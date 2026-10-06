@@ -21,14 +21,29 @@ services:
     volumes:
       - wordpress-data:/var/www/html
       - ./docker/themes:/opt/wp-forestas/themes:ro
+    # service_started e non service_healthy: senza wp-forestas/.env MariaDB esce, e una dipendenza
+    # «sana» farebbe fallire `docker compose up` dell'intero shard. L'attesa del database la fa
+    # init-wordpress.sh.
     depends_on:
       mariadb:
-        condition: service_healthy
+        condition: service_started
 
   mariadb:
     image: mariadb:11.4
     container_name: "mariadb-${APP_NAME}"
     restart: unless-stopped
+    # MariaDB crea utente e database solo al primo avvio su un volume vuoto. Senza password
+    # (wp-forestas/.env mancante) inizializzerebbe l'utente senza password, e il .env creato dopo
+    # verrebbe ignorato: in quel caso esce senza toccare il volume.
+    entrypoint:
+      - sh
+      - -c
+      - |
+        if [ -z "$$MARIADB_PASSWORD" ]; then
+          echo "[mariadb] manca WP_DB_PASSWORD: crea wp-forestas/.env da .env-example e riavvia"
+          exit 1
+        fi
+        exec docker-entrypoint.sh mariadbd
     environment:
       MARIADB_DATABASE: ${WP_DB_NAME:-wordpress}
       MARIADB_USER: ${WP_DB_USER:-wordpress}

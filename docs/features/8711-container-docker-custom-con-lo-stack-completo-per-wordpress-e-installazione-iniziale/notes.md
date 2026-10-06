@@ -22,7 +22,13 @@ data `wp-admin` con l'header: `302` verso `https://wp.esempio.test/wp-login.php‚
 
 ## Bug trovati
 
-Nessuno oltre a quelli descritti nelle divergenze.
+- **MariaDB inizializzata senza password.** Avviando lo shard prima di aver creato
+  `wp-forestas/.env` (il caso del primo aggiornamento dopo il merge, su UAT e sulle macchine dei
+  dev), MariaDB inizializzava il volume con l'utente `wordpress` senza password; il `.env` creato
+  dopo veniva ignorato e WordPress riceveva `Access denied`. Trovato provando l'include nello shard
+  locale. Correzione in `compose.yml`: senza `WP_DB_PASSWORD` MariaDB esce senza toccare il volume,
+  e WordPress dipende da MariaDB come `service_started` (non `service_healthy`), cos√¨
+  `docker compose up` dello shard non fallisce.
 
 ## Decisioni
 
