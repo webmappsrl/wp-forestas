@@ -1,0 +1,6 @@
+# Configurazione con valori reali: mai nel repo (il repo è pubblico)
+.env
+
+# Temi commerciali (Impreza): non ridistribuibili
+/docker/themes/*
+!/docker/themes/.gitkeep

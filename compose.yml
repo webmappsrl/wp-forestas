@@ -1,0 +1,64 @@
+# Servizi WordPress dello shard Forestas.
+# Pensato per essere incluso dal compose di forestas (`include: - wp-forestas/compose.yml`):
+# APP_NAME arriva dal .env di forestas, la configurazione di WordPress da wp-forestas/.env.
+# Nessuna variabile è obbligatoria a livello di compose: un .env mancante non deve impedire
+# l'avvio dello shard. Le variabili mancanti le segnala init-wordpress.sh.
+services:
+  wordpress:
+    build:
+      context: .
+      dockerfile: docker/configs/php/Dockerfile
+    image: wm-wordpress:php8.3
+    container_name: "wordpress-${APP_NAME}"
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      WP_DB_HOST: mariadb
+    ports:
+      - "127.0.0.1:${WP_PORT:-8090}:80"
+    volumes:
+      - wordpress-data:/var/www/html
+      - ./docker/themes:/opt/wp-forestas/themes:ro
+    # service_started e non service_healthy: senza wp-forestas/.env MariaDB esce, e una dipendenza
+    # «sana» farebbe fallire `docker compose up` dell'intero shard. L'attesa del database la fa
+    # init-wordpress.sh.
+    depends_on:
+      mariadb:
+        condition: service_started
+
+  mariadb:
+    image: mariadb:11.4
+    container_name: "mariadb-${APP_NAME}"
+    restart: unless-stopped
+    # MariaDB crea utente e database solo al primo avvio su un volume vuoto. Senza password
+    # (wp-forestas/.env mancante) inizializzerebbe l'utente senza password, e il .env creato dopo
+    # verrebbe ignorato: in quel caso esce senza toccare il volume.
+    entrypoint:
+      - sh
+      - -c
+      - |
+        if [ -z "$$MARIADB_PASSWORD" ]; then
+          echo "[mariadb] manca WP_DB_PASSWORD: crea wp-forestas/.env da .env-example e riavvia"
+          exit 1
+        fi
+        exec docker-entrypoint.sh mariadbd
+    environment:
+      MARIADB_DATABASE: ${WP_DB_NAME:-wordpress}
+      MARIADB_USER: ${WP_DB_USER:-wordpress}
+      MARIADB_PASSWORD: ${WP_DB_PASSWORD:-}
+      MARIADB_RANDOM_ROOT_PASSWORD: "1"
+    volumes:
+      - mariadb-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+volumes:
+  wordpress-data:
+    name: "wordpress-${APP_NAME}"
+  mariadb-data:
+    name: "mariadb-${APP_NAME}"
