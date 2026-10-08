@@ -190,7 +190,8 @@ $menu        = [];
 $chiavi_menu = []; // term_id => chiave
 $termini     = wp_get_nav_menus();
 // Prima gli originali: la chiave di una traduzione deriva da quella del suo originale
-usort( $termini, fn( $a, $b ) => (int) ( wpf_lingua( $a->term_taxonomy_id, 'tax_nav_menu' ) !== $lingua_predefinita ) <=> (int) ( wpf_lingua( $b->term_taxonomy_id, 'tax_nav_menu' ) !== $lingua_predefinita ) );
+$tradotto = fn( WP_Term $t ): int => (int) ( wpf_lingua( $t->term_taxonomy_id, 'tax_nav_menu' ) !== $lingua_predefinita );
+usort( $termini, fn( $a, $b ) => $tradotto( $a ) <=> $tradotto( $b ) );
 foreach ( $termini as $termine ) {
 	// Per i termini WPML usa il term_taxonomy_id, non il term_id
 	$lingua    = wpf_lingua( $termine->term_taxonomy_id, 'tax_nav_menu' );
@@ -222,6 +223,9 @@ if ( $sitepress && ! class_exists( '\WPML\LanguageEditor\PageData' ) ) {
 } elseif ( $sitepress ) {
 	$impostazioni = $sitepress->get_settings();
 	unset( $impostazioni['site_key'] );
+	if ( (int) ( $impostazioni['urls']['root_page'] ?? 0 ) > 0 ) {
+		$avvisi[] = 'WPML usa una «root page» (id ' . (int) $impostazioni['urls']['root_page'] . '): non sta in config/, su un altro sito va reimpostata da WPML → Lingue';
+	}
 	foreach ( WPF_WPML_INTERNE as [ $gruppo, $nome ] ) {
 		unset( $impostazioni[ $gruppo ][ $nome ] );
 	}

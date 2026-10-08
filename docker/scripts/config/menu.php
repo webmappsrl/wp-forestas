@@ -127,7 +127,7 @@ function wpf_menu_ricrea_voci( WP_Term $termine, array $m, array $voci, callable
 		if ( is_wp_error( $voce ) ) {
 			WP_CLI::warning( "menu {$m['chiave']}, voce «{$v['titolo']}»: " . $voce->get_error_message() . '. Il menu resta com\'era' );
 			foreach ( $creati as $id ) {
-				wpf_cancella_post( $id, 'post_nav_menu_item' );
+				wpf_wpml_cancella_post( $id, 'post_nav_menu_item' );
 			}
 			return false;
 		}
@@ -143,7 +143,7 @@ function wpf_menu_ricrea_voci( WP_Term $termine, array $m, array $voci, callable
 		wpf_wpml_collega( (int) $voce, 'post_nav_menu_item', $m['lingua'], $id_originale );
 	}
 	foreach ( $vecchie as $id ) {
-		wpf_cancella_post( $id, 'post_nav_menu_item' );
+		wpf_wpml_cancella_post( $id, 'post_nav_menu_item' );
 	}
 	return true;
 }

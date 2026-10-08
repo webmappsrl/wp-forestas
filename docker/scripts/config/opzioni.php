@@ -12,9 +12,12 @@
  * @param callable $risolvi fn( $valore ): ?int, id del post di un riferimento «@chiave:…»
  */
 function wpf_impreza_applica( array $impreza, bool $prova, callable $diff, callable $risolvi ): bool {
-	if ( ! function_exists( 'usof_save_options' ) || ! defined( 'US_THEMENAME' ) ) {
-		WP_CLI::warning( 'UpSolution Core non è attivo: Theme Options di Impreza saltate' );
-		return false;
+	// Funzioni interne di UpSolution Core: se un aggiornamento ne toglie una, ci si ferma prima di scrivere
+	foreach ( [ 'usof_save_options', 'usof_backup', 'us_get_option' ] as $funzione ) {
+		if ( ! function_exists( $funzione ) || ! defined( 'US_THEMENAME' ) ) {
+			WP_CLI::warning( "UpSolution Core non è attivo o non ha {$funzione}(): Theme Options di Impreza saltate" );
+			return false;
+		}
 	}
 	$ora     = (array) get_option( 'usof_options_' . US_THEMENAME, [] );
 	$impreza = wpf_ripristina_segreti( $impreza, $ora );
@@ -38,7 +41,7 @@ function wpf_impreza_applica( array $impreza, bool $prova, callable $diff, calla
 		}
 	}
 	// Come le licenze: la chiave del .env non si applica a un sito locale
-	$chiave_manutenzione = wpf_url_locale() ? '' : getenv( 'IMPREZA_MAINTENANCE_KEY' );
+	$chiave_manutenzione = wpf_sito_locale() ? '' : getenv( 'IMPREZA_MAINTENANCE_KEY' );
 	if ( $chiave_manutenzione ) {
 		$impreza['maintenance_private_key'] = $chiave_manutenzione;
 	}
@@ -56,11 +59,12 @@ function wpf_impreza_applica( array $impreza, bool $prova, callable $diff, calla
 /**
  * Google Fonts serviti dal sito: Impreza li scarica solo quando si apre la pagina delle Theme Options,
  * quindi su un sito ricreato da script li scarica l'apply, con la stessa funzione. Se il download non
- * riesce l'apply è parziale: un nuovo apply riprova solo questo, perché il resto non ha differenze.
+ * riesce (per esempio senza rete verso Google) è un avviso, non un errore: la configurazione è applicata,
+ * e a ogni avvio l'init ricorda di rilanciare l'apply, che riprova solo i font.
  */
 function wpf_google_fonts_applica( bool $prova, callable $diff ): bool {
-	if ( ! function_exists( 'us_get_local_google_fonts_state' ) || ! us_get_option( 'store_gfonts_locally' )
-		|| us_get_local_google_fonts_state()['is_current'] ) {
+	if ( ! function_exists( 'us_get_local_google_fonts_state' ) || ! function_exists( 'us_download_local_google_fonts' )
+		|| ! us_get_option( 'store_gfonts_locally' ) || us_get_local_google_fonts_state()['is_current'] ) {
 		return true;
 	}
 	$diff( 'impreza: Google Fonts in locale', 'da scaricare', 'scaricati' );
@@ -76,7 +80,6 @@ function wpf_google_fonts_applica( bool $prova, callable $diff ): bool {
 	}
 	if ( $esito === false || ! us_get_local_google_fonts_state()['is_current'] ) {
 		WP_CLI::warning( 'Google Fonts non scaricati: il sito usa i font di ripiego. Rilancia l\'apply quando la rete risponde, o apri le Theme Options' );
-		return false;
 	}
 	return true;
 }

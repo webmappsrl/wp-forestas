@@ -8,7 +8,9 @@ services:
     build:
       context: .
       dockerfile: docker/configs/php/Dockerfile
-    image: wm-wordpress:php8.3
+    # Il nome contiene APP_NAME: l'immagine incorpora l'init di questo shard, e un altro shard sulla stessa
+    # macchina con lo stesso nome la sovrascriverebbe a ogni build
+    image: "wm-wordpress-${APP_NAME}:php8.3"
     container_name: "wordpress-${APP_NAME}"
     restart: unless-stopped
     env_file:

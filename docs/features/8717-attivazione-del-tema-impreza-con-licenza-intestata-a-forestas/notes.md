@@ -107,8 +107,11 @@ la home carica `forestas-child/style.css?ver=1.0.0`).
 - **Pagine esistenti aggiornate solo con `--pagine`**: la Home è anche contenuto della redazione.
 - **Voci di menu create prima di cancellare le vecchie**: se una non si crea il menu resta com'era.
   Le voci tradotte entrano nel gruppo della voce originale; cancellando le vecchie si toglie anche la
-  loro riga di WPML (`wpf_cancella_post`), che da WP-CLI WPML non toglie da sé.
-- **Google Fonts non scaricati: apply parziale**, così l'apply si rilancia; il ritratto mostra se i
+  loro riga di WPML (`wpf_wpml_cancella_post`), che da WP-CLI WPML non toglie da sé.
+- **Google Fonts non scaricati: un avviso, non un errore**: la configurazione resta applicata (con
+  l'apply parziale un sito senza rete verso Google non risultava mai configurato e a ogni avvio
+  ripeteva l'apply automatico); l'init lo ricorda a ogni avvio e un nuovo apply riprova solo i font.
+  Il ritratto mostra se i
   font sul sito sono aggiornati e se la home li carica.
 - **Menu ritrovati dalla chiave e riallineati anche nello slug**: l'header di Impreza richiama il menu
   per slug (`"source":"main-menu"`). Se cambiano solo nome o slug le voci non si ricreano.
@@ -171,6 +174,11 @@ fa l'init, che lancia `licenza-impreza.php` solo quando serve, con un tempo mass
 - Il ritratto lascia fuori dall'impronta delle Theme Options anche lo stato di Impreza
   (`WPF_IMPREZA_STATO`) e i campi immagine (l'id di un allegato cambia da un sito all'altro), e mostra
   le traduzioni dei testi delle opzioni e la presenza di `.htaccess`.
+- Oltre a quanto previsto dal piano, il ritratto stampa per ogni menu titoli e impronta delle voci
+  (metadati e legami di traduzione compresi), per ogni post esportato titolo, lingua e impronta del
+  contenuto, lo stato dei Google Fonts salvati sul sito e se la home li carica. Una modifica della
+  redazione a una pagina esportata cambia quindi il ritratto anche se l'apply, senza `--pagine`, non
+  la tocca.
 
 ### Vincolo www-data
 
@@ -205,7 +213,7 @@ Le altre scelte prese durante l'implementazione sono nelle «Decisioni» qui sot
 - **Errori SQL di WPML** al primo salvataggio di un post del builder su un sito nuovo
   (tabella `wp_icl_string_packages` creata da WPML solo alla prima visita del pannello): l'apply lancia
   prima `WPML_Package_Translation_Schema::run_update()`. Restava anche un messaggio su
-  `wp_icl_mo_files_domains`, che veniva invece da `config/`: vedi la prima review qui sotto.
+  `wp_icl_mo_files_domains`, che veniva invece da `config/`: vedi «Review wm-review-ticket (08/10)» qui sotto.
 - **Google Fonts locali mai scaricati** su un sito ricreato: Impreza li scarica solo
   aprendo la pagina delle Theme Options; ora lo fa l'apply con `us_download_local_google_fonts()`.
 
@@ -284,6 +292,22 @@ Le altre scelte prese durante l'implementazione sono nelle «Decisioni» qui sot
   un'attivazione fallita e lasciato spento se spento a mano; blocco di un apply lanciato durante
   l'avvio conservato; MariaDB fermo → init fermo e ripartito senza reinstallare.
 
+- **Sesta review wm-review-ticket (08/10), nessun bloccante**: corretti i cleanup. L'init parte anche
+  con `comune.php` rotto; toglie il blocco di un apply interrotto dal tempo massimo; non applica da sé
+  un `config/` arrivato su un sito installato senza; riattiva wp-geohub solo dopo un'attivazione
+  fallita. L'apply controlla le funzioni di Impreza prima di scrivere, ripristina i segreti dentro i
+  metadati composti dei post, si ferma (se automatico) anche con una versione minore diversa, mostra
+  nell'anteprima i riferimenti ancora da risolvere; i font non scaricati sono un avviso. `root_page`
+  di WPML esclusa da `config/` con un avviso. In `forestas` gli script di WordPress dicono quando
+  manca il `.env`, e l'immagine Docker ha `APP_NAME` nel nome. Documentazione allineata.
+  Verificato su un WordPress usa e getta (vedi sotto, «Esito delle prove finali»).
+- **Esito delle prove finali (08/10)**: inizio dell'init eseguito con un `comune.php` rotto (valori di
+  riserva, licenza non applicata, uscita 0); WordPress usa e getta ricreato da zero con l'immagine
+  `wm-wordpress-prova`: apply automatico riuscito, anteprima con un header da ricollegare che mostra
+  anche il riferimento da risolvere, apply automatico fermato da Impreza «9.5» in `versioni.json`,
+  wp-geohub spento a mano rimasto spento al riavvio; ritratto identico a quello del locale ricostruito
+  con `scripts/wordpress-up.sh`, apply «nessuna differenza» su tutti e due.
+
 ## Decisioni
 
 
@@ -314,10 +338,12 @@ Le altre scelte prese durante l'implementazione sono nelle «Decisioni» qui sot
 - **`config/versioni.json`**: versioni di Impreza, UpSolution Core e plugin commerciali dell'export;
   l'apply avvisa se il sito ne ha altre, perché opzioni di versioni diverse possono avere uno schema
   diverso.
-- **Segreti riconosciuti dalle parole separate da `_` del nome** (`…_key`, `secret`, `token`,
-  `password`, `api`) più le forme attaccate comuni (`apikey`, `licensekey`, `secretkey`,
-  `accesstoken`), e non da qualsiasi sottostringa: «key» da solo prendeva opzioni come
-  `h_keyboard_accessibility`. Ciò che il nome non rivela lo prende il controllo sui valori
+- **Segreti riconosciuti dalle parole del nome** (separate da `_`, `-` o da una maiuscola: `key`,
+  `secret`, `token`, `password`, `pass`, `credentials`) più le forme attaccate comuni (`apikey`,
+  `licensekey`, `secretkey`, `accesstoken`, `privatekey`), e non da qualsiasi sottostringa: «key» da
+  solo prendeva opzioni come `h_keyboard_accessibility`. «api» da sola non basta più, diversamente dal
+  piano: `apiUrl` e `header_api` sono impostazioni, e una chiave Google ha comunque `key` nel nome o
+  la forma che il controllo sui valori riconosce. Ciò che il nome non rivela lo prende il controllo sui valori
   (`WPF_FORME_SEGRETE`); l'ultimo controllo resta `git diff config/` prima del commit.
 
 - **Child theme montato dal compose, non copiato da `init-wordpress.sh`**: con il mount una
@@ -366,7 +392,9 @@ Le altre scelte prese durante l'implementazione sono nelle «Decisioni» qui sot
   di `commerciali.txt` e il criterio dell'indirizzo locale stanno solo lì; `init-wordpress.sh` li
   legge con `php -r` (`config_php`), `bin/wordpress-config.sh` con `php -r` nel container. Resta
   ripetuto in `bin/` solo l'`--exec` per HTTPS, che si costruisce sull'host prima di entrare nel
-  container.
+  container. Se `comune.php` non si carica (un errore arrivato con un pull), l'init usa valori di
+  riserva uguali a quelli del compose e WordPress parte lo stesso, con un AVVISO: senza, un errore in
+  un file montato avrebbe tenuto giù il sito.
 - **Esito del reset del locale (08/10)**: ritratto prima e dopo identico tranne
   l'impronta delle Theme Options, dovuta a `text_styles: []` che Impreza aggiunge a ogni
   installazione. Gli export successivi l'hanno portata in `config/` (è un'opzione vera, vuota), quindi
@@ -375,6 +403,11 @@ Le altre scelte prese durante l'implementazione sono nelle «Decisioni» qui sot
   dato perso.
 
 ## Follow-up
+
+- **Aggiornare Impreza e WPML in produzione**: con `WP_AMBIENTE=produzione` il pannello non installa
+  nulla (`DISALLOW_FILE_MODS`) e l'init installa gli zip solo se tema o plugin mancano. Prima del
+  lancio in produzione serve un modo esplicito per aggiornare dagli zip (per esempio un comando che
+  reinstalla con `--force` lo zip del repo). Oggi la produzione non esiste.
 
 - **Zip su UAT**: sull'host di UAT c'è ancora `impreza.zip` 9.3.1 e mancano gli zip di WPML; si sostituiscono alla
   messa in opera (README, «Messa in opera su UAT»).

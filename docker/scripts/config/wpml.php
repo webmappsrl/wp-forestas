@@ -1,6 +1,7 @@
 <?php
 /**
- * Configurazione di WPML con le sue stesse API, mai con SQL sulle tabelle wp_icl_* (oc:8717).
+ * Configurazione di WPML con le sue stesse API: le tabelle wp_icl_* si leggono, mai si scrivono con SQL
+ * (oc:8717).
  *
  * Sequenza provata su un WordPress nuovo: sincronizzazione del catalogo delle lingue (senza, l'API
  * risponde «missing_preset»), lingue salvate con l'endpoint della schermata «Lingue», impostazioni,
@@ -33,7 +34,7 @@ function wpf_wpml_applica( array $cfg, bool $prova, callable $diff ): bool {
 	// WPML aggiunge da sé sottochiavi (per esempio quando sposta impostazioni in tabelle proprie): si
 	// confrontano e si scrivono solo quelle presenti nell'export, il resto resta com'è sul sito
 	foreach ( $impostazioni as $nome => $valore ) {
-		$impostazioni[ $nome ] = wpf_unisci( $impostazioni_ora[ $nome ] ?? null, $valore );
+		$impostazioni[ $nome ] = wpf_wpml_unisci( $impostazioni_ora[ $nome ] ?? null, $valore );
 	}
 	$impostazioni_diverse = [];
 	foreach ( $impostazioni as $nome => $valore ) {
@@ -92,12 +93,12 @@ function wpf_wpml_applica( array $cfg, bool $prova, callable $diff ): bool {
  * WPML aggiunge da sé restano; un elenco del repo (hidden_languages, languages_order…) sostituisce
  * quello del sito per intero, perché unito voce per voce non si accorcerebbe mai.
  */
-function wpf_unisci( $sul_sito, $dal_repo ) {
+function wpf_wpml_unisci( $sul_sito, $dal_repo ) {
 	if ( ! is_array( $sul_sito ) || ! is_array( $dal_repo ) || array_is_list( $dal_repo ) ) {
 		return $dal_repo;
 	}
 	foreach ( $dal_repo as $nome => $valore ) {
-		$sul_sito[ $nome ] = wpf_unisci( $sul_sito[ $nome ] ?? null, $valore );
+		$sul_sito[ $nome ] = wpf_wpml_unisci( $sul_sito[ $nome ] ?? null, $valore );
 	}
 	return $sul_sito;
 }
@@ -116,9 +117,9 @@ function wpf_wpml_prepara(): void {
  * Cancella un post togliendo anche la sua riga di traduzione di WPML. WPML la toglie da sé solo quando
  * il post si cancella dal pannello o dal sito: da WP-CLI la riga resterebbe, orfana.
  */
-function wpf_cancella_post( int $id, string $tipo ): void {
+function wpf_wpml_cancella_post( int $id, string $tipo ): void {
 	global $sitepress;
-	$dettagli = apply_filters( 'wpml_element_language_details', null, [ 'element_id' => $id, 'element_type' => $tipo ] );
+	$dettagli = wpf_dettagli_lingua( $id, $tipo );
 	wp_delete_post( $id, true );
 	if ( $sitepress && $dettagli && ! empty( $dettagli->trid ) ) {
 		// WPML vuole il trid come stringa (is_string): con un intero non cancella nulla
@@ -131,7 +132,7 @@ function wpf_wpml_collega( int $id, string $tipo, ?string $lingua, ?int $id_orig
 	if ( ! $lingua ) {
 		return;
 	}
-	$ora = apply_filters( 'wpml_element_language_details', null, [ 'element_id' => $id, 'element_type' => $tipo ] );
+	$ora = wpf_dettagli_lingua( $id, $tipo );
 	// Una traduzione va nel gruppo del suo originale. Un originale resta nel gruppo che ha già: con
 	// trid falso WPML cancellerebbe la sua riga e ne creerebbe un gruppo nuovo, staccandolo dalle
 	// traduzioni (WPML_Set_Language::set, delete_existing_row + insert_new_row).

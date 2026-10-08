@@ -60,17 +60,19 @@ proprietario dei file. Esegue solo i passi che mancano e non cancella mai conten
 configurazione di un'installazione esistente. Su un sito esistente agisce solo così: allinea alle
 voci del `.env` le costanti di `wp-config.php` (`DISALLOW_FILE_MODS`, site key di WPML) e la licenza
 di Impreza, crea `.htaccess` se manca, toglie il blocco lasciato da un apply interrotto, riattiva
-UpSolution Core se è spento (e un plugin commerciale la cui attivazione automatica era fallita) e
-installa ciò che manca.
+UpSolution Core se è spento (wp-geohub e i plugin commerciali solo se la loro attivazione automatica
+era fallita: spenti dal pannello restano spenti) e installa ciò che manca.
 
-- Se MariaDB non risponde entro un minuto l'init si ferma e il container riparte: proseguire farebbe
-  scambiare un sito esistente per uno da installare.
+- Se MariaDB non risponde entro un minuto, o rifiuta utente e password del `.env`, l'init si ferma e il
+  container riparte: proseguire farebbe scambiare un sito esistente per uno da installare.
 - I passi che vanno in rete (wp-geohub, licenza di Impreza, apply automatico) hanno un tempo massimo:
   Apache parte solo alla fine dell'inizializzazione, e un servizio lento non deve tenere giù il sito.
 - WP-CLI è a una versione fissa (`WP_CLI_VERSION` nel Dockerfile), come wp-geohub (`GEOHUB_REF`).
 
 `init-wordpress.sh` sta nell'immagine: dopo una sua modifica va ricostruita (`scripts/wordpress-up.sh`
-di `forestas`). Gli script PHP della configurazione invece sono montati dal repo e valgono subito.
+di `forestas`). Gli script PHP della configurazione invece sono montati dal repo e valgono subito; l'init
+legge nomi e percorsi da `comune.php`, e se quel file non si carica (un errore arrivato con un pull)
+WordPress parte lo stesso, con un AVVISO, senza `.htaccess`, licenza e apply.
 
 - Le **chiavi di sicurezza** le genera WP-CLI in `wp-config.php`, che sta nel volume: non vanno nel
   `.env`.
@@ -89,7 +91,8 @@ di `forestas`). Gli script PHP della configurazione invece sono montati dal repo
 - Il **child theme** `forestas-child` è codice del repo, in `themes/forestas-child/`: il compose lo
   monta dentro WordPress, quindi una modifica nel repo è subito visibile sul sito. Lo script lo
   attiva solo se Impreza è installato e il tema attivo è Impreza o un tema di default: un tema
-  scelto a mano dal pannello non viene sostituito. Come ci si lavora: [Lavorare sul child theme](#lavorare-sul-child-theme).
+  scelto a mano dal pannello non viene sostituito. Come ci si lavora:
+  [Lavorare sul child theme](#lavorare-sul-child-theme).
 - Lo slug di un plugin si prende dalla cartella contenuta nel suo zip in `docker/plugins/`, non dal
   nome del file. Un plugin già installato non si reinstalla; se è spento lo si segnala nei log senza
   riattivarlo, perché può essere stato disattivato apposta. UpSolution Core invece si riattiva sempre:
@@ -159,9 +162,10 @@ Il comando trova da solo il container che monta il child da questa cartella; se 
   (`export --in /tmp/config`) e portato in locale: altrimenti il successivo `apply --conferma` riporta
   header, footer, menu e Theme Options a quelli del repo e la modifica si perde (resta solo nel backup
   dell'apply).
-- **Nessun segreto nei file**: le opzioni con `key`, `secret`, `token`, `password` o `api` fra le
-  parole del nome (o forme attaccate come `apikey`, `licensekey`) diventano `@segreto` e l'export le
-  elenca; quelle che servono vanno nel `.env` (oggi `IMPREZA_MAINTENANCE_KEY`). In più l'export si
+- **Nessun segreto nei file**: le opzioni con `key`, `secret`, `token`, `password` o `pass` fra le
+  parole del nome (anche in camelCase, come `consumerSecret`, o in forme attaccate come `apikey`,
+  `licensekey`) diventano `@segreto` e l'export le elenca; «api» da sola non basta, perché `apiUrl` è
+  un'impostazione; quelle che servono vanno nel `.env` (oggi `IMPREZA_MAINTENANCE_KEY`). In più l'export si
   ferma senza scrivere nulla se un valore ha la forma di una chiave nota (Google, Stripe, GitHub,
   AWS, Slack, chiave privata), sotto qualsiasi nome e anche dentro il contenuto di un post. Prima del
   commit, `git diff config/` resta l'ultimo controllo: il repo è pubblico.
@@ -194,7 +198,8 @@ Il comando trova da solo il container che monta il child da questa cartella; se 
   filtri, allegati usati): l'apply salva il post e li ricalcolano loro.
 - **Le immagini della Libreria media non stanno in `config/`**: l'export segnala le Theme Options di
   tipo immagine che puntano a un allegato (icona del sito, sfondi…), le immagini in evidenza e i post
-  del builder che usano immagini; l'apply per le Theme Options tiene il valore del sito di destinazione. L'immagine va
+  del builder che usano immagini; l'apply per le Theme Options tiene il valore del sito di
+  destinazione. L'immagine va
   caricata dal pannello, oppure messa nel child (vedi «Lavorare sul child theme»). Lo stesso vale
   per un'immagine di sfondo di un mega menu.
 - **Il titolo del sito è quello di `config/sito.json`**: `WP_TITLE` del `.env` vale solo
@@ -211,14 +216,17 @@ Il comando trova da solo il container che monta il child da questa cartella; se 
   lanciato a mano): il secondo si ferma e va rilanciato.
 - Se l'apply cambia i permalink scrive anche `.htaccess`, come il pannello.
 - Per aggiungere un plugin commerciale: il suo slug in `docker/plugins/commerciali.txt`, lo zip
-  `<slug>.zip` nella stessa cartella. L'init lo installa, `zip` lo rigenera e il ritratto ne mostra la
-  versione.
+  nella stessa cartella (con un nome qualsiasi; `zip` lo crea come `<slug>.zip`). L'init lo installa,
+  `zip` lo rigenera e il ritratto ne mostra la versione.
 - **Aggiornamenti di Impreza e WPML**: dal pannello di UAT, dove ci sono le licenze. Subito dopo, su
   UAT, `bin/wordpress-config.sh zip` rigenera gli zip nelle cartelle escluse da git; copiali in locale
   e nella cartella condivisa. Altrimenti un sito ricreato tornerebbe alle versioni vecchie.
-- Con «salva i Google Fonts in locale» attivo nelle Theme Options, l'apply scarica i font sul sito (se
-  non ci riesce l'apply risulta parziale e va rilanciato, e il ritratto lo mostra):
-  Impreza lo fa da sé solo aprendo la pagina delle Theme Options.
+- Con «salva i Google Fonts in locale» attivo nelle Theme Options, l'apply scarica i font sul sito:
+  Impreza lo fa da sé solo aprendo la pagina delle Theme Options. Se non ci riesce (per esempio senza
+  rete verso Google) lo dice, la configurazione resta applicata e a ogni avvio l'init ricorda di
+  rilanciare l'apply, che riprova solo i font; il ritratto mostra se sono aggiornati.
+- `root_page` di WPML (una pagina come radice del sito) non sta in `config/`: è un id di pagina.
+  L'export avvisa se è impostata; su un altro sito si reimposta da WPML → Lingue.
 
 ## Messa in opera su UAT
 

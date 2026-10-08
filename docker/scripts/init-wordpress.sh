@@ -30,6 +30,7 @@ APPLY_TENTATIVI=3
 # Tempi massimi, in secondi, dei passi che vanno in rete: senza, un servizio lento terrebbe giù il sito,
 # perché Apache parte solo alla fine dell'inizializzazione
 RETE_ATTESA=120
+RETE_CONNESSIONE=20
 
 log() { echo "[init-wordpress] $*"; }
 
@@ -37,20 +38,31 @@ log() { echo "[init-wordpress] $*"; }
 # percorsi ed elenco dei plugin commerciali stanno solo lì
 config_php() { php -r "require '${CONFIG_LIB}/comune.php'; $1"; }
 
+# comune.php è montato dal repo e cambia con un pull: se non si carica (errore di sintassi, mount
+# mancante) WordPress deve partire lo stesso. Si usano i valori di riserva qui sotto, che sono quelli
+# del compose, e i passi della configurazione falliscono con un AVVISO.
+COMUNE_OK=true
+if ! config_php '' >/dev/null 2>&1; then
+    COMUNE_OK=false
+fi
+# config_valore <codice PHP> <valore di riserva>
+config_valore() {
+    if $COMUNE_OK; then config_php "$1" 2>/dev/null || echo "$2"; else echo "$2"; fi
+}
+
 # Zip dei plugin commerciali (WPML) in docker/plugins/, esclusa da git: si copiano a mano o li crea
 # bin/wordpress-config.sh zip
-PLUGIN_ZIP_DIR=$(config_php 'echo WPF_DIR_PLUGIN;')
+PLUGIN_ZIP_DIR=$(config_valore 'echo WPF_DIR_PLUGIN;' /opt/wp-forestas/plugins)
 # Configurazione versionata (config/ del repo)
-CONFIG_DIR=$(config_php 'echo WPF_DIR_CONFIG;')
+CONFIG_DIR=$(config_valore 'echo WPF_DIR_CONFIG;' /opt/wp-forestas/config)
 # Opzioni di controllo dell'apply e della riattivazione dei plugin
-OPZIONE_DA_FARE=$(config_php 'echo WPF_OPZIONE_DA_FARE;')
-OPZIONE_FATTO=$(config_php 'echo WPF_OPZIONE_FATTO;')
-OPZIONE_DA_ATTIVARE=$(config_php 'echo WPF_OPZIONE_DA_ATTIVARE;')
+OPZIONE_DA_FARE=$(config_valore 'echo WPF_OPZIONE_DA_FARE;' wp_forestas_config_da_applicare)
+OPZIONE_FATTO=$(config_valore 'echo WPF_OPZIONE_FATTO;' wp_forestas_config_applicata)
+OPZIONE_DA_ATTIVARE=$(config_valore 'echo WPF_OPZIONE_DA_ATTIVARE;' wp_forestas_plugin_da_attivare)
 # Plugin commerciali attesi, da docker/plugins/commerciali.txt
-PLUGIN_COMMERCIALI=$(config_php 'echo implode( " ", wpf_plugin_commerciali() );')
-# Tempo massimo dell'apply automatico: più corto della scadenza del suo blocco, così un apply ancora in
-# corso non perde mai il blocco per scadenza
-APPLY_ATTESA=$(config_php 'echo WPF_APPLY_SCADENZA - 600;')
+PLUGIN_COMMERCIALI=$(config_valore 'echo implode( " ", wpf_plugin_commerciali() );' '')
+# Tempo massimo dell'apply automatico: più corto della scadenza del suo blocco
+APPLY_ATTESA=$(config_valore 'echo WPF_APPLY_SCADENZA - 600;' 1800)
 
 # wp_script <secondi> <script.php>: esegue uno degli script PHP di configurazione come amministratore,
 # con un tempo massimo. Con un sito in https imposta HTTPS prima che WordPress si carichi: il CSS che
@@ -68,8 +80,18 @@ slug_zip() {
 }
 
 # Vero se WP_URL punta a questa macchina: lì licenze e chiavi dei servizi esterni non si applicano
-# (criterio unico: wpf_indirizzo_locale in comune.php)
-url_locale() { config_php 'exit( wpf_indirizzo_locale( (string) getenv( "WP_URL" ) ) ? 0 : 1 );'; }
+# (criterio unico: wpf_indirizzo_locale in comune.php). Se comune.php non si carica si risponde «sì»:
+# meglio non applicare una licenza che registrarla con un indirizzo sbagliato.
+url_locale() {
+    $COMUNE_OK || return 0
+    local esito=0
+    config_php 'exit( wpf_indirizzo_locale( (string) getenv( "WP_URL" ) ) ? 0 : 1 );' 2>/dev/null || esito=$?
+    [ "$esito" -ne 1 ]
+}
+
+if ! $COMUNE_OK; then
+    log "AVVISO: ${CONFIG_LIB}/comune.php non si carica (errore nel repo?): WordPress parte, ma .htaccess, licenza e configurazione di config/ restano da fare"
+fi
 
 # 0. Configurazione: senza queste variabili non si può installare nulla
 mancanti=()
@@ -190,17 +212,30 @@ fi
 if [ ! -f "${GEOHUB_DIR}/index.php" ]; then
     log "scarico wp-geohub"
     tmp=$(mktemp -d)
-    if curl -fsSL --connect-timeout 20 --max-time "$RETE_ATTESA" "$GEOHUB_TARBALL" | tar xz --strip-components=1 -C "$tmp"; then
+    if curl -fsSL --connect-timeout "$RETE_CONNESSIONE" --max-time "$RETE_ATTESA" "$GEOHUB_TARBALL" | tar xz --strip-components=1 -C "$tmp"; then
         mkdir -p "$GEOHUB_DIR"
         cp -a "$tmp"/. "$GEOHUB_DIR"/
+        geohub_appena_scaricato=1
     else
         log "AVVISO: impossibile scaricare wp-geohub, riprovo al prossimo avvio"
     fi
     rm -rf "$tmp"
 fi
+# Si attiva appena installato; spento in seguito si riattiva solo se a spegnerlo è stata un'attivazione
+# fallita di questo script, come per i plugin commerciali al passo 7c
+geohub_da_attivare="${OPZIONE_DA_ATTIVARE}_wm-package"
 if [ -f "${GEOHUB_DIR}/index.php" ] && ! $WP plugin is-active wm-package; then
-    log "attivo wp-geohub"
-    $WP plugin activate wm-package
+    if [ -n "${geohub_appena_scaricato:-}" ] || [ -n "$($WP option get "$geohub_da_attivare" 2>/dev/null || true)" ]; then
+        log "attivo wp-geohub"
+        if $WP plugin activate wm-package; then
+            $WP option delete "$geohub_da_attivare" >/dev/null 2>&1 || true
+        else
+            log "AVVISO: attivazione di wp-geohub non riuscita, riprovo al prossimo avvio"
+            $WP option update "$geohub_da_attivare" 1 >/dev/null || true
+        fi
+    else
+        log "AVVISO: wp-geohub è installato ma spento: se non è voluto, attivalo dal pannello"
+    fi
 fi
 
 # 7. Tema Impreza (commerciale: solo se c'è lo zip in docker/themes/, copiato a mano o creato con
@@ -310,17 +345,35 @@ if [ -n "$tentativi" ] && [[ ! "$tentativi" =~ ^[0-9]+$ ]]; then
 fi
 config_presente=false
 ls "$CONFIG_DIR"/*.json >/dev/null 2>&1 && config_presente=true
-if [ -n "$tentativi" ] && $config_presente; then
+if [ -n "$tentativi" ] && ! $config_presente; then
+    # Sito installato senza config/: l'apply automatico non deve partire mesi dopo, quando un pull porta
+    # config/ su un sito ormai cambiato dal pannello
+    log "config/ vuota all'installazione: niente apply automatico, quando ci sarà si applica a mano"
+    $WP option delete "$OPZIONE_DA_FARE" >/dev/null || true
+elif [ -n "$tentativi" ]; then
     if [ "$tentativi" -ge "$APPLY_TENTATIVI" ]; then
         log "AVVISO: configurazione non applicata dopo ${APPLY_TENTATIVI} tentativi: lanciala a mano con bin/wordpress-config.sh apply"
         $WP option delete "$OPZIONE_DA_FARE" >/dev/null || true
     else
         $WP option update "$OPZIONE_DA_FARE" $((tentativi + 1)) >/dev/null || true
         log "applico la configurazione di config/ (tentativo $((tentativi + 1)) di ${APPLY_TENTATIVI})"
-        WPF_AUTOMATICO=1 wp_script "$APPLY_ATTESA" apply.php || log "AVVISO: configurazione non applicata del tutto, riprovo al prossimo avvio"
+        esito=0
+        WPF_AUTOMATICO=1 wp_script "$APPLY_ATTESA" apply.php || esito=$?
+        if [ "$esito" -eq 124 ]; then
+            # Interrotto dal tempo massimo: PHP non toglie il proprio blocco, lo toglie l'init
+            log "AVVISO: configurazione interrotta dopo ${APPLY_ATTESA} secondi, riprovo al prossimo avvio"
+            $WP eval "require '${CONFIG_LIB}/comune.php'; wpf_sblocca_apply();" >/dev/null 2>&1 || true
+        elif [ "$esito" -ne 0 ]; then
+            log "AVVISO: configurazione non applicata del tutto, riprovo al prossimo avvio"
+        fi
     fi
 elif $config_presente && [ -z "$($WP option get "$OPZIONE_FATTO" 2>/dev/null || true)" ]; then
     log "config/ non applicata a questo sito: non si applica da sola, vedi bin/wordpress-config.sh apply"
+fi
+# Google Fonts salvati sul sito ma non aggiornati (download non riuscito, per esempio senza rete verso
+# Google): il sito usa i font di ripiego finché un apply o le Theme Options non li scaricano
+if $WP eval 'exit( function_exists( "us_get_local_google_fonts_state" ) && us_get_option( "store_gfonts_locally" ) && ! us_get_local_google_fonts_state()["is_current"] ? 0 : 1 );' 2>/dev/null; then
+    log "AVVISO: Google Fonts del sito non aggiornati: rilancia bin/wordpress-config.sh apply --conferma quando la rete raggiunge Google"
 fi
 
 # 9. Permessi: Apache gira come www-data, e anche il core deve essere suo, altrimenti WordPress

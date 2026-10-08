@@ -43,12 +43,20 @@ function wpf_post_applica( array $post_cfg, bool $prova, callable $diff, bool $p
 			'post_excerpt' => $p['post_excerpt'],
 			'menu_order'   => $p['menu_order'],
 		];
-		// Segreti tolti dall'export e valori ricalcolati dai plugin restano quelli del sito
-		$meta = array_filter(
-			$p['meta'],
-			fn( $valore, $nome ) => $valore !== WPF_SEGRETO && ! in_array( $nome, WPF_META_CALCOLATI, true ),
-			ARRAY_FILTER_USE_BOTH
-		);
+		// Valori ricalcolati dai plugin: restano quelli del sito. Segreti tolti dall'export, anche dentro un
+		// metadato composto: si rimette il valore del sito; un segreto che il sito non ha non si scrive.
+		$meta = [];
+		foreach ( $p['meta'] as $nome => $valore ) {
+			if ( in_array( $nome, WPF_META_CALCOLATI, true ) ) {
+				continue;
+			}
+			$valore = wpf_ripristina_segreti( $valore, $esistente ? get_post_meta( $esistente->ID, $nome, true ) : null );
+			if ( $valore !== null ) {
+				$meta[ $nome ] = $valore;
+			}
+		}
+		$originale = $p['originale'] ? wpf_post_per_chiave( $p['originale'] ) : null;
+		$tipo_wpml = 'post_' . $p['post_type'];
 		if ( $esistente ) {
 			$diversi = [];
 			foreach ( $campi as $nome => $valore ) {
@@ -67,9 +75,8 @@ function wpf_post_applica( array $post_cfg, bool $prova, callable $diff, bool $p
 			if ( ! $pagine && ! in_array( $p['post_type'], WPF_TIPI_BUILDER, true ) ) {
 				// Non è una differenza da applicare: si segnala senza contarla
 				WP_CLI::log( "post {$p['chiave']}: diverso dal repo in " . implode( ', ', $diversi ) . ', non aggiornato perché è una pagina della redazione (per aggiornarla: apply --pagine)' );
-				$originale = $p['originale'] ? wpf_post_per_chiave( $p['originale'] ) : null;
 				if ( ! $prova ) {
-					wpf_wpml_collega( $esistente->ID, 'post_' . $p['post_type'], $p['lingua'], $originale ? $originale->ID : null );
+					wpf_wpml_collega( $esistente->ID, $tipo_wpml, $p['lingua'], $originale ? $originale->ID : null );
 				}
 				continue;
 			}
@@ -93,8 +100,7 @@ function wpf_post_applica( array $post_cfg, bool $prova, callable $diff, bool $p
 		foreach ( $meta as $nome => $valore ) {
 			update_post_meta( $id, $nome, wp_slash( $valore ) );
 		}
-		$originale = $p['originale'] ? wpf_post_per_chiave( $p['originale'] ) : null;
-		wpf_wpml_collega( $id, 'post_' . $p['post_type'], $p['lingua'], $originale ? $originale->ID : null );
+		wpf_wpml_collega( $id, $tipo_wpml, $p['lingua'], $originale ? $originale->ID : null );
 	}
 	return $ok;
 }

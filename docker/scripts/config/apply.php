@@ -6,10 +6,11 @@
  *      wp eval-file /usr/local/lib/wp-forestas/apply.php
  * La cartella è config/ del repo (WPF_DIR_CONFIG), o un backup con bin/wordpress-config.sh apply --da.
  * WPF_PAGINE=1 aggiorna anche le pagine che esistono già, come la Home (vedi post.php).
- * Con WPF_PROVA=1 non scrive nulla e stampa una riga per differenza. Senza, applica nell'ordine WPML,
- * post, menu, opzioni, traduzioni dei testi delle opzioni, e solo se tutto riesce scrive l'opzione
- * wp_forestas_config_applicata. WPF_AUTOMATICO=1 (apply dell'init) si rifiuta di applicare un config/
- * esportato da un'altra versione principale di Impreza o di un plugin.
+ * Con WPF_PROVA=1 non scrive nulla e stampa una riga per differenza. Senza, applica nell'ordine: WPML
+ * (lingue e impostazioni), post, menu, Theme Options, traduzioni dei loro testi, theme_mods, posizioni
+ * dei menu, impostazioni del sito; solo se tutto riesce scrive l'opzione WPF_OPZIONE_FATTO.
+ * WPF_AUTOMATICO=1 (apply dell'init) si rifiuta di applicare un config/ esportato da un'altra versione
+ * (principale o minore, «9.4» contro «9.5») di Impreza o di un plugin: nessuno guarda le differenze.
  * Lanciato due volte non duplica nulla: post e menu si ritrovano dalla chiave stabile
  * (_wp_forestas_chiave); lo slug serve solo a ricollegare quelli di un sito nato prima di config/.
  */
@@ -65,8 +66,8 @@ if ( ! $prova && ! wpf_blocca_apply() ) {
 }
 
 // Versioni da cui è stato fatto l'export: se il sito ha versioni diverse lo si dice. A mano si decide
-// guardando le differenze; l'apply automatico non può guardarle, quindi con una versione principale
-// diversa (lo schema delle opzioni può essere cambiato) non applica.
+// guardando le differenze; l'apply automatico non può guardarle, quindi con una versione diversa (lo
+// schema delle opzioni può essere cambiato) non applica.
 $versioni_sito = wpf_versioni();
 foreach ( (array) $leggi( 'versioni.json' ) as $nome => $versione ) {
 	$sul_sito = $versioni_sito[ $nome ] ?? null;
@@ -74,8 +75,9 @@ foreach ( (array) $leggi( 'versioni.json' ) as $nome => $versione ) {
 		continue;
 	}
 	WP_CLI::warning( "config/ è stato esportato con {$nome} {$versione}, il sito ha " . ( $sul_sito ?? 'nessuna versione' ) . ': controlla le differenze prima di confermare' );
-	if ( $automatico && $sul_sito && strtok( (string) $versione, '.' ) !== strtok( $sul_sito, '.' ) ) {
-		WP_CLI::warning( 'versione principale diversa: l\'apply automatico non applica, guarda le differenze con bin/wordpress-config.sh apply' );
+	$serie = fn( $v ) => implode( '.', array_slice( explode( '.', (string) $v ), 0, 2 ) ); // «9.4.1» → «9.4»
+	if ( $automatico && $sul_sito && $serie( $versione ) !== $serie( $sul_sito ) ) {
+		WP_CLI::warning( 'versione diversa: l\'apply automatico non applica, guarda le differenze con bin/wordpress-config.sh apply' );
 		WP_CLI::halt( 1 );
 	}
 }
@@ -92,18 +94,27 @@ if ( $wpml ) {
 if ( ! $prova ) {
 	wpf_wpml_prepara();
 }
-$ok = wpf_post_applica( (array) $leggi( 'post.json' ), $prova, $diff, $pagine ) && $ok;
+$post_cfg = (array) $leggi( 'post.json' );
+$ok       = wpf_post_applica( $post_cfg, $prova, $diff, $pagine ) && $ok;
 
 /**
  * Id del post a cui punta un riferimento «@chiave:…»; null se il valore non è un riferimento, 0 se la
- * chiave non trova un post (segnalato: l'apply non è riuscito del tutto).
+ * chiave non trova un post (segnalato: l'apply non è riuscito del tutto). In modalità prova i post da
+ * creare o da ricollegare non esistono ancora con la loro chiave: il riferimento si segnala come
+ * differenza, perché con --conferma l'opzione che lo usa cambierà.
  */
-$risolvi = function ( $valore ) use ( &$ok, $prova ) {
+$chiavi_cfg = array_column( $post_cfg, 'chiave' );
+$segnalati  = [];
+$risolvi    = function ( $valore ) use ( &$ok, &$segnalati, $prova, $chiavi_cfg, $diff ) {
 	if ( ! is_string( $valore ) || strpos( $valore, WPF_RIFERIMENTO ) !== 0 ) {
 		return null;
 	}
-	$post = wpf_post_per_chiave( substr( $valore, strlen( WPF_RIFERIMENTO ) ) );
-	if ( ! $post && ! $prova ) {
+	$chiave = substr( $valore, strlen( WPF_RIFERIMENTO ) );
+	$post   = wpf_post_per_chiave( $chiave );
+	if ( ! $post && $prova && in_array( $chiave, $chiavi_cfg, true ) && ! isset( $segnalati[ $chiave ] ) ) {
+		$segnalati[ $chiave ] = true;
+		$diff( "riferimento {$valore}", 'post da creare o ricollegare', 'risolto con --conferma (header, footer, Home…)' );
+	} elseif ( ! $post && ! $prova ) {
 		WP_CLI::warning( "riferimento {$valore} non risolto: nessun post con quella chiave" );
 		$ok = false;
 	}

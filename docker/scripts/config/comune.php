@@ -51,13 +51,15 @@ const WPF_WPML_INTERNE = [
 	[ 'st', 'was_frontend_visited_key' ],
 	[ 'translation-management', 'custom_fields_translation' ],
 	[ 'translation-management', 'custom_term_fields_translation' ],
+	// Id della pagina usata come root page: su un altro sito sarebbe un'altra pagina. L'export avvisa
+	// se è impostata, l'apply lascia quella del sito.
+	[ 'urls', 'root_page' ],
 ];
 
-// Theme Options di Impreza che non sono configurazione: la modalità manutenzione la accende la licenza
-// di sviluppo (su UAT è sempre attiva) o il pannello, e versionata accenderebbe la manutenzione anche
-// su un sito di produzione nuovo
-// Lo stesso vale per i campi del pannello che descrivono un'operazione o un controllo in corso
-// (ottimizzazione degli asset, backup, informazioni su icone e immagini)
+// Theme Options di Impreza che non sono configurazione: la modalità manutenzione (la accende la licenza
+// di sviluppo, su UAT sempre, o il pannello: versionata accenderebbe la manutenzione anche su un sito di
+// produzione nuovo) e i campi che descrivono un'operazione o un controllo in corso (ottimizzazione degli
+// asset, backup, informazioni su icone e immagini)
 const WPF_IMPREZA_STATO = [ 'maintenance_mode', 'optimize_assets_start', 'optimize_assets_end', 'of_backup', 'used_icons_info', 'img_size_info' ];
 
 // Opzioni di Impreza con l'id di una pagina che il nome non rivela (vedi wpf_opzione_riferimento)
@@ -87,12 +89,12 @@ const WPF_ATTRIBUTI_ALLEGATO = '/\b(image|images|img|ids|bg_image|logo|icon_imag
 // Valori che hanno la forma di una chiave anche se il nome non lo dice: un export che li trova si ferma
 // (il repo è pubblico). Nome del tipo di chiave => espressione.
 const WPF_FORME_SEGRETE = [
-	'chiave Google'       => '/AIza[0-9A-Za-z_\-]{35}/',
-	'chiave Stripe'       => '/\b(sk|rk)_live_[0-9A-Za-z]{16,}/',
-	'chiave privata'      => '/-----BEGIN [A-Z ]*PRIVATE KEY-----/',
-	'token GitHub'        => '/\bgh[pousr]_[0-9A-Za-z]{30,}/',
-	'chiave AWS'          => '/\bAKIA[0-9A-Z]{16}\b/',
-	'token Slack'         => '/\bxox[abposr]-[0-9A-Za-z-]{10,}/',
+	'chiave Google'  => '/AIza[0-9A-Za-z_\-]{35}/',
+	'chiave Stripe'  => '/\b(sk|rk)_live_[0-9A-Za-z]{16,}/',
+	'chiave privata' => '/-----BEGIN [A-Z ]*PRIVATE KEY-----/',
+	'token GitHub'   => '/\bgh[pousr]_[0-9A-Za-z]{30,}/',
+	'chiave AWS'     => '/\bAKIA[0-9A-Z]{16}\b/',
+	'token Slack'    => '/\bxox[abposr]-[0-9A-Za-z-]{10,}/',
 ];
 
 // Nomi che sembrano segreti ma sono impostazioni
@@ -412,7 +414,7 @@ function wpf_indirizzo_locale( string $url ): bool {
 }
 
 /** Vero se il sito risponde su questa macchina (vedi wpf_indirizzo_locale). */
-function wpf_url_locale(): bool {
+function wpf_sito_locale(): bool {
 	return wpf_indirizzo_locale( home_url() );
 }
 
@@ -550,10 +552,14 @@ function wpf_json( $dati ): string {
 	return json_encode( wpf_ordina( $dati ), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . "\n";
 }
 
+/** Dettagli WPML di un elemento (lingua, trid, lingua di partenza), o null senza WPML. */
+function wpf_dettagli_lingua( int $id, string $tipo ): ?object {
+	return apply_filters( 'wpml_element_language_details', null, [ 'element_id' => $id, 'element_type' => $tipo ] ) ?: null;
+}
+
 /** Lingua WPML di un elemento, o null senza WPML. */
 function wpf_lingua( int $id, string $tipo ): ?string {
-	$dettagli = apply_filters( 'wpml_element_language_details', null, [ 'element_id' => $id, 'element_type' => $tipo ] );
-	return $dettagli->language_code ?? null;
+	return wpf_dettagli_lingua( $id, $tipo )->language_code ?? null;
 }
 
 /** Traduzioni WPML di un elemento: [ lingua => id ], originale compreso. */

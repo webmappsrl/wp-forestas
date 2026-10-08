@@ -100,7 +100,8 @@ diversi, chiede le credenziali FTP.
       leggibili in `config/`. L'URL del sito diventa
       un segnaposto. I file sono dell'utente dell'host, non di root.
 - [x] Nessun segreto nei file esportati, chiudendo per impostazione predefinita: le opzioni con
-      `key`, `secret`, `token`, `password` o `api` nel nome sono tolte e segnalate (oggi
+      `key`, `secret`, `token`, `password` o `pass` nel nome (anche in camelCase; «api» da sola no,
+      `apiUrl` è un'impostazione) sono tolte e segnalate (oggi
       `maintenance_private_key`); quelle che servono vanno nel `.env` e l'apply le rimette. Un valore
       con la forma di una chiave nota, sotto qualsiasi nome, ferma l'export senza scrivere.
 - [x] Google Fonts serviti in locale (`store_gfonts_locally`), verificato anche dopo il reset.
@@ -116,7 +117,8 @@ diversi, chiede le credenziali FTP.
       tentativi, solo con il comando esplicito. Un riavvio di un sito configurato non cambia nulla.
 - [x] I passi nuovi dell'init (zip, licenze, catalogo WPML, apply) non bloccano mai l'avvio: in caso
       di errore scrivono un avviso nei log; licenze e plugin si ritentano a ogni riavvio, l'apply
-      entro i suoi 3 tentativi. Un apply parziale esce con errore.
+      entro i suoi 3 tentativi. Un apply parziale esce con errore. Se `comune.php` (montato dal repo)
+      non si carica, WordPress parte lo stesso con un avviso.
 - [x] L'apply ha una modalità che non scrive e restituisce le differenze fra configurazione del repo
       e sito, usata dal comando sull'host prima di chiedere `--conferma`.
 - [x] Comando sull'host in questo repo: `bin/wordpress-config.sh export|apply|ritratto`. Trova da
@@ -138,9 +140,10 @@ diversi, chiede le credenziali FTP.
       zip necessari e dove metterli, flusso «cambi la configurazione → export → commit»,
       licenze nel `.env` e comportamento in locale, passi di messa in opera su UAT (zip, chiavi,
       `wordpress-up.sh`, Child Theme Configurator da disattivare).
-- [x] Il codice cambia solo in questo repo. In `forestas` cambiano la documentazione (procedura di UAT,
-      `CLAUDE.md`, pagina di conoscenza, commento di `scripts/wordpress-reset.sh`) e, dopo il merge,
-      il puntatore del submodule, che non si committa insieme a questo lavoro.
+- [x] Il codice di WordPress cambia solo in questo repo. In `forestas` cambiano la documentazione
+      (procedura di UAT, `CLAUDE.md`, pagina di conoscenza) e due correzioni a `wordpress-reset.sh` e
+      `wordpress-up.sh` (lettura di `APP_NAME`), poi, dopo il merge, il puntatore del submodule, che
+      non si committa insieme a questo lavoro.
 
 ## Rischi
 
@@ -170,11 +173,14 @@ Repo `wp-forestas`:
 
 - `themes/forestas-child/style.css`, `themes/forestas-child/functions.php` — nuovi (`functions.php`
   dà al CSS del child la sua `Version` al posto di quella di Impreza)
-- `compose.yml` — mount del child, degli zip dei plugin, di `config/` e degli script di configurazione
-- `docker/scripts/init-wordpress.sh` — passi 3b (costanti d'ambiente), 4b (`.htaccess` per i
+- `compose.yml` — mount del child, degli zip dei plugin, di `config/` e degli script di configurazione;
+  nome dell'immagine con `APP_NAME`
+- `docker/scripts/init-wordpress.sh` — passi 1 (database controllato con una query, uscita se non
+  risponde), 3b (costanti d'ambiente), 4b (`.htaccess` per i
   permalink), 4c (blocco di un apply interrotto), 6 (wp-geohub a un commit fisso), 7 (controllo
   dello zip), 7b (UpSolution Core), 7c (plugin commerciali), 8 (child), 8b (licenza Impreza), 8c
-  (apply automatico), 9 (proprietario dei file); funzioni `url_locale`, `wp_script` e `slug_zip`
+  (apply automatico), 9 (proprietario dei file); funzioni `config_php` e `config_valore` (nomi e
+  percorsi da `comune.php`), `url_locale`, `wp_script` e `slug_zip`
 - `README.md`, `CLAUDE.md`, `docs/knowledge/inizializzazione-wordpress.md`
 - `.gitignore`, `.env-example`, `docker/plugins/.gitkeep`,
   `docker/plugins/commerciali.txt` (elenco dei plugin commerciali), `config/` (nuova, con `.gitkeep`),
@@ -185,7 +191,9 @@ Repo `wp-forestas`:
   `backup/` (esclusa da git)
 
 Repo `forestas`: `docs/howto/messa-in-opera-wordpress-uat.md`, `docs/knowledge/wordpress-nello-shard.md`,
-`CLAUDE.md`, commento di `scripts/wordpress-reset.sh`; il puntatore del submodule dopo il merge.
+`CLAUDE.md`, `scripts/wordpress-reset.sh` e `scripts/wordpress-up.sh` (commento e lettura di
+`APP_NAME` senza `grep | head`, che con `pipefail` faceva uscire lo script senza messaggio); il
+puntatore del submodule dopo il merge.
 
 Su UAT, fuori dal repo: zip di Impreza in `docker/themes/`, licenza, Theme Options di Impreza,
 child creato con Child Theme Configurator e poi sostituito dal mount, temi di default eliminati.

@@ -85,9 +85,15 @@ Vincolo: `wp-geohub` non ha tag né release; si scarica a un commit fisso (`GEOH
 - **Nomi, percorsi ed elenco dei plugin commerciali solo in `comune.php`** (oc:8717): bash e PHP non
   possono condividere codice, ma l'init li legge con `php -r` (`config_php`) e `bin/` con `php -r`
   dentro il container. Una copia in bash rinominata a metà avrebbe fatto ripartire l'apply automatico
-  all'infinito, o mai.
+  all'infinito, o mai. Se `comune.php` non si carica l'init usa valori di riserva uguali al compose e
+  WordPress parte: un errore in un file montato dal repo non deve tenere giù il sito.
+- **Google Fonts non scaricati: un avviso** (oc:8717): la configurazione resta applicata, l'init lo
+  ricorda a ogni avvio e un nuovo apply riprova solo i font. Con un errore, un sito senza rete verso
+  Google non sarebbe mai risultato configurato.
 - **Database che non risponde: l'init si ferma** (oc:8717): proseguendo, `core is-installed` fallisce
   come su un sito vuoto e il passo 4 tratterebbe un sito esistente come nuovo, con l'apply automatico.
+  Il controllo è una query vera con le credenziali del `.env`: `mariadb-admin ping` risponde sì anche
+  con utente o password sbagliati.
 - **Le pagine esistenti si aggiornano solo con `apply --pagine`** (oc:8717): la Home è in `config/`
   perché un sito ricreato deve averla, ma è anche contenuto della redazione; un apply fatto per un
   colore non deve riportarla alla versione del repo.
@@ -103,14 +109,19 @@ Export e apply usano funzioni e classi che Impreza e WPML non documentano come A
 aggiornamento dei due (README, «Aggiornamenti di Impreza e WPML») vanno controllati questi punti,
 con un apply di prova su un WordPress usa e getta prima di quello su UAT:
 
-- **Impreza / UpSolution Core:** `usof_save_options`, `usof_backup`, `us_config('theme-options')`
-  (campi `upload`), `us_get_local_google_fonts_state`, `us_download_local_google_fonts`, `us_api` con
-  `/envato_auth` (`licenza-impreza.php` riproduce `us_check_and_activate_theme`, che legge `$_GET` e
-  fa un redirect e quindi non si può richiamare), il salvataggio dei metadati in `us_save_post`.
+- **Impreza / UpSolution Core:** `usof_save_options`, `usof_backup`, `us_get_option`,
+  `us_config('theme-options')` (campi `upload`), `us_get_local_google_fonts_state`,
+  `us_download_local_google_fonts`, il salvataggio dei metadati in `us_save_post`, l'handle
+  `theme-style` del CSS del child (`functions.php`), `us_api` con `/envato_auth` e le opzioni
+  `us_license_secret`, `us_license_activated`, `us_license_dev_activated`,
+  `us_can_modify_favorite_sections` (`licenza-impreza.php` riproduce `us_check_and_activate_theme`,
+  che legge `$_GET` e fa un redirect e quindi non si può richiamare).
 - **WPML:** `\WPML\LanguageEditor\PageData`, `Endpoint\SaveLanguages`, `Presets\CatalogueSyncRunner`,
   `\WPML\FP\Right`, `WPML_Package_Translation_Schema::run_update`, `WPML_Config::load_config_run`,
-  `$sitepress->delete_element_translation` (vuole il trid come stringa), le tabelle
-  `icl_strings`/`icl_string_translations` lette dall'export.
+  `$sitepress->delete_element_translation` (vuole il trid come stringa), `$sitepress->save_settings`,
+  `wpml_is_setup_complete`, `icl_add_string_translation` con `ICL_TM_COMPLETE`, i filtri e le azioni
+  `wpml_element_language_details`, `wpml_set_element_language_details`, `wpml_object_id`,
+  `wpml_switch_language`, le tabelle `icl_strings`/`icl_string_translations` lette da export e apply.
 
 La versione principale diversa ferma l'apply automatico; un apply a mano avvisa e mostra le
 differenze prima di `--conferma`.

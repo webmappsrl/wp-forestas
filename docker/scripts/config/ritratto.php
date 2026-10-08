@@ -81,9 +81,20 @@ if ( $sitepress ) {
 	$righe[] = 'wpml setup completato: ' . ( function_exists( 'wpml_is_setup_complete' ) && wpml_is_setup_complete() ? 'sì' : 'no' );
 }
 
-$post = get_posts( [ 'post_type' => array_values( get_post_types() ), 'post_status' => 'any', 'meta_key' => WPF_META_CHIAVE, 'numberposts' => -1, 'suppress_filters' => true ] );
+// Post con la chiave stabile: titolo, lingua e impronta del contenuto (una modifica della redazione a
+// una pagina esportata cambia la riga anche se l'apply non la tocca senza --pagine)
+$post = get_posts(
+	[
+		'post_type'        => array_values( get_post_types() ),
+		'post_status'      => 'any',
+		'meta_key'         => WPF_META_CHIAVE,
+		'numberposts'      => -1,
+		'suppress_filters' => true,
+	]
+);
 foreach ( $post as $p ) {
-	$righe[] = 'post ' . get_post_meta( $p->ID, WPF_META_CHIAVE, true ) . ': ' . $p->post_title . ' (' . ( wpf_lingua( $p->ID, 'post_' . $p->post_type ) ?? '-' ) . ', ' . md5( $p->post_content ) . ')';
+	$lingua  = wpf_lingua( $p->ID, 'post_' . $p->post_type ) ?? '-';
+	$righe[] = 'post ' . get_post_meta( $p->ID, WPF_META_CHIAVE, true ) . ": {$p->post_title} ({$lingua}, " . md5( $p->post_content ) . ')';
 }
 
 $righe[] = '.htaccess: ' . ( is_file( ABSPATH . '.htaccess' ) ? 'presente' : 'assente' );
