@@ -24,8 +24,9 @@ uso() {
 Configurazione del WordPress di Forestas, dall'host.
 
   bin/wordpress-config.sh export [--in DIR]   configurazione del sito → config/ (o DIR)
-  bin/wordpress-config.sh apply               mostra cosa cambierebbe, senza scrivere
-  bin/wordpress-config.sh apply --conferma    salva un backup in backup/<data-ora>/ e applica config/
+  bin/wordpress-config.sh apply [--da DIR]               mostra cosa cambierebbe, senza scrivere
+  bin/wordpress-config.sh apply [--da DIR] --conferma    salva un backup in backup/<data-ora>/ e applica
+                                                         config/ (o DIR, per esempio un backup)
   bin/wordpress-config.sh ritratto            stato del sito, da confrontare prima e dopo un reset
   bin/wordpress-config.sh zip                 zip di Impreza e dei plugin commerciali installati
 
@@ -64,7 +65,6 @@ esac
 C=$(trova_container)
 URL=$(docker exec "$C" printenv WP_URL || true)
 ADMIN=$(docker exec "$C" printenv WP_ADMIN_USER || true)
-# Con un sito in https, HTTPS va impostato prima che WordPress si carichi (CSS rigenerato da Impreza)
 # Con un sito in https, HTTPS va impostato prima che WordPress si carichi (CSS rigenerato da Impreza):
 # stesso criterio di wp_script() in init-wordpress.sh
 HTTPS_EXTRA=()
@@ -86,16 +86,18 @@ esegui_script() {
 export_in() {
     local dest=$1 tmp=/tmp/wp-forestas-export-$$ prodotti f
     mkdir -p "$dest"
-    if [ "${2:-}" = "sola-lettura" ]; then
-        esegui_script export.php "WPF_EXPORT_DIR=${tmp}" "WPF_SOLA_LETTURA=1"
-    else
-        esegui_script export.php "WPF_EXPORT_DIR=${tmp}"
+    local extra=()
+    [ "${2:-}" = "sola-lettura" ] && extra=("WPF_SOLA_LETTURA=1")
+    if ! esegui_script export.php "WPF_EXPORT_DIR=${tmp}" ${extra[@]+"${extra[@]}"}; then
+        docker exec "$C" rm -rf "$tmp"
+        fail "export non riuscito: vedi i messaggi sopra, nessun file scritto in ${dest}"
     fi
     # Si sostituiscono solo i file prodotti: un export con WPML spento non cancella wpml.json
     prodotti=$(docker exec "$C" sh -c "cd ${tmp} && ls *.json")
-    for f in impreza.json child.json sito.json post.json menu.json wpml.json versioni.json; do
-        if [[ $'\n'"$prodotti"$'\n' != *$'\n'"$f"$'\n'* ]] && [ -f "${dest}/${f}" ]; then
-            echo "AVVISO: ${f} non prodotto (per wpml.json: WPML non è attivo), lasciato com'è in ${dest}"
+    for f in "$dest"/*.json; do
+        [ -f "$f" ] || continue
+        if [[ $'\n'"$prodotti"$'\n' != *$'\n'"$(basename "$f")"$'\n'* ]]; then
+            echo "AVVISO: $(basename "$f") non prodotto dall'export (vedi gli avvisi sopra), lasciato com'è in ${dest}"
         fi
     done
     for f in $prodotti; do rm -f "${dest}/${f}"; done
@@ -116,15 +118,38 @@ case "${1:-}" in
         fi
         ;;
     apply)
-        if [ "${2:-}" = "--conferma" ]; then
+        shift
+        sorgente="" conferma=false
+        while [ $# -gt 0 ]; do
+            case "$1" in
+                --da) [ -n "${2:-}" ] || fail "--da vuole una cartella"; sorgente=$2; shift 2 ;;
+                --conferma) conferma=true; shift ;;
+                *) uso; exit 1 ;;
+            esac
+        done
+        config_dir="" cartella="config/"
+        if [ -n "$sorgente" ]; then
+            # Una cartella diversa da config/ (un backup) si copia nel container: config/ è montata in sola
+            # lettura e il checkout del server non va sporcato
+            [ -d "$sorgente" ] && ls "$sorgente"/*.json >/dev/null 2>&1 || fail "${sorgente} non contiene file .json"
+            config_dir=/tmp/wp-forestas-apply-$$
+            docker exec "$C" rm -rf "$config_dir"
+            docker cp "$sorgente/." "${C}:${config_dir}" >/dev/null
+            docker exec "$C" chmod -R a+rX "$config_dir"
+            trap 'docker exec "$C" rm -rf "$config_dir"' EXIT
+            cartella=$sorgente
+        fi
+        dir_arg=()
+        [ -n "$config_dir" ] && dir_arg=("WPF_CONFIG_DIR=${config_dir}")
+        if $conferma; then
             backup="${REPO}/backup/$(date +%Y-%m-%d-%H%M%S)"
             echo "backup della configurazione attuale in ${backup}"
             export_in "$backup" sola-lettura
-            esegui_script apply.php || fail "configurazione applicata solo in parte: vedi gli avvisi sopra (backup in ${backup})"
+            esegui_script apply.php ${dir_arg[@]+"${dir_arg[@]}"} || fail "configurazione non applicata o applicata solo in parte: vedi i messaggi sopra (backup in ${backup})"
         else
-            echo "Differenze fra config/ e il sito ${URL} (nulla viene scritto):"
-            esegui_script apply.php WPF_PROVA=1
-            echo "Per applicarle: $0 apply --conferma"
+            echo "Differenze fra ${cartella} e il sito ${URL} (nulla viene scritto):"
+            esegui_script apply.php WPF_PROVA=1 ${dir_arg[@]+"${dir_arg[@]}"}
+            echo "Per applicarle: $0 apply${sorgente:+ --da $sorgente} --conferma"
         fi
         ;;
     ritratto)
@@ -140,8 +165,9 @@ case "${1:-}" in
         ;;
     zip)
         mkdir -p "${REPO}/docker/themes" "${REPO}/docker/plugins"
-        docker exec "$C" rm -rf /tmp/wpf-zip
-        docker exec "$C" mkdir -p /tmp/wpf-zip
+        ZIP_TMP=/tmp/wp-forestas-zip-$$
+        docker exec "$C" rm -rf "$ZIP_TMP"
+        docker exec "$C" mkdir -p "$ZIP_TMP"
         # zip <cartella dentro wp-content> <nome dello zip>: la cartella resta la radice dello zip
         crea_zip() {
             docker exec -w "${WP_PATH}/wp-content/$(dirname "$1")" "$C" php -r '
@@ -149,10 +175,10 @@ case "${1:-}" in
                 if ($z->open($argv[2], ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) { exit(1); }
                 $it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($argv[1], FilesystemIterator::SKIP_DOTS));
                 foreach ($it as $f) { $z->addFile($f->getPathname(), $f->getPathname()); }
-                exit($z->close() ? 0 : 1);' "$(basename "$1")" "/tmp/wpf-zip/$2"
+                exit($z->close() ? 0 : 1);' "$(basename "$1")" "${ZIP_TMP}/$2"
         }
         crea_zip themes/Impreza impreza.zip
-        docker cp "${C}:/tmp/wpf-zip/impreza.zip" "${REPO}/docker/themes/impreza.zip" >/dev/null
+        docker cp "${C}:${ZIP_TMP}/impreza.zip" "${REPO}/docker/themes/impreza.zip" >/dev/null
         echo "docker/themes/impreza.zip: Impreza $(docker exec "$C" wp --allow-root --path="$WP_PATH" theme get Impreza --field=version)"
         for slug in $PLUGIN_COMMERCIALI; do
             if ! docker exec "$C" test -d "${WP_PATH}/wp-content/plugins/${slug}"; then
@@ -160,10 +186,10 @@ case "${1:-}" in
                 continue
             fi
             crea_zip "plugins/${slug}" "${slug}.zip"
-            docker cp "${C}:/tmp/wpf-zip/${slug}.zip" "${REPO}/docker/plugins/${slug}.zip" >/dev/null
+            docker cp "${C}:${ZIP_TMP}/${slug}.zip" "${REPO}/docker/plugins/${slug}.zip" >/dev/null
             echo "docker/plugins/${slug}.zip: $(docker exec "$C" wp --allow-root --path="$WP_PATH" plugin get "$slug" --field=version)"
         done
-        docker exec "$C" rm -rf /tmp/wpf-zip
+        docker exec "$C" rm -rf "$ZIP_TMP"
         echo "Copia gli zip anche nella cartella condivisa del team: non stanno in git."
         ;;
 esac

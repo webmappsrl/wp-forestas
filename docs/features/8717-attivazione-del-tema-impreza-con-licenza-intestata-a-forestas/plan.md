@@ -33,10 +33,11 @@ Core 9.4.
 - `DISALLOW_FILE_MODS` solo con `WP_AMBIENTE=produzione`.
 - WPML si configura solo con le sue API (`CatalogueSyncRunner`, `SaveLanguages` con `presetCode`,
   `$sitepress->save_settings()`, opzione `WPML(setup)`), mai con SQL sulle tabelle `wp_icl_*`.
-- Comandi WP-CLI che scrivono file: come `www-data`; con `WP_URL` in `https`, `$_SERVER['HTTPS']`
+- Comandi WP-CLI che scrivono file: come `www-data` (deviazione per l'init: [notes.md](notes.md#vincolo-www-data)); con `WP_URL` in `https`, `$_SERVER['HTTPS']`
   impostato con `--exec` prima del caricamento.
-- Segnaposti nei file di `config/`: `@url_sito` per l'URL, `@segreto` per un valore tolto,
-  `@chiave:<nome>` per un riferimento a un post esportato.
+- Segnaposti nei file di `config/`: `@url_sito` per l'URL (`@url_sito_json` e `@url_sito_urlenc`
+  per le sue forme nel JSON del builder e codificata: [notes.md](notes.md#task-7-export-della-configurazione)),
+  `@segreto` per un valore tolto, `@chiave:<nome>` per un riferimento a un post esportato.
 
 ## Attenzione in review
 
@@ -89,6 +90,8 @@ Core 9.4.
 
 ### Task 5: Struttura per zip e configurazione
 
+> ⚠️ L'implementazione ha deviato da questo task: [notes.md](notes.md#task-5-struttura-per-zip-e-configurazione)
+
 **File:** `.gitignore`, `docker/plugins/.gitkeep` (nuovo), `compose.yml`,
 `docker/configs/php/Dockerfile`, `.env-example`, `config/.gitkeep` (nuovo)
 
@@ -106,6 +109,8 @@ Core 9.4.
       `docker compose -f ../compose.yml config --quiet` dalla cartella di `forestas` esce 0.
 
 ### Task 6: Codice installato dall'init
+
+> ⚠️ L'implementazione ha deviato da questo task: [notes.md](notes.md#task-6-codice-installato-dallinit)
 
 **File:** `docker/scripts/init-wordpress.sh`
 
@@ -130,6 +135,8 @@ Core 9.4.
       non cambia nulla. Poi `docker compose -p wpprova down -v`.
 
 ### Task 7: Export della configurazione
+
+> ⚠️ L'implementazione ha deviato da questo task: [notes.md](notes.md#task-7-export-della-configurazione)
 
 **File:** `docker/scripts/config/comune.php`, `docker/scripts/config/export.php` (nuovi)
 
@@ -158,6 +165,8 @@ diventa un link con URL relativo.
       stampa `escluso: maintenance_private_key`; `header_id` è un riferimento `@chiave:`.
 
 ### Task 8: Apply della configurazione
+
+> ⚠️ L'implementazione ha deviato da questo task: [notes.md](notes.md#task-8-apply-della-configurazione)
 
 **File:** `docker/scripts/config/apply.php`, `docker/scripts/config/wpml.php` (nuovi)
 
@@ -195,6 +204,8 @@ uscita 0. Scrive `wp_forestas_config_applicata` (data ISO) solo a fine senza err
 
 ### Task 10: Comando sull'host
 
+> ⚠️ L'implementazione ha deviato da questo task: [notes.md](notes.md#task-10-comando-sullhost)
+
 **File:** `bin/wordpress-config.sh` (nuovo)
 
 **Interfacce:** `bin/wordpress-config.sh export [--in DIR] | apply [--conferma] | ritratto | zip`.
@@ -213,6 +224,8 @@ uscita 0. Scrive `wp_forestas_config_applicata` (data ISO) solo a fine senza err
       `apply` senza argomenti dopo un `export` stampa «nessuna differenza».
 
 ### Task 11: Ritratto e prova completa
+
+> ⚠️ L'implementazione ha deviato da questo task: [notes.md](notes.md#task-11-ritratto-e-prova-completa)
 
 **File:** `docker/scripts/config/ritratto.php` (nuovo)
 

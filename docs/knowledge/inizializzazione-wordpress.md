@@ -25,8 +25,8 @@ qui conta come si comporta e perché.
 - **Dietro un proxy HTTPS** `wp-config.php` imposta `HTTPS=on` quando arriva
   `X-Forwarded-Proto: https`: senza, WordPress crede di essere in http e va in un ciclo di redirect.
 
-Vincolo: `wp-geohub` si scarica dal `main` del repo pubblico, che non ha tag né release; ogni
-installazione prende il codice del momento. Rischio accettato (oc:8711).
+Vincolo: `wp-geohub` non ha tag né release; si scarica a un commit fisso (`GEOHUB_REF` in
+`init-wordpress.sh`), che si aggiorna a mano (oc:8717). Un sito già installato non lo riscarica.
 
 ## Perché così
 
@@ -66,7 +66,22 @@ installazione prende il codice del momento. Rischio accettato (oc:8711).
   chiavi fra l'anteprima e l'esecuzione.
 - **Script di configurazione montati dal repo** (oc:8717): copiati solo nell'immagine, una loro
   modifica non valeva finché non si ricostruiva l'immagine, e su UAT `bin/` e `config/` nuovi potevano
-  girare con script vecchi.
+  girare con script vecchi. `init-wordpress.sh` invece sta solo nell'immagine: una sua modifica vale
+  dopo `scripts/wordpress-up.sh` di `forestas`, che la ricostruisce.
+- **`.htaccess` scritto dall'init e dall'apply, non da WP-CLI** (oc:8717): `wp rewrite structure
+  --hard` lo scrive solo se WP-CLI sa che `mod_rewrite` c'è, e da riga di comando non lo sa. Senza il
+  file un sito ricreato risponde 404 su tutte le pagine tranne la home. Lo scrive
+  `wpf_scrivi_htaccess()` con la funzione di WordPress che usa il pannello, dichiarando che
+  `mod_rewrite` c'è (l'immagine lo abilita): l'init solo se il file manca, l'apply quando cambia i
+  permalink. La funzione tocca solo la sezione «WordPress» del file.
+- **wp-geohub a un commit fisso** (oc:8717): dal ramo `main` due siti ricreati in giorni diversi
+  avevano codice diverso, contro l'obiettivo di un sito ricreabile.
+- **Un apply alla volta, e l'automatico solo con le stesse versioni principali** (oc:8717): l'apply
+  dell'avvio e uno lanciato dall'host nello stesso momento creerebbero post e menu doppi. Il blocco
+  si toglie a ogni avvio del container (passo 4c), perché un apply gira dentro il container e muore
+  con lui; e un
+  `config/` di un Impreza o un WPML di versione principale diversa può avere uno schema diverso, che
+  l'apply automatico applicherebbe senza che nessuno guardi le differenze.
 
 ## Come ci siamo arrivati
 
@@ -81,7 +96,6 @@ installazione prende il codice del momento. Rischio accettato (oc:8711).
 - **Post cercati con `post_type => any`** (oc:8717, superata): escludeva `us_header` e
   `us_page_block`; poi, con UpSolution Core spento, l'apply duplicava header e footer. Ora la ricerca
   va diretta sui metadati e un tipo non registrato si salta.
-
 - **Plugin nella cartella `wp-geohub`** (oc:8711, superata): l'attivazione falliva perché il plugin
   cerca i suoi shortcode in `wp-content/plugins/wm-package/` (`functions/imports.php`).
 - **`chown` solo su `wp-content`** (oc:8711, superata da oc:8717): il core scaricato da

@@ -3,7 +3,8 @@
  * Funzioni condivise da export, apply e ritratto della configurazione (oc:8717).
  *
  * Nei file di config/ tre segnaposti sostituiscono ciò che cambia da un sito all'altro:
- * - @url_sito       l'indirizzo del sito (@url_sito_json nella forma con le barre protette);
+ * - @url_sito       l'indirizzo del sito (@url_sito_json nella forma con le barre protette,
+ *                   @url_sito_urlenc in quella codificata per gli URL);
  * - @segreto        un valore tolto perché segreto (il repo è pubblico);
  * - @chiave:<nome>  un post esportato, al posto del suo id.
  */
@@ -12,6 +13,13 @@ const WPF_SEGNAPOSTO_URL = '@url_sito';
 const WPF_SEGRETO        = '@segreto';
 const WPF_RIFERIMENTO    = '@chiave:';
 const WPF_META_CHIAVE    = '_wp_forestas_chiave';
+// Percorsi montati dal compose: gli stessi di docker/scripts/init-wordpress.sh (PLUGIN_ZIP_DIR, CONFIG_DIR)
+const WPF_DIR_PLUGIN = '/opt/wp-forestas/plugins';
+const WPF_DIR_CONFIG = '/opt/wp-forestas/config';
+// Opzione che impedisce due apply nello stesso momento (l'automatico dell'init e uno lanciato dall'host)
+const WPF_OPZIONE_APPLY_IN_CORSO = 'wp_forestas_apply_in_corso';
+// Dopo quanti secondi un apply «in corso» si considera interrotto e il blocco si può togliere
+const WPF_APPLY_SCADENZA = 900;
 // I nomi di queste due opzioni sono ripetuti in docker/scripts/init-wordpress.sh: vanno cambiati insieme
 const WPF_OPZIONE_FATTO  = 'wp_forestas_config_applicata';
 // Scritta dall'init quando installa WordPress: solo un sito nato così riceve l'apply automatico
@@ -48,6 +56,30 @@ const WPF_IMPREZA_STATO = [ 'maintenance_mode', 'optimize_assets_start', 'optimi
 // Opzioni di Impreza con l'id di una pagina che il nome non rivela (vedi wpf_opzione_riferimento)
 const WPF_IMPREZA_PAGINE = [ 'page_404', 'search_page' ];
 
+// Metadati dei post che i plugin ricavano da sé a ogni salvataggio: UpSolution Core dal contenuto
+// (us_save_post: stili degli elementi, filtri, schema FAQ), WPML Media dagli allegati usati (id che
+// cambiano da un sito all'altro). Non si esportano e non si applicano: li ricalcola il salvataggio
+// del post fatto dall'apply.
+const WPF_META_CALCOLATI = [ '_us_jsoncss_data', '_us_faceted_filter_items', '_us_schema_markup_faq', 'copied_media_ids', 'referenced_media_ids' ];
+
+// Metadati standard delle voci di menu: già rappresentati dai campi di wpf_voci_menu(). Gli altri (mega
+// menu e pulsante di Impreza, «us_mega_menu_settings», «_menu_item_btn_style»…) si esportano a parte.
+const WPF_META_VOCE_STANDARD = [ '_menu_item_type', '_menu_item_menu_item_parent', '_menu_item_object_id', '_menu_item_object', '_menu_item_target', '_menu_item_classes', '_menu_item_xfn', '_menu_item_url', '_menu_item_orphaned' ];
+
+// Attributi del builder che contengono id di allegati della Libreria media («image="12"», «images="3,4"»)
+const WPF_ATTRIBUTI_ALLEGATO = '/\b(image|images|img|ids|bg_image|logo|icon_image)="\d/';
+
+// Valori che hanno la forma di una chiave anche se il nome non lo dice: un export che li trova si ferma
+// (il repo è pubblico). Nome del tipo di chiave => espressione.
+const WPF_FORME_SEGRETE = [
+	'chiave Google'       => '/AIza[0-9A-Za-z_\-]{35}/',
+	'chiave Stripe'       => '/\b(sk|rk)_live_[0-9A-Za-z]{16,}/',
+	'chiave privata'      => '/-----BEGIN [A-Z ]*PRIVATE KEY-----/',
+	'token GitHub'        => '/\bgh[pousr]_[0-9A-Za-z]{30,}/',
+	'chiave AWS'          => '/\bAKIA[0-9A-Z]{16}\b/',
+	'token Slack'         => '/\bxox[abposr]-[0-9A-Za-z-]{10,}/',
+];
+
 // Nomi che sembrano segreti ma sono impostazioni
 const WPF_NON_SEGRETI = [ 'sync_password' ];
 
@@ -59,7 +91,8 @@ function wpf_valore_segreto( string $nome ): bool {
 	if ( in_array( $nome, WPF_NON_SEGRETI, true ) ) {
 		return false;
 	}
-	return (bool) preg_match( '/(^|_)(key|secret|token|password|api)(_|$)/i', $nome );
+	// Le parole intere, più le forme attaccate più comuni («apikey», «licensekey», «secretkey»)
+	return (bool) preg_match( '/(^|_)(key|secret|token|password|passwd|pwd|api)(_|$)|apikey|api_key|licen[cs]e_?key|secret_?key|access_?token/i', $nome );
 }
 
 /**
@@ -86,14 +119,16 @@ function wpf_togli_segreti( array $dati, array &$tolti, string $percorso = '' ):
  *   come wp_icl_mo_files_domains;
  * - i valori che WPML calcola sul sito: default_categories contiene id di termini (su un sito nuovo
  *   l'id della categoria inglese di UAT era il menu), gettext_theme_domain_name e
- *   theme_language_folders dipendono da temi e percorsi del sito, i «…_readonly_config» li ricava dai
- *   wpml-config.xml dei plugin, setup_wizard_step e language_selector_initialized sono passi del
- *   wizard già fatti.
+ *   theme_language_folders dipendono da temi e percorsi del sito, i «…_readonly_config» (e la loro
+ *   «…_source») li ricava dai wpml-config.xml dei plugin, setup_wizard_step e
+ *   language_selector_initialized sono passi del wizard già fatti, db_ok_for_gettext_context e
+ *   autoregister_strings_were_new_translations_loaded sono controlli di String Translation.
  */
 function wpf_togli_stato_wpml( array $dati ): array {
-	$stato = '/_has_run$|migration_complete|_verified$|^ajx_health_checked$|^migrated_site$'
-		. '|^default_categories$|^gettext_theme_domain_name$|^theme_language_folders$|_readonly_config$'
-		. '|^setup_wizard_step$|^language_selector_initialized$/';
+	$stato = '/_has_run$|migration_complete|_migrated$|_verified$|^ajx_health_checked$|^migrated_site$'
+		. '|^default_categories$|^gettext_theme_domain_name$|^theme_language_folders$|_readonly_config(_source)?$'
+		. '|^setup_wizard_step$|^language_selector_initialized$|^db_ok_for_gettext_context$'
+		. '|_were_new_translations_loaded$/';
 	foreach ( $dati as $nome => $valore ) {
 		if ( is_string( $nome ) && preg_match( $stato, $nome ) ) {
 			unset( $dati[ $nome ] );
@@ -119,21 +154,28 @@ function wpf_ripristina_segreti( $dati, $sul_sito ) {
 }
 
 /**
- * L'indirizzo del sito compare in due forme: normale e con le barre protette, dentro il JSON che il
- * builder di Impreza salva nel contenuto. Ognuna ha il suo segnaposto, altrimenti l'apply non saprebbe
- * quale rimettere. La forma protetta va per prima: «@url_sito» è il suo prefisso.
+ * L'indirizzo del sito compare in tre forme: normale, con le barre protette dentro il JSON che il
+ * builder di Impreza salva nel contenuto, e codificata dentro un parametro di un link
+ * («http%3A%2F%2F…», per esempio nei pulsanti di condivisione). Ognuna ha il suo segnaposto,
+ * altrimenti l'apply non saprebbe quale rimettere. La forma normale va per ultima: è contenuta nella
+ * protetta.
  */
 function wpf_forme_url(): array {
 	$url = untrailingslashit( home_url() );
-	return [ str_replace( '/', '\/', $url ), $url ];
+	return [ str_replace( '/', '\/', $url ), rawurlencode( $url ), $url ];
+}
+
+/** Segnaposti nello stesso ordine di wpf_forme_url(): i più lunghi prima, «@url_sito» è il loro prefisso. */
+function wpf_segnaposti_url(): array {
+	return [ WPF_SEGNAPOSTO_URL . '_json', WPF_SEGNAPOSTO_URL . '_urlenc', WPF_SEGNAPOSTO_URL ];
 }
 
 function wpf_url_in_segnaposto( $dati ) {
-	return wpf_sostituisci( $dati, wpf_forme_url(), [ WPF_SEGNAPOSTO_URL . '_json', WPF_SEGNAPOSTO_URL ] );
+	return wpf_sostituisci( $dati, wpf_forme_url(), wpf_segnaposti_url() );
 }
 
 function wpf_segnaposto_in_url( $dati ) {
-	return wpf_sostituisci( $dati, [ WPF_SEGNAPOSTO_URL . '_json', WPF_SEGNAPOSTO_URL ], wpf_forme_url() );
+	return wpf_sostituisci( $dati, wpf_segnaposti_url(), wpf_forme_url() );
 }
 
 function wpf_sostituisci( $dati, array $da, array $a ) {
@@ -193,18 +235,35 @@ function wpf_voci_menu( int $id_menu ): array {
 			'classi'       => array_values( array_filter( (array) $voce->classes ) ),
 			'descrizione'  => $voce->description,
 			'attr_title'   => $voce->attr_title,
+			'xfn'          => $voce->xfn,
+			'meta'         => wpf_meta_voce( (int) $voce->ID ),
 		];
 	}
 	return $voci;
 }
 
 /**
- * Plugin commerciali da docker/plugins/commerciali.txt, montato in /opt/wp-forestas/plugins. Stesse
- * regole di init-wordpress.sh e bin/wordpress-config.sh: «#» apre un commento, spazi e righe vuote
- * si ignorano.
+ * Metadati di una voce di menu oltre a quelli standard: le impostazioni di Impreza (mega menu, voce
+ * come pulsante, righe tolte) e di altri plugin. Senza, un sito ricreato avrebbe le voci ma non il mega
+ * menu.
+ */
+function wpf_meta_voce( int $id ): array {
+	$meta = [];
+	foreach ( get_post_meta( $id ) as $nome => $valori ) {
+		if ( in_array( $nome, WPF_META_VOCE_STANDARD, true ) || preg_match( '/^(_edit_|_wp_|_wpml)/', $nome ) ) {
+			continue;
+		}
+		$meta[ $nome ] = maybe_unserialize( $valori[0] );
+	}
+	return $meta;
+}
+
+/**
+ * Plugin commerciali da docker/plugins/commerciali.txt, montato in WPF_DIR_PLUGIN. Stesse regole di
+ * init-wordpress.sh e bin/wordpress-config.sh: «#» apre un commento, spazi e righe vuote si ignorano.
  */
 function wpf_plugin_commerciali(): array {
-	$file = '/opt/wp-forestas/plugins/commerciali.txt';
+	$file = WPF_DIR_PLUGIN . '/commerciali.txt';
 	if ( ! is_readable( $file ) ) {
 		WP_CLI::warning( "{$file} non trovato: elenco dei plugin commerciali vuoto" );
 		return [];
@@ -220,7 +279,7 @@ function wpf_plugin_commerciali(): array {
  */
 function wpf_versioni(): array {
 	require_once ABSPATH . 'wp-admin/includes/plugin.php';
-	$versioni = [ 'Impreza' => wp_get_theme( 'Impreza' )->exists() ? wp_get_theme( 'Impreza' )->get( 'Version' ) : null ];
+	$versioni = [ 'Impreza' => wpf_versione_tema( 'Impreza' ) ];
 	foreach ( get_plugins() as $file => $dati ) {
 		if ( in_array( dirname( $file ), array_merge( [ 'us-core' ], wpf_plugin_commerciali() ), true ) ) {
 			$versioni[ dirname( $file ) ] = $dati['Version'];
@@ -228,6 +287,12 @@ function wpf_versioni(): array {
 	}
 	ksort( $versioni );
 	return $versioni;
+}
+
+/** Versione di un tema installato, o null se non c'è. */
+function wpf_versione_tema( string $tema ): ?string {
+	$t = wp_get_theme( $tema );
+	return $t->exists() ? $t->get( 'Version' ) : null;
 }
 
 /** Ordina un elenco di post o menu esportati mettendo gli originali prima delle traduzioni. */
@@ -261,10 +326,96 @@ function wpf_menu_per_chiave( string $chiave ): ?WP_Term {
 	return ( ! is_wp_error( $termini ) && $termini ) ? $termini[0] : null;
 }
 
-/** Vero per le opzioni di Impreza che contengono l'id di un post («header_id», «maintenance_page»…). */
+/**
+ * Vero per le opzioni di Impreza che contengono l'id di un post: header, footer, contenuto, sidebar e
+ * titlebar per tipo di pagina («header_id», «footer_post_id»…) e le pagine («maintenance_page»…).
+ * Un id di un servizio esterno («facebook_app_id») non è un riferimento e resta com'è.
+ */
 function wpf_opzione_riferimento( string $nome, $valore ): bool {
-	return ( preg_match( '/_(id|page)$/', $nome ) || in_array( $nome, WPF_IMPREZA_PAGINE, true ) )
+	return ( preg_match( '/^(header|footer|content|sidebar|titlebar)_(.+_)?id$|_page$/', $nome ) || in_array( $nome, WPF_IMPREZA_PAGINE, true ) )
 		&& is_scalar( $valore ) && ctype_digit( (string) $valore ) && (int) $valore > 0;
+}
+
+/**
+ * Theme Options di Impreza di tipo «upload» (icona del sito, immagini di sfondo, segnaposto…), lette
+ * dalla definizione delle Theme Options della versione installata invece che da un elenco a mano.
+ */
+function wpf_campi_upload(): array {
+	static $campi = null;
+	if ( $campi === null ) {
+		$campi = [];
+		foreach ( function_exists( 'us_config' ) ? (array) us_config( 'theme-options' ) : [] as $sezione ) {
+			foreach ( (array) ( $sezione['fields'] ?? [] ) as $nome => $campo ) {
+				if ( ( $campo['type'] ?? '' ) === 'upload' ) {
+					$campi[] = $nome;
+				}
+			}
+		}
+	}
+	return $campi;
+}
+
+/**
+ * Vero per le Theme Options che contengono uno o più allegati della Libreria media: non stanno in
+ * config/, quindi l'id di un sito non vale su un altro. Impreza salva «12», «12|full» o «12,13».
+ */
+function wpf_opzione_allegato( string $nome, $valore ): bool {
+	return in_array( $nome, wpf_campi_upload(), true ) && is_scalar( $valore )
+		&& preg_match( '/^\d+(\|[\w-]+)?(,\d+(\|[\w-]+)?)*$/', (string) $valore ) && (int) $valore > 0;
+}
+
+/**
+ * Scrive in .htaccess le regole dei permalink, come fa il pannello salvandoli. Da WP-CLI WordPress
+ * non sa che mod_rewrite c'è (got_mod_rewrite() legge i moduli di Apache) e non scriverebbe nulla:
+ * l'immagine lo abilita (a2enmod rewrite), quindi lo si dichiara. Tocca solo la sezione
+ * «# BEGIN WordPress … # END WordPress»: le altre regole del file restano.
+ */
+function wpf_scrivi_htaccess(): bool {
+	require_once ABSPATH . 'wp-admin/includes/misc.php';
+	require_once ABSPATH . 'wp-admin/includes/file.php';
+	add_filter( 'got_rewrite', '__return_true' );
+	// Struttura dei permalink riletta: appena cambiata dall'apply, $wp_rewrite ha ancora quella vecchia
+	global $wp_rewrite;
+	$wp_rewrite->init();
+	flush_rewrite_rules( false );
+	return (bool) save_mod_rewrite_rules();
+}
+
+/**
+ * Impedisce due apply nello stesso momento. Il blocco è una riga di wp_options inserita con
+ * INSERT IGNORE: il database la accetta una volta sola, quindi solo il primo apply la ottiene
+ * (add_option non basta: scrive con ON DUPLICATE KEY UPDATE e si fida della cache). Un blocco più
+ * vecchio di WPF_APPLY_SCADENZA viene da un apply interrotto e si toglie; l'init toglie comunque ogni
+ * blocco all'avvio del container, perché un apply gira dentro il container e muore con lui.
+ */
+function wpf_blocca_apply(): bool {
+	global $wpdb;
+	$wpdb->query(
+		$wpdb->prepare(
+			"DELETE FROM {$wpdb->options} WHERE option_name = %s AND CAST(option_value AS UNSIGNED) < %d",
+			WPF_OPZIONE_APPLY_IN_CORSO,
+			time() - WPF_APPLY_SCADENZA
+		)
+	);
+	$preso = $wpdb->query(
+		$wpdb->prepare(
+			"INSERT IGNORE INTO {$wpdb->options} (option_name, option_value, autoload) VALUES (%s, %s, 'off')",
+			WPF_OPZIONE_APPLY_IN_CORSO,
+			(string) time()
+		)
+	);
+	if ( $preso !== 1 ) {
+		return false;
+	}
+	register_shutdown_function( 'wpf_sblocca_apply' );
+	return true;
+}
+
+/** Toglie il blocco dell'apply (vedi wpf_blocca_apply). */
+function wpf_sblocca_apply(): void {
+	global $wpdb;
+	$wpdb->delete( $wpdb->options, [ 'option_name' => WPF_OPZIONE_APPLY_IN_CORSO ] );
+	wp_cache_delete( WPF_OPZIONE_APPLY_IN_CORSO, 'options' );
 }
 
 /** Ordina le chiavi degli array associativi, per file con differenze stabili fra un export e l'altro. */

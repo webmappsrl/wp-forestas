@@ -12,8 +12,100 @@
 Il piano prevedeva di copiare `functions.php` dal child generato da Child Theme Configurator. Il file
 portava i marcatori «AUTO GENERATED - Do not modify» del plugin, che contraddicono la regola di non
 gestire il child con quel plugin, e un filtro per il `rtl.css` del padre che a un sito in italiano e
-inglese non serve: è stato riscritto con la sola guardia `ABSPATH`. Lo `style.css` del child lo
-carica Impreza da sé (verificato: la home carica `forestas-child/style.css?ver=1.0.0`).
+inglese non serve: è stato riscritto. Lo `style.css` del child lo carica UpSolution Core da sé
+(handle `theme-style`), ma con la versione di Impreza (`?ver=9.4`): alzare la `Version` del child
+non avrebbe cambiato l'URL e i browser avrebbero tenuto il CSS vecchio. `functions.php` contiene
+quindi la guardia `ABSPATH` e un filtro che dà a `theme-style` la `Version` del child (verificato:
+la home carica `forestas-child/style.css?ver=1.0.0`).
+
+### Task 5 struttura per zip e configurazione
+
+- **Script PHP montati dal compose** (`./docker/scripts/config:/usr/local/lib/wp-forestas:ro`), oltre
+  alla copia nell'immagine prevista dal piano: una loro modifica vale subito (vedi le Decisioni).
+  `init-wordpress.sh` invece resta solo nell'immagine.
+- **`docker/plugins/commerciali.txt`**, versionato con un'eccezione in `.gitignore`: l'elenco dei
+  plugin commerciali in un punto solo (vedi le Decisioni).
+
+### Task 6 codice installato dall'init
+
+- **Slug dei plugin commerciali letto dalla cartella dentro lo zip**, non dal nome del file come
+  diceva il piano: uno zip scaricato da WPML si chiama `sitepress-multilingual-cms.5.1.0.zip`.
+  `slug_zip` prende la prima cartella, saltando i file in radice e la `__MACOSX` aggiunta dal Finder;
+  lo stesso controllo vale per la cartella `Impreza/` del tema. Uno zip illeggibile produce un avviso
+  e si salta (`slug_zip … || true`: con `pipefail` l'init sarebbe uscito e il container sarebbe
+  ripartito all'infinito).
+- **UpSolution Core riattivato se è spento**, oltre che installato se manca: senza, Impreza non ha
+  Theme Options né builder.
+- **Passo 4b, `.htaccess`**, non previsto: `wp rewrite structure --hard` da WP-CLI non lo scrive
+  (WP-CLI non sa che `mod_rewrite` c'è), e su un sito ricreato tutte le pagine tranne la home
+  rispondevano 404. L'init lo crea solo se manca, con `wpf_scrivi_htaccess()`: la funzione di
+  WordPress che usa il pannello (`save_mod_rewrite_rules`), dichiarando che `mod_rewrite` c'è.
+- **wp-geohub a un commit fisso** (`GEOHUB_REF`) invece del ramo `main`: due siti ricreati in giorni
+  diversi avrebbero avuto codice diverso.
+- **Site key di WPML scritta con l'output di WP-CLI scartato**: il messaggio di `wp config set`
+  riporta il valore della costante, che sarebbe finito nei log del container.
+
+### Task 7 export della configurazione
+
+- **7 file invece di 6**: si è aggiunto `versioni.json` (vedi le Decisioni).
+- **`sito.json` comprende anche `page_for_posts`**: è un riferimento a una pagina come
+  `page_on_front`, e senza un sito ricreato avrebbe perso la pagina degli articoli.
+- **`post.json` più ampio di header, footer e Home**: contiene tutti i post del builder di Impreza
+  (header, Page Block, Content Template, Grid Layout), anche in bozza, e le pagine a cui puntano
+  Theme Options e impostazioni del sito. Un Page Block usato in una pagina è configurazione quanto il
+  footer.
+- **Segreti riconosciuti dalle parole del nome** e non da qualsiasi sottostringa (vedi le Decisioni).
+- **Esclusi i metadati che i plugin ricalcolano salvando il post** (`WPF_META_CALCOLATI`):
+  `_us_jsoncss_data`, `_us_faceted_filter_items` e `_us_schema_markup_faq` di UpSolution Core
+  (`us_save_post`), `copied_media_ids` e `referenced_media_ids` di WPML Media (id di allegati). Il
+  salvataggio fatto dall'apply li ricalcola.
+- **Voci di menu con xfn e metadati**: le impostazioni di Impreza sulle voci (`us_mega_menu_settings`,
+  `_menu_item_btn_style`, `_menu_item_remove_rows`) si scrivono dal pannello dei menu; senza, un sito
+  ricreato perdeva mega menu e pulsanti, e un apply che ricreava le voci li cancellava.
+- **Traduzioni dei testi delle opzioni** (String Translation, contesti `admin_texts_…`) in
+  `wpml.json`, chiave `stringhe`: solo quelle in una lingua diversa da quella della stringa, perché
+  WPML crea da sé «traduzioni» italiane dei formati di data. Lette dalle tabelle di String
+  Translation, applicate con `icl_add_string_translation`.
+- **Valori con la forma di una chiave** (`WPF_FORME_SEGRETE`: Google, Stripe, GitHub, AWS, Slack,
+  chiave privata) cercati in tutti i file prima di scriverli: se ce n'è uno l'export si ferma senza
+  scrivere e senza stampare il valore. Copre ciò che il filtro sui nomi non vede, come una chiave
+  dentro il contenuto di un post.
+- **Terza forma dell'URL**, `@url_sito_urlenc`, per l'indirizzo codificato dentro un link
+  (`http%3A%2F%2F…`).
+- **Riferimenti nelle Theme Options riconosciuti per famiglia** (`header_…_id`, `footer_…_id`,
+  `content_…`, `sidebar_…`, `titlebar_…`, `…_page`): un id di un servizio esterno come
+  `facebook_app_id` resta un valore. Gli allegati della Libreria media non si esportano: le Theme
+  Options di tipo `upload` si leggono dalla definizione di Impreza (`us_config('theme-options')`),
+  in tutti i formati che Impreza salva (`12`, `12|full`, `12,13`); l'export avvisa, anche per i post
+  del builder che usano immagini, e l'apply tiene il valore del sito.
+
+### Task 8 apply della configurazione
+
+- **Post e menu in file propri** (`post.php`, `menu.php`), come WPML: `apply.php` resta l'ordine dei
+  passi e l'esito.
+- **Menu ritrovati dalla chiave e riallineati anche nello slug**: l'header di Impreza richiama il menu
+  per slug (`"source":"main-menu"`). Se cambiano solo nome o slug le voci non si ricreano.
+- **`source_language_code` solo per una traduzione**, con la lingua del suo originale: un originale
+  non ha lingua di partenza. Anche una riga già esistente con la lingua di partenza sbagliata viene
+  corretta.
+- **Traduzioni dei testi delle opzioni dopo le Theme Options**: String Translation registra le
+  stringhe originali leggendo i `wpml-config.xml` e le opzioni; l'apply lo fa fare con
+  `WPML_Config::load_config_run()`, la procedura del wizard di WPML.
+- **`.htaccess` scritto anche dall'apply** quando cambia i permalink.
+- **Un apply alla volta**: la riga `wp_forestas_apply_in_corso` di `wp_options`, inserita con
+  `INSERT IGNORE`, la ottiene un solo apply (`add_option` non basta: scrive con
+  `ON DUPLICATE KEY UPDATE` e si fida della cache). Scade dopo 15 minuti, e l'init la toglie a ogni
+  avvio (passo 4c): gli apply girano nel container e muoiono con lui, e un blocco rimasto da un
+  `docker stop` avrebbe consumato i tentativi dell'apply automatico.
+- **Segreti nei metadati delle voci di menu** confrontati come `@segreto` e conservati dal sito alla
+  ricreazione delle voci, come per i post: altrimenti ogni apply avrebbe ricreato le voci perdendoli.
+- **`WPML_Config::load_config_run()`** fa anche la pulizia degli admin texts non più configurati,
+  come quando un amministratore apre il pannello dei temi: effetto accettato.
+- **Apply automatico e versioni**: con `WPF_AUTOMATICO=1` (l'init) e una versione principale diversa
+  da `versioni.json` l'apply non applica, perché nessuno guarda le differenze.
+- **Un valore `null` di `sito.json` si salta**: indica un'opzione che sul sito dell'export non c'era.
+- **Nelle differenze stampate, anche un segreto dentro un'impostazione composta** (WPML, theme_mods)
+  diventa `@segreto`.
 
 ### Task 9 apply automatico
 
@@ -21,6 +113,36 @@ Il piano faceva partire l'apply a ogni avvio finché mancava `wp_forestas_config
 finale ha mostrato che alla prima messa in opera su UAT, sito esistente, avrebbe duplicato header,
 footer e Home: ora l'apply automatico parte solo su un sito installato dall'init, al massimo 3 volte
 (dettagli nei «Bug trovati»).
+
+### Task 10 comando sull'host
+
+- **`WPF_CONTAINER`**: sulla stessa macchina più WordPress possono montare lo stesso child (è successo
+  con l'ambiente di prova); in quel caso il comando chiede di scegliere.
+- **Backup in sola lettura** (`WPF_SOLA_LETTURA=1`): il backup di `apply --conferma` non assegna
+  chiavi al sito, così non cambia ciò che l'apply ricollega subito dopo.
+- **L'export sostituisce solo i file prodotti**: un export con WPML spento non cancella `wpml.json`, e
+  lo segnala.
+- **`apply --da DIR`**: applica un'altra cartella, per rimettere un backup senza toccare `config/`
+  (montata in sola lettura, e nel checkout del server non va sporcata).
+- **Il backup non passa dal controllo delle chiavi**: va in `backup/`, esclusa da git, e il controllo
+  avrebbe solo impedito apply e ripristino. Un export fallito cancella la cartella temporanea nel
+  container.
+
+### Task 11 ritratto e prova completa
+
+- La prova prevedeva `diff prima.txt dopo.txt` vuoto: dopo il reset del locale differiva l'impronta
+  delle Theme Options, per `text_styles: []` che Impreza aggiunge a ogni installazione (vedi «Esito
+  del reset del locale»). Dopo l'export successivo i ritratti coincidono.
+- Il ritratto lascia fuori dall'impronta delle Theme Options anche lo stato di Impreza
+  (`WPF_IMPREZA_STATO`) e i campi immagine (l'id di un allegato cambia da un sito all'altro), e mostra
+  le traduzioni dei testi delle opzioni e la presenza di `.htaccess`.
+
+### Vincolo www-data
+
+Il piano chiedeva di eseguire come `www-data` i comandi WP-CLI che scrivono file. Il comando sull'host
+(`bin/wordpress-config.sh`) lo fa; l'init invece gira come root e lancia licenza e apply come root
+(`--allow-root`), perché è root a fare tutti gli altri passi. I file scritti (CSS di Impreza, Google
+Fonts) passano a `www-data` al passo 9 dello stesso avvio.
 
 Le altre scelte prese durante l'implementazione sono nelle «Decisioni» qui sotto.
 
@@ -47,8 +169,8 @@ Le altre scelte prese durante l'implementazione sono nelle «Decisioni» qui sot
   controllo della cartella di Impreza e il ritratto diceva «no» anche quando il testo c'era.
 - **Errori SQL di WPML** al primo salvataggio di un post del builder su un sito nuovo
   (tabella `wp_icl_string_packages` creata da WPML solo alla prima visita del pannello): l'apply lancia
-  prima `WPML_Package_Translation_Schema::run_update()`. Resta un solo messaggio, una volta, su
-  `wp_icl_mo_files_domains` al primo caricamento: non si ripete e non viene dal nostro codice.
+  prima `WPML_Package_Translation_Schema::run_update()`. Restava anche un messaggio su
+  `wp_icl_mo_files_domains`, che veniva invece da `config/`: vedi la prima review qui sotto.
 - **Google Fonts locali mai scaricati** su un sito ricreato: Impreza li scarica solo
   aprendo la pagina delle Theme Options; ora lo fa l'apply con `us_download_local_google_fonts()`.
 
@@ -69,8 +191,8 @@ Le altre scelte prese durante l'implementazione sono nelle «Decisioni» qui sot
     WordPress nuovo da `config/` ha la tabella.
   - `maintenance_mode: 1`, forzata su UAT dalla licenza di sviluppo: un sito di produzione nuovo
     sarebbe nato in manutenzione. Ora non si esporta né si applica (`WPF_IMPREZA_STATO`).
-  Il WordPress locale, ricreato prima della correzione, ha ancora i segni e non ha
-  `wp_icl_mo_files_domains`: si sistema con un nuovo reset.
+  Il WordPress locale, ricreato prima della correzione, aveva ancora i segni: il reset successivo
+  (08/10, vedi «Esito del reset del locale») lo ha ricreato con la tabella.
 
 - **Seconda review wm-review-ticket (08/10), tre bloccanti corretti**:
   - `wpf_wpml_collega()` passava `trid => false` anche per un originale: WPML ne cancellava la riga e
@@ -85,7 +207,36 @@ Le altre scelte prese durante l'implementazione sono nelle «Decisioni» qui sot
     voci con la stessa chiave. Nella prova è emerso anche un doppio passaggio sull'originale
     raggiunto dalla sua traduzione, corretto.
 
+- **Terza review wm-review-ticket (08/10), due bloccanti corretti**: `.htaccess` mancante su un sito
+  ricreato (404 su `/en/` e `/wp-json/`) e uno zip illeggibile in `docker/plugins/` che fermava l'init
+  (dettagli nel Task 6). Verificati sul locale (zip di prova rovinato: solo un avviso, container
+  avviato; `/wp-json/` 200) e su un WordPress usa e getta installato da zero: `.htaccess` creato,
+  apply «nessuna differenza», ritratto identico a quello del locale.
+
+- **Quarta review wm-review-ticket (08/10), un bloccante corretto**: le impostazioni di Impreza sulle
+  voci di menu (mega menu, pulsante) non venivano esportate, e l'apply che ricreava le voci le
+  cancellava. Corretti nella stessa occasione i cleanup: traduzioni di String Translation, campi
+  immagine letti da Impreza, metadati ricalcolati dai plugin, `.htaccess` dall'apply, lingua di
+  partenza delle righe WPML esistenti, un apply alla volta, versioni nell'apply automatico,
+  `apply --da`, forme di chiave cercate nei valori, wp-geohub a un commit fisso. L'apply delle
+  traduzioni di String Translation, alla prima prova su un sito nuovo, non trovava le stringhe ancora
+  registrate (corretto con `WPML_Config::load_config_run()`), e l'apply dei permalink non scriveva
+  `.htaccess` perché WordPress teneva la struttura vecchia (corretto rileggendola).
+  Verifica su un WordPress usa e getta: header e menu tradotti in inglese, mega menu, voce a pulsante,
+  messaggio dei cookie tradotto e icona del sito; export, sito ricreato da zero, `apply --da` → tutto
+  presente, `source_language_code` `it` sulle traduzioni e NULL sugli originali, secondo apply
+  «nessuna differenza», ritratti uguali tranne l'icona (allegato, resta quella del sito). Provati
+  anche: export fermato da una chiave Google finta in un Page Block (nessun file scritto, valore non
+  stampato), secondo apply rifiutato mentre un altro è in corso, apply automatico rifiutato con
+  Impreza 8 in `versioni.json`, `.htaccess` riscritto dall'apply dopo un cambio di permalink, zip con
+  `__MACOSX/` e file in radice. Un revisore indipendente sulle correzioni non ha trovato bloccanti;
+  i suoi cleanup (blocco non atomico, blocco rimasto dopo un `docker stop`, segreti nei metadati
+  delle voci, backup fermato dal controllo delle chiavi, README e un commento) sono corretti.
+
 ## Decisioni
+
+- **Licenza di Impreza che segue il `.env`**, mentre il piano la attivava solo se mancava
+  `us_license_secret`: con un segreto cambiato nel `.env` il sito resterebbe con quello vecchio.
 
 - **Chiavi stabili `<post_type>-<post_name>`** (`us_header-header`, `us_page_block-footer`,
   `page-home`), menu `menu-<slug>` salvato come metadato del termine, traduzioni con `-<lingua>`: si
@@ -109,15 +260,14 @@ Le altre scelte prese durante l'implementazione sono nelle «Decisioni» qui sot
 - **Plugin spenti**: UpSolution Core si riattiva sempre (senza, Impreza non ha Theme Options); un plugin
   commerciale spento si segnala nei log ma non si riattiva, perché può essere stato spento apposta. Lo
   slug di un plugin si legge dalla cartella dentro lo zip.
-- **Licenza di Impreza che segue il `.env`**: si riattiva quando il segreto del `.env` è diverso da
-  quello salvato, come la site key di WPML.
 - **`config/versioni.json`**: versioni di Impreza, UpSolution Core e plugin commerciali dell'export;
   l'apply avvisa se il sito ne ha altre, perché opzioni di versioni diverse possono avere uno schema
   diverso.
 - **Segreti riconosciuti dalle parole separate da `_` del nome** (`…_key`, `secret`, `token`,
-  `password`, `api`) e non da qualsiasi sottostringa: «key» da solo prendeva opzioni come
-  `h_keyboard_accessibility`. Un segreto con un nome insolito (`apiKey`) sfugge: l'ultimo controllo è
-  `git diff config/` prima del commit.
+  `password`, `api`) più le forme attaccate comuni (`apikey`, `licensekey`, `secretkey`,
+  `accesstoken`), e non da qualsiasi sottostringa: «key» da solo prendeva opzioni come
+  `h_keyboard_accessibility`. Ciò che il nome non rivela lo prende il controllo sui valori
+  (`WPF_FORME_SEGRETE`); l'ultimo controllo resta `git diff config/` prima del commit.
 
 - **Child theme montato dal compose, non copiato da `init-wordpress.sh`**: con il mount una
   modifica nel repo è subito visibile, e il codice del child ha una sola copia.
@@ -159,14 +309,16 @@ Le altre scelte prese durante l'implementazione sono nelle «Decisioni» qui sot
 - **Prove distruttive solo in locale**: un WordPress usa e getta (`APP_NAME=prova`,
   porta 8091, rimosso alla fine) e, con l'ok del dev, il reset del WordPress locale. Su UAT solo
   letture (la verifica della licenza Impreza).
+- **Dati generati esclusi dall'export WPML**: `st.was_frontend_visited_key` e
+  `custom_fields_translation`/`custom_term_fields_translation`, che WPML calcola da sé.
+- **Nomi ripetuti fra bash e PHP**: le opzioni `wp_forestas_config_*`, i percorsi montati e le regole
+  di lettura di `commerciali.txt` stanno sia in `init-wordpress.sh` sia in `comune.php`, che non
+  possono condividere codice. Ogni copia rimanda all'altra in un commento; in PHP i percorsi sono
+  costanti (`WPF_DIR_PLUGIN`, `WPF_DIR_CONFIG`).
 - **Esito del reset del locale (08/10)**: ritratto prima e dopo identico tranne
   l'impronta delle Theme Options, dovuta a `text_styles: []` che Impreza aggiunge a ogni
   installazione. Gli export successivi l'hanno portata in `config/` (è un'opzione vera, vuota), quindi
   un sito ricreato da questo `config/` ha la stessa impronta.
-- **Dati generati esclusi dall'export WPML**: `st.was_frontend_visited_key` e
-  `custom_fields_translation`/`custom_term_fields_translation`, che WPML calcola da sé.
-- **`WPF_CONTAINER`**: sulla stessa macchina più WordPress possono montare lo stesso
-  child (è successo con l'ambiente di prova).
 - Docker Desktop si è fermato durante una prova, con il Mac molto carico; riavviato dal dev, nessun
   dato perso.
 

@@ -37,8 +37,9 @@ codice del repo `wp-forestas`.
     lingua), impostazioni con `$sitepress->save_settings()`, stato del wizard nell'opzione
     `WPML(setup)`. Provato su un WordPress nuovo: lingue, locale, tag, bandiere, URL `/en/`, setup e
     impostazioni identici a UAT; un secondo apply non duplica nulla.
-  - **Licenze:** `WPML_SITE_KEY` e `IMPREZA_LICENSE_SECRET` stanno in `wp-forestas/.env`. Lo script
-    le applica solo se `WP_URL` non è `localhost` o `127.0.0.1`. WPML si registra con la costante
+  - **Licenze e chiavi:** `WPML_SITE_KEY`, `IMPREZA_LICENSE_SECRET` e `IMPREZA_MAINTENANCE_KEY` (il
+    link privato che scavalca la modalità manutenzione) stanno in `wp-forestas/.env`. Lo script le
+    applica solo se `WP_URL` non è `localhost` o `127.0.0.1`. WPML si registra con la costante
     `OTGS_INSTALLER_SITE_KEY_WPML`; Impreza si riattiva con la stessa chiamata che fa il tema
     (`/envato_auth` con segreto e dominio) e salva ciò che risponde l'API: verificato in sola
     lettura su UAT, risposta `status 1`, `site_type dev`.
@@ -77,7 +78,9 @@ diversi, chiede le credenziali FTP.
 - [x] README e `CLAUDE.md` spiegano come si lavora sul child e cosa resta fuori dal repo.
 - [x] `docker/plugins/` esclusa da git (con `.gitkeep`) e montata nel container; gli zip commerciali
       non entrano mai in un commit.
-- [x] `init-wordpress.sh` installa e attiva UpSolution Core dallo zip contenuto in Impreza, se manca.
+- [x] `init-wordpress.sh` installa e attiva UpSolution Core dallo zip contenuto in Impreza, se manca,
+      e lo riattiva se è spento: senza, Impreza non ha Theme Options né builder (a differenza dei
+      plugin commerciali, che spenti a mano restano spenti).
 - [x] `init-wordpress.sh` installa e attiva i plugin degli zip in `docker/plugins/` che non sono
       installati; un plugin installato e disattivato a mano non viene riattivato. Zip mancante:
       avviso nei log, il sito parte lo stesso.
@@ -91,12 +94,15 @@ diversi, chiede le credenziali FTP.
 - [x] Licenze dal `.env`: `OTGS_INSTALLER_SITE_KEY_WPML` in `wp-config.php` e segreto di Impreza
       nelle sue opzioni, solo se `WP_URL` non è locale. `.env-example` con i segnaposto.
 - [x] Export: Theme Options di Impreza, `theme_mods` del child, header e footer di Impreza, Home,
-      menu, con le loro traduzioni WPML, impostazioni di WPML (lingue `it` e `en-us`, formato degli
-      URL), titolo, permalink e home statica, in file leggibili in `config/`. L'URL del sito diventa
+      menu con le impostazioni di Impreza sulle voci (mega menu, pulsante), con le loro traduzioni
+      WPML, impostazioni di WPML (lingue `it` e `en-us`, formato degli URL), traduzioni dei testi
+      delle opzioni fatte con String Translation, titolo, permalink e home statica, in file
+      leggibili in `config/`. L'URL del sito diventa
       un segnaposto. I file sono dell'utente dell'host, non di root.
 - [x] Nessun segreto nei file esportati, chiudendo per impostazione predefinita: le opzioni con
       `key`, `secret`, `token`, `password` o `api` nel nome sono tolte e segnalate (oggi
-      `maintenance_private_key`); quelle che servono vanno nel `.env` e l'apply le rimette.
+      `maintenance_private_key`); quelle che servono vanno nel `.env` e l'apply le rimette. Un valore
+      con la forma di una chiave nota, sotto qualsiasi nome, ferma l'export senza scrivere.
 - [x] Google Fonts serviti in locale (`store_gfonts_locally`), verificato anche dopo il reset.
 - [x] Apply: riscrive la configurazione esportata, ricollega i riferimenti per id e le traduzioni
       WPML; idempotente: header, footer e Home si riconoscono dal metadato `_wp_forestas_chiave` del
@@ -118,7 +124,7 @@ diversi, chiede le credenziali FTP.
       trova o se ne trova più di uno.
 - [x] `apply` senza argomenti non scrive nulla e stampa le differenze fra repo e sito; con
       `--conferma` salva prima la configurazione attuale in `backup/<data-ora>/` (esclusa da git) e
-      poi applica.
+      poi applica; con `--da DIR` applica un'altra cartella, per esempio un backup.
 - [x] Sintassi di `bin/wordpress-config.sh` verificata con `bash -n` su bash 3.2 (macOS) e bash 5.
 - [x] Ritratto del sito (tema attivo, versioni, Theme Options, riferimenti, lingue WPML, impostazioni,
       home in 200 con CSS del child e Work Sans) salvato prima e dopo un reset; i due coincidono.
@@ -160,16 +166,18 @@ diversi, chiede le credenziali FTP.
 
 Repo `wp-forestas`:
 
-- `themes/forestas-child/style.css`, `themes/forestas-child/functions.php` — nuovi
+- `themes/forestas-child/style.css`, `themes/forestas-child/functions.php` — nuovi (`functions.php`
+  dà al CSS del child la sua `Version` al posto di quella di Impreza)
 - `compose.yml` — mount del child, degli zip dei plugin, di `config/` e degli script di configurazione
-- `docker/scripts/init-wordpress.sh` — passi 3b (costanti d'ambiente), 7 (controllo dello zip),
-  7b (UpSolution Core), 7c (plugin commerciali), 8 (child), 8b (licenza Impreza), 8c (apply
-  automatico), 9 (proprietario dei file); funzioni `url_locale` e `wp_script`
+- `docker/scripts/init-wordpress.sh` — passi 3b (costanti d'ambiente), 4b (`.htaccess` per i
+  permalink), 4c (blocco di un apply interrotto), 6 (wp-geohub a un commit fisso), 7 (controllo
+  dello zip), 7b (UpSolution Core), 7c (plugin commerciali), 8 (child), 8b (licenza Impreza), 8c
+  (apply automatico), 9 (proprietario dei file); funzioni `url_locale`, `wp_script` e `slug_zip`
 - `README.md`, `CLAUDE.md`, `docs/knowledge/inizializzazione-wordpress.md`
 - `.gitignore`, `.env-example`, `docker/plugins/.gitkeep`,
   `docker/plugins/commerciali.txt` (elenco dei plugin commerciali), `config/` (nuova, con `.gitkeep`),
-  `docker/scripts/config/` (nuova: `comune.php`, `export.php`, `apply.php`, `wpml.php`,
-  `ritratto.php`, `licenza-impreza.php`), `docker/configs/php/Dockerfile`,
+  `docker/scripts/config/` (nuova: `comune.php`, `export.php`, `apply.php`, `post.php`, `menu.php`,
+  `wpml.php`, `ritratto.php`, `licenza-impreza.php`), `docker/configs/php/Dockerfile`,
   `bin/wordpress-config.sh` (nuovo: export, apply, ritratto, zip),
   `backup/` (esclusa da git)
 

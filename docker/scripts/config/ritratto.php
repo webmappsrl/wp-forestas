@@ -5,6 +5,7 @@
  */
 
 require_once __DIR__ . '/comune.php';
+require_once __DIR__ . '/wpml.php';
 require_once ABSPATH . 'wp-admin/includes/plugin.php';
 
 $righe   = [];
@@ -23,8 +24,8 @@ $commerciali = wpf_plugin_commerciali();
 global $wp_version;
 $righe[] = 'core: ' . implode( '.', array_slice( explode( '.', $wp_version ), 0, 2 ) );
 $righe[] = 'tema attivo: ' . get_stylesheet();
-$righe[] = 'versione Impreza: ' . ( wp_get_theme( 'Impreza' )->exists() ? wp_get_theme( 'Impreza' )->get( 'Version' ) : 'assente' );
-$righe[] = 'versione forestas-child: ' . ( wp_get_theme( 'forestas-child' )->exists() ? wp_get_theme( 'forestas-child' )->get( 'Version' ) : 'assente' );
+$righe[] = 'versione Impreza: ' . ( wpf_versione_tema( 'Impreza' ) ?? 'assente' );
+$righe[] = 'versione forestas-child: ' . ( wpf_versione_tema( 'forestas-child' ) ?? 'assente' );
 foreach ( array_merge( [ 'us-core', 'wm-package' ], $commerciali ) as $cartella ) {
 	$righe[] = "versione {$cartella}: " . $plugin( $cartella );
 }
@@ -33,12 +34,22 @@ $impreza = (array) get_option( 'usof_options_' . ( defined( 'US_THEMENAME' ) ? U
 foreach ( [ 'header_id', 'footer_id', 'maintenance_page' ] as $nome ) {
 	$righe[] = "impreza {$nome}: " . $chiave( $impreza[ $nome ] ?? 0 );
 }
-$tolti      = [];
-$confronto  = wpf_togli_segreti( $impreza, $tolti );
+$tolti     = [];
+$confronto = wpf_togli_segreti( $impreza, $tolti );
 foreach ( $confronto as $nome => $valore ) {
 	if ( wpf_opzione_riferimento( (string) $nome, $valore ) ) {
 		unset( $confronto[ $nome ] ); // già stampati con la chiave: gli id cambiano da un sito all'altro
+	} elseif ( in_array( $nome, wpf_campi_upload(), true ) ) {
+		// Allegati della Libreria media: l'id cambia da un sito all'altro e l'apply non li porta, quindi
+		// restano fuori dall'impronta. Si segnala solo che ci sono.
+		if ( wpf_opzione_allegato( (string) $nome, $valore ) ) {
+			$righe[] = "impreza {$nome}: un allegato";
+		}
+		unset( $confronto[ $nome ] );
 	}
+}
+foreach ( WPF_IMPREZA_STATO as $nome ) {
+	unset( $confronto[ $nome ] ); // stato che Impreza cambia da sé: l'impronta cambierebbe senza motivo
 }
 $righe[] = 'impreza theme options (impronta): ' . md5( wpf_json( $confronto ) );
 $righe[] = 'impreza store_gfonts_locally: ' . ( $impreza['store_gfonts_locally'] ?? '-' );
@@ -50,8 +61,8 @@ foreach ( WPF_OPZIONI_SITO as $nome ) {
 }
 
 foreach ( wp_get_nav_menus() as $m ) {
-	$righe[] = "menu {$m->slug}: " . implode( ', ', array_column( wpf_voci_menu( $m->term_id ), 'titolo' ) )
-		. ' (' . md5( wpf_json( wpf_voci_menu( $m->term_id ) ) ) . ')';
+	$voci    = wpf_voci_menu( $m->term_id ); // metadati delle voci compresi (mega menu di Impreza)
+	$righe[] = "menu {$m->slug}: " . implode( ', ', array_column( $voci, 'titolo' ) ) . ' (' . md5( wpf_json( $voci ) ) . ')';
 }
 foreach ( get_nav_menu_locations() as $posizione => $id_menu ) {
 	$righe[] = "posizione menu {$posizione}: " . ( get_term_meta( $id_menu, WPF_META_CHIAVE, true ) ?: '-' );
@@ -63,6 +74,7 @@ if ( $sitepress ) {
 	sort( $lingue );
 	$righe[] = 'wpml lingue: ' . implode( ',', $lingue ) . ' (predefinita ' . $sitepress->get_default_language() . ')';
 	$righe[] = 'wpml formato URL: ' . $sitepress->get_setting( 'language_negotiation_type' );
+	$righe[] = 'wpml traduzioni dei testi delle opzioni: ' . md5( wpf_json( wpf_wpml_stringhe_esporta() ) );
 	$righe[] = 'wpml setup completato: ' . ( function_exists( 'wpml_is_setup_complete' ) && wpml_is_setup_complete() ? 'sì' : 'no' );
 }
 
@@ -70,6 +82,8 @@ $post = get_posts( [ 'post_type' => array_values( get_post_types() ), 'post_stat
 foreach ( $post as $p ) {
 	$righe[] = 'post ' . get_post_meta( $p->ID, WPF_META_CHIAVE, true ) . ': ' . $p->post_title . ' (' . ( wpf_lingua( $p->ID, 'post_' . $p->post_type ) ?? '-' ) . ', ' . md5( $p->post_content ) . ')';
 }
+
+$righe[] = '.htaccess: ' . ( is_file( ABSPATH . '.htaccess' ) ? 'presente' : 'assente' );
 
 sort( $righe );
 echo implode( "\n", $righe ), "\n";

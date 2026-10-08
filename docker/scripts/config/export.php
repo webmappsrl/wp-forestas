@@ -3,23 +3,25 @@
  * Export della configurazione del sito in file JSON (oc:8717).
  *
  * Uso: WPF_EXPORT_DIR=/tmp/x [WPF_SOLA_LETTURA=1] wp eval-file /usr/local/lib/wp-forestas/export.php
- * Scrive impreza.json, child.json, sito.json, wpml.json (se WPML è attivo), post.json, menu.json.
+ * Scrive impreza.json, child.json, sito.json, post.json, menu.json, versioni.json e, se WPML è attivo,
+ * wpml.json. Si ferma senza scrivere se un valore ha la forma di una chiave (WPF_FORME_SEGRETE), tranne
+ * in sola lettura (backup dell'apply, fuori da git).
  * Assegna la chiave stabile (_wp_forestas_chiave) ai post e ai menu esportati che non l'hanno ancora:
  * è l'unica scrittura sul sito. Con WPF_SOLA_LETTURA=1 (backup di apply --conferma) non scrive nulla,
  * così il backup non cambia ciò che l'apply ricollegherà subito dopo.
  */
 
 require_once __DIR__ . '/comune.php';
+require_once __DIR__ . '/wpml.php';
 
-$dir = getenv( 'WPF_EXPORT_DIR' ) ?: '/tmp/wp-forestas-config';
+$dir = getenv( 'WPF_EXPORT_DIR' ) ?: '/tmp/wp-forestas-export';
 if ( ! is_dir( $dir ) && ! mkdir( $dir, 0775, true ) ) {
 	WP_CLI::error( "impossibile creare {$dir}" );
 }
-array_map( 'unlink', glob( $dir . '/*.json' ) );
 if ( ! defined( 'US_THEMENAME' ) ) {
 	WP_CLI::error( 'Impreza non è il tema attivo (né il padre del tema attivo): niente da esportare' );
 }
-$scrivi = getenv( 'WPF_SOLA_LETTURA' ) !== '1';
+$scrivi         = getenv( 'WPF_SOLA_LETTURA' ) !== '1';
 $assegna_chiave = function ( int $id, string $chiave ) use ( $scrivi ) {
 	if ( $scrivi ) {
 		update_post_meta( $id, WPF_META_CHIAVE, $chiave );
@@ -110,13 +112,16 @@ foreach ( $chiavi as $id => $chiave ) {
 	$post = get_post( $id );
 	$meta = [];
 	foreach ( get_post_meta( $id ) as $nome => $valori ) {
-		if ( $nome === WPF_META_CHIAVE || preg_match( '/^(_edit_|_wp_old|_wpml)/', $nome ) ) {
+		if ( $nome === WPF_META_CHIAVE || in_array( $nome, WPF_META_CALCOLATI, true ) || preg_match( '/^(_edit_|_wp_old|_wpml)/', $nome ) ) {
 			continue;
 		}
 		$meta[ $nome ] = maybe_unserialize( $valori[0] );
 	}
 	$meta      = wpf_togli_segreti( $meta, $tolti );
 	$lingua    = wpf_lingua( $id, 'post_' . $post->post_type );
+	if ( preg_match( WPF_ATTRIBUTI_ALLEGATO, $post->post_content ) ) {
+		$avvisi[] = "post {$chiave}: il contenuto usa immagini della Libreria media, che non stanno in config/: su un altro sito vanno ricaricate e riassegnate dal pannello";
+	}
 	$originale = null;
 	if ( $lingua && $lingua !== $lingua_predefinita ) {
 		$id_originale = wpf_traduzioni( $id, 'post_' . $post->post_type )[ $lingua_predefinita ] ?? null;
@@ -142,6 +147,8 @@ foreach ( $chiavi as $id => $chiave ) {
 foreach ( $impreza as $nome => $valore ) {
 	if ( wpf_opzione_riferimento( (string) $nome, $valore ) ) {
 		$impreza[ $nome ] = $riferimento( $valore ) ?? $valore;
+	} elseif ( wpf_opzione_allegato( (string) $nome, $valore ) ) {
+		$avvisi[] = "impreza {$nome}: è l'allegato {$valore} della Libreria media, che non sta in config/: su un altro sito va ricaricato dal pannello (l'apply tiene il valore di quel sito)";
 	}
 }
 foreach ( WPF_IMPREZA_STATO as $nome ) {
@@ -171,7 +178,7 @@ $chiave_menu = function ( WP_Term $termine, string $predefinita ) use ( $scrivi 
 	}
 	return $chiave;
 };
-$menu       = [];
+$menu        = [];
 $chiavi_menu = []; // term_id => chiave
 $termini     = wp_get_nav_menus();
 // Prima gli originali: la chiave di una traduzione deriva da quella del suo originale
@@ -188,7 +195,7 @@ foreach ( $termini as $termine ) {
 	$chiave                           = $chiave_menu( $termine, $originale ? "{$originale}-{$lingua}" : 'menu-' . $termine->slug );
 	$chiavi_menu[ $termine->term_id ] = $chiave;
 	$voci                             = wpf_togli_segreti( wpf_voci_menu( $termine->term_id ), $tolti );
-	$menu[] = [ 'chiave' => $chiave, 'slug' => $termine->slug, 'nome' => $termine->name, 'lingua' => $lingua, 'originale' => $originale, 'voci' => $voci ];
+	$menu[]                           = [ 'chiave' => $chiave, 'slug' => $termine->slug, 'nome' => $termine->name, 'lingua' => $lingua, 'originale' => $originale, 'voci' => $voci ];
 }
 $posizioni = [];
 foreach ( get_nav_menu_locations() as $posizione => $id_menu ) {
@@ -200,8 +207,11 @@ foreach ( get_nav_menu_locations() as $posizione => $id_menu ) {
 // --- wpml.json ----------------------------------------------------------------------------------
 
 $wpml = null;
-if ( class_exists( '\WPML\LanguageEditor\PageData' ) ) {
-	global $sitepress;
+global $sitepress;
+if ( $sitepress && ! class_exists( '\WPML\LanguageEditor\PageData' ) ) {
+	// WPML attivo ma con una struttura che wpml.php non conosce: meglio nessun wpml.json che uno sbagliato
+	WP_CLI::warning( 'WPML è attivo ma questa versione non ha \WPML\LanguageEditor\PageData: wpml.json non esportato, va adeguato wpml.php' );
+} elseif ( $sitepress ) {
 	$impostazioni = $sitepress->get_settings();
 	unset( $impostazioni['site_key'] );
 	foreach ( WPF_WPML_INTERNE as [ $gruppo, $nome ] ) {
@@ -212,24 +222,43 @@ if ( class_exists( '\WPML\LanguageEditor\PageData' ) ) {
 		'predefinita'  => $sitepress->get_default_language(),
 		'impostazioni' => wpf_togli_segreti( wpf_togli_stato_wpml( $impostazioni ), $tolti ),
 		'setup'        => get_option( 'WPML(setup)' ),
+		'stringhe'     => wpf_wpml_stringhe_esporta(),
 	];
 }
 
 // --- Scrittura --------------------------------------------------------------------------------
 
 $file = [
-	'impreza.json' => $impreza,
-	'child.json'   => $child,
-	'sito.json'    => $sito,
-	'post.json'    => $post_json,
-	'menu.json'    => [ 'menu' => $menu, 'posizioni' => $posizioni ],
+	'impreza.json'  => $impreza,
+	'child.json'    => $child,
+	'sito.json'     => $sito,
+	'post.json'     => $post_json,
+	'menu.json'     => [ 'menu' => $menu, 'posizioni' => $posizioni ],
 	'versioni.json' => wpf_versioni(),
 ];
 if ( $wpml ) {
 	$file['wpml.json'] = $wpml;
 }
-foreach ( $file as $nome => $dati ) {
-	file_put_contents( "{$dir}/{$nome}", wpf_json( wpf_url_in_segnaposto( $dati ) ) );
+$testi = array_map( fn( $dati ) => wpf_json( wpf_url_in_segnaposto( $dati ) ), $file );
+
+// Ultimo controllo prima di scrivere: un valore con la forma di una chiave, sotto un nome qualsiasi
+// (anche dentro il contenuto di un post), non deve arrivare nel repo pubblico. Il valore non si stampa.
+// Il backup dell'apply (sola lettura) va in backup/, esclusa da git: lì il controllo impedirebbe solo
+// l'apply e il ripristino.
+$trovati = [];
+foreach ( $scrivi ? $testi : [] as $nome => $testo ) {
+	foreach ( WPF_FORME_SEGRETE as $tipo => $forma ) {
+		if ( preg_match( $forma, $testo ) ) {
+			$trovati[] = "{$tipo} in {$nome}";
+		}
+	}
+}
+if ( $trovati ) {
+	WP_CLI::error( 'export fermato, nessun file scritto: ' . implode( ', ', $trovati ) . '. Togli la chiave dal sito (va nel .env) e rifai l\'export' );
+}
+array_map( 'unlink', glob( $dir . '/*.json' ) );
+foreach ( $testi as $nome => $testo ) {
+	file_put_contents( "{$dir}/{$nome}", $testo );
 }
 
 WP_CLI::log( 'esportati: ' . implode( ', ', array_keys( $file ) ) . ' (' . count( $post_json ) . ' post, ' . count( $menu ) . ' menu)' );

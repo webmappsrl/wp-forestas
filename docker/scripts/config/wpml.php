@@ -20,8 +20,8 @@ function wpf_wpml_applica( array $cfg, bool $prova, callable $diff ): bool {
 		return false;
 	}
 
-	$attive_ora   = array_keys( $sitepress->get_active_languages() );
-	$attive_cfg   = array_column( $cfg['lingue'], 'code' );
+	$attive_ora = array_keys( $sitepress->get_active_languages() );
+	$attive_cfg = array_column( $cfg['lingue'], 'code' );
 	sort( $attive_ora );
 	sort( $attive_cfg );
 	$lingue_uguali = $attive_ora === $attive_cfg && $sitepress->get_default_language() === $cfg['predefinita'];
@@ -29,7 +29,7 @@ function wpf_wpml_applica( array $cfg, bool $prova, callable $diff ): bool {
 	$impostazioni_ora = $sitepress->get_settings();
 	// I segreti restano quelli del sito; i segni di stato di WPML non si applicano mai, anche se un
 	// config/ esportato prima della loro esclusione li contiene
-	$impostazioni     = wpf_ripristina_segreti( wpf_togli_stato_wpml( $cfg['impostazioni'] ), $impostazioni_ora );
+	$impostazioni = wpf_ripristina_segreti( wpf_togli_stato_wpml( $cfg['impostazioni'] ), $impostazioni_ora );
 	// WPML aggiunge da sé sottochiavi (per esempio quando sposta impostazioni in tabelle proprie): si
 	// confrontano e si scrivono solo quelle presenti nell'export, il resto resta com'è sul sito
 	foreach ( $impostazioni as $nome => $valore ) {
@@ -124,8 +124,11 @@ function wpf_wpml_collega( int $id, string $tipo, ?string $lingua, ?int $id_orig
 	$trid = $id_originale
 		? apply_filters( 'wpml_element_trid', null, $id_originale, $tipo )
 		: ( $ora->trid ?? null );
-	if ( $ora && $trid && (int) $ora->trid === (int) $trid && $ora->language_code === $lingua ) {
-		return; // già nella lingua e nel gruppo giusti
+	// Solo una traduzione ha una lingua di partenza: quella del suo originale
+	$partenza = $id_originale ? ( wpf_lingua( $id_originale, $tipo ) ?? apply_filters( 'wpml_default_language', null ) ) : null;
+	if ( $ora && $trid && (int) $ora->trid === (int) $trid && $ora->language_code === $lingua
+		&& ( $ora->source_language_code ?? null ) === $partenza ) {
+		return; // già nella lingua, nel gruppo e con la lingua di partenza giusti
 	}
 	do_action(
 		'wpml_set_element_language_details',
@@ -134,7 +137,95 @@ function wpf_wpml_collega( int $id, string $tipo, ?string $lingua, ?int $id_orig
 			'element_type'         => $tipo,
 			'trid'                 => $trid ?: false,
 			'language_code'        => $lingua,
-			'source_language_code' => $trid ? apply_filters( 'wpml_default_language', null ) : null,
+			'source_language_code' => $partenza,
 		]
 	);
+}
+
+/**
+ * Traduzioni dei testi delle opzioni registrati da WPML String Translation («admin texts»: messaggio
+ * dei cookie di Impreza, formati di data…). Le altre stringhe vengono dai file di traduzione di temi e
+ * plugin, non dalla configurazione, e le «traduzioni» nella lingua stessa della stringa (formati di
+ * data che WPML crea da sé) non sono traduzioni. Lettura delle tabelle di String Translation, mai
+ * scrittura.
+ *
+ * @return array [ [ 'contesto', 'nome', 'traduzioni' => [ lingua => valore ] ] ]
+ */
+function wpf_wpml_stringhe_esporta(): array {
+	global $wpdb;
+	if ( ! defined( 'WPML_ST_VERSION' ) ) {
+		return [];
+	}
+	$righe = $wpdb->get_results(
+		"SELECT s.context, s.name, t.language, t.value FROM {$wpdb->prefix}icl_strings s
+		 JOIN {$wpdb->prefix}icl_string_translations t ON t.string_id = s.id
+		 WHERE s.context LIKE 'admin\\_texts\\_%' AND t.language <> s.language
+		   AND t.status = " . (int) ICL_TM_COMPLETE . ' AND t.value IS NOT NULL
+		 ORDER BY s.context, s.name, t.language',
+		ARRAY_A
+	);
+	$stringhe = [];
+	foreach ( $righe as $r ) {
+		$chiave = $r['context'] . "\0" . $r['name'];
+		$stringhe[ $chiave ] ??= [ 'contesto' => $r['context'], 'nome' => $r['name'], 'traduzioni' => [] ];
+		$stringhe[ $chiave ]['traduzioni'][ $r['language'] ] = $r['value'];
+	}
+	return array_values( $stringhe );
+}
+
+/**
+ * Applica le traduzioni esportate da wpf_wpml_stringhe_esporta(). Le stringhe originali le registra
+ * String Translation leggendo i wpml-config.xml e le opzioni: di solito al caricamento del pannello,
+ * qui con la stessa procedura che usa il wizard di WPML (WPML_Config::load_config_run), dopo le Theme
+ * Options. Una stringa che resta senza registrazione dà un avviso e un apply parziale.
+ */
+function wpf_wpml_stringhe_applica( array $stringhe, bool $prova, callable $diff ): bool {
+	global $wpdb;
+	if ( ! $stringhe ) {
+		return true;
+	}
+	if ( ! function_exists( 'icl_add_string_translation' ) ) {
+		WP_CLI::warning( 'WPML String Translation non è attivo: traduzioni dei testi delle opzioni saltate' );
+		return false;
+	}
+	if ( ! $prova && class_exists( 'WPML_Config' ) ) {
+		WPML_Config::load_config_run();
+	}
+	$ok = true;
+	foreach ( $stringhe as $s ) {
+		$id = (int) $wpdb->get_var(
+			$wpdb->prepare( "SELECT id FROM {$wpdb->prefix}icl_strings WHERE context = %s AND name = %s", $s['contesto'], $s['nome'] )
+		);
+		if ( ! $id ) {
+			if ( $prova ) {
+				// La registrazione avviene solo eseguendo: qui si mostra cosa verrà tradotto
+				foreach ( $s['traduzioni'] as $lingua => $valore ) {
+					$diff( "traduzione {$lingua} di {$s['nome']}", '(stringa da registrare)', $valore );
+				}
+			} else {
+				WP_CLI::warning( "stringa «{$s['nome']}» non registrata da WPML su questo sito: traduzioni non applicate, apri String Translation nel pannello e rilancia l'apply" );
+				$ok = false;
+			}
+			continue;
+		}
+		foreach ( $s['traduzioni'] as $lingua => $valore ) {
+			$ora = $wpdb->get_var(
+				$wpdb->prepare(
+					"SELECT value FROM {$wpdb->prefix}icl_string_translations WHERE string_id = %d AND language = %s AND status = %d",
+					$id,
+					$lingua,
+					ICL_TM_COMPLETE
+				)
+			);
+			if ( $ora === $valore ) {
+				continue;
+			}
+			$diff( "traduzione {$lingua} di {$s['nome']}", $ora, $valore );
+			if ( ! $prova && ! icl_add_string_translation( $id, $lingua, $valore, ICL_TM_COMPLETE ) ) {
+				WP_CLI::warning( "traduzione {$lingua} di «{$s['nome']}» non salvata" );
+				$ok = false;
+			}
+		}
+	}
+	return $ok;
 }

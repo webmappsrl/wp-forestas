@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Porta WordPress allo stato atteso, un passo alla volta: ogni passo controlla se è già fatto
 # e agisce solo se manca. Non distrugge mai un'installazione esistente, quindi è sicuro a ogni
 # avvio del container, anche in produzione.
@@ -10,7 +10,10 @@ IMPREZA_ZIP=/opt/wp-forestas/themes/impreza.zip
 # Il plugin si chiama «WM Package» e cerca i propri file in wp-content/plugins/wm-package
 # (percorso scritto fisso in functions/imports.php): la cartella deve avere questo nome.
 GEOHUB_DIR="${WP_PATH}/wp-content/plugins/wm-package"
-GEOHUB_TARBALL=https://github.com/webmappsrl/wp-geohub/archive/refs/heads/main.tar.gz
+# Commit fisso di wp-geohub: un sito ricreato deve avere lo stesso codice di quello di partenza. Per
+# aggiornarlo: git ls-remote https://github.com/webmappsrl/wp-geohub refs/heads/main, poi l'hash qui
+GEOHUB_REF=92d2ae43b7b4569f1f257bcc38d809266d4bdddd
+GEOHUB_TARBALL="https://github.com/webmappsrl/wp-geohub/archive/${GEOHUB_REF}.tar.gz"
 # Child theme versionato in themes/forestas-child, montato qui dal compose
 CHILD_DIR="${WP_PATH}/wp-content/themes/forestas-child"
 # Zip dei plugin commerciali (WPML) in docker/plugins/, esclusa da git: si copiano a mano o li crea
@@ -41,6 +44,12 @@ wp_script() {
     local extra=()
     [[ "$WP_URL" == https://* ]] && extra=(--exec='$_SERVER["HTTPS"]="on";')
     $WP "${extra[@]}" --user="$WP_ADMIN_USER" eval-file "${CONFIG_LIB}/$1"
+}
+
+# Cartella radice del contenuto di uno zip (lo slug di un tema o di un plugin), ignorando i file in radice
+# e la cartella __MACOSX che aggiunge il Finder. awk legge tutto l'elenco: niente SIGPIPE con pipefail.
+slug_zip() {
+    unzip -Z1 "$1" 2>/dev/null | awk -F/ 'NF > 1 && $1 != "__MACOSX" && s == "" { s = $1 } END { print s }'
 }
 
 # Vero se WP_URL punta a questa macchina: lì licenze e chiavi dei servizi esterni non si applicano,
@@ -106,7 +115,8 @@ if ! url_locale && [ -n "${WPML_SITE_KEY:-}" ]; then
     # WPML registra il sito su wpml.org con la chiave scritta come costante
     if [ "$($WP config get OTGS_INSTALLER_SITE_KEY_WPML 2>/dev/null || true)" != "$WPML_SITE_KEY" ]; then
         log "imposto la site key di WPML"
-        $WP config set OTGS_INSTALLER_SITE_KEY_WPML "$WPML_SITE_KEY" --type=constant \
+        # Il messaggio di WP-CLI riporta il valore della costante: non deve finire nei log del container
+        $WP config set OTGS_INSTALLER_SITE_KEY_WPML "$WPML_SITE_KEY" --type=constant >/dev/null \
             || log "AVVISO: impossibile impostare la site key di WPML"
     fi
 elif $WP config has OTGS_INSTALLER_SITE_KEY_WPML 2>/dev/null; then
@@ -123,11 +133,27 @@ if ! $WP core is-installed; then
     # Sito di prova: i motori di ricerca non devono indicizzarlo. Al lancio in produzione si
     # toglie dal pannello (Impostazioni → Lettura).
     $WP option update blog_public 0
-    $WP rewrite structure '/%postname%/' --hard
+    $WP rewrite structure '/%postname%/'
     # Solo un sito nato qui riceve l'apply automatico della configurazione (passo 8c): su un sito
     # esistente cancellerebbe ciò che è stato fatto dal pannello
     $WP option add "$OPZIONE_DA_FARE" 0 >/dev/null || log "AVVISO: impossibile segnare il sito come da configurare"
 fi
+
+# 4b. .htaccess: con i permalink «belli» Apache deve girare ogni indirizzo a index.php. Da WP-CLI
+#     «rewrite structure --hard» non lo scrive (non sa che mod_rewrite c'è) e senza il file tutte le
+#     pagine tranne la home rispondono 404. Lo scrive la stessa funzione di WordPress che usa il
+#     pannello, solo se il file manca: uno esistente può avere regole aggiunte da un plugin.
+if [ ! -f "${WP_PATH}/.htaccess" ] && [ -n "$($WP option get permalink_structure 2>/dev/null || true)" ]; then
+    log "creo .htaccess per i permalink"
+    $WP eval "require '${CONFIG_LIB}/comune.php'; exit( wpf_scrivi_htaccess() ? 0 : 1 );" \
+        || log "AVVISO: impossibile creare .htaccess, riprovo al prossimo avvio"
+fi
+
+# 4c. Blocco dell'apply rimasto da un apply interrotto: gli apply girano dentro il container e muoiono
+#     con lui, quindi all'avvio nessuno può essere ancora in corso. Senza, un blocco rimasto da un
+#     «docker stop» farebbe fallire i tentativi dell'apply automatico per 15 minuti.
+$WP eval "require '${CONFIG_LIB}/comune.php'; wpf_sblocca_apply();" \
+    || log "AVVISO: impossibile togliere il blocco dell'apply"
 
 # 5. Lingua
 if ! $WP language core is-installed it_IT; then
@@ -138,7 +164,7 @@ if [ "$($WP language core list --status=active --field=language)" != "it_IT" ]; 
     $WP site switch-language it_IT
 fi
 
-# 6. Plugin wp-geohub (dal main del repo pubblico, nella cartella wm-package)
+# 6. Plugin wp-geohub (dal repo pubblico al commit GEOHUB_REF, nella cartella wm-package)
 if [ ! -f "${GEOHUB_DIR}/index.php" ]; then
     log "scarico wp-geohub"
     tmp=$(mktemp -d)
@@ -163,7 +189,7 @@ if [[ "$temi" == *$'\n'impreza$'\n'* ]]; then
     :
 elif [ -f "$IMPREZA_ZIP" ]; then
     # Il child dichiara «Template: Impreza»: con una cartella radice diversa resterebbe senza padre
-    if unzip -Z1 "$IMPREZA_ZIP" 2>/dev/null | sed -n 1p | grep -q '^Impreza/'; then
+    if [ "$(slug_zip "$IMPREZA_ZIP" || true)" = "Impreza" ]; then
         log "installo e attivo Impreza"
         $WP theme install "$IMPREZA_ZIP" --activate || log "AVVISO: installazione di Impreza non riuscita"
     else
@@ -187,11 +213,12 @@ fi
 #     il nome del file (uno zip scaricato può chiamarsi sitepress-multilingual-cms.5.1.0.zip). Un plugin
 #     già installato non si reinstalla; se è spento lo si segnala senza riattivarlo, perché può essere
 #     stato disattivato apposta dal pannello.
-slug_zip() { unzip -Z1 "$1" 2>/dev/null | sed -n 1p | cut -d/ -f1; }
 trovati=" "
 for zip in "$PLUGIN_ZIP_DIR"/*.zip; do
     [ -f "$zip" ] || continue
-    slug=$(slug_zip "$zip")
+    # «|| true»: con pipefail uno zip rovinato farebbe uscire lo script, e il container ripartirebbe
+    # all'infinito; così cade nel controllo qui sotto
+    slug=$(slug_zip "$zip" || true)
     [ -n "$slug" ] || { log "AVVISO: $(basename "$zip") non è uno zip leggibile"; continue; }
     trovati="${trovati}${slug} "
     if ! $WP plugin is-installed "$slug"; then
@@ -238,6 +265,11 @@ fi
 #     (opzione wp_forestas_config_da_applicare, scritta al passo 4), al massimo APPLY_TENTATIVI volte.
 #     Su un sito esistente, e dopo, solo con bin/wordpress-config.sh apply.
 tentativi=$($WP option get "$OPZIONE_DA_FARE" 2>/dev/null || true)
+# Un valore non numerico (opzione cambiata a mano) farebbe fallire il confronto e uscire lo script
+if [ -n "$tentativi" ] && [[ ! "$tentativi" =~ ^[0-9]+$ ]]; then
+    log "AVVISO: ${OPZIONE_DA_FARE} vale «${tentativi}», non è un numero: riparto da 0 tentativi"
+    tentativi=0
+fi
 config_presente=false
 ls "$CONFIG_DIR"/*.json >/dev/null 2>&1 && config_presente=true
 if [ -n "$tentativi" ] && $config_presente; then
@@ -247,7 +279,7 @@ if [ -n "$tentativi" ] && $config_presente; then
     else
         $WP option update "$OPZIONE_DA_FARE" $((tentativi + 1)) >/dev/null || true
         log "applico la configurazione di config/ (tentativo $((tentativi + 1)) di ${APPLY_TENTATIVI})"
-        wp_script apply.php || log "AVVISO: configurazione non applicata del tutto, riprovo al prossimo avvio"
+        WPF_AUTOMATICO=1 wp_script apply.php || log "AVVISO: configurazione non applicata del tutto, riprovo al prossimo avvio"
     fi
 elif $config_presente && [ -z "$($WP option get "$OPZIONE_FATTO" 2>/dev/null || true)" ]; then
     log "config/ non applicata a questo sito: non si applica da sola, vedi bin/wordpress-config.sh apply"

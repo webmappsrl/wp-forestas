@@ -42,10 +42,14 @@ subagent.
 - Il child theme e la configurazione del sito si cambiano in locale, mai dal pannello di UAT né con
   Child Theme Configurator: lì finirebbero nel checkout del server, fuori da git (README, «Lavorare
   sul child theme» e «Configurazione versionata») (oc:8717)
+- `init-wordpress.sh` sta nell'immagine, non è montato come gli script di `docker/scripts/config/`:
+  una sua modifica gira solo dopo `scripts/wordpress-up.sh` di `forestas`, che ricostruisce
+  l'immagine; un semplice `docker restart` esegue ancora quello vecchio (oc:8717)
 - `init-wordpress.sh` assegna a `www-data` tutti i file di WordPress tranne il child montato: un
   `chown` sulla cartella montata cambierebbe il proprietario dei file del repo sull'host (oc:8717)
-- `git diff config/` prima di ogni commit: l'export toglie i segreti per nome e un'opzione segreta
-  con un nome insolito sfugge, in un repo pubblico (oc:8717)
+- `git diff config/` prima di ogni commit: l'export toglie i segreti per nome e si ferma sui valori
+  con la forma di una chiave nota, ma un segreto con un nome insolito e una forma qualsiasi sfugge,
+  in un repo pubblico (oc:8717)
 - WPML si configura solo con le sue API (`CatalogueSyncRunner`, `SaveLanguages` con `presetCode`,
   `save_settings`): su un sito nuovo, senza sincronizzare il catalogo, l'API risponde
   `missing_preset` (oc:8717)

@@ -69,8 +69,7 @@
         ],
         "notify_complete": 1,
         "posts_slug_translation": {
-            "on": 1,
-            "string_name_migrated": true
+            "on": 1
         },
         "promote_wpml": 0,
         "remember_language": 24,
@@ -85,8 +84,6 @@
         "st": {
             "autoregister_strings": 2,
             "autoregister_strings_should_register_backend_strings": false,
-            "autoregister_strings_were_new_translations_loaded": true,
-            "db_ok_for_gettext_context": true,
             "icl_st_auto_reg": "disable",
             "strings_language": "en-us",
             "strings_per_page": 10,
@@ -142,188 +139,6 @@
             "custom_fields_encoding": {
                 "footnotes": "json",
                 "us_tile_link": "json,urlencode"
-            },
-            "custom_fields_readonly_config_source": {
-                "_alp_processed": {
-                    "file": null,
-                    "kind": "remote-config"
-                },
-                "_edit_last": {
-                    "file": null,
-                    "kind": "remote-config"
-                },
-                "_edit_lock": {
-                    "file": null,
-                    "kind": "remote-config"
-                },
-                "_encloseme": {
-                    "file": null,
-                    "kind": "remote-config"
-                },
-                "_icl_lang_duplicate_of": {
-                    "file": null,
-                    "kind": "remote-config"
-                },
-                "_icl_translator_note": {
-                    "file": null,
-                    "kind": "remote-config"
-                },
-                "_pingme": {
-                    "file": null,
-                    "kind": "remote-config"
-                },
-                "_thumbnail_id": {
-                    "file": null,
-                    "kind": "remote-config"
-                },
-                "_wp_attached_file": {
-                    "file": null,
-                    "kind": "remote-config"
-                },
-                "_wp_attachment_image_alt": {
-                    "file": null,
-                    "kind": "remote-config"
-                },
-                "_wp_attachment_metadata": {
-                    "file": null,
-                    "kind": "remote-config"
-                },
-                "_wp_old_slug": {
-                    "file": null,
-                    "kind": "remote-config"
-                },
-                "_wp_page_template": {
-                    "file": null,
-                    "kind": "remote-config"
-                },
-                "_wpml_original_post_id": {
-                    "file": null,
-                    "kind": "remote-config"
-                },
-                "description": {
-                    "file": null,
-                    "kind": "remote-config"
-                },
-                "footnotes": {
-                    "file": null,
-                    "kind": "remote-config"
-                },
-                "keywords": {
-                    "file": null,
-                    "kind": "remote-config"
-                },
-                "original_post_id": {
-                    "file": null,
-                    "kind": "remote-config"
-                },
-                "title": {
-                    "file": null,
-                    "kind": "remote-config"
-                },
-                "us_attachment_link": {
-                    "file": "themes/Impreza/wpml-config.xml",
-                    "kind": "theme-config"
-                },
-                "us_content_id": {
-                    "file": "themes/Impreza/wpml-config.xml",
-                    "kind": "theme-config"
-                },
-                "us_footer_id": {
-                    "file": "themes/Impreza/wpml-config.xml",
-                    "kind": "theme-config"
-                },
-                "us_header_id": {
-                    "file": "themes/Impreza/wpml-config.xml",
-                    "kind": "theme-config"
-                },
-                "us_header_shadow": {
-                    "file": "themes/Impreza/wpml-config.xml",
-                    "kind": "theme-config"
-                },
-                "us_header_sticky": {
-                    "file": "themes/Impreza/wpml-config.xml",
-                    "kind": "theme-config"
-                },
-                "us_header_sticky_override": {
-                    "file": "themes/Impreza/wpml-config.xml",
-                    "kind": "theme-config"
-                },
-                "us_header_sticky_pos": {
-                    "file": "themes/Impreza/wpml-config.xml",
-                    "kind": "theme-config"
-                },
-                "us_header_transparent": {
-                    "file": "themes/Impreza/wpml-config.xml",
-                    "kind": "theme-config"
-                },
-                "us_header_transparent_override": {
-                    "file": "themes/Impreza/wpml-config.xml",
-                    "kind": "theme-config"
-                },
-                "us_meta_description": {
-                    "file": "themes/Impreza/wpml-config.xml",
-                    "kind": "theme-config"
-                },
-                "us_meta_robots": {
-                    "file": "themes/Impreza/wpml-config.xml",
-                    "kind": "theme-config"
-                },
-                "us_meta_title": {
-                    "file": "themes/Impreza/wpml-config.xml",
-                    "kind": "theme-config"
-                },
-                "us_sidebar_id": {
-                    "file": "themes/Impreza/wpml-config.xml",
-                    "kind": "theme-config"
-                },
-                "us_sidebar_pos": {
-                    "file": "themes/Impreza/wpml-config.xml",
-                    "kind": "theme-config"
-                },
-                "us_testimonial_author": {
-                    "file": "themes/Impreza/wpml-config.xml",
-                    "kind": "theme-config"
-                },
-                "us_testimonial_company": {
-                    "file": "themes/Impreza/wpml-config.xml",
-                    "kind": "theme-config"
-                },
-                "us_testimonial_link": {
-                    "file": "themes/Impreza/wpml-config.xml",
-                    "kind": "theme-config"
-                },
-                "us_testimonial_rating": {
-                    "file": "themes/Impreza/wpml-config.xml",
-                    "kind": "theme-config"
-                },
-                "us_testimonial_role": {
-                    "file": "themes/Impreza/wpml-config.xml",
-                    "kind": "theme-config"
-                },
-                "us_tile_additional_image": {
-                    "file": "themes/Impreza/wpml-config.xml",
-                    "kind": "theme-config"
-                },
-                "us_tile_bg_color": {
-                    "file": "themes/Impreza/wpml-config.xml",
-                    "kind": "theme-config"
-                },
-                "us_tile_link": {
-                    "file": "themes/Impreza/wpml-config.xml",
-                    "kind": "theme-config"
-                },
-                "us_tile_size": {
-                    "file": "themes/Impreza/wpml-config.xml",
-                    "kind": "theme-config"
-                },
-                "us_tile_text_color": {
-                    "file": "themes/Impreza/wpml-config.xml",
-                    "kind": "theme-config"
-                },
-                "us_titlebar_id": {
-                    "file": "themes/Impreza/wpml-config.xml",
-                    "kind": "theme-config"
-                }
             },
             "custom_fields_translation_custom": [],
             "custom_fields_translation_custom_readonly": [],
@@ -412,5 +227,6 @@
         "who-mode": [
             "myself"
         ]
-    }
+    },
+    "stringhe": []
 }

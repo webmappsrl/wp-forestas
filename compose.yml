@@ -25,8 +25,9 @@ services:
       # chown dell'inizializzazione non li tocca.
       - ./docker/plugins:/opt/wp-forestas/plugins:ro
       - ./config:/opt/wp-forestas/config:ro
-      # Script di export, apply e ritratto: montati dal repo, così una modifica vale subito senza
-      # ricostruire l'immagine (che ne contiene comunque una copia, per l'avvio da solo)
+      # Script PHP della configurazione (export, apply, ritratto, licenza di Impreza e le loro funzioni):
+      # montati dal repo, così una modifica vale subito senza ricostruire l'immagine (che ne contiene
+      # comunque una copia). init-wordpress.sh invece sta solo nell'immagine.
       - ./docker/scripts/config:/usr/local/lib/wp-forestas:ro
       # Il child theme è codice del repo: montato sopra il volume, ogni modifica nel repo è subito
       # visibile in WordPress, in locale e su UAT dopo il pull.

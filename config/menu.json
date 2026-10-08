@@ -16,8 +16,10 @@
                         "tipo": "post"
                     },
                     "genitore": null,
+                    "meta": [],
                     "target": "",
-                    "titolo": "Home"
+                    "titolo": "Home",
+                    "xfn": ""
                 },
                 {
                     "attr_title": "",
@@ -28,8 +30,10 @@
                         "url": "#"
                     },
                     "genitore": null,
+                    "meta": [],
                     "target": "",
-                    "titolo": "Chi siamo"
+                    "titolo": "Chi siamo",
+                    "xfn": ""
                 },
                 {
                     "attr_title": "",
@@ -40,8 +44,10 @@
                         "url": "#"
                     },
                     "genitore": null,
+                    "meta": [],
                     "target": "",
-                    "titolo": "Blog"
+                    "titolo": "Blog",
+                    "xfn": ""
                 },
                 {
                     "attr_title": "",
@@ -52,8 +58,10 @@
                         "url": "#"
                     },
                     "genitore": null,
+                    "meta": [],
                     "target": "",
-                    "titolo": "Contatti"
+                    "titolo": "Contatti",
+                    "xfn": ""
                 }
             ]
         }

@@ -51,10 +51,17 @@ APP_NAME=prova docker compose down -v     # per buttare via tutto
 ## Cosa fa l'inizializzazione
 
 A ogni avvio del container `init-wordpress.sh` controlla, nell'ordine: variabili presenti,
-database raggiungibile, core, `wp-config.php` e costanti d'ambiente, installazione, lingua `it_IT`,
-plugin `wp-geohub`, tema Impreza, UpSolution Core, plugin commerciali, child theme `forestas-child`,
-licenza Impreza, configurazione di `config/`, proprietario dei file. Esegue solo i passi che mancano
-e non tocca mai un'installazione esistente.
+database raggiungibile, core, `wp-config.php` e costanti d'ambiente, installazione, `.htaccess` dei
+permalink, lingua `it_IT`, plugin `wp-geohub` (a un commit fisso), tema Impreza, UpSolution Core,
+plugin commerciali, child theme `forestas-child`, licenza Impreza, configurazione di `config/`,
+proprietario dei file. Esegue solo i passi che mancano e non cancella mai contenuti né
+configurazione di un'installazione esistente. Su un sito esistente agisce solo così: allinea alle
+voci del `.env` le costanti di `wp-config.php` (`DISALLOW_FILE_MODS`, site key di WPML) e la licenza
+di Impreza, crea `.htaccess` se manca, toglie il blocco lasciato da un apply interrotto, riattiva
+UpSolution Core se è spento e installa ciò che manca.
+
+`init-wordpress.sh` sta nell'immagine: dopo una sua modifica va ricostruita (`scripts/wordpress-up.sh`
+di `forestas`). Gli script PHP della configurazione invece sono montati dal repo e valgono subito.
 
 - Le **chiavi di sicurezza** le genera WP-CLI in `wp-config.php`, che sta nel volume: non vanno nel
   `.env`.
@@ -62,8 +69,9 @@ e non tocca mai un'installazione esistente.
   cambiarli dopo si usa il pannello o WP-CLI.
 - `wp-geohub` si installa nella cartella `wp-content/plugins/wm-package`: il plugin si chiama «WM
   Package» e cerca i propri file in quel percorso, quindi la cartella non va rinominata.
-- `wp-geohub` si scarica dal `main` del repo pubblico; se GitHub non risponde il sito parte lo
-  stesso e il plugin arriva al riavvio successivo.
+- `wp-geohub` si scarica dal repo pubblico a un commit fisso (`GEOHUB_REF` in `init-wordpress.sh`,
+  da aggiornare a mano); se GitHub non risponde il sito parte lo stesso e il plugin arriva al
+  riavvio successivo.
 - **Impreza** è un tema commerciale: lo zip si scarica dall'account Webmapp su ThemeForest e non va
   mai committato. Se lo zip manca il sito usa il tema di default; se lo aggiungi dopo, si installa
   al riavvio successivo. La **licenza** si riattiva da sola all'avvio con `IMPREZA_LICENSE_SECRET`
@@ -112,7 +120,9 @@ in `git status` di questo repo.
 - **Restano fuori dal repo** contenuti e uploads. Theme Options, header, footer, Home, menu e WPML
   non stanno nel child ma in `config/`: vedi [Configurazione versionata](#configurazione-versionata).
 - A ogni modifica del CSS alza la `Version` nell'intestazione di `style.css` (1.0.1 per un ritocco,
-  1.1.0 per una sezione nuova): WordPress la usa nell'URL del file e i browser scaricano quello nuovo.
+  1.1.0 per una sezione nuova): finisce nell'URL del file (`style.css?ver=1.0.1`) e i browser
+  scaricano quello nuovo. Impreza userebbe la propria versione: è `functions.php` del child a
+  sostituirla.
 
 ## Configurazione versionata
 
@@ -121,11 +131,12 @@ di WPML, titolo, permalink e home statica stanno in `config/`, così un sito ric
 identico. Restano fuori contenuti editoriali, contenuti di esempio e uploads.
 
 ```bash
-bin/wordpress-config.sh export              # dal sito a config/
-bin/wordpress-config.sh apply               # cosa cambierebbe, senza scrivere
-bin/wordpress-config.sh apply --conferma    # backup in backup/<data-ora>/, poi applica config/
-bin/wordpress-config.sh ritratto            # stato del sito, da confrontare prima e dopo un reset
-bin/wordpress-config.sh zip                 # zip di Impreza e dei plugin commerciali installati
+bin/wordpress-config.sh export                  # dal sito a config/
+bin/wordpress-config.sh apply                   # cosa cambierebbe, senza scrivere
+bin/wordpress-config.sh apply --conferma        # backup in backup/<data-ora>/, poi applica config/
+bin/wordpress-config.sh apply --da DIR [--conferma]   # come sopra, da un'altra cartella (un backup)
+bin/wordpress-config.sh ritratto                # stato del sito, da confrontare prima e dopo un reset
+bin/wordpress-config.sh zip                     # zip di Impreza e dei plugin commerciali installati
 ```
 
 Il comando trova da solo il container che monta il child da questa cartella; se ce n'è più di uno,
@@ -139,28 +150,48 @@ Il comando trova da solo il container che monta il child da questa cartella; se 
   header, footer, menu e Theme Options a quelli del repo e la modifica si perde (resta solo nel backup
   dell'apply).
 - **Nessun segreto nei file**: le opzioni con `key`, `secret`, `token`, `password` o `api` fra le
-  parole del nome diventano `@segreto` e l'export le elenca; quelle che servono vanno nel `.env`
-  (oggi `IMPREZA_MAINTENANCE_KEY`). Prima del commit, `git diff config/` è l'ultimo controllo: il
-  repo è pubblico.
-- Nei file l'URL del sito è `@url_sito` (`@url_sito_json` dentro il JSON del builder) e i riferimenti
+  parole del nome (o forme attaccate come `apikey`, `licensekey`) diventano `@segreto` e l'export le
+  elenca; quelle che servono vanno nel `.env` (oggi `IMPREZA_MAINTENANCE_KEY`). In più l'export si
+  ferma senza scrivere nulla se un valore ha la forma di una chiave nota (Google, Stripe, GitHub,
+  AWS, Slack, chiave privata), sotto qualsiasi nome e anche dentro il contenuto di un post. Prima del
+  commit, `git diff config/` resta l'ultimo controllo: il repo è pubblico.
+- Nei file l'URL del sito è `@url_sito` (`@url_sito_json` dentro il JSON del builder,
+  `@url_sito_urlenc` dove è codificato dentro un link) e i riferimenti
   ai post sono `@chiave:<nome>`: header, footer, Home e menu si riconoscono dal metadato
   `_wp_forestas_chiave`, non da titolo o slug, quindi rinominarli dal pannello non crea duplicati.
 - **Cosa finisce in `config/`**: tutti gli header, i Page Block, i Content Template e i Grid Layout di
   Impreza, **anche in bozza** (una prova va cancellata o cestinata prima dell'export); le pagine a cui
   puntano le Theme Options e le impostazioni del sito, come la Home; tutti i menu con le loro
-  traduzioni. Le altre pagine e gli articoli sono contenuti, non configurazione.
+  traduzioni e le impostazioni di Impreza sulle singole voci (mega menu, voce come pulsante); le
+  traduzioni dei testi delle opzioni fatte con String Translation (per esempio il messaggio dei
+  cookie di Impreza in inglese). Le altre pagine e gli articoli sono contenuti, non configurazione.
 - Una **voce di menu verso una pagina non esportata** (una pagina normale come «Chi siamo») si salva
   come link relativo (`/chi-siamo/`): sul sito di destinazione funziona solo se lì c'è una pagina con
   lo stesso indirizzo.
 - **«Duplica» di Impreza** copia anche la chiave stabile: l'export assegna alla copia una chiave sua e
   lo segnala; l'originale tiene la sua.
 - Restano fuori da `config/` anche lo stato dei plugin: i segni di migrazione di WPML e la modalità
-  manutenzione di Impreza, che su UAT accende la licenza di sviluppo.
+  manutenzione di Impreza, che su UAT accende la licenza di sviluppo. Restano fuori anche gli stili
+  i metadati che UpSolution Core e WPML ricavano da sé salvando un post (stili degli elementi del
+  builder, filtri, allegati usati): l'apply salva il post e li ricalcolano loro.
+- **Le immagini della Libreria media non stanno in `config/`**: l'export segnala le Theme Options di
+  tipo immagine che puntano a un allegato (icona del sito, sfondi…) e i post del builder che usano
+  immagini; l'apply per le Theme Options tiene il valore del sito di destinazione. L'immagine va
+  caricata dal pannello, oppure messa nel child (vedi «Lavorare sul child theme»). Lo stesso vale
+  per un'immagine di sfondo di un mega menu.
+- **Il titolo del sito è quello di `config/sito.json`**: `WP_TITLE` del `.env` vale solo
+  all'installazione, poi l'apply lo sostituisce con `blogname` del repo.
 - `config/versioni.json` registra le versioni di Impreza, UpSolution Core e dei plugin commerciali
-  da cui è stato fatto l'export; l'apply avvisa se il sito ne ha altre.
+  da cui è stato fatto l'export; l'apply avvisa se il sito ne ha altre. L'apply automatico di un sito
+  appena installato, che nessuno guarda, con una versione principale diversa (Impreza 9 contro 10)
+  non applica: si guardano le differenze e si lancia a mano.
 - Il backup di `apply --conferma` è un export in sola lettura in `backup/<data-ora>/`, senza segreti;
-  Impreza conserva anche un suo backup delle Theme Options, ripristinabile dal pannello. Un apply che
-  riesce solo in parte termina con errore e dice quali passi mancano.
+  si rimette con `apply --da backup/<data-ora> --conferma`. Impreza conserva anche un suo backup delle
+  Theme Options, ripristinabile dal pannello. Un apply che riesce solo in parte termina con errore e
+  dice quali passi mancano.
+- Due apply sullo stesso sito non partono insieme (per esempio quello automatico dell'avvio e uno
+  lanciato a mano): il secondo si ferma e va rilanciato.
+- Se l'apply cambia i permalink scrive anche `.htaccess`, come il pannello.
 - Per aggiungere un plugin commerciale: il suo slug in `docker/plugins/commerciali.txt`, lo zip
   `<slug>.zip` nella stessa cartella. L'init lo installa, `zip` lo rigenera e il ritratto ne mostra la
   versione.
@@ -179,8 +210,9 @@ Il comando trova da solo il container che monta il child da questa cartella; se 
 4. `bin/wordpress-config.sh apply` per vedere le differenze, poi `apply --conferma` se sono quelle
    attese. Su un sito che esisteva prima di `config/` l'init non applica nulla da solo, e header,
    footer e Home già presenti vengono **ricollegati** («senza chiave → ricollegato»), non duplicati.
-   In quella prima anteprima possono comparire anche `page_on_front … → 0` e «voci diverse» nel menu:
-   dipendono dai post non ancora ricollegati e l'esecuzione non li applica.
+   In quella prima anteprima possono comparire anche «voci diverse» nel menu, perché le voci puntano
+   a post non ancora ricollegati, e qualche avviso «riferimento non risolto»: con `--conferma` i post
+   si ricollegano prima, e un riferimento che resta senza post lascia il valore del sito.
 
 ## Indicizzazione
 
