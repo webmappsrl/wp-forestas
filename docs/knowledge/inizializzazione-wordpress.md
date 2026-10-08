@@ -77,11 +77,43 @@ Vincolo: `wp-geohub` non ha tag né release; si scarica a un commit fisso (`GEOH
 - **wp-geohub a un commit fisso** (oc:8717): dal ramo `main` due siti ricreati in giorni diversi
   avevano codice diverso, contro l'obiettivo di un sito ricreabile.
 - **Un apply alla volta, e l'automatico solo con le stesse versioni principali** (oc:8717): l'apply
-  dell'avvio e uno lanciato dall'host nello stesso momento creerebbero post e menu doppi. Il blocco
-  si toglie a ogni avvio del container (passo 4c), perché un apply gira dentro il container e muore
-  con lui; e un
-  `config/` di un Impreza o un WPML di versione principale diversa può avere uno schema diverso, che
-  l'apply automatico applicherebbe senza che nessuno guardi le differenze.
+  dell'avvio e uno lanciato dall'host nello stesso momento creerebbero post e menu doppi. All'avvio
+  del container (passo 4c) si tolgono i blocchi presi prima dell'avvio, perché un apply gira dentro il
+  container e muore con lui; quello di un apply lanciato durante l'avvio resta. Un `config/` di un
+  Impreza o un WPML di versione principale diversa può avere uno schema diverso, che l'apply
+  automatico applicherebbe senza che nessuno guardi le differenze.
+- **Nomi, percorsi ed elenco dei plugin commerciali solo in `comune.php`** (oc:8717): bash e PHP non
+  possono condividere codice, ma l'init li legge con `php -r` (`config_php`) e `bin/` con `php -r`
+  dentro il container. Una copia in bash rinominata a metà avrebbe fatto ripartire l'apply automatico
+  all'infinito, o mai.
+- **Database che non risponde: l'init si ferma** (oc:8717): proseguendo, `core is-installed` fallisce
+  come su un sito vuoto e il passo 4 tratterebbe un sito esistente come nuovo, con l'apply automatico.
+- **Le pagine esistenti si aggiornano solo con `apply --pagine`** (oc:8717): la Home è in `config/`
+  perché un sito ricreato deve averla, ma è anche contenuto della redazione; un apply fatto per un
+  colore non deve riportarla alla versione del repo.
+- **Voci di menu lette dal database, non da `wp_get_nav_menu_items()`** (oc:8717): da WP-CLI il suo
+  filtro lascia a WPML aggiungere il selettore di lingua e togliere la «root page», che finirebbero
+  in `config/` come voci vere o andrebbero perse.
+- **WP-CLI a una versione fissa** (oc:8717): export e apply usano WP-CLI e sono provati con quella
+  versione; prima l'immagine scaricava l'ultima.
+
+## Dipendenze da codice interno di Impreza e WPML
+
+Export e apply usano funzioni e classi che Impreza e WPML non documentano come API. Dopo un
+aggiornamento dei due (README, «Aggiornamenti di Impreza e WPML») vanno controllati questi punti,
+con un apply di prova su un WordPress usa e getta prima di quello su UAT:
+
+- **Impreza / UpSolution Core:** `usof_save_options`, `usof_backup`, `us_config('theme-options')`
+  (campi `upload`), `us_get_local_google_fonts_state`, `us_download_local_google_fonts`, `us_api` con
+  `/envato_auth` (`licenza-impreza.php` riproduce `us_check_and_activate_theme`, che legge `$_GET` e
+  fa un redirect e quindi non si può richiamare), il salvataggio dei metadati in `us_save_post`.
+- **WPML:** `\WPML\LanguageEditor\PageData`, `Endpoint\SaveLanguages`, `Presets\CatalogueSyncRunner`,
+  `\WPML\FP\Right`, `WPML_Package_Translation_Schema::run_update`, `WPML_Config::load_config_run`,
+  `$sitepress->delete_element_translation` (vuole il trid come stringa), le tabelle
+  `icl_strings`/`icl_string_translations` lette dall'export.
+
+La versione principale diversa ferma l'apply automatico; un apply a mano avvisa e mostra le
+differenze prima di `--conferma`.
 
 ## Come ci siamo arrivati
 

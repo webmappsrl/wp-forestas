@@ -5,12 +5,18 @@
  */
 
 /**
+ * Le pagine (la Home e le altre a cui puntano le opzioni) sono anche contenuto della redazione: se
+ * esistono già si aggiornano solo con $pagine vero (bin/wordpress-config.sh apply --pagine), così un
+ * apply fatto per un colore o un menu non riporta la Home alla versione del repo. Header, Page Block e
+ * gli altri post del builder sono configurazione e si aggiornano sempre.
+ *
  * @param array    $post_cfg contenuto di post.json
  * @param bool     $prova    vero: non scrive, segnala solo le differenze
  * @param callable $diff     fn( string $voce, $prima, $dopo )
+ * @param bool     $pagine   vero: aggiorna anche le pagine che esistono già
  * @return bool falso se qualcosa non è riuscito
  */
-function wpf_post_applica( array $post_cfg, bool $prova, callable $diff ): bool {
+function wpf_post_applica( array $post_cfg, bool $prova, callable $diff, bool $pagine = false ): bool {
 	$ok    = true;
 	$viste = [];
 	foreach ( wpf_originali_prima( $post_cfg ) as $p ) {
@@ -56,6 +62,15 @@ function wpf_post_applica( array $post_cfg, bool $prova, callable $diff ): bool 
 				}
 			}
 			if ( ! $diversi ) {
+				continue;
+			}
+			if ( ! $pagine && ! in_array( $p['post_type'], WPF_TIPI_BUILDER, true ) ) {
+				// Non è una differenza da applicare: si segnala senza contarla
+				WP_CLI::log( "post {$p['chiave']}: diverso dal repo in " . implode( ', ', $diversi ) . ', non aggiornato perché è una pagina della redazione (per aggiornarla: apply --pagine)' );
+				$originale = $p['originale'] ? wpf_post_per_chiave( $p['originale'] ) : null;
+				if ( ! $prova ) {
+					wpf_wpml_collega( $esistente->ID, 'post_' . $p['post_type'], $p['lingua'], $originale ? $originale->ID : null );
+				}
 				continue;
 			}
 			$diff( "post {$p['chiave']}", 'diverso in ' . implode( ', ', $diversi ), 'come nel repo' );

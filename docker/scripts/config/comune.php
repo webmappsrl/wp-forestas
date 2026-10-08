@@ -1,6 +1,8 @@
 <?php
 /**
- * Funzioni condivise da export, apply e ritratto della configurazione (oc:8717).
+ * Costanti e funzioni condivise da export, apply e ritratto della configurazione e da
+ * init-wordpress.sh, che ne legge nomi e percorsi con «php -r» per non ripeterli (oc:8717). Il file
+ * si carica anche senza WordPress: solo le funzioni che lo usano lo richiedono.
  *
  * Nei file di config/ tre segnaposti sostituiscono ciò che cambia da un sito all'altro:
  * - @url_sito       l'indirizzo del sito (@url_sito_json nella forma con le barre protette,
@@ -13,17 +15,22 @@ const WPF_SEGNAPOSTO_URL = '@url_sito';
 const WPF_SEGRETO        = '@segreto';
 const WPF_RIFERIMENTO    = '@chiave:';
 const WPF_META_CHIAVE    = '_wp_forestas_chiave';
-// Percorsi montati dal compose: gli stessi di docker/scripts/init-wordpress.sh (PLUGIN_ZIP_DIR, CONFIG_DIR)
+
+// Percorsi montati dal compose (compose.yml): li legge anche init-wordpress.sh
 const WPF_DIR_PLUGIN = '/opt/wp-forestas/plugins';
 const WPF_DIR_CONFIG = '/opt/wp-forestas/config';
-// Opzione che impedisce due apply nello stesso momento (l'automatico dell'init e uno lanciato dall'host)
-const WPF_OPZIONE_APPLY_IN_CORSO = 'wp_forestas_apply_in_corso';
-// Dopo quanti secondi un apply «in corso» si considera interrotto e il blocco si può togliere
-const WPF_APPLY_SCADENZA = 900;
-// I nomi di queste due opzioni sono ripetuti in docker/scripts/init-wordpress.sh: vanno cambiati insieme
-const WPF_OPZIONE_FATTO  = 'wp_forestas_config_applicata';
-// Scritta dall'init quando installa WordPress: solo un sito nato così riceve l'apply automatico
+
+// Opzioni di controllo, lette anche da init-wordpress.sh. Scritta dall'init quando installa WordPress:
+// solo un sito nato così riceve l'apply automatico. La seconda la scrive l'apply riuscito.
 const WPF_OPZIONE_DA_FARE = 'wp_forestas_config_da_applicare';
+const WPF_OPZIONE_FATTO   = 'wp_forestas_config_applicata';
+// Blocco che impedisce due apply nello stesso momento (l'automatico dell'init e uno lanciato dall'host)
+const WPF_OPZIONE_APPLY_IN_CORSO = 'wp_forestas_apply_in_corso';
+// Dopo quanti secondi un apply «in corso» si considera interrotto e il blocco si può togliere. Deve
+// superare il tempo massimo dell'apply automatico, che init-wordpress.sh ricava da qui
+const WPF_APPLY_SCADENZA = 2400;
+// Plugin commerciali la cui attivazione automatica è fallita: l'init la ritenta (vedi il passo 7c)
+const WPF_OPZIONE_DA_ATTIVARE = 'wp_forestas_plugin_da_attivare';
 
 // Impostazioni del sito versionate in sito.json (export) e mostrate nel ritratto
 const WPF_OPZIONI_SITO = [ 'blogname', 'blogdescription', 'permalink_structure', 'show_on_front', 'page_on_front', 'page_for_posts' ];
@@ -62,9 +69,17 @@ const WPF_IMPREZA_PAGINE = [ 'page_404', 'search_page' ];
 // del post fatto dall'apply.
 const WPF_META_CALCOLATI = [ '_us_jsoncss_data', '_us_faceted_filter_items', '_us_schema_markup_faq', 'copied_media_ids', 'referenced_media_ids' ];
 
+// Metadati dei post che non si esportano: modifica in corso e slug vecchi di WordPress, collegamenti di
+// WPML (le traduzioni si esportano a parte). «_wp_page_template», il modello della pagina, invece resta.
+const WPF_META_ESCLUSI_POST = '/^(_edit_|_wp_old|_wpml|_icl_)/';
+// Metadati dei post con l'id di un allegato della Libreria media: non si esportano, l'export avvisa
+const WPF_META_ALLEGATI = [ '_thumbnail_id' ];
+
 // Metadati standard delle voci di menu: già rappresentati dai campi di wpf_voci_menu(). Gli altri (mega
 // menu e pulsante di Impreza, «us_mega_menu_settings», «_menu_item_btn_style»…) si esportano a parte.
 const WPF_META_VOCE_STANDARD = [ '_menu_item_type', '_menu_item_menu_item_parent', '_menu_item_object_id', '_menu_item_object', '_menu_item_target', '_menu_item_classes', '_menu_item_xfn', '_menu_item_url', '_menu_item_orphaned' ];
+// Altri metadati delle voci che non si esportano: per una voce di menu nessun «_wp_…» è un'impostazione
+const WPF_META_ESCLUSI_VOCE = '/^(_edit_|_wp_|_wpml|_icl_)/';
 
 // Attributi del builder che contengono id di allegati della Libreria media («image="12"», «images="3,4"»)
 const WPF_ATTRIBUTI_ALLEGATO = '/\b(image|images|img|ids|bg_image|logo|icon_image)="\d/';
@@ -84,28 +99,35 @@ const WPF_FORME_SEGRETE = [
 const WPF_NON_SEGRETI = [ 'sync_password' ];
 
 /**
- * Vero se il nome di un'opzione indica un segreto. Si confrontano le parole separate da «_», così
- * «gmaps_api_key» è un segreto e «h_keyboard_accessibility» no.
+ * Vero se il nome di un'opzione indica un segreto. Il nome si spezza in parole (separate da «_», «-»
+ * o da una maiuscola: «privateKey» → private, key) e si cercano quelle dei segreti, così
+ * «gmaps_api_key» e «consumerSecret» sono segreti e «h_keyboard_accessibility» no. «api» da sola non
+ * basta («apiUrl», «header_api» sono impostazioni). In più le forme attaccate comuni («apikey»,
+ * «licensekey»).
  */
 function wpf_valore_segreto( string $nome ): bool {
 	if ( in_array( $nome, WPF_NON_SEGRETI, true ) ) {
 		return false;
 	}
-	// Le parole intere, più le forme attaccate più comuni («apikey», «licensekey», «secretkey»)
-	return (bool) preg_match( '/(^|_)(key|secret|token|password|passwd|pwd|api)(_|$)|apikey|api_key|licen[cs]e_?key|secret_?key|access_?token/i', $nome );
+	$parole = strtolower( preg_replace( '/(?<=[a-z0-9])(?=[A-Z])|-/', '_', $nome ) );
+	return (bool) preg_match( '/(^|_)(key|keys|secret|secrets|token|tokens|password|passwd|pwd|pass|credentials)(_|$)/', $parole )
+		|| (bool) preg_match( '/apikey|licen[cs]ekey|secretkey|accesstoken|privatekey|passphrase/i', $nome );
 }
 
 /**
- * Sostituisce con @segreto i valori segreti non vuoti, a qualsiasi profondità, e ne raccoglie i nomi.
+ * Sostituisce con @segreto i valori segreti, a qualsiasi profondità, e ne raccoglie i nomi. Un segreto
+ * con un elenco come valore si toglie per intero. Restano i valori che non dicono nulla (vuoto, null,
+ * vero/falso, elenco vuoto): toglierli farebbe solo comparire differenze inutili.
  */
 function wpf_togli_segreti( array $dati, array &$tolti, string $percorso = '' ): array {
 	foreach ( $dati as $nome => $valore ) {
-		$qui = $percorso === '' ? (string) $nome : $percorso . '.' . $nome;
-		if ( is_array( $valore ) ) {
-			$dati[ $nome ] = wpf_togli_segreti( $valore, $tolti, $qui );
-		} elseif ( is_string( $nome ) && wpf_valore_segreto( $nome ) && $valore !== '' && $valore !== null ) {
+		$qui     = $percorso === '' ? (string) $nome : $percorso . '.' . $nome;
+		$segreto = is_string( $nome ) && wpf_valore_segreto( $nome );
+		if ( $segreto && ! in_array( $valore, [ '', null, [] ], true ) && ! is_bool( $valore ) ) {
 			$dati[ $nome ] = WPF_SEGRETO;
 			$tolti[]       = $qui;
+		} elseif ( is_array( $valore ) ) {
+			$dati[ $nome ] = wpf_togli_segreti( $valore, $tolti, $qui );
 		}
 	}
 	return $dati;
@@ -206,26 +228,101 @@ function wpf_post_per_chiave( string $chiave ): ?WP_Post {
 }
 
 /**
+ * Voci di un menu lette dal database, nell'ordine del menu. Non si usa wp_get_nav_menu_items(): il suo
+ * filtro lascia a WPML aggiungere le voci del selettore di lingua (che non esistono nel database) e
+ * togliere quella della «root page», e da WP-CLI quel filtro è attivo.
+ *
+ * @return WP_Post[]
+ */
+function wpf_voci_db( int $id_menu ): array {
+	$ids = get_objects_in_term( $id_menu, 'nav_menu' );
+	if ( is_wp_error( $ids ) || ! $ids ) {
+		return [];
+	}
+	$voci = get_posts(
+		[
+			'post_type'        => 'nav_menu_item',
+			'post__in'         => $ids,
+			'post_status'      => 'any',
+			'orderby'          => 'menu_order',
+			'order'            => 'ASC',
+			'numberposts'      => -1,
+			'suppress_filters' => true,
+		]
+	);
+	return array_map( 'wp_setup_nav_menu_item', $voci );
+}
+
+/**
+ * Link relativo di un post nella sua lingua. Da WP-CLI WPML converte il link di una traduzione in quello
+ * del post nella lingua corrente (la predefinita): si passa alla lingua del post e poi si torna indietro.
+ */
+function wpf_link_relativo( int $id ): string {
+	$lingua = wpf_lingua( $id, 'post_' . get_post_type( $id ) );
+	$prima  = apply_filters( 'wpml_current_language', null );
+	if ( $lingua ) {
+		do_action( 'wpml_switch_language', $lingua );
+	}
+	$link = wp_make_link_relative( get_permalink( $id ) );
+	if ( $lingua ) {
+		do_action( 'wpml_switch_language', $prima );
+	}
+	return $link;
+}
+
+/**
+ * Posizione di una voce nel suo menu (0 = la prima), o null. Serve a collegare le voci di un menu
+ * tradotto a quelle dell'originale: gli id cambiano da un sito all'altro, la posizione no.
+ */
+function wpf_posizione_voce( int $id_voce ): ?int {
+	$menu = wp_get_object_terms( $id_voce, 'nav_menu', [ 'fields' => 'ids' ] );
+	if ( is_wp_error( $menu ) || ! $menu ) {
+		return null;
+	}
+	$posizione = array_search( $id_voce, array_map( fn( $v ) => (int) $v->ID, wpf_voci_db( (int) $menu[0] ) ), true );
+	return $posizione === false ? null : $posizione;
+}
+
+/**
  * Voci di un menu nella forma dei file di config/: la stessa per l'export e per il confronto
- * dell'apply, così ogni differenza (destinazione, gerarchia, target, classi) viene vista.
- * Una voce verso un post con chiave stabile punta alla chiave; verso un altro post, al suo link
- * relativo.
+ * dell'apply, così ogni differenza (destinazione, gerarchia, target, classi, metadati, legame con la
+ * traduzione) viene vista. La destinazione è:
+ * - «post», la chiave stabile, per un post esportato in config/;
+ * - «pagina», tipo e percorso, per un altro post o pagina: l'apply lo ritrova sul sito di destinazione
+ *   e la voce resta un collegamento a quel post (con link e traduzione che WordPress e WPML seguono);
+ * - «custom», l'URL, per un link e per una categoria.
+ * «originale» è, per una voce di un menu tradotto, la posizione della voce che traduce nel menu
+ * originale (il gruppo di traduzione di WPML).
  */
 function wpf_voci_menu( int $id_menu ): array {
-	$voci   = [];
-	$indici = []; // id della voce => posizione nell'elenco, per ricollegare i sottomenu
-	foreach ( (array) wp_get_nav_menu_items( $id_menu, [ 'post_status' => 'any' ] ) as $i => $voce ) {
+	$voci        = [];
+	$indici      = []; // id della voce => posizione nell'elenco, per ricollegare i sottomenu
+	$predefinita = apply_filters( 'wpml_default_language', null );
+	foreach ( wpf_voci_db( $id_menu ) as $i => $voce ) {
 		$indici[ $voce->ID ] = $i;
 		$destinazione        = [ 'tipo' => 'custom', 'url' => $voce->url ];
 		if ( $voce->type === 'post_type' ) {
-			$chiave       = get_post_meta( (int) $voce->object_id, WPF_META_CHIAVE, true );
-			$destinazione = $chiave
-				? [ 'tipo' => 'post', 'post' => WPF_RIFERIMENTO . $chiave ]
-				: [ 'tipo' => 'custom', 'url' => wp_make_link_relative( get_permalink( $voce->object_id ) ) ];
+			$chiave = get_post_meta( (int) $voce->object_id, WPF_META_CHIAVE, true );
+			if ( $chiave ) {
+				$destinazione = [ 'tipo' => 'post', 'post' => WPF_RIFERIMENTO . $chiave ];
+			} elseif ( get_post( (int) $voce->object_id ) ) {
+				$destinazione = [
+					'tipo'      => 'pagina',
+					'post_type' => $voce->object,
+					'percorso'  => get_page_uri( (int) $voce->object_id ),
+					'url'       => wpf_link_relativo( (int) $voce->object_id ),
+				];
+			}
 		} elseif ( $voce->type === 'taxonomy' ) {
 			// Con la tassonomia non registrata (plugin spento) get_term_link restituisce un errore
 			$link         = get_term_link( (int) $voce->object_id, $voce->object );
 			$destinazione = [ 'tipo' => 'custom', 'url' => is_wp_error( $link ) ? $voce->url : wp_make_link_relative( $link ) ];
+		}
+		$originale = null;
+		$lingua    = wpf_lingua( (int) $voce->ID, 'post_nav_menu_item' );
+		if ( $lingua && $predefinita && $lingua !== $predefinita ) {
+			$id_originale = wpf_traduzioni( (int) $voce->ID, 'post_nav_menu_item' )[ $predefinita ] ?? null;
+			$originale    = $id_originale && $id_originale !== (int) $voce->ID ? wpf_posizione_voce( $id_originale ) : null;
 		}
 		$voci[] = [
 			'titolo'       => $voce->title,
@@ -237,6 +334,7 @@ function wpf_voci_menu( int $id_menu ): array {
 			'attr_title'   => $voce->attr_title,
 			'xfn'          => $voce->xfn,
 			'meta'         => wpf_meta_voce( (int) $voce->ID ),
+			'originale'    => $originale,
 		];
 	}
 	return $voci;
@@ -250,7 +348,7 @@ function wpf_voci_menu( int $id_menu ): array {
 function wpf_meta_voce( int $id ): array {
 	$meta = [];
 	foreach ( get_post_meta( $id ) as $nome => $valori ) {
-		if ( in_array( $nome, WPF_META_VOCE_STANDARD, true ) || preg_match( '/^(_edit_|_wp_|_wpml)/', $nome ) ) {
+		if ( in_array( $nome, WPF_META_VOCE_STANDARD, true ) || preg_match( WPF_META_ESCLUSI_VOCE, $nome ) ) {
 			continue;
 		}
 		$meta[ $nome ] = maybe_unserialize( $valori[0] );
@@ -259,13 +357,16 @@ function wpf_meta_voce( int $id ): array {
 }
 
 /**
- * Plugin commerciali da docker/plugins/commerciali.txt, montato in WPF_DIR_PLUGIN. Stesse regole di
- * init-wordpress.sh e bin/wordpress-config.sh: «#» apre un commento, spazi e righe vuote si ignorano.
+ * Plugin commerciali da docker/plugins/commerciali.txt, montato in WPF_DIR_PLUGIN: «#» apre un
+ * commento, spazi e righe vuote si ignorano. È l'unica lettura del file: init-wordpress.sh e
+ * bin/wordpress-config.sh la chiamano con «php -r».
  */
 function wpf_plugin_commerciali(): array {
 	$file = WPF_DIR_PLUGIN . '/commerciali.txt';
 	if ( ! is_readable( $file ) ) {
-		WP_CLI::warning( "{$file} non trovato: elenco dei plugin commerciali vuoto" );
+		if ( class_exists( 'WP_CLI' ) ) {
+			WP_CLI::warning( "{$file} non trovato: elenco dei plugin commerciali vuoto" );
+		}
 		return [];
 	}
 	$slug = array_map( fn( $r ) => preg_replace( '/\s+/', '', preg_replace( '/#.*/', '', $r ) ), file( $file ) );
@@ -302,11 +403,17 @@ function wpf_originali_prima( array $elenco ): array {
 }
 
 /**
- * Vero se il sito risponde su questa macchina (localhost o 127.0.0.1): lì licenze e chiavi dei
- * servizi esterni non si applicano. Stesso criterio di url_locale() in init-wordpress.sh.
+ * Vero se l'indirizzo punta a questa macchina (localhost o 127.0.0.1): lì licenze e chiavi dei servizi
+ * esterni non si applicano, perché il sito si registrerebbe presso i fornitori con un indirizzo locale.
+ * init-wordpress.sh la usa con «php -r» su WP_URL.
  */
+function wpf_indirizzo_locale( string $url ): bool {
+	return in_array( parse_url( $url, PHP_URL_HOST ), [ 'localhost', '127.0.0.1' ], true );
+}
+
+/** Vero se il sito risponde su questa macchina (vedi wpf_indirizzo_locale). */
 function wpf_url_locale(): bool {
-	return in_array( parse_url( home_url(), PHP_URL_HOST ), [ 'localhost', '127.0.0.1' ], true );
+	return wpf_indirizzo_locale( home_url() );
 }
 
 /**
@@ -385,18 +492,13 @@ function wpf_scrivi_htaccess(): bool {
  * Impedisce due apply nello stesso momento. Il blocco è una riga di wp_options inserita con
  * INSERT IGNORE: il database la accetta una volta sola, quindi solo il primo apply la ottiene
  * (add_option non basta: scrive con ON DUPLICATE KEY UPDATE e si fida della cache). Un blocco più
- * vecchio di WPF_APPLY_SCADENZA viene da un apply interrotto e si toglie; l'init toglie comunque ogni
- * blocco all'avvio del container, perché un apply gira dentro il container e muore con lui.
+ * vecchio di WPF_APPLY_SCADENZA viene da un apply interrotto e si toglie; l'init toglie all'avvio del
+ * container i blocchi presi prima dell'avvio (vedi wpf_sblocca_apply), perché un apply gira dentro il
+ * container e muore con lui.
  */
 function wpf_blocca_apply(): bool {
 	global $wpdb;
-	$wpdb->query(
-		$wpdb->prepare(
-			"DELETE FROM {$wpdb->options} WHERE option_name = %s AND CAST(option_value AS UNSIGNED) < %d",
-			WPF_OPZIONE_APPLY_IN_CORSO,
-			time() - WPF_APPLY_SCADENZA
-		)
-	);
+	wpf_sblocca_apply( time() - WPF_APPLY_SCADENZA );
 	$preso = $wpdb->query(
 		$wpdb->prepare(
 			"INSERT IGNORE INTO {$wpdb->options} (option_name, option_value, autoload) VALUES (%s, %s, 'off')",
@@ -411,10 +513,24 @@ function wpf_blocca_apply(): bool {
 	return true;
 }
 
-/** Toglie il blocco dell'apply (vedi wpf_blocca_apply). */
-function wpf_sblocca_apply(): void {
+/**
+ * Toglie il blocco dell'apply (vedi wpf_blocca_apply). Con $prima_di toglie solo un blocco preso prima
+ * di quell'istante: l'init passa l'ora del proprio avvio, così non toglie il blocco di un apply lanciato
+ * dall'host mentre l'init sta ancora girando.
+ */
+function wpf_sblocca_apply( ?int $prima_di = null ): void {
 	global $wpdb;
-	$wpdb->delete( $wpdb->options, [ 'option_name' => WPF_OPZIONE_APPLY_IN_CORSO ] );
+	if ( $prima_di === null ) {
+		$wpdb->delete( $wpdb->options, [ 'option_name' => WPF_OPZIONE_APPLY_IN_CORSO ] );
+	} else {
+		$wpdb->query(
+			$wpdb->prepare(
+				"DELETE FROM {$wpdb->options} WHERE option_name = %s AND CAST(option_value AS UNSIGNED) < %d",
+				WPF_OPZIONE_APPLY_IN_CORSO,
+				$prima_di
+			)
+		);
+	}
 	wp_cache_delete( WPF_OPZIONE_APPLY_IN_CORSO, 'options' );
 }
 

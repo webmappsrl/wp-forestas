@@ -11,9 +11,6 @@ REPO=$(cd "$(dirname "$0")/.." && pwd -P)
 WP_PATH=/var/www/html
 CHILD_MOUNT="${WP_PATH}/wp-content/themes/forestas-child"
 CONFIG_LIB=/usr/local/lib/wp-forestas
-# Plugin commerciali: elenco unico in docker/plugins/commerciali.txt
-# (stesse regole di init-wordpress.sh: «#» apre un commento, spazi e righe vuote si ignorano)
-PLUGIN_COMMERCIALI=$(awk '{ sub(/#.*/, ""); gsub(/[ \t\r]/, "") } NF' "${REPO}/docker/plugins/commerciali.txt" 2>/dev/null || true)
 # Attesa massima della home nel ritratto, in secondi
 CURL_ATTESA=60
 
@@ -23,12 +20,16 @@ uso() {
     cat <<'TESTO'
 Configurazione del WordPress di Forestas, dall'host.
 
-  bin/wordpress-config.sh export [--in DIR]   configurazione del sito → config/ (o DIR)
-  bin/wordpress-config.sh apply [--da DIR]               mostra cosa cambierebbe, senza scrivere
-  bin/wordpress-config.sh apply [--da DIR] --conferma    salva un backup in backup/<data-ora>/ e applica
-                                                         config/ (o DIR, per esempio un backup)
-  bin/wordpress-config.sh ritratto            stato del sito, da confrontare prima e dopo un reset
-  bin/wordpress-config.sh zip                 zip di Impreza e dei plugin commerciali installati
+  bin/wordpress-config.sh export [--in DIR]        configurazione del sito → config/ (o DIR)
+  bin/wordpress-config.sh apply [OPZIONI]          mostra cosa cambierebbe, senza scrivere
+  bin/wordpress-config.sh apply [OPZIONI] --conferma
+                                                   salva un backup in backup/<data-ora>/ e applica
+  bin/wordpress-config.sh ritratto                 stato del sito, da confrontare prima e dopo un reset
+  bin/wordpress-config.sh zip                      zip di Impreza e dei plugin commerciali installati
+
+Opzioni di apply:
+  --da DIR     applica DIR invece di config/ (per esempio un backup)
+  --pagine     aggiorna anche le pagine che esistono già, come la Home (di solito sono della redazione)
 
 Con più WordPress avviati che montano questo child: WPF_CONTAINER=<nome>.
 TESTO
@@ -119,10 +120,11 @@ case "${1:-}" in
         ;;
     apply)
         shift
-        sorgente="" conferma=false
+        sorgente="" conferma=false pagine=false
         while [ $# -gt 0 ]; do
             case "$1" in
                 --da) [ -n "${2:-}" ] || fail "--da vuole una cartella"; sorgente=$2; shift 2 ;;
+                --pagine) pagine=true; shift ;;
                 --conferma) conferma=true; shift ;;
                 *) uso; exit 1 ;;
             esac
@@ -139,17 +141,18 @@ case "${1:-}" in
             trap 'docker exec "$C" rm -rf "$config_dir"' EXIT
             cartella=$sorgente
         fi
-        dir_arg=()
-        [ -n "$config_dir" ] && dir_arg=("WPF_CONFIG_DIR=${config_dir}")
+        apply_env=()
+        [ -n "$config_dir" ] && apply_env=("WPF_CONFIG_DIR=${config_dir}")
+        $pagine && apply_env+=("WPF_PAGINE=1")
         if $conferma; then
             backup="${REPO}/backup/$(date +%Y-%m-%d-%H%M%S)"
             echo "backup della configurazione attuale in ${backup}"
             export_in "$backup" sola-lettura
-            esegui_script apply.php ${dir_arg[@]+"${dir_arg[@]}"} || fail "configurazione non applicata o applicata solo in parte: vedi i messaggi sopra (backup in ${backup})"
+            esegui_script apply.php ${apply_env[@]+"${apply_env[@]}"} || fail "configurazione non applicata o applicata solo in parte: vedi i messaggi sopra (backup in ${backup})"
         else
             echo "Differenze fra ${cartella} e il sito ${URL} (nulla viene scritto):"
-            esegui_script apply.php WPF_PROVA=1 ${dir_arg[@]+"${dir_arg[@]}"}
-            echo "Per applicarle: $0 apply${sorgente:+ --da $sorgente} --conferma"
+            esegui_script apply.php WPF_PROVA=1 ${apply_env[@]+"${apply_env[@]}"}
+            echo "Per applicarle: $0 apply${sorgente:+ --da $sorgente}$($pagine && echo ' --pagine') --conferma"
         fi
         ;;
     ritratto)
@@ -162,6 +165,7 @@ case "${1:-}" in
         # confronto di bash e non «echo | grep -q»: con pipefail il SIGPIPE di echo darebbe sempre «no»
         if [[ "$home" == *forestas-child/style.css* ]]; then echo "home carica forestas-child/style.css: sì"; else echo "home carica forestas-child/style.css: no"; fi
         if [[ "$home" == *fonts.googleapis.com* ]]; then echo "home carica font da Google: sì"; else echo "home carica font da Google: no"; fi
+        if [[ "$home" == *us-assets/google-fonts.css* ]]; then echo "home carica i Google Fonts salvati sul sito: sì"; else echo "home carica i Google Fonts salvati sul sito: no"; fi
         ;;
     zip)
         mkdir -p "${REPO}/docker/themes" "${REPO}/docker/plugins"
@@ -180,7 +184,9 @@ case "${1:-}" in
         crea_zip themes/Impreza impreza.zip
         docker cp "${C}:${ZIP_TMP}/impreza.zip" "${REPO}/docker/themes/impreza.zip" >/dev/null
         echo "docker/themes/impreza.zip: Impreza $(docker exec "$C" wp --allow-root --path="$WP_PATH" theme get Impreza --field=version)"
-        for slug in $PLUGIN_COMMERCIALI; do
+        # Elenco dei plugin commerciali letto da comune.php nel container: l'unica lettura di commerciali.txt
+        commerciali=$(docker exec "$C" php -r "require '${CONFIG_LIB}/comune.php'; echo implode( ' ', wpf_plugin_commerciali() );")
+        for slug in $commerciali; do
             if ! docker exec "$C" test -d "${WP_PATH}/wp-content/plugins/${slug}"; then
                 echo "AVVISO: ${slug} non è installato su questo sito: zip non rigenerato"
                 continue

@@ -15,8 +15,10 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
 
 RUN a2enmod rewrite headers
 
+# WP-CLI a una versione fissa: export e apply della configurazione sono provati con questa
+ARG WP_CLI_VERSION=2.12.0
 RUN curl -fsSL -o /usr/local/bin/wp \
-        https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar \
+        "https://github.com/wp-cli/wp-cli/releases/download/v${WP_CLI_VERSION}/wp-cli-${WP_CLI_VERSION}.phar" \
     && chmod +x /usr/local/bin/wp
 
 COPY docker/configs/php/vhost.conf /etc/apache2/sites-available/000-default.conf

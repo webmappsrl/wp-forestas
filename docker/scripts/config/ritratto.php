@@ -8,8 +8,8 @@ require_once __DIR__ . '/comune.php';
 require_once __DIR__ . '/wpml.php';
 require_once ABSPATH . 'wp-admin/includes/plugin.php';
 
-$righe   = [];
-$chiave  = fn( $id ) => $id ? ( get_post_meta( (int) $id, WPF_META_CHIAVE, true ) ?: 'post senza chiave (' . get_post_type( (int) $id ) . ')' ) : '-';
+$righe  = [];
+$chiave = fn( $id ) => $id ? ( get_post_meta( (int) $id, WPF_META_CHIAVE, true ) ?: 'post senza chiave (' . get_post_type( (int) $id ) . ')' ) : '-';
 // Versione e stato di un plugin cercato dalla sua cartella, come negli zip di docker/plugins/
 $plugin = function ( string $cartella ): string {
 	foreach ( get_plugins() as $file => $dati ) {
@@ -55,6 +55,9 @@ $righe[] = 'impreza theme options (impronta): ' . md5( wpf_json( $confronto ) );
 $righe[] = 'impreza store_gfonts_locally: ' . ( $impreza['store_gfonts_locally'] ?? '-' );
 $righe[] = 'impreza colore primario: ' . ( $impreza['color_content_primary'] ?? '-' );
 $righe[] = 'impreza font del testo: ' . ( $impreza['body']['font-family'] ?? '-' );
+// Il nome del font viene dalle opzioni; se i file ci sono davvero lo dice lo stato del download di Impreza
+$righe[] = 'impreza Google Fonts salvati sul sito e aggiornati: '
+	. ( function_exists( 'us_get_local_google_fonts_state' ) ? ( us_get_local_google_fonts_state()['is_current'] ? 'sì' : 'no' ) : '-' );
 
 foreach ( WPF_OPZIONI_SITO as $nome ) {
 	$righe[] = "sito {$nome}: " . ( in_array( $nome, WPF_OPZIONI_SITO_PAGINA, true ) ? $chiave( get_option( $nome ) ) : get_option( $nome ) );

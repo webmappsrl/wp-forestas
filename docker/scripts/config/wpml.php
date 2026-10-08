@@ -112,6 +112,20 @@ function wpf_wpml_prepara(): void {
 	}
 }
 
+/**
+ * Cancella un post togliendo anche la sua riga di traduzione di WPML. WPML la toglie da sé solo quando
+ * il post si cancella dal pannello o dal sito: da WP-CLI la riga resterebbe, orfana.
+ */
+function wpf_cancella_post( int $id, string $tipo ): void {
+	global $sitepress;
+	$dettagli = apply_filters( 'wpml_element_language_details', null, [ 'element_id' => $id, 'element_type' => $tipo ] );
+	wp_delete_post( $id, true );
+	if ( $sitepress && $dettagli && ! empty( $dettagli->trid ) ) {
+		// WPML vuole il trid come stringa (is_string): con un intero non cancella nulla
+		$sitepress->delete_element_translation( (string) $dettagli->trid, $tipo, $dettagli->language_code );
+	}
+}
+
 /** Collega un elemento a WPML: lingua e, per una traduzione, il gruppo dell'originale. */
 function wpf_wpml_collega( int $id, string $tipo, ?string $lingua, ?int $id_originale ): void {
 	if ( ! $lingua ) {

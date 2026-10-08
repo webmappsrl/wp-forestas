@@ -2,8 +2,10 @@
 /**
  * Apply della configurazione esportata (oc:8717).
  *
- * Uso: [WPF_CONFIG_DIR=<cartella>] [WPF_PROVA=1] [WPF_AUTOMATICO=1] wp eval-file /usr/local/lib/wp-forestas/apply.php
+ * Uso: [WPF_CONFIG_DIR=<cartella>] [WPF_PROVA=1] [WPF_AUTOMATICO=1] [WPF_PAGINE=1]
+ *      wp eval-file /usr/local/lib/wp-forestas/apply.php
  * La cartella è config/ del repo (WPF_DIR_CONFIG), o un backup con bin/wordpress-config.sh apply --da.
+ * WPF_PAGINE=1 aggiorna anche le pagine che esistono già, come la Home (vedi post.php).
  * Con WPF_PROVA=1 non scrive nulla e stampa una riga per differenza. Senza, applica nell'ordine WPML,
  * post, menu, opzioni, traduzioni dei testi delle opzioni, e solo se tutto riesce scrive l'opzione
  * wp_forestas_config_applicata. WPF_AUTOMATICO=1 (apply dell'init) si rifiuta di applicare un config/
@@ -16,10 +18,12 @@ require_once __DIR__ . '/comune.php';
 require_once __DIR__ . '/wpml.php';
 require_once __DIR__ . '/post.php';
 require_once __DIR__ . '/menu.php';
+require_once __DIR__ . '/opzioni.php';
 
 $dir        = getenv( 'WPF_CONFIG_DIR' ) ?: WPF_DIR_CONFIG;
 $prova      = getenv( 'WPF_PROVA' ) === '1';
 $automatico = getenv( 'WPF_AUTOMATICO' ) === '1';
+$pagine     = getenv( 'WPF_PAGINE' ) === '1';
 $ok         = true;
 $righe      = 0;
 
@@ -76,19 +80,19 @@ foreach ( (array) $leggi( 'versioni.json' ) as $nome => $versione ) {
 	}
 }
 
-// --- 1. WPML ----------------------------------------------------------------------------------
+// --- 1. WPML: lingue e impostazioni ---------------------------------------------------------
 
 $wpml = $leggi( 'wpml.json' );
 if ( $wpml ) {
 	$ok = wpf_wpml_applica( $wpml, $prova, fn( $v, $p, $d ) => $diff( "wpml: {$v}", $p, $d ) ) && $ok;
 }
 
-// --- 2. Post e menu: originali prima delle traduzioni -------------------------------------------------
+// --- 2. Post e menu: originali prima delle traduzioni ---------------------------------------
 
 if ( ! $prova ) {
 	wpf_wpml_prepara();
 }
-$ok = wpf_post_applica( (array) $leggi( 'post.json' ), $prova, $diff ) && $ok;
+$ok = wpf_post_applica( (array) $leggi( 'post.json' ), $prova, $diff, $pagine ) && $ok;
 
 /**
  * Id del post a cui punta un riferimento «@chiave:…»; null se il valore non è un riferimento, 0 se la
@@ -110,138 +114,22 @@ $menu_cfg = (array) $leggi( 'menu.json' );
 $id_menu  = []; // chiave => term_id
 $ok       = wpf_menu_applica( (array) ( $menu_cfg['menu'] ?? [] ), $prova, $diff, $risolvi, $id_menu ) && $ok;
 
-// --- 4. Opzioni -------------------------------------------------------------------------------
+// --- 3. Opzioni: Theme Options e loro traduzioni, tema, posizioni dei menu, sito ------------
 
-// Theme Options di Impreza: riferimenti risolti, segreti lasciati come sono sul sito
 $impreza = $leggi( 'impreza.json' );
 if ( $impreza !== null ) {
-	if ( ! function_exists( 'usof_save_options' ) || ! defined( 'US_THEMENAME' ) ) {
-		WP_CLI::warning( 'UpSolution Core non è attivo: Theme Options di Impreza saltate' );
-		$ok = false;
-	} else {
-		$ora = (array) get_option( 'usof_options_' . US_THEMENAME, [] );
-		$impreza = wpf_ripristina_segreti( $impreza, $ora );
-		foreach ( WPF_IMPREZA_STATO as $nome ) {
-			unset( $impreza[ $nome ] ); // stato, non configurazione: resta quello del sito
-		}
-		foreach ( $impreza as $nome => $valore ) {
-			if ( wpf_opzione_allegato( (string) $nome, $valore ) ) {
-				// L'id viene da un altro sito: qui sarebbe un'immagine qualsiasi, o nessuna. Resta quello del sito.
-				if ( (string) ( $ora[ $nome ] ?? '' ) !== (string) $valore ) {
-					WP_CLI::warning( "impreza {$nome}: config/ indica l'allegato {$valore} di un altro sito, resta il valore di questo: caricalo dal pannello" );
-				}
-				$impreza[ $nome ] = $ora[ $nome ] ?? '';
-				continue;
-			}
-			$id = $risolvi( $valore );
-			if ( $id !== null ) {
-				// stesso tipo del valore sul sito: Impreza salva gli id come numeri
-				$impreza[ $nome ] = $id ? ( is_string( $ora[ $nome ] ?? null ) ? (string) $id : $id ) : ( $ora[ $nome ] ?? '' );
-			}
-		}
-		// Come le licenze: la chiave del .env non si applica a un sito locale
-		$chiave_manutenzione = wpf_url_locale() ? '' : getenv( 'IMPREZA_MAINTENANCE_KEY' );
-		if ( $chiave_manutenzione ) {
-			$impreza['maintenance_private_key'] = $chiave_manutenzione;
-		}
-		$nuove   = array_merge( $ora, $impreza );
-		$diverse = array_keys( array_filter( $impreza, fn( $v, $k ) => wpf_json( $ora[ $k ] ?? null ) !== wpf_json( $v ), ARRAY_FILTER_USE_BOTH ) );
-		foreach ( $diverse as $nome ) {
-			$diff( "impreza: {$nome}", $ora[ $nome ] ?? null, $impreza[ $nome ] );
-		}
-		if ( $diverse && ! $prova ) {
-			usof_backup(); // backup nativo di Impreza, ripristinabile dal pannello delle Theme Options
-			usof_save_options( $nuove ); // rigenera anche il CSS del tema
-		}
-
-		// Google Fonts serviti dal sito: Impreza li scarica solo quando si apre la pagina delle Theme
-		// Options, quindi su un sito ricreato da script lo fa l'apply, con la stessa funzione
-		if ( function_exists( 'us_get_local_google_fonts_state' ) && us_get_option( 'store_gfonts_locally' )
-			&& ! us_get_local_google_fonts_state()['is_current'] ) {
-			$diff( 'impreza: Google Fonts in locale', 'da scaricare', 'scaricati' );
-			if ( ! $prova ) {
-				for ( $giro = 0; $giro < WPF_GFONTS_GIRI; $giro++ ) {
-					$esito = us_download_local_google_fonts();
-					if ( $esito === false || empty( $esito['remaining'] ) ) {
-						break;
-					}
-				}
-				if ( $esito === false || ! us_get_local_google_fonts_state()['is_current'] ) {
-					// Non blocca il segno: la configurazione è applicata, e ritentare l'apply a ogni avvio
-					// riscriverebbe tutto il resto. I font si scaricano aprendo le Theme Options.
-					WP_CLI::warning( 'Google Fonts non scaricati: il sito usa i font di ripiego finché non si aprono le Theme Options' );
-				}
-			}
-		}
-	}
+	$ok = wpf_impreza_applica( $impreza, $prova, $diff, $risolvi ) && $ok;
 }
-
-// Traduzioni dei testi delle Theme Options e delle altre opzioni: WPML registra le stringhe originali
-// leggendo le opzioni, quindi vanno dopo le Theme Options
+// WPML registra le stringhe originali leggendo le opzioni, quindi le traduzioni vanno dopo
 if ( $wpml ) {
 	$ok = wpf_wpml_stringhe_applica( (array) ( $wpml['stringhe'] ?? [] ), $prova, $diff ) && $ok;
 }
-
-// theme_mods del tema attivo e posizioni dei menu
 $child = $leggi( 'child.json' );
 if ( $child !== null ) {
-	foreach ( $child as $nome => $valore ) {
-		$ora    = get_theme_mod( $nome );
-		$valore = wpf_ripristina_segreti( $valore, $ora );
-		if ( wpf_json( $ora ) === wpf_json( $valore ) ) {
-			continue;
-		}
-		$diff( "tema: {$nome}", $ora, $valore );
-		if ( ! $prova ) {
-			set_theme_mod( $nome, $valore );
-		}
-	}
+	$ok = wpf_child_applica( $child, $prova, $diff ) && $ok;
 }
-$posizioni = [];
-foreach ( (array) ( $menu_cfg['posizioni'] ?? [] ) as $posizione => $chiave ) {
-	if ( isset( $id_menu[ $chiave ] ) ) {
-		$posizioni[ $posizione ] = $id_menu[ $chiave ];
-	} else {
-		WP_CLI::warning( "posizione {$posizione}: il menu {$chiave} non c'è" );
-		$ok = false;
-	}
-}
-$posizioni_ora = get_nav_menu_locations();
-// Senza posizioni nel repo quelle del sito restano: un config/ che non ne dice nulla non le azzera
-if ( $posizioni && wpf_json( $posizioni_ora ) !== wpf_json( array_replace( $posizioni_ora, $posizioni ) ) ) {
-	$posizioni = array_replace( $posizioni_ora, $posizioni );
-	$diff( 'posizioni dei menu', $posizioni_ora, $posizioni );
-	if ( ! $prova ) {
-		set_theme_mod( 'nav_menu_locations', $posizioni );
-	}
-}
-
-// Impostazioni del sito
-$sito = $leggi( 'sito.json' );
-foreach ( (array) $sito as $nome => $valore ) {
-	if ( $valore === null ) {
-		continue; // opzione assente sul sito dell'export: non c'è nulla da applicare
-	}
-	$id = $risolvi( $valore );
-	if ( $id === 0 ) {
-		continue; // riferimento non risolto (già segnalato): resta il valore del sito
-	}
-	if ( $id !== null ) {
-		$valore = $id;
-	}
-	if ( (string) get_option( $nome ) === (string) $valore ) {
-		continue;
-	}
-	$diff( "sito: {$nome}", get_option( $nome ), $valore );
-	if ( ! $prova ) {
-		update_option( $nome, $valore );
-		// Con i permalink «belli» serve .htaccess: da WP-CLI flush_rewrite_rules non lo scrive
-		if ( $nome === 'permalink_structure' && ! wpf_scrivi_htaccess() ) {
-			WP_CLI::warning( 'permalink cambiati ma .htaccess non scritto: le pagine rispondono 404 finché non si salvano i permalink dal pannello' );
-			$ok = false;
-		}
-	}
-}
+$ok = wpf_posizioni_applica( (array) ( $menu_cfg['posizioni'] ?? [] ), $id_menu, $prova, $diff ) && $ok;
+$ok = wpf_sito_applica( (array) $leggi( 'sito.json' ), $prova, $diff, $risolvi ) && $ok;
 
 // --- Esito ----------------------------------------------------------------------------------
 

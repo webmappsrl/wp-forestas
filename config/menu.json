@@ -17,6 +17,7 @@
                     },
                     "genitore": null,
                     "meta": [],
+                    "originale": null,
                     "target": "",
                     "titolo": "Home",
                     "xfn": ""
@@ -31,6 +32,7 @@
                     },
                     "genitore": null,
                     "meta": [],
+                    "originale": null,
                     "target": "",
                     "titolo": "Chi siamo",
                     "xfn": ""
@@ -45,6 +47,7 @@
                     },
                     "genitore": null,
                     "meta": [],
+                    "originale": null,
                     "target": "",
                     "titolo": "Blog",
                     "xfn": ""
@@ -59,6 +62,7 @@
                     },
                     "genitore": null,
                     "meta": [],
+                    "originale": null,
                     "target": "",
                     "titolo": "Contatti",
                     "xfn": ""

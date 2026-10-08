@@ -2,7 +2,7 @@
 /**
  * Export della configurazione del sito in file JSON (oc:8717).
  *
- * Uso: WPF_EXPORT_DIR=/tmp/x [WPF_SOLA_LETTURA=1] wp eval-file /usr/local/lib/wp-forestas/export.php
+ * Uso: WPF_EXPORT_DIR=<cartella> [WPF_SOLA_LETTURA=1] wp eval-file /usr/local/lib/wp-forestas/export.php
  * Scrive impreza.json, child.json, sito.json, post.json, menu.json, versioni.json e, se WPML è attivo,
  * wpml.json. Si ferma senza scrivere se un valore ha la forma di una chiave (WPF_FORME_SEGRETE), tranne
  * in sola lettura (backup dell'apply, fuori da git).
@@ -14,7 +14,10 @@
 require_once __DIR__ . '/comune.php';
 require_once __DIR__ . '/wpml.php';
 
-$dir = getenv( 'WPF_EXPORT_DIR' ) ?: '/tmp/wp-forestas-export';
+$dir = (string) getenv( 'WPF_EXPORT_DIR' );
+if ( $dir === '' ) {
+	WP_CLI::error( 'manca WPF_EXPORT_DIR: lancia l\'export con bin/wordpress-config.sh export' );
+}
 if ( ! is_dir( $dir ) && ! mkdir( $dir, 0775, true ) ) {
 	WP_CLI::error( "impossibile creare {$dir}" );
 }
@@ -109,22 +112,27 @@ $riferimento = fn( $id ) => isset( $chiavi[ (int) $id ] ) ? WPF_RIFERIMENTO . $c
 
 $post_json = [];
 foreach ( $chiavi as $id => $chiave ) {
-	$post = get_post( $id );
-	$meta = [];
+	$post      = get_post( $id );
+	$tipo_wpml = 'post_' . $post->post_type;
+	$meta      = [];
 	foreach ( get_post_meta( $id ) as $nome => $valori ) {
-		if ( $nome === WPF_META_CHIAVE || in_array( $nome, WPF_META_CALCOLATI, true ) || preg_match( '/^(_edit_|_wp_old|_wpml)/', $nome ) ) {
+		if ( $nome === WPF_META_CHIAVE || in_array( $nome, WPF_META_CALCOLATI, true ) || preg_match( WPF_META_ESCLUSI_POST, $nome ) ) {
+			continue;
+		}
+		if ( in_array( $nome, WPF_META_ALLEGATI, true ) ) {
+			$avvisi[] = "post {$chiave}: {$nome} è l'allegato {$valori[0]} della Libreria media, che non sta in config/: su un altro sito va riassegnato dal pannello";
 			continue;
 		}
 		$meta[ $nome ] = maybe_unserialize( $valori[0] );
 	}
-	$meta      = wpf_togli_segreti( $meta, $tolti );
-	$lingua    = wpf_lingua( $id, 'post_' . $post->post_type );
+	$meta   = wpf_togli_segreti( $meta, $tolti );
+	$lingua = wpf_lingua( $id, $tipo_wpml );
 	if ( preg_match( WPF_ATTRIBUTI_ALLEGATO, $post->post_content ) ) {
 		$avvisi[] = "post {$chiave}: il contenuto usa immagini della Libreria media, che non stanno in config/: su un altro sito vanno ricaricate e riassegnate dal pannello";
 	}
 	$originale = null;
 	if ( $lingua && $lingua !== $lingua_predefinita ) {
-		$id_originale = wpf_traduzioni( $id, 'post_' . $post->post_type )[ $lingua_predefinita ] ?? null;
+		$id_originale = wpf_traduzioni( $id, $tipo_wpml )[ $lingua_predefinita ] ?? null;
 		$originale    = $id_originale ? ( $chiavi[ $id_originale ] ?? null ) : null;
 	}
 	$post_json[] = [

@@ -95,7 +95,7 @@ diversi, chiede le credenziali FTP.
       nelle sue opzioni, solo se `WP_URL` non è locale. `.env-example` con i segnaposto.
 - [x] Export: Theme Options di Impreza, `theme_mods` del child, header e footer di Impreza, Home,
       menu con le impostazioni di Impreza sulle voci (mega menu, pulsante), con le loro traduzioni
-      WPML, impostazioni di WPML (lingue `it` e `en-us`, formato degli URL), traduzioni dei testi
+      WPML voce per voce (Menu Sync) e le voci verso pagine che restano collegate alle pagine, impostazioni di WPML (lingue `it` e `en-us`, formato degli URL), traduzioni dei testi
       delle opzioni fatte con String Translation, titolo, permalink e home statica, in file
       leggibili in `config/`. L'URL del sito diventa
       un segnaposto. I file sono dell'utente dell'host, non di root.
@@ -107,7 +107,9 @@ diversi, chiede le credenziali FTP.
 - [x] Apply: riscrive la configurazione esportata, ricollega i riferimenti per id e le traduzioni
       WPML; idempotente: header, footer e Home si riconoscono dal metadato `_wp_forestas_chiave` del
       post, i menu dallo stesso metadato sul termine, non da titolo o slug. Su un sito che esisteva
-      prima di `config/` i post e i menu senza chiave si ricollegano per tipo e slug.
+      prima di `config/` i post e i menu senza chiave si ricollegano per tipo e slug. Le pagine che
+      esistono già, come la Home, sono anche contenuto della redazione: si aggiornano solo con
+      `apply --pagine`.
 - [x] L'apply automatico parte solo su un sito installato dall'init (opzione
       `wp_forestas_config_da_applicare`, scritta all'installazione), al massimo 3 volte; scrive
       `wp_forestas_config_applicata` solo se finisce senza errori. Su un sito esistente, e dopo i 3
@@ -177,7 +179,8 @@ Repo `wp-forestas`:
 - `.gitignore`, `.env-example`, `docker/plugins/.gitkeep`,
   `docker/plugins/commerciali.txt` (elenco dei plugin commerciali), `config/` (nuova, con `.gitkeep`),
   `docker/scripts/config/` (nuova: `comune.php`, `export.php`, `apply.php`, `post.php`, `menu.php`,
-  `wpml.php`, `ritratto.php`, `licenza-impreza.php`), `docker/configs/php/Dockerfile`,
+  `opzioni.php`, `wpml.php`, `ritratto.php`, `licenza-impreza.php`), `docker/configs/php/Dockerfile`
+  (copia degli script, WP-CLI a una versione fissa),
   `bin/wordpress-config.sh` (nuovo: export, apply, ritratto, zip),
   `backup/` (esclusa da git)
 

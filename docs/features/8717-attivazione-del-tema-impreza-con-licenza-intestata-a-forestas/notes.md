@@ -41,7 +41,17 @@ la home carica `forestas-child/style.css?ver=1.0.0`).
   rispondevano 404. L'init lo crea solo se manca, con `wpf_scrivi_htaccess()`: la funzione di
   WordPress che usa il pannello (`save_mod_rewrite_rules`), dichiarando che `mod_rewrite` c'è.
 - **wp-geohub a un commit fisso** (`GEOHUB_REF`) invece del ramo `main`: due siti ricreati in giorni
-  diversi avrebbero avuto codice diverso.
+  diversi avrebbero avuto codice diverso. Per lo stesso motivo WP-CLI è a una versione fissa nel
+  Dockerfile (`WP_CLI_VERSION`).
+- **Database che non risponde: l'init si ferma** invece di proseguire: `core is-installed` sarebbe
+  fallito come su un sito vuoto e il passo 4 avrebbe trattato un sito esistente come nuovo, con
+  l'apply automatico.
+- **Tempi massimi** per i passi che vanno in rete (`curl` di wp-geohub, licenza, apply automatico,
+  con `timeout`): Apache parte solo alla fine dell'init.
+- **Plugin commerciale la cui attivazione automatica fallisce**: l'init lo segna
+  (`wp_forestas_plugin_da_attivare_<slug>`) e lo riattiva agli avvii successivi; uno spento dal
+  pannello resta spento.
+- **Blocco dell'apply al passo 4c**: si tolgono solo i blocchi presi prima dell'avvio dell'init.
 - **Site key di WPML scritta con l'output di WP-CLI scartato**: il messaggio di `wp config set`
   riporta il valore della costante, che sarebbe finito nei log del container.
 
@@ -66,6 +76,17 @@ la home carica `forestas-child/style.css?ver=1.0.0`).
   `wpml.json`, chiave `stringhe`: solo quelle in una lingua diversa da quella della stringa, perché
   WPML crea da sé «traduzioni» italiane dei formati di data. Lette dalle tabelle di String
   Translation, applicate con `icl_add_string_translation`.
+- **Voci di menu lette dal database** (`wpf_voci_db`) e non con `wp_get_nav_menu_items()`, il cui
+  filtro da WP-CLI lascia a WPML aggiungere il selettore di lingua e togliere la «root page».
+- **Voci verso pagine non esportate** con destinazione «pagina» (tipo e percorso), non più un link:
+  l'apply ritrova la pagina nella lingua del menu. Il link di riserva si calcola nella lingua della
+  pagina (`wpf_link_relativo`), perché da WP-CLI WPML lo convertirebbe in quello della lingua
+  predefinita.
+- **Voci dei menu tradotti con la posizione della voce originale** (`originale`): è il legame di
+  Menu Sync di WPML, che gli id non possono portare da un sito all'altro.
+- **`_thumbnail_id` e i metadati `_icl_…`** di WPML non si esportano: id del sito d'origine.
+- **Segreti**: il nome si spezza anche sulle maiuscole (`consumerSecret`) e comprende `pass`; un
+  segreto con un elenco come valore si toglie per intero.
 - **Valori con la forma di una chiave** (`WPF_FORME_SEGRETE`: Google, Stripe, GitHub, AWS, Slack,
   chiave privata) cercati in tutti i file prima di scriverli: se ce n'è uno l'export si ferma senza
   scrivere e senza stampare il valore. Copre ciò che il filtro sui nomi non vede, come una chiave
@@ -81,8 +102,14 @@ la home carica `forestas-child/style.css?ver=1.0.0`).
 
 ### Task 8 apply della configurazione
 
-- **Post e menu in file propri** (`post.php`, `menu.php`), come WPML: `apply.php` resta l'ordine dei
-  passi e l'esito.
+- **Post, menu e opzioni in file propri** (`post.php`, `menu.php`, `opzioni.php`), come WPML:
+  `apply.php` resta l'ordine dei passi e l'esito.
+- **Pagine esistenti aggiornate solo con `--pagine`**: la Home è anche contenuto della redazione.
+- **Voci di menu create prima di cancellare le vecchie**: se una non si crea il menu resta com'era.
+  Le voci tradotte entrano nel gruppo della voce originale; cancellando le vecchie si toglie anche la
+  loro riga di WPML (`wpf_cancella_post`), che da WP-CLI WPML non toglie da sé.
+- **Google Fonts non scaricati: apply parziale**, così l'apply si rilancia; il ritratto mostra se i
+  font sul sito sono aggiornati e se la home li carica.
 - **Menu ritrovati dalla chiave e riallineati anche nello slug**: l'header di Impreza richiama il menu
   per slug (`"source":"main-menu"`). Se cambiano solo nome o slug le voci non si ricreano.
 - **`source_language_code` solo per una traduzione**, con la lingua del suo originale: un originale
@@ -94,7 +121,7 @@ la home carica `forestas-child/style.css?ver=1.0.0`).
 - **`.htaccess` scritto anche dall'apply** quando cambia i permalink.
 - **Un apply alla volta**: la riga `wp_forestas_apply_in_corso` di `wp_options`, inserita con
   `INSERT IGNORE`, la ottiene un solo apply (`add_option` non basta: scrive con
-  `ON DUPLICATE KEY UPDATE` e si fida della cache). Scade dopo 15 minuti, e l'init la toglie a ogni
+  `ON DUPLICATE KEY UPDATE` e si fida della cache). Scade dopo 40 minuti (`WPF_APPLY_SCADENZA`, più lungo del tempo massimo dell'apply automatico), e l'init la toglie a ogni
   avvio (passo 4c): gli apply girano nel container e muoiono con lui, e un blocco rimasto da un
   `docker stop` avrebbe consumato i tentativi dell'apply automatico.
 - **Segreti nei metadati delle voci di menu** confrontati come `@segreto` e conservati dal sito alla
@@ -114,6 +141,11 @@ finale ha mostrato che alla prima messa in opera su UAT, sito esistente, avrebbe
 footer e Home: ora l'apply automatico parte solo su un sito installato dall'init, al massimo 3 volte
 (dettagli nei «Bug trovati»).
 
+Anche la licenza devia: il piano la attivava solo se mancava `us_license_secret`, il codice la
+riattiva anche quando il segreto del `.env` è diverso da quello salvato, come la site key di WPML.
+Con un segreto cambiato nel `.env` il sito resterebbe altrimenti con quello vecchio. Il confronto lo
+fa l'init, che lancia `licenza-impreza.php` solo quando serve, con un tempo massimo.
+
 ### Task 10 comando sull'host
 
 - **`WPF_CONTAINER`**: sulla stessa macchina più WordPress possono montare lo stesso child (è successo
@@ -122,6 +154,9 @@ footer e Home: ora l'apply automatico parte solo su un sito installato dall'init
   chiavi al sito, così non cambia ciò che l'apply ricollega subito dopo.
 - **L'export sostituisce solo i file prodotti**: un export con WPML spento non cancella `wpml.json`, e
   lo segnala.
+- **`apply --pagine`**: aggiorna anche le pagine che esistono già (vedi il Task 8).
+- **Elenco dei plugin commerciali letto da `comune.php` nel container** per `zip`, invece di una
+  seconda lettura di `commerciali.txt` sull'host.
 - **`apply --da DIR`**: applica un'altra cartella, per rimettere un backup senza toccare `config/`
   (montata in sola lettura, e nel checkout del server non va sporcata).
 - **Il backup non passa dal controllo delle chiavi**: va in `backup/`, esclusa da git, e il controllo
@@ -233,10 +268,24 @@ Le altre scelte prese durante l'implementazione sono nelle «Decisioni» qui sot
   i suoi cleanup (blocco non atomico, blocco rimasto dopo un `docker stop`, segreti nei metadati
   delle voci, backup fermato dal controllo delle chiavi, README e un commento) sono corretti.
 
+- **Quinta review wm-review-ticket (08/10), un bloccante corretto**: le voci dei menu tradotti con
+  Menu Sync di WPML perdevano il legame con le voci originali, all'export e a ogni ricreazione delle
+  voci. Corretti anche i cleanup (pagine della redazione, voci verso pagine, selettore di lingua,
+  segreti, init, plugin, rete, font, WP-CLI, struttura dell'apply, documentazione). Nella prova sono
+  emersi due bug, corretti: il link di riserva di una pagina tradotta era quello della pagina
+  italiana, e le voci cancellate lasciavano righe di traduzione orfane (WPML vuole il trid come
+  stringa). Confutato `us_template_preview="8745"` nel footer: è l'id di un modello della libreria di
+  UpSolution (`footer-templates.php`), non del sito d'origine.
+  Verifica su un WordPress usa e getta: pagine «Chi siamo»/«About us» e menu inglese tradotto voce per
+  voce come Menu Sync; export, sito ricreato, apply senza le pagine (avviso e link di riserva), pagine
+  create, apply (voci ricollegate alle pagine), secondo apply «nessuna differenza», ritratti uguali;
+  voce del menu italiano cambiata → voci italiane e inglesi ricreate e ricollegate, nessuna riga
+  orfana nuova; Home modificata non riscritta (riscritta solo con `--pagine`); plugin riattivato dopo
+  un'attivazione fallita e lasciato spento se spento a mano; blocco di un apply lanciato durante
+  l'avvio conservato; MariaDB fermo → init fermo e ripartito senza reinstallare.
+
 ## Decisioni
 
-- **Licenza di Impreza che segue il `.env`**, mentre il piano la attivava solo se mancava
-  `us_license_secret`: con un segreto cambiato nel `.env` il sito resterebbe con quello vecchio.
 
 - **Chiavi stabili `<post_type>-<post_name>`** (`us_header-header`, `us_page_block-footer`,
   `page-home`), menu `menu-<slug>` salvato come metadato del termine, traduzioni con `-<lingua>`: si
@@ -244,8 +293,10 @@ Le altre scelte prese durante l'implementazione sono nelle «Decisioni» qui sot
   più, anche se lo slug cambia; una chiave copiata da «Duplica» di Impreza viene rigenerata
   sull'export, con un avviso.
 - **Script di configurazione montati dal compose**, oltre che copiati nell'immagine: una modifica vale
-  subito, senza ricostruire l'immagine, e su UAT `bin/`, `config/` e script hanno sempre la stessa
-  versione.
+  subito, senza ricostruire l'immagine, e su UAT `bin/`, `config/` e script PHP hanno sempre la
+  stessa versione. `init-wordpress.sh` invece sta solo nell'immagine e cambia dopo
+  `scripts/wordpress-up.sh`; legge però nomi e percorsi da `comune.php` montato, quindi un rename lì
+  vale anche per l'init vecchio.
 - **Elenco dei plugin commerciali in `docker/plugins/commerciali.txt`**, versionato: lo leggono init,
   `bin/wordpress-config.sh zip` e il ritratto, così un plugin si aggiunge in un punto solo.
 - **Costanti di `wp-config.php` che seguono il `.env`**: `DISALLOW_FILE_MODS` e
@@ -311,10 +362,11 @@ Le altre scelte prese durante l'implementazione sono nelle «Decisioni» qui sot
   letture (la verifica della licenza Impreza).
 - **Dati generati esclusi dall'export WPML**: `st.was_frontend_visited_key` e
   `custom_fields_translation`/`custom_term_fields_translation`, che WPML calcola da sé.
-- **Nomi ripetuti fra bash e PHP**: le opzioni `wp_forestas_config_*`, i percorsi montati e le regole
-  di lettura di `commerciali.txt` stanno sia in `init-wordpress.sh` sia in `comune.php`, che non
-  possono condividere codice. Ogni copia rimanda all'altra in un commento; in PHP i percorsi sono
-  costanti (`WPF_DIR_PLUGIN`, `WPF_DIR_CONFIG`).
+- **Nomi e percorsi solo in `comune.php`**: le opzioni `wp_forestas_*`, i percorsi montati, la lettura
+  di `commerciali.txt` e il criterio dell'indirizzo locale stanno solo lì; `init-wordpress.sh` li
+  legge con `php -r` (`config_php`), `bin/wordpress-config.sh` con `php -r` nel container. Resta
+  ripetuto in `bin/` solo l'`--exec` per HTTPS, che si costruisce sull'host prima di entrare nel
+  container.
 - **Esito del reset del locale (08/10)**: ritratto prima e dopo identico tranne
   l'impronta delle Theme Options, dovuta a `text_styles: []` che Impreza aggiunge a ogni
   installazione. Gli export successivi l'hanno portata in `config/` (è un'opzione vera, vuota), quindi
@@ -330,8 +382,5 @@ Le altre scelte prese durante l'implementazione sono nelle «Decisioni» qui sot
   importati da Drupal (riconoscibili da un id Drupal salvato sul post) e lasciare intatta la
   configurazione; un import che aggiorna invece di cancellare e ricreare tiene stabili id, URL e
   menu. Da decidere nel ticket dell'import.
-- **Documentazione di `forestas` allineata** sul branch `feature/oc-8717-wordpress-ricreabile`:
-  la procedura di UAT rimanda al README di `wp-forestas` per zip, chiavi e configurazione, e il
-  `CLAUDE.md` non descrive più `wordpress-reset.sh` come azzeramento quotidiano già attivo.
 - **`--tipo-cammino`**: nel testo dato dall'agente del design system il valore era troncato
   (`#1A41`); il valore giusto, `#1A416F`, viene dal mockup.

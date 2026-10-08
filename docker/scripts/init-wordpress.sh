@@ -4,6 +4,8 @@
 # avvio del container, anche in produzione.
 set -euo pipefail
 
+# Ora dell'avvio: al passo 4c si tolgono solo i blocchi dell'apply presi prima di questo istante
+AVVIO=$(date +%s)
 WP_PATH=/var/www/html
 WP="wp --allow-root --path=${WP_PATH}"
 IMPREZA_ZIP=/opt/wp-forestas/themes/impreza.zip
@@ -16,34 +18,47 @@ GEOHUB_REF=92d2ae43b7b4569f1f257bcc38d809266d4bdddd
 GEOHUB_TARBALL="https://github.com/webmappsrl/wp-geohub/archive/${GEOHUB_REF}.tar.gz"
 # Child theme versionato in themes/forestas-child, montato qui dal compose
 CHILD_DIR="${WP_PATH}/wp-content/themes/forestas-child"
-# Zip dei plugin commerciali (WPML) in docker/plugins/, esclusa da git: si copiano a mano o li crea
-# bin/wordpress-config.sh zip
-PLUGIN_ZIP_DIR=/opt/wp-forestas/plugins
-# Configurazione versionata (config/ del repo) e script che la applicano
-CONFIG_DIR=/opt/wp-forestas/config
+# Script PHP della configurazione: comune.php contiene anche nomi e percorsi che usa questo script
 CONFIG_LIB=/usr/local/lib/wp-forestas
-# Plugin commerciali attesi: elenco unico in docker/plugins/commerciali.txt. Regole di lettura (le
-# stesse di bin/wordpress-config.sh e ritratto.php): «#» apre un commento, spazi e righe vuote si ignorano
-PLUGIN_COMMERCIALI=$(awk '{ sub(/#.*/, ""); gsub(/[ \t\r]/, "") } NF' "${PLUGIN_ZIP_DIR}/commerciali.txt" 2>/dev/null || true)
 # UpSolution Core: Theme Options e builder di Impreza, contenuto nel tema nella sua stessa versione
 USCORE_ZIP="${WP_PATH}/wp-content/themes/Impreza/common/plugins/us-core.zip"
 # Attesa del database al passo 1
 DB_TENTATIVI=30
 DB_PAUSA=2
-# Opzioni di controllo dell'apply: stessi nomi delle costanti WPF_OPZIONE_* in config/comune.php
-OPZIONE_DA_FARE=wp_forestas_config_da_applicare
-OPZIONE_FATTO=wp_forestas_config_applicata
 # Tentativi automatici dell'apply su un sito appena installato, poi serve il comando a mano
 APPLY_TENTATIVI=3
+# Tempi massimi, in secondi, dei passi che vanno in rete: senza, un servizio lento terrebbe giù il sito,
+# perché Apache parte solo alla fine dell'inizializzazione
+RETE_ATTESA=120
 
 log() { echo "[init-wordpress] $*"; }
 
-# Esegue uno degli script PHP di configurazione come amministratore. Con un sito in https imposta
-# HTTPS prima che WordPress si carichi: il CSS che Impreza rigenera altrimenti avrebbe URL http://.
+# Esegue codice PHP con le costanti e le funzioni di comune.php, senza WordPress: nomi delle opzioni,
+# percorsi ed elenco dei plugin commerciali stanno solo lì
+config_php() { php -r "require '${CONFIG_LIB}/comune.php'; $1"; }
+
+# Zip dei plugin commerciali (WPML) in docker/plugins/, esclusa da git: si copiano a mano o li crea
+# bin/wordpress-config.sh zip
+PLUGIN_ZIP_DIR=$(config_php 'echo WPF_DIR_PLUGIN;')
+# Configurazione versionata (config/ del repo)
+CONFIG_DIR=$(config_php 'echo WPF_DIR_CONFIG;')
+# Opzioni di controllo dell'apply e della riattivazione dei plugin
+OPZIONE_DA_FARE=$(config_php 'echo WPF_OPZIONE_DA_FARE;')
+OPZIONE_FATTO=$(config_php 'echo WPF_OPZIONE_FATTO;')
+OPZIONE_DA_ATTIVARE=$(config_php 'echo WPF_OPZIONE_DA_ATTIVARE;')
+# Plugin commerciali attesi, da docker/plugins/commerciali.txt
+PLUGIN_COMMERCIALI=$(config_php 'echo implode( " ", wpf_plugin_commerciali() );')
+# Tempo massimo dell'apply automatico: più corto della scadenza del suo blocco, così un apply ancora in
+# corso non perde mai il blocco per scadenza
+APPLY_ATTESA=$(config_php 'echo WPF_APPLY_SCADENZA - 600;')
+
+# wp_script <secondi> <script.php>: esegue uno degli script PHP di configurazione come amministratore,
+# con un tempo massimo. Con un sito in https imposta HTTPS prima che WordPress si carichi: il CSS che
+# Impreza rigenera altrimenti avrebbe URL http://.
 wp_script() {
     local extra=()
     [[ "$WP_URL" == https://* ]] && extra=(--exec='$_SERVER["HTTPS"]="on";')
-    $WP "${extra[@]}" --user="$WP_ADMIN_USER" eval-file "${CONFIG_LIB}/$1"
+    timeout "$1" $WP "${extra[@]}" --user="$WP_ADMIN_USER" eval-file "${CONFIG_LIB}/$2"
 }
 
 # Cartella radice del contenuto di uno zip (lo slug di un tema o di un plugin), ignorando i file in radice
@@ -52,14 +67,9 @@ slug_zip() {
     unzip -Z1 "$1" 2>/dev/null | awk -F/ 'NF > 1 && $1 != "__MACOSX" && s == "" { s = $1 } END { print s }'
 }
 
-# Vero se WP_URL punta a questa macchina: lì licenze e chiavi dei servizi esterni non si applicano,
-# perché il sito si registrerebbe presso i fornitori con un indirizzo locale.
-url_locale() {
-    local host="${WP_URL#*://}"
-    host="${host%%/*}"
-    host="${host%%:*}"
-    [ "$host" = "localhost" ] || [ "$host" = "127.0.0.1" ]
-}
+# Vero se WP_URL punta a questa macchina: lì licenze e chiavi dei servizi esterni non si applicano
+# (criterio unico: wpf_indirizzo_locale in comune.php)
+url_locale() { config_php 'exit( wpf_indirizzo_locale( (string) getenv( "WP_URL" ) ) ? 0 : 1 );'; }
 
 # 0. Configurazione: senza queste variabili non si può installare nulla
 mancanti=()
@@ -73,12 +83,23 @@ if [ ${#mancanti[@]} -gt 0 ]; then
     exit 1
 fi
 
-# 1. Database raggiungibile (il healthcheck di MariaDB lo garantisce quasi sempre)
+# 1. Database raggiungibile con le credenziali del .env: una query vera, perché «mariadb-admin ping»
+#    risponde sì anche con utente o password sbagliati. Se non riesce lo script si ferma e il container
+#    riparte: proseguire farebbe credere al passo 4 che WordPress non sia installato, e su un sito
+#    esistente il passo 4 lo tratterebbe come nuovo
+db_pronto=false
 for i in $(seq 1 "$DB_TENTATIVI"); do
-    mariadb-admin ping -h "$WP_DB_HOST" -u "$WP_DB_USER" -p"$WP_DB_PASSWORD" --silent && break
+    if mariadb -h "$WP_DB_HOST" -u "$WP_DB_USER" -p"$WP_DB_PASSWORD" -e 'SELECT 1' "$WP_DB_NAME" >/dev/null 2>&1; then
+        db_pronto=true
+        break
+    fi
     log "attendo MariaDB ($i/${DB_TENTATIVI})"
     sleep "$DB_PAUSA"
 done
+if ! $db_pronto; then
+    log "ERRORE: MariaDB non risponde, o rifiuta utente e password di wp-forestas/.env, dopo ${DB_TENTATIVI} tentativi: il container riparte e riprova"
+    exit 1
+fi
 
 # 2. Core
 if [ ! -f "${WP_PATH}/wp-includes/version.php" ]; then
@@ -150,9 +171,10 @@ if [ ! -f "${WP_PATH}/.htaccess" ] && [ -n "$($WP option get permalink_structure
 fi
 
 # 4c. Blocco dell'apply rimasto da un apply interrotto: gli apply girano dentro il container e muoiono
-#     con lui, quindi all'avvio nessuno può essere ancora in corso. Senza, un blocco rimasto da un
-#     «docker stop» farebbe fallire i tentativi dell'apply automatico per 15 minuti.
-$WP eval "require '${CONFIG_LIB}/comune.php'; wpf_sblocca_apply();" \
+#     con lui, quindi un blocco preso prima di questo avvio non appartiene a nessuno. Senza, un blocco
+#     rimasto da un «docker stop» farebbe fallire l'apply automatico finché non scade
+#     (WPF_APPLY_SCADENZA). Un apply lanciato dall'host durante l'avvio ha un blocco più recente e resta.
+$WP eval "require '${CONFIG_LIB}/comune.php'; wpf_sblocca_apply( ${AVVIO} );" \
     || log "AVVISO: impossibile togliere il blocco dell'apply"
 
 # 5. Lingua
@@ -168,7 +190,7 @@ fi
 if [ ! -f "${GEOHUB_DIR}/index.php" ]; then
     log "scarico wp-geohub"
     tmp=$(mktemp -d)
-    if curl -fsSL "$GEOHUB_TARBALL" | tar xz --strip-components=1 -C "$tmp"; then
+    if curl -fsSL --connect-timeout 20 --max-time "$RETE_ATTESA" "$GEOHUB_TARBALL" | tar xz --strip-components=1 -C "$tmp"; then
         mkdir -p "$GEOHUB_DIR"
         cp -a "$tmp"/. "$GEOHUB_DIR"/
     else
@@ -211,8 +233,9 @@ fi
 
 # 7c. Plugin commerciali dagli zip in docker/plugins/. Lo slug è la cartella contenuta nello zip, non
 #     il nome del file (uno zip scaricato può chiamarsi sitepress-multilingual-cms.5.1.0.zip). Un plugin
-#     già installato non si reinstalla; se è spento lo si segnala senza riattivarlo, perché può essere
-#     stato disattivato apposta dal pannello.
+#     già installato non si reinstalla. Se è spento lo si riattiva solo se a spegnerlo è stata
+#     un'attivazione fallita di questo script (opzione <OPZIONE_DA_ATTIVARE>_<slug>); spento dal pannello
+#     lo si segnala e basta, perché può essere voluto.
 trovati=" "
 for zip in "$PLUGIN_ZIP_DIR"/*.zip; do
     [ -f "$zip" ] || continue
@@ -221,11 +244,26 @@ for zip in "$PLUGIN_ZIP_DIR"/*.zip; do
     slug=$(slug_zip "$zip" || true)
     [ -n "$slug" ] || { log "AVVISO: $(basename "$zip") non è uno zip leggibile"; continue; }
     trovati="${trovati}${slug} "
+    da_attivare="${OPZIONE_DA_ATTIVARE}_${slug}"
     if ! $WP plugin is-installed "$slug"; then
         log "installo e attivo il plugin ${slug}"
-        $WP plugin install "$zip" --activate || log "AVVISO: installazione del plugin ${slug} non riuscita"
+        if ! $WP plugin install "$zip"; then
+            log "AVVISO: installazione del plugin ${slug} non riuscita, riprovo al prossimo avvio"
+        elif ! $WP plugin activate "$slug"; then
+            log "AVVISO: attivazione del plugin ${slug} non riuscita, riprovo al prossimo avvio"
+            $WP option update "$da_attivare" 1 >/dev/null || true
+        fi
     elif ! $WP plugin is-active "$slug"; then
-        log "AVVISO: il plugin ${slug} è installato ma spento: se non è voluto, attivalo dal pannello"
+        if [ -n "$($WP option get "$da_attivare" 2>/dev/null || true)" ]; then
+            log "riprovo ad attivare il plugin ${slug}"
+            if $WP plugin activate "$slug"; then
+                $WP option delete "$da_attivare" >/dev/null || true
+            else
+                log "AVVISO: attivazione del plugin ${slug} non riuscita, riprovo al prossimo avvio"
+            fi
+        else
+            log "AVVISO: il plugin ${slug} è installato ma spento: se non è voluto, attivalo dal pannello"
+        fi
     fi
 done
 for slug in $PLUGIN_COMMERCIALI; do
@@ -258,7 +296,7 @@ elif [ -z "${IMPREZA_LICENSE_SECRET:-}" ]; then
     log "IMPREZA_LICENSE_SECRET vuoto: licenza di Impreza non gestita dallo script"
 elif [ "$($WP option get us_license_secret 2>/dev/null || true)" != "$IMPREZA_LICENSE_SECRET" ]; then
     log "attivo la licenza di Impreza con il segreto del .env"
-    wp_script licenza-impreza.php || log "AVVISO: licenza di Impreza non attivata, riprovo al prossimo avvio"
+    wp_script "$RETE_ATTESA" licenza-impreza.php || log "AVVISO: licenza di Impreza non attivata, riprovo al prossimo avvio"
 fi
 
 # 8c. Configurazione versionata: si applica da sola solo su un sito installato da questo script
@@ -279,7 +317,7 @@ if [ -n "$tentativi" ] && $config_presente; then
     else
         $WP option update "$OPZIONE_DA_FARE" $((tentativi + 1)) >/dev/null || true
         log "applico la configurazione di config/ (tentativo $((tentativi + 1)) di ${APPLY_TENTATIVI})"
-        WPF_AUTOMATICO=1 wp_script apply.php || log "AVVISO: configurazione non applicata del tutto, riprovo al prossimo avvio"
+        WPF_AUTOMATICO=1 wp_script "$APPLY_ATTESA" apply.php || log "AVVISO: configurazione non applicata del tutto, riprovo al prossimo avvio"
     fi
 elif $config_presente && [ -z "$($WP option get "$OPZIONE_FATTO" 2>/dev/null || true)" ]; then
     log "config/ non applicata a questo sito: non si applica da sola, vedi bin/wordpress-config.sh apply"

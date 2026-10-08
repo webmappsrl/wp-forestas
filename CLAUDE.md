@@ -53,8 +53,13 @@ subagent.
 - WPML si configura solo con le sue API (`CatalogueSyncRunner`, `SaveLanguages` con `presetCode`,
   `save_settings`): su un sito nuovo, senza sincronizzare il catalogo, l'API risponde
   `missing_preset` (oc:8717)
+- Da WP-CLI WPML non toglie la riga di traduzione di un post cancellato (lo fa solo dal pannello o
+  dal sito) e converte il link di una traduzione in quello della lingua predefinita: negli script di
+  `docker/scripts/config/` si cancella con `wpf_cancella_post` e si prende il link con
+  `wpf_link_relativo` (oc:8717)
 - Dopo un aggiornamento di Impreza o WPML dal pannello di UAT: `bin/wordpress-config.sh zip`, poi
-  zip in locale e nella cartella condivisa (README) (oc:8717)
+  zip in locale e nella cartella condivisa (README), e un controllo delle funzioni interne che export
+  e apply usano (`docs/knowledge/inizializzazione-wordpress.md`, «Dipendenze») (oc:8717)
 - In `bin/` e negli script con `set -o pipefail`, niente `… | head` o `echo … | grep -q` per
   decidere: il SIGPIPE fa fallire la pipeline anche quando il testo c'è (oc:8717)
 - `wp option get WPLANG` fallisce su un'installazione appena fatta: la lingua attiva si legge con
