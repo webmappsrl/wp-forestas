@@ -1,0 +1,62 @@
+{
+    "menu": [
+        {
+            "chiave": "menu-main-menu",
+            "lingua": "it",
+            "nome": "main-menu",
+            "originale": null,
+            "slug": "main-menu",
+            "voci": [
+                {
+                    "attr_title": "",
+                    "classi": [],
+                    "descrizione": "",
+                    "destinazione": {
+                        "post": "@chiave:page-home",
+                        "tipo": "post"
+                    },
+                    "genitore": null,
+                    "target": "",
+                    "titolo": "Home"
+                },
+                {
+                    "attr_title": "",
+                    "classi": [],
+                    "descrizione": "",
+                    "destinazione": {
+                        "tipo": "custom",
+                        "url": "#"
+                    },
+                    "genitore": null,
+                    "target": "",
+                    "titolo": "Chi siamo"
+                },
+                {
+                    "attr_title": "",
+                    "classi": [],
+                    "descrizione": "",
+                    "destinazione": {
+                        "tipo": "custom",
+                        "url": "#"
+                    },
+                    "genitore": null,
+                    "target": "",
+                    "titolo": "Blog"
+                },
+                {
+                    "attr_title": "",
+                    "classi": [],
+                    "descrizione": "",
+                    "destinazione": {
+                        "tipo": "custom",
+                        "url": "#"
+                    },
+                    "genitore": null,
+                    "target": "",
+                    "titolo": "Contatti"
+                }
+            ]
+        }
+    ],
+    "posizioni": []
+}

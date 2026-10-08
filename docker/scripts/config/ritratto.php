@@ -1,0 +1,75 @@
+<?php
+/**
+ * Ritratto del sito: righe «voce: valore» ordinate, da confrontare prima e dopo un reset (oc:8717).
+ * Gli id cambiano da un sito all'altro, quindi i riferimenti si stampano con la chiave stabile del post.
+ */
+
+require_once __DIR__ . '/comune.php';
+require_once ABSPATH . 'wp-admin/includes/plugin.php';
+
+$righe   = [];
+$chiave  = fn( $id ) => $id ? ( get_post_meta( (int) $id, WPF_META_CHIAVE, true ) ?: 'post senza chiave (' . get_post_type( (int) $id ) . ')' ) : '-';
+// Versione e stato di un plugin cercato dalla sua cartella, come negli zip di docker/plugins/
+$plugin = function ( string $cartella ): string {
+	foreach ( get_plugins() as $file => $dati ) {
+		if ( dirname( $file ) === $cartella ) {
+			return $dati['Version'] . ( is_plugin_active( $file ) ? '' : ' (non attivo)' );
+		}
+	}
+	return 'assente';
+};
+$commerciali = wpf_plugin_commerciali();
+
+global $wp_version;
+$righe[] = 'core: ' . implode( '.', array_slice( explode( '.', $wp_version ), 0, 2 ) );
+$righe[] = 'tema attivo: ' . get_stylesheet();
+$righe[] = 'versione Impreza: ' . ( wp_get_theme( 'Impreza' )->exists() ? wp_get_theme( 'Impreza' )->get( 'Version' ) : 'assente' );
+$righe[] = 'versione forestas-child: ' . ( wp_get_theme( 'forestas-child' )->exists() ? wp_get_theme( 'forestas-child' )->get( 'Version' ) : 'assente' );
+foreach ( array_merge( [ 'us-core', 'wm-package' ], $commerciali ) as $cartella ) {
+	$righe[] = "versione {$cartella}: " . $plugin( $cartella );
+}
+
+$impreza = (array) get_option( 'usof_options_' . ( defined( 'US_THEMENAME' ) ? US_THEMENAME : 'Impreza' ), [] );
+foreach ( [ 'header_id', 'footer_id', 'maintenance_page' ] as $nome ) {
+	$righe[] = "impreza {$nome}: " . $chiave( $impreza[ $nome ] ?? 0 );
+}
+$tolti      = [];
+$confronto  = wpf_togli_segreti( $impreza, $tolti );
+foreach ( $confronto as $nome => $valore ) {
+	if ( wpf_opzione_riferimento( (string) $nome, $valore ) ) {
+		unset( $confronto[ $nome ] ); // già stampati con la chiave: gli id cambiano da un sito all'altro
+	}
+}
+$righe[] = 'impreza theme options (impronta): ' . md5( wpf_json( $confronto ) );
+$righe[] = 'impreza store_gfonts_locally: ' . ( $impreza['store_gfonts_locally'] ?? '-' );
+$righe[] = 'impreza colore primario: ' . ( $impreza['color_content_primary'] ?? '-' );
+$righe[] = 'impreza font del testo: ' . ( $impreza['body']['font-family'] ?? '-' );
+
+foreach ( WPF_OPZIONI_SITO as $nome ) {
+	$righe[] = "sito {$nome}: " . ( in_array( $nome, WPF_OPZIONI_SITO_PAGINA, true ) ? $chiave( get_option( $nome ) ) : get_option( $nome ) );
+}
+
+foreach ( wp_get_nav_menus() as $m ) {
+	$righe[] = "menu {$m->slug}: " . implode( ', ', array_column( wpf_voci_menu( $m->term_id ), 'titolo' ) )
+		. ' (' . md5( wpf_json( wpf_voci_menu( $m->term_id ) ) ) . ')';
+}
+foreach ( get_nav_menu_locations() as $posizione => $id_menu ) {
+	$righe[] = "posizione menu {$posizione}: " . ( get_term_meta( $id_menu, WPF_META_CHIAVE, true ) ?: '-' );
+}
+
+global $sitepress;
+if ( $sitepress ) {
+	$lingue = array_keys( $sitepress->get_active_languages() );
+	sort( $lingue );
+	$righe[] = 'wpml lingue: ' . implode( ',', $lingue ) . ' (predefinita ' . $sitepress->get_default_language() . ')';
+	$righe[] = 'wpml formato URL: ' . $sitepress->get_setting( 'language_negotiation_type' );
+	$righe[] = 'wpml setup completato: ' . ( function_exists( 'wpml_is_setup_complete' ) && wpml_is_setup_complete() ? 'sì' : 'no' );
+}
+
+$post = get_posts( [ 'post_type' => array_values( get_post_types() ), 'post_status' => 'any', 'meta_key' => WPF_META_CHIAVE, 'numberposts' => -1, 'suppress_filters' => true ] );
+foreach ( $post as $p ) {
+	$righe[] = 'post ' . get_post_meta( $p->ID, WPF_META_CHIAVE, true ) . ': ' . $p->post_title . ' (' . ( wpf_lingua( $p->ID, 'post_' . $p->post_type ) ?? '-' ) . ', ' . md5( $p->post_content ) . ')';
+}
+
+sort( $righe );
+echo implode( "\n", $righe ), "\n";

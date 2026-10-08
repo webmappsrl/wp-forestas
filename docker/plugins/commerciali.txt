@@ -1,0 +1,5 @@
+# Plugin commerciali di WordPress: uno slug per riga. Il loro zip si chiama <slug>.zip e sta in questa
+# cartella, esclusa da git (non si ridistribuiscono). Letto da docker/scripts/init-wordpress.sh
+# (installazione), bin/wordpress-config.sh (zip) e docker/scripts/config/ritratto.php (versioni).
+sitepress-multilingual-cms
+wpml-string-translation

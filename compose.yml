@@ -21,6 +21,16 @@ services:
     volumes:
       - wordpress-data:/var/www/html
       - ./docker/themes:/opt/wp-forestas/themes:ro
+      # Zip dei plugin commerciali (WPML) e configurazione versionata: fuori da /var/www/html, così il
+      # chown dell'inizializzazione non li tocca.
+      - ./docker/plugins:/opt/wp-forestas/plugins:ro
+      - ./config:/opt/wp-forestas/config:ro
+      # Script di export, apply e ritratto: montati dal repo, così una modifica vale subito senza
+      # ricostruire l'immagine (che ne contiene comunque una copia, per l'avvio da solo)
+      - ./docker/scripts/config:/usr/local/lib/wp-forestas:ro
+      # Il child theme è codice del repo: montato sopra il volume, ogni modifica nel repo è subito
+      # visibile in WordPress, in locale e su UAT dopo il pull.
+      - ./themes/forestas-child:/var/www/html/wp-content/themes/forestas-child
     # service_started e non service_healthy: senza wp-forestas/.env MariaDB esce, e una dipendenza
     # «sana» farebbe fallire `docker compose up` dell'intero shard. L'attesa del database la fa
     # init-wordpress.sh.

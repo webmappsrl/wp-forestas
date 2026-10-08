@@ -10,8 +10,9 @@ Uso e avvio: [README.md](README.md).
 **Il repo è pubblico.** Nessun valore reale in un file tracciato: password, chiavi, URL interni
 stanno solo in `.env` (escluso da git). `.env-example` contiene solo segnaposto.
 
-**Il tema Impreza è commerciale e non si ridistribuisce.** Lo zip sta in `docker/themes/`, esclusa
-da git: non va mai committato, nemmeno per una prova.
+**Impreza e WPML sono commerciali e non si ridistribuiscono.** Gli zip stanno in `docker/themes/` e
+`docker/plugins/`, escluse da git: non vanno mai committati, nemmeno per una prova. Lo stesso vale
+per le chiavi di licenza, che stanno solo nel `.env`.
 
 **Non eseguire mai `git commit` senza istruzione esplicita dell'utente.** Vale anche per i
 subagent.
@@ -38,6 +39,20 @@ subagent.
   cambiano dal pannello o con WP-CLI, non dal `.env` (oc:8711)
 - `blog_public = 0` viene impostato all'installazione e non più toccato: al lancio in produzione va
   tolto a mano (Impostazioni → Lettura) (oc:8711)
+- Il child theme e la configurazione del sito si cambiano in locale, mai dal pannello di UAT né con
+  Child Theme Configurator: lì finirebbero nel checkout del server, fuori da git (README, «Lavorare
+  sul child theme» e «Configurazione versionata») (oc:8717)
+- `init-wordpress.sh` assegna a `www-data` tutti i file di WordPress tranne il child montato: un
+  `chown` sulla cartella montata cambierebbe il proprietario dei file del repo sull'host (oc:8717)
+- `git diff config/` prima di ogni commit: l'export toglie i segreti per nome e un'opzione segreta
+  con un nome insolito sfugge, in un repo pubblico (oc:8717)
+- WPML si configura solo con le sue API (`CatalogueSyncRunner`, `SaveLanguages` con `presetCode`,
+  `save_settings`): su un sito nuovo, senza sincronizzare il catalogo, l'API risponde
+  `missing_preset` (oc:8717)
+- Dopo un aggiornamento di Impreza o WPML dal pannello di UAT: `bin/wordpress-config.sh zip`, poi
+  zip in locale e nella cartella condivisa (README) (oc:8717)
+- In `bin/` e negli script con `set -o pipefail`, niente `… | head` o `echo … | grep -q` per
+  decidere: il SIGPIPE fa fallire la pipeline anche quando il testo c'è (oc:8717)
 - `wp option get WPLANG` fallisce su un'installazione appena fatta: la lingua attiva si legge con
   `wp language core list --status=active` (oc:8711)
 
