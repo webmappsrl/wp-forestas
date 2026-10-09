@@ -1,7 +1,7 @@
 # Plugin commerciali di WordPress: uno slug per riga. Il loro zip sta in questa cartella, esclusa da git
 # (non si ridistribuiscono), con un nome qualsiasi: lo slug si legge dalla cartella dentro lo zip.
 # `bin/wordpress-config.sh zip` li crea come <slug>.zip. Lo legge solo wpf_plugin_commerciali() in
-# docker/scripts/config/comune.php, che usano export, apply, ritratto, init-wordpress.sh e
+# docker/scripts/config/costanti.php, che usano export, apply, ritratto, init-wordpress.sh e
 # bin/wordpress-config.sh.
 sitepress-multilingual-cms
 wpml-string-translation

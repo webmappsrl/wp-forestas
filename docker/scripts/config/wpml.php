@@ -92,6 +92,10 @@ function wpf_wpml_applica( array $cfg, bool $prova, callable $diff ): bool {
 			return false;
 		}
 	}
+	if ( ! function_exists( 'wpml_collect' ) ) {
+		WP_CLI::warning( 'questa versione di WPML non ha wpml_collect(): lingue non configurate, va adeguato wpml.php' );
+		return false;
+	}
 
 	$attive_ora = array_keys( $sitepress->get_active_languages() );
 	$attive_cfg = array_column( $cfg['lingue'], 'code' );

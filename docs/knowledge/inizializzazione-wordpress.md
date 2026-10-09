@@ -19,7 +19,8 @@ qui conta come si comporta e perché.
   `Impreza/` non si installa: il child, che dichiara `Template: Impreza`, resterebbe senza padre.
 - **Passi aggiunti con oc:8717 non bloccanti:** plugin commerciali, licenze e configurazione
   scrivono un avviso se falliscono e il sito parte comunque. Licenze e plugin si ritentano a ogni
-  riavvio; l'apply automatico solo su un sito installato dall'init, al massimo 3 volte.
+  riavvio; l'apply automatico solo su un sito installato dall'init, al massimo 3 volte e solo nei 3
+  giorni dopo l'installazione.
 - **Variabili mancanti:** lo script esce elencandole; Docker riavvia il container a intervalli
   crescenti finché il `.env` non c'è.
 - **Dietro un proxy HTTPS** `wp-config.php` imposta `HTTPS=on` quando arriva
@@ -43,7 +44,7 @@ Vincolo: `wp-geohub` non ha tag né release; si scarica a un commit fisso (`GEOH
   Apache; se sono diversi non scrive direttamente e chiede le credenziali FTP per installare plugin
   e temi dal pannello. La cartella montata del child resta esclusa (trappola nel `CLAUDE.md`).
 - **Configurazione di `config/` applicata da sola solo su un sito appena installato, al massimo 3
-  volte** (oc:8717): un sito ricreato nasce configurato, ma un sito esistente (UAT alla prima messa in
+  volte e nei 3 giorni dopo l'installazione** (oc:8717): un sito ricreato nasce configurato, ma un sito esistente (UAT alla prima messa in
   opera, la produzione) non viene mai riscritto senza anteprima, e un apply che non può riuscire, per
   esempio senza WPML, non riscrive la configurazione a ogni riavvio. Il segno
   `wp_forestas_config_applicata` si scrive solo a fine senza errori.
@@ -130,7 +131,8 @@ con un apply di prova su un WordPress usa e getta prima di quello su UAT:
   `us_can_modify_favorite_sections` (`licenza-impreza.php` riproduce `us_check_and_activate_theme`,
   che legge `$_GET` e fa un redirect e quindi non si può richiamare).
 - **WPML:** `\WPML\LanguageEditor\PageData`, `Endpoint\SaveLanguages`, `Presets\CatalogueSyncRunner`,
-  `\WPML\FP\Right`, `WPML_Package_Translation_Schema::run_update`, `WPML_Config::load_config_run`,
+  `\WPML\FP\Right`, `wpml_collect`, `WPML_Package_Translation_Schema::run_update`,
+  `WPML_Config::load_config_run`,
   `$sitepress->delete_element_translation` (vuole il trid come stringa), `$sitepress->save_settings`,
   `wpml_is_setup_complete`, `icl_add_string_translation` con `ICL_TM_COMPLETE`, i filtri e le azioni
   `wpml_element_language_details`, `wpml_set_element_language_details`, `wpml_object_id`,

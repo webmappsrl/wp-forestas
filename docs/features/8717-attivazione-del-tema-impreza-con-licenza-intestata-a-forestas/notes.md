@@ -132,6 +132,10 @@ la home carica `forestas-child/style.css?ver=1.0.0`).
   ricreazione delle voci, come per i post: altrimenti ogni apply avrebbe ricreato le voci perdendoli.
 - **`WPML_Config::load_config_run()`** fa anche la pulizia degli admin texts non più configurati,
   come quando un amministratore apre il pannello dei temi: effetto accettato.
+- **Classi interne di WPML controllate prima di scrivere**: `CatalogueSyncRunner`, `\WPML\FP\Right`
+  e la funzione `wpml_collect()` si controllano anche quando le lingue non cambiano. È la scelta
+  prudente, con un costo: se un aggiornamento di WPML ne rinomina una, ogni apply resta parziale
+  finché `wpml.php` non viene adeguato.
 - **Apply automatico e versioni**: con `WPF_AUTOMATICO=1` (l'init) e una versione diversa da
   `versioni.json`, anche solo minore («9.4» contro «9.5»), l'apply non applica, perché nessuno guarda
   le differenze; se manca il tema o un plugin dell'elenco esce con codice 3 e l'init riprova senza
@@ -161,8 +165,8 @@ fa l'init, che lancia `licenza-impreza.php` solo quando serve, con un tempo mass
 - **L'export sostituisce solo i file prodotti**: un export con WPML spento non cancella `wpml.json`, e
   lo segnala.
 - **`apply --pagine`**: aggiorna anche le pagine che esistono già (vedi il Task 8).
-- **Elenco dei plugin commerciali letto da `comune.php` nel container** per `zip`, invece di una
-  seconda lettura di `commerciali.txt` sull'host.
+- **Elenco dei plugin commerciali letto nel container** per `zip`, invece di una seconda lettura di
+  `commerciali.txt` sull'host: prima da `comune.php`, da `60ce74c` da `costanti.php`.
 - **`apply --da DIR`**: applica un'altra cartella, per rimettere un backup senza toccare `config/`
   (montata in sola lettura, e nel checkout del server non va sporcata).
 - **Il backup non passa dal controllo delle chiavi**: va in `backup/`, esclusa da git, e il controllo
@@ -418,13 +422,14 @@ Le altre scelte prese durante l'implementazione sono nelle «Decisioni» qui sot
   letture (la verifica della licenza Impreza).
 - **Dati generati esclusi dall'export WPML**: `st.was_frontend_visited_key` e
   `custom_fields_translation`/`custom_term_fields_translation`, che WPML calcola da sé.
-- **Nomi e percorsi solo in `comune.php`**: le opzioni `wp_forestas_*`, i percorsi montati, la lettura
-  di `commerciali.txt` e il criterio dell'indirizzo locale stanno solo lì; `init-wordpress.sh` li
-  legge con `php -r` (`config_php`), `bin/wordpress-config.sh` con `php -r` nel container. Resta
-  ripetuto in `bin/` solo l'`--exec` per HTTPS, che si costruisce sull'host prima di entrare nel
-  container. Se `comune.php` non si carica (un errore arrivato con un pull), l'init usa valori di
-  riserva uguali a quelli del compose e WordPress parte lo stesso, con un AVVISO: senza, un errore in
-  un file montato avrebbe tenuto giù il sito.
+- **Nomi e percorsi in un file solo**: le opzioni `wp_forestas_*`, i percorsi montati, la lettura di
+  `commerciali.txt` e il criterio dell'indirizzo locale stanno solo lì; `init-wordpress.sh` li legge
+  con `php -r` (`config_php`), `bin/wordpress-config.sh` con `php -r` nel container. Resta ripetuto in
+  `bin/` solo l'`--exec` per HTTPS, che si costruisce sull'host prima di entrare nel container. Il
+  file era `comune.php`; da `60ce74c` è `costanti.php`, piccolo e senza dipendenze (vedi «Script di
+  configurazione montati dal compose»). Se non si carica (un errore arrivato con un pull), l'init usa
+  valori di riserva uguali a quelli del compose e WordPress parte lo stesso, con un AVVISO: senza, un
+  errore in un file montato avrebbe tenuto giù il sito.
 - **Esito del reset del locale (08/10)**: ritratto prima e dopo identico tranne
   l'impronta delle Theme Options, dovuta a `text_styles: []` che Impreza aggiunge a ogni
   installazione. Gli export successivi l'hanno portata in `config/` (è un'opzione vera, vuota), quindi
