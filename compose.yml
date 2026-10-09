@@ -8,7 +8,9 @@ services:
     build:
       context: .
       dockerfile: docker/configs/php/Dockerfile
-    image: wm-wordpress:php8.3
+    # Il nome contiene APP_NAME: l'immagine incorpora l'init di questo shard, e un altro shard sulla stessa
+    # macchina con lo stesso nome la sovrascriverebbe a ogni build
+    image: "wm-wordpress-${APP_NAME}:php8.3"
     container_name: "wordpress-${APP_NAME}"
     restart: unless-stopped
     env_file:
@@ -21,6 +23,18 @@ services:
     volumes:
       - wordpress-data:/var/www/html
       - ./docker/themes:/opt/wp-forestas/themes:ro
+      # Zip dei plugin commerciali (WPML) e configurazione versionata: fuori da /var/www/html, così il
+      # chown dell'inizializzazione non li tocca.
+      - ./docker/plugins:/opt/wp-forestas/plugins:ro
+      - ./config:/opt/wp-forestas/config:ro
+      # Script PHP della configurazione (export, apply, ritratto, licenza di Impreza e le loro funzioni):
+      # montati dal repo, così una modifica vale subito senza ricostruire l'immagine. init-wordpress.sh
+      # invece sta solo nell'immagine e ne usa costanti.php: senza questo mount parte con i suoi valori
+      # di riserva, senza .htaccess, licenza e apply.
+      - ./docker/scripts/config:/usr/local/lib/wp-forestas:ro
+      # Il child theme è codice del repo: montato sopra il volume, ogni modifica nel repo è subito
+      # visibile in WordPress, in locale e su UAT dopo il pull.
+      - ./themes/forestas-child:/var/www/html/wp-content/themes/forestas-child
     # service_started e non service_healthy: senza wp-forestas/.env MariaDB esce, e una dipendenza
     # «sana» farebbe fallire `docker compose up` dell'intero shard. L'attesa del database la fa
     # init-wordpress.sh.

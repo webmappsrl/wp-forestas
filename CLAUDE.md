@@ -10,8 +10,9 @@ Uso e avvio: [README.md](README.md).
 **Il repo è pubblico.** Nessun valore reale in un file tracciato: password, chiavi, URL interni
 stanno solo in `.env` (escluso da git). `.env-example` contiene solo segnaposto.
 
-**Il tema Impreza è commerciale e non si ridistribuisce.** Lo zip sta in `docker/themes/`, esclusa
-da git: non va mai committato, nemmeno per una prova.
+**Impreza e WPML sono commerciali e non si ridistribuiscono.** Gli zip stanno in `docker/themes/` e
+`docker/plugins/`, escluse da git: non vanno mai committati, nemmeno per una prova. Lo stesso vale
+per le chiavi di licenza, che stanno solo nel `.env`.
 
 **Non eseguire mai `git commit` senza istruzione esplicita dell'utente.** Vale anche per i
 subagent.
@@ -38,6 +39,45 @@ subagent.
   cambiano dal pannello o con WP-CLI, non dal `.env` (oc:8711)
 - `blog_public = 0` viene impostato all'installazione e non più toccato: al lancio in produzione va
   tolto a mano (Impostazioni → Lettura) (oc:8711)
+- Il child theme e la configurazione del sito si cambiano in locale, mai dal pannello di UAT né con
+  Child Theme Configurator: lì finirebbero nel checkout del server, fuori da git (README, «Lavorare
+  sul child theme» e «Configurazione versionata») (oc:8717)
+- `init-wordpress.sh` sta nell'immagine, non è montato come gli script di `docker/scripts/config/`:
+  una sua modifica gira solo dopo `scripts/wordpress-up.sh` di `forestas`, che ricostruisce
+  l'immagine; un semplice `docker restart` esegue ancora quello vecchio (oc:8717)
+- `init-wordpress.sh` legge nomi e percorsi da `docker/scripts/config/costanti.php`, che è montato dal
+  repo (gli script PHP non sono più copiati nell'immagine): rinominare una costante o una funzione di
+  `costanti.php` che l'init usa (`config_php`) vale anche per un init vecchio ancora nell'immagine.
+  `costanti.php` resta piccolo e senza dipendenze; se non si carica l'init usa i valori di riserva e
+  WordPress parte senza `.htaccess`, licenza e apply: un AVVISO nei log, non un errore (oc:8717)
+- L'apply automatico vale solo nei 3 giorni dopo l'installazione (`WPF_APPLY_FINESTRA`) e aspetta,
+  senza consumare tentativi, che tema e plugin di `config/versioni.json` siano installati: dopo, un
+  sito cambiato dal pannello non viene più sovrascritto senza anteprima (oc:8717)
+- Export, apply e ritratto girano come l'utente `WP_ADMIN_USER` del `.env` (`--user`): se
+  quell'utente si rinomina o si cancella dal pannello, falliscono finché il `.env` non lo segue (oc:8717)
+- L'apply automatico si ferma se `config/versioni.json` ha una versione di Impreza o di un plugin
+  diversa da quella del sito, anche solo minore («9.4» contro «9.5»): dopo un aggiornamento degli
+  zip va rifatto l'export, o si applica a mano guardando le differenze (oc:8717)
+- `root_page` di WPML non sta in `config/` (è un id di pagina): su un sito ricreato si reimposta a
+  mano. L'immagine Docker si chiama `wm-wordpress-<APP_NAME>`: un altro shard sulla stessa macchina
+  non la sovrascrive (oc:8717)
+- `init-wordpress.sh` assegna a `www-data` tutti i file di WordPress tranne il child montato: un
+  `chown` sulla cartella montata cambierebbe il proprietario dei file del repo sull'host (oc:8717)
+- `git diff config/` prima di ogni commit: l'export toglie i segreti per nome e si ferma sui valori
+  con la forma di una chiave nota, ma un segreto con un nome insolito e una forma qualsiasi sfugge,
+  in un repo pubblico (oc:8717)
+- WPML si configura solo con le sue API (`CatalogueSyncRunner`, `SaveLanguages` con `presetCode`,
+  `save_settings`): su un sito nuovo, senza sincronizzare il catalogo, l'API risponde
+  `missing_preset` (oc:8717)
+- Da WP-CLI WPML non toglie la riga di traduzione di un post cancellato (lo fa solo dal pannello o
+  dal sito) e converte il link di una traduzione in quello della lingua predefinita: negli script di
+  `docker/scripts/config/` si cancella con `wpf_wpml_cancella_post` e si prende il link con
+  `wpf_link_relativo` (oc:8717)
+- Dopo un aggiornamento di Impreza o WPML dal pannello di UAT: `bin/wordpress-config.sh zip`, poi
+  zip in locale e nella cartella condivisa (README), e un controllo delle funzioni interne che export
+  e apply usano (`docs/knowledge/inizializzazione-wordpress.md`, «Dipendenze») (oc:8717)
+- In `bin/` e negli script con `set -o pipefail`, niente `… | head` o `echo … | grep -q` per
+  decidere: il SIGPIPE fa fallire la pipeline anche quando il testo c'è (oc:8717)
 - `wp option get WPLANG` fallisce su un'installazione appena fatta: la lingua attiva si legge con
   `wp language core list --status=active` (oc:8711)
 

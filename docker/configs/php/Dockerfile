@@ -15,14 +15,18 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
 
 RUN a2enmod rewrite headers
 
+# WP-CLI a una versione fissa: export e apply della configurazione sono provati con questa
+ARG WP_CLI_VERSION=2.12.0
 RUN curl -fsSL -o /usr/local/bin/wp \
-        https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar \
+        "https://github.com/wp-cli/wp-cli/releases/download/v${WP_CLI_VERSION}/wp-cli-${WP_CLI_VERSION}.phar" \
     && chmod +x /usr/local/bin/wp
 
 COPY docker/configs/php/vhost.conf /etc/apache2/sites-available/000-default.conf
 COPY docker/configs/php/wordpress.ini /usr/local/etc/php/conf.d/wordpress.ini
 COPY docker/scripts/init-wordpress.sh /usr/local/bin/init-wordpress.sh
 COPY docker/scripts/entrypoint.sh /usr/local/bin/wp-forestas-entrypoint
+# Gli script PHP della configurazione non stanno nell'immagine: li monta il compose da
+# docker/scripts/config/ in /usr/local/lib/wp-forestas, così valgono subito e sono sempre quelli del repo
 RUN chmod +x /usr/local/bin/init-wordpress.sh /usr/local/bin/wp-forestas-entrypoint
 
 ENTRYPOINT ["wp-forestas-entrypoint"]
