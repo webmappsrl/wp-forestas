@@ -4,3 +4,11 @@
 # Temi commerciali (Impreza): non ridistribuibili
 /docker/themes/*
 !/docker/themes/.gitkeep
+
+# Plugin commerciali (WPML): non ridistribuibili
+/docker/plugins/*
+!/docker/plugins/.gitkeep
+!/docker/plugins/commerciali.txt
+
+# Backup della configurazione fatti da bin/wordpress-config.sh apply --conferma
+/backup/

@@ -1,0 +1,57 @@
+/*
+Theme Name: Forestas Child
+Theme URI: https://webmapp.it/
+Template: Impreza
+Author: Webmapp
+Author URI: https://webmapp.it/
+Description: Child theme di Impreza per Sardegna Sentieri (Forestas). Versionato nel repo wp-forestas e montato dal compose: si modifica nel repo, non dal pannello.
+Version: 1.0.0
+*/
+
+
+/*
+ * Colori del design system Forestas che non hanno un posto nelle Theme Options di Impreza
+ * (oc:8717). Testi, fondi, bordi, link e colori primario/secondario si impostano in
+ * Impreza → Theme Options → Colori: qui sotto blu e verde rimandano a quelle variabili,
+ * per non tenere lo stesso valore in due posti.
+ */
+:root {
+	/* Quadricromia del marchio: identità visiva, non stati o significati */
+	--sar-blu: var(--color-content-primary);
+	--sar-verde: var(--color-content-secondary);
+	--sar-terra: #CA5C30;        /* solo grafica, mai per il testo */
+	--sar-oro: #E9A33F;          /* solo campiture, mai testo su bianco */
+	--sar-terra-testo: #C0572E;
+	--sar-oro-testo: #8A5A00;
+
+	/* Declinazioni: tinte chiare per campiture e fondi */
+	--blu-tenue: #DEE4EB;
+	--blu-velo: #EEF0F4;
+	--verde-tenue: #E6E9DF;
+	--verde-velo: #F1F3EE;
+	--terra-tenue: #F7E7E0;
+	--terra-velo: #FBF2EF;
+	--oro-tenue: #FCF1E2;
+	--oro-velo: #FDF8EE;
+
+	/* Stati di validazione dei sentieri */
+	--st-4: #4B6B22;             /* Percorribile */
+	--st-3: #8A5A00;             /* In verifica */
+	--st-2: #7A6A55;             /* In revisione */
+	--st-1: #9B1B1B;             /* Non percorribile */
+
+	/* Colori per tipo di contenuto */
+	--tipo-sentiero: #DE1B0D;
+	--tipo-itinerario: #58810B;
+	--tipo-cammino: #1A416F;
+	--tipo-da-vedere: #B7117F;
+	--tipo-da-sapere: #0F6E6A;
+	--tipo-news: #C2410C;
+
+	--focus: #0B63C5;
+}
+
+/* Filo oro sopra il footer, come nel mockup «Canvas Fase 2» (oc:8717) */
+.l-footer {
+	border-top: 3px solid var(--sar-oro);
+}

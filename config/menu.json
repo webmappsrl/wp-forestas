@@ -1,0 +1,74 @@
+{
+    "menu": [
+        {
+            "chiave": "menu-main-menu",
+            "lingua": "it",
+            "nome": "main-menu",
+            "originale": null,
+            "slug": "main-menu",
+            "voci": [
+                {
+                    "attr_title": "",
+                    "classi": [],
+                    "descrizione": "",
+                    "destinazione": {
+                        "post": "@chiave:page-home",
+                        "tipo": "post"
+                    },
+                    "genitore": null,
+                    "meta": [],
+                    "originale": null,
+                    "target": "",
+                    "titolo": "Home",
+                    "xfn": ""
+                },
+                {
+                    "attr_title": "",
+                    "classi": [],
+                    "descrizione": "",
+                    "destinazione": {
+                        "tipo": "custom",
+                        "url": "#"
+                    },
+                    "genitore": null,
+                    "meta": [],
+                    "originale": null,
+                    "target": "",
+                    "titolo": "Chi siamo",
+                    "xfn": ""
+                },
+                {
+                    "attr_title": "",
+                    "classi": [],
+                    "descrizione": "",
+                    "destinazione": {
+                        "tipo": "custom",
+                        "url": "#"
+                    },
+                    "genitore": null,
+                    "meta": [],
+                    "originale": null,
+                    "target": "",
+                    "titolo": "Blog",
+                    "xfn": ""
+                },
+                {
+                    "attr_title": "",
+                    "classi": [],
+                    "descrizione": "",
+                    "destinazione": {
+                        "tipo": "custom",
+                        "url": "#"
+                    },
+                    "genitore": null,
+                    "meta": [],
+                    "originale": null,
+                    "target": "",
+                    "titolo": "Contatti",
+                    "xfn": ""
+                }
+            ]
+        }
+    ],
+    "posizioni": []
+}
