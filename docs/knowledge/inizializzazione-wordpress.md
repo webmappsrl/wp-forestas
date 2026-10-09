@@ -76,17 +76,30 @@ Vincolo: `wp-geohub` non ha tag né release; si scarica a un commit fisso (`GEOH
   permalink. La funzione tocca solo la sezione «WordPress» del file.
 - **wp-geohub a un commit fisso** (oc:8717): dal ramo `main` due siti ricreati in giorni diversi
   avevano codice diverso, contro l'obiettivo di un sito ricreabile.
-- **Un apply alla volta, e l'automatico solo con le stesse versioni principali** (oc:8717): l'apply
+- **Un apply alla volta, e l'automatico solo con le stesse versioni** (oc:8717): l'apply
   dell'avvio e uno lanciato dall'host nello stesso momento creerebbero post e menu doppi. All'avvio
   del container (passo 4c) si tolgono i blocchi presi prima dell'avvio, perché un apply gira dentro il
   container e muore con lui; quello di un apply lanciato durante l'avvio resta. Un `config/` di un
-  Impreza o un WPML di versione principale diversa può avere uno schema diverso, che l'apply
-  automatico applicherebbe senza che nessuno guardi le differenze.
-- **Nomi, percorsi ed elenco dei plugin commerciali solo in `comune.php`** (oc:8717): bash e PHP non
+  Impreza o un WPML di versione diversa, anche solo minore (9.4 contro 9.5), può avere uno schema
+  diverso, che l'apply automatico applicherebbe senza che nessuno guardi le differenze.
+- **Nomi, percorsi ed elenco dei plugin commerciali solo in `costanti.php`** (oc:8717): bash e PHP non
   possono condividere codice, ma l'init li legge con `php -r` (`config_php`) e `bin/` con `php -r`
   dentro il container. Una copia in bash rinominata a metà avrebbe fatto ripartire l'apply automatico
-  all'infinito, o mai. Se `comune.php` non si carica l'init usa valori di riserva uguali al compose e
-  WordPress parte: un errore in un file montato dal repo non deve tenere giù il sito.
+  all'infinito, o mai. `costanti.php` è piccolo e senza dipendenze apposta; se non si carica l'init usa
+  valori di riserva uguali al compose e WordPress parte: un errore in un file montato dal repo non deve
+  tenere giù il sito. Gli script PHP non sono copiati nell'immagine: il mount del compose li avrebbe
+  comunque nascosti, e una copia vecchia avrebbe potuto non coincidere con l'init.
+- **Apply automatico solo nei giorni dopo l'installazione** (oc:8717): un apply riuscito in parte
+  (per esempio senza WPML) ripartirebbe al riavvio successivo, anche settimane dopo, senza anteprima
+  né backup, su un sito ormai cambiato dal pannello. Vale per 3 giorni (`WPF_APPLY_FINESTRA`); se
+  mancano Impreza o un plugin di `config/versioni.json` aspetta senza consumare un tentativo.
+- **Cosa riscrive l'apply** (oc:8717): dei post esportati riscrive titolo, slug, contenuto, ma anche
+  stato (`post_status`), riassunto (`post_excerpt`) e ordine (`menu_order`); un header messo in bozza
+  dal pannello torna come nel repo. Le pagine esistenti solo con `--pagine`.
+- **Utente e proprietario dei file** (oc:8717): export, apply e ritratto girano come `WP_ADMIN_USER`
+  (`--user`), che deve esistere; l'init e il suo apply girano come root e i file che scrivono
+  (CSS di Impreza, font) passano a `www-data` al passo 9. Se l'init si ferma prima del passo 9,
+  in `wp-content/uploads` possono restare file di root fino all'avvio successivo.
 - **Google Fonts non scaricati: un avviso** (oc:8717): la configurazione resta applicata, l'init lo
   ricorda a ogni avvio e un nuovo apply riprova solo i font. Con un errore, un sito senza rete verso
   Google non sarebbe mai risultato configurato.
@@ -123,8 +136,9 @@ con un apply di prova su un WordPress usa e getta prima di quello su UAT:
   `wpml_element_language_details`, `wpml_set_element_language_details`, `wpml_object_id`,
   `wpml_switch_language`, le tabelle `icl_strings`/`icl_string_translations` lette da export e apply.
 
-La versione principale diversa ferma l'apply automatico; un apply a mano avvisa e mostra le
-differenze prima di `--conferma`.
+Una versione diversa (anche solo minore) ferma l'apply automatico; un apply a mano avvisa e mostra le
+differenze prima di `--conferma`. Dopo ogni aggiornamento la prova è: su un WordPress usa e getta
+(`APP_NAME=prova`, README) con gli zip nuovi, export, poi `apply` che deve dare «nessuna differenza».
 
 ## Come ci siamo arrivati
 

@@ -20,9 +20,10 @@ la home carica `forestas-child/style.css?ver=1.0.0`).
 
 ### Task 5 struttura per zip e configurazione
 
-- **Script PHP montati dal compose** (`./docker/scripts/config:/usr/local/lib/wp-forestas:ro`), oltre
-  alla copia nell'immagine prevista dal piano: una loro modifica vale subito (vedi le Decisioni).
-  `init-wordpress.sh` invece resta solo nell'immagine.
+- **Script PHP montati dal compose** (`./docker/scripts/config:/usr/local/lib/wp-forestas:ro`) invece
+  della copia nell'immagine prevista dal piano: una loro modifica vale subito (vedi le Decisioni). La
+  copia nell'immagine è stata tolta, perché il mount la nascondeva sempre. `init-wordpress.sh` invece
+  resta solo nell'immagine.
 - **`docker/plugins/commerciali.txt`**, versionato con un'eccezione in `.gitignore`: l'elenco dei
   plugin commerciali in un punto solo (vedi le Decisioni).
 
@@ -131,8 +132,10 @@ la home carica `forestas-child/style.css?ver=1.0.0`).
   ricreazione delle voci, come per i post: altrimenti ogni apply avrebbe ricreato le voci perdendoli.
 - **`WPML_Config::load_config_run()`** fa anche la pulizia degli admin texts non più configurati,
   come quando un amministratore apre il pannello dei temi: effetto accettato.
-- **Apply automatico e versioni**: con `WPF_AUTOMATICO=1` (l'init) e una versione principale diversa
-  da `versioni.json` l'apply non applica, perché nessuno guarda le differenze.
+- **Apply automatico e versioni**: con `WPF_AUTOMATICO=1` (l'init) e una versione diversa da
+  `versioni.json`, anche solo minore («9.4» contro «9.5»), l'apply non applica, perché nessuno guarda
+  le differenze; se manca il tema o un plugin dell'elenco esce con codice 3 e l'init riprova senza
+  contare il tentativo.
 - **Un valore `null` di `sito.json` si salta**: indica un'opzione che sul sito dell'export non c'era.
 - **Nelle differenze stampate, anche un segreto dentro un'impostazione composta** (WPML, theme_mods)
   diventa `@segreto`.
@@ -308,6 +311,32 @@ Le altre scelte prese durante l'implementazione sono nelle «Decisioni» qui sot
   wp-geohub spento a mano rimasto spento al riavvio; ritratto identico a quello del locale ricostruito
   con `scripts/wordpress-up.sh`, apply «nessuna differenza» su tutti e due.
 
+- **Review interna (09/10), un bloccante e nove cleanup corretti**. Il bloccante: `CLAUDE.md`
+  svuotato per errore nel commit `ae84296`, da uno script che lo apriva in scrittura (e quindi lo
+  troncava) mentre lo leggeva per rinominare una funzione; ripristinato da `88ddb13` e aggiornato. I
+  cleanup:
+  - apply automatico solo nei 3 giorni dopo l'installazione (`wp_forestas_installato_il`,
+    `WPF_APPLY_FINESTRA`): un apply riuscito in parte non riparte più settimane dopo su un sito
+    cambiato dal pannello;
+  - se mancano Impreza o un plugin di `versioni.json` l'apply automatico esce con codice 3 e l'init
+    non consuma il tentativo; prima i tentativi si consumavano e, arrivato lo zip, Theme Options e
+    menu non venivano più applicati;
+  - ripetizioni tolte: lettura di `APP_NAME` in `scripts/wordpress-app-name.sh` di `forestas`,
+    funzione `attiva_plugin` nell'init, `wpf_diverso()` per i confronti, `wpf_nome_theme_options()`;
+  - `sito.json` applicato solo per le opzioni di `WPF_OPZIONI_SITO` (un `siteurl` messo a mano
+    avrebbe spostato il sito);
+  - il ritratto stampa tutti i riferimenti delle Theme Options, non solo header, footer e manutenzione;
+  - un menu nuovo il cui slug è già di un altro menu non nasce con uno slug diverso: avviso, menu tolto;
+  - copia degli script PHP tolta dall'immagine (il mount la nascondeva);
+  - `comune.php` diviso: `costanti.php` per l'init, le funzioni dei menu in `menu.php`, quelle delle
+    lingue in `wpml.php`; classi interne di WPML controllate prima di scrivere; nel README la prova
+    da fare dopo ogni aggiornamento di Impreza o WPML;
+  - documentati: l'apply riscrive anche stato, riassunto e ordine dei post; gli script girano come
+    `WP_ADMIN_USER`; i file di root in `uploads` se l'init si ferma prima del passo 9.
+  Fra i facoltativi, il ricollegamento di un post per slug ora sceglie solo un post nella lingua giusta.
+  Resta ipotetico il ripristino dei segreti delle voci di menu per posizione: se le voci cambiano
+  ordine, un segreto torna sulla voce sbagliata (oggi nessuna voce ha segreti).
+
 ## Decisioni
 
 
@@ -316,13 +345,14 @@ Le altre scelte prese durante l'implementazione sono nelle «Decisioni» qui sot
   ricavano senza un elenco a mano e non si scontrano fra tipi diversi. Una chiave assegnata non cambia
   più, anche se lo slug cambia; una chiave copiata da «Duplica» di Impreza viene rigenerata
   sull'export, con un avviso.
-- **Script di configurazione montati dal compose**, oltre che copiati nell'immagine: una modifica vale
+- **Script di configurazione montati dal compose**, non copiati nell'immagine: una modifica vale
   subito, senza ricostruire l'immagine, e su UAT `bin/`, `config/` e script PHP hanno sempre la
   stessa versione. `init-wordpress.sh` invece sta solo nell'immagine e cambia dopo
-  `scripts/wordpress-up.sh`; legge però nomi e percorsi da `comune.php` montato, quindi un rename lì
-  vale anche per l'init vecchio.
-- **Elenco dei plugin commerciali in `docker/plugins/commerciali.txt`**, versionato: lo leggono init,
-  `bin/wordpress-config.sh zip` e il ritratto, così un plugin si aggiunge in un punto solo.
+  `scripts/wordpress-up.sh`; legge però nomi e percorsi da `costanti.php` montato, quindi un rename lì
+  vale anche per l'init vecchio. `costanti.php` è separato da `comune.php` perché resti piccolo e senza
+  dipendenze: è l'unico file PHP che l'init carica prima che WordPress esista.
+- **Elenco dei plugin commerciali in `docker/plugins/commerciali.txt`**, versionato: lo legge solo
+  `wpf_plugin_commerciali()` in `costanti.php`, così un plugin si aggiunge in un punto solo.
 - **Costanti di `wp-config.php` che seguono il `.env`**: `DISALLOW_FILE_MODS` e
   `OTGS_INSTALLER_SITE_KEY_WPML` si scrivono quando il `.env` le chiede e si tolgono quando non le
   chiede più (o l'indirizzo è locale), così un ambiente non resta bloccato da un valore di prova.

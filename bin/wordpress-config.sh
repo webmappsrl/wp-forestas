@@ -184,8 +184,8 @@ case "${1:-}" in
         crea_zip themes/Impreza impreza.zip
         docker cp "${C}:${ZIP_TMP}/impreza.zip" "${REPO}/docker/themes/impreza.zip" >/dev/null
         echo "docker/themes/impreza.zip: Impreza $(docker exec "$C" wp --allow-root --path="$WP_PATH" theme get Impreza --field=version)"
-        # Elenco dei plugin commerciali letto da comune.php nel container: l'unica lettura di commerciali.txt
-        commerciali=$(docker exec "$C" php -r "require '${CONFIG_LIB}/comune.php'; echo implode( ' ', wpf_plugin_commerciali() );")
+        # Elenco dei plugin commerciali letto da costanti.php nel container: l'unica lettura di commerciali.txt
+        commerciali=$(docker exec "$C" php -r "require '${CONFIG_LIB}/costanti.php'; echo implode( ' ', wpf_plugin_commerciali() );")
         for slug in $commerciali; do
             if ! docker exec "$C" test -d "${WP_PATH}/wp-content/plugins/${slug}"; then
                 echo "AVVISO: ${slug} non è installato su questo sito: zip non rigenerato"

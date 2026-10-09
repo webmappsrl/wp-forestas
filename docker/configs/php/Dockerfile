@@ -25,8 +25,8 @@ COPY docker/configs/php/vhost.conf /etc/apache2/sites-available/000-default.conf
 COPY docker/configs/php/wordpress.ini /usr/local/etc/php/conf.d/wordpress.ini
 COPY docker/scripts/init-wordpress.sh /usr/local/bin/init-wordpress.sh
 COPY docker/scripts/entrypoint.sh /usr/local/bin/wp-forestas-entrypoint
-# Script PHP della configurazione (export, apply, ritratto, licenza di Impreza), lanciati con wp eval-file
-COPY docker/scripts/config/ /usr/local/lib/wp-forestas/
+# Gli script PHP della configurazione non stanno nell'immagine: li monta il compose da
+# docker/scripts/config/ in /usr/local/lib/wp-forestas, così valgono subito e sono sempre quelli del repo
 RUN chmod +x /usr/local/bin/init-wordpress.sh /usr/local/bin/wp-forestas-entrypoint
 
 ENTRYPOINT ["wp-forestas-entrypoint"]

@@ -112,12 +112,13 @@ diversi, chiede le credenziali FTP.
       esistono già, come la Home, sono anche contenuto della redazione: si aggiornano solo con
       `apply --pagine`.
 - [x] L'apply automatico parte solo su un sito installato dall'init (opzione
-      `wp_forestas_config_da_applicare`, scritta all'installazione), al massimo 3 volte; scrive
+      `wp_forestas_config_da_applicare`, scritta all'installazione), al massimo 3 volte e solo nei 3
+      giorni dopo l'installazione; se mancano tema o plugin aspetta senza consumare tentativi; scrive
       `wp_forestas_config_applicata` solo se finisce senza errori. Su un sito esistente, e dopo i 3
       tentativi, solo con il comando esplicito. Un riavvio di un sito configurato non cambia nulla.
 - [x] I passi nuovi dell'init (zip, licenze, catalogo WPML, apply) non bloccano mai l'avvio: in caso
       di errore scrivono un avviso nei log; licenze e plugin si ritentano a ogni riavvio, l'apply
-      entro i suoi 3 tentativi. Un apply parziale esce con errore. Se `comune.php` (montato dal repo)
+      entro i suoi 3 tentativi. Un apply parziale esce con errore. Se `costanti.php` (montato dal repo)
       non si carica, WordPress parte lo stesso con un avviso.
 - [x] L'apply ha una modalità che non scrive e restituisce le differenze fra configurazione del repo
       e sito, usata dal comando sull'host prima di chiedere `--conferma`.
@@ -180,20 +181,21 @@ Repo `wp-forestas`:
   permalink), 4c (blocco di un apply interrotto), 6 (wp-geohub a un commit fisso), 7 (controllo
   dello zip), 7b (UpSolution Core), 7c (plugin commerciali), 8 (child), 8b (licenza Impreza), 8c
   (apply automatico), 9 (proprietario dei file); funzioni `config_php` e `config_valore` (nomi e
-  percorsi da `comune.php`), `url_locale`, `wp_script` e `slug_zip`
+  percorsi da `costanti.php`), `attiva_plugin`, `url_locale`, `wp_script` e `slug_zip`
 - `README.md`, `CLAUDE.md`, `docs/knowledge/inizializzazione-wordpress.md`
 - `.gitignore`, `.env-example`, `docker/plugins/.gitkeep`,
   `docker/plugins/commerciali.txt` (elenco dei plugin commerciali), `config/` (nuova, con `.gitkeep`),
-  `docker/scripts/config/` (nuova: `comune.php`, `export.php`, `apply.php`, `post.php`, `menu.php`,
-  `opzioni.php`, `wpml.php`, `ritratto.php`, `licenza-impreza.php`), `docker/configs/php/Dockerfile`
-  (copia degli script, WP-CLI a una versione fissa),
+  `docker/scripts/config/` (nuova: `costanti.php`, `comune.php`, `export.php`, `apply.php`,
+  `post.php`, `menu.php`, `opzioni.php`, `wpml.php`, `ritratto.php`, `licenza-impreza.php`),
+  `docker/configs/php/Dockerfile` (WP-CLI a una versione fissa; gli script PHP della configurazione
+  non sono copiati, li monta il compose),
   `bin/wordpress-config.sh` (nuovo: export, apply, ritratto, zip),
   `backup/` (esclusa da git)
 
 Repo `forestas`: `docs/howto/messa-in-opera-wordpress-uat.md`, `docs/knowledge/wordpress-nello-shard.md`,
 `CLAUDE.md`, `scripts/wordpress-reset.sh` e `scripts/wordpress-up.sh` (commento e lettura di
-`APP_NAME` senza `grep | head`, che con `pipefail` faceva uscire lo script senza messaggio); il
-puntatore del submodule dopo il merge.
+`APP_NAME`, ora in `scripts/wordpress-app-name.sh` caricato da entrambi, con un messaggio chiaro se
+manca il `.env`); il puntatore del submodule dopo il merge.
 
 Su UAT, fuori dal repo: zip di Impreza in `docker/themes/`, licenza, Theme Options di Impreza,
 child creato con Child Theme Configurator e poi sostituito dal mount, temi di default eliminati.

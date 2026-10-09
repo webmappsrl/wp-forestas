@@ -8,6 +8,71 @@
  * stato del wizard.
  */
 
+require_once __DIR__ . '/comune.php';
+
+// Impostazioni di WPML che WPML calcola o genera da sé: non sono configurazione e, esportate,
+// comparirebbero come differenze a ogni export da un sito ricreato
+const WPF_WPML_INTERNE = [
+	[ 'st', 'was_frontend_visited_key' ],
+	[ 'translation-management', 'custom_fields_translation' ],
+	[ 'translation-management', 'custom_term_fields_translation' ],
+	// Id della pagina usata come root page: su un altro sito sarebbe un'altra pagina. L'export avvisa
+	// se è impostata, l'apply lascia quella del sito.
+	[ 'urls', 'root_page' ],
+];
+
+/**
+ * Toglie, a qualsiasi profondità, le impostazioni di WPML che descrivono il sito da cui si esporta e
+ * non la configurazione:
+ * - i segni delle migrazioni già eseguite («…_has_run», «…migration_complete…») e dei controlli già
+ *   fatti: scritti su un sito nuovo, WPML salterebbe migrazioni mai eseguite e non creerebbe tabelle
+ *   come wp_icl_mo_files_domains;
+ * - i valori che WPML calcola sul sito: default_categories contiene id di termini (su un sito nuovo
+ *   l'id della categoria inglese di UAT era il menu), gettext_theme_domain_name e
+ *   theme_language_folders dipendono da temi e percorsi del sito, i «…_readonly_config» (e la loro
+ *   «…_source») li ricava dai wpml-config.xml dei plugin, setup_wizard_step e
+ *   language_selector_initialized sono passi del wizard già fatti, db_ok_for_gettext_context e
+ *   autoregister_strings_were_new_translations_loaded sono controlli di String Translation.
+ */
+function wpf_togli_stato_wpml( array $dati ): array {
+	$stato = '/_has_run$|migration_complete|_migrated$|_verified$|^ajx_health_checked$|^migrated_site$'
+		. '|^default_categories$|^gettext_theme_domain_name$|^theme_language_folders$|_readonly_config(_source)?$'
+		. '|^setup_wizard_step$|^language_selector_initialized$|^db_ok_for_gettext_context$'
+		. '|_were_new_translations_loaded$/';
+	foreach ( $dati as $nome => $valore ) {
+		if ( is_string( $nome ) && preg_match( $stato, $nome ) ) {
+			unset( $dati[ $nome ] );
+		} elseif ( is_array( $valore ) ) {
+			$dati[ $nome ] = wpf_togli_stato_wpml( $valore );
+		}
+	}
+	return $dati;
+}
+
+/** Dettagli WPML di un elemento (lingua, trid, lingua di partenza), o null senza WPML. */
+function wpf_dettagli_lingua( int $id, string $tipo ): ?object {
+	return apply_filters( 'wpml_element_language_details', null, [ 'element_id' => $id, 'element_type' => $tipo ] ) ?: null;
+}
+
+/** Lingua WPML di un elemento, o null senza WPML. */
+function wpf_lingua( int $id, string $tipo ): ?string {
+	return wpf_dettagli_lingua( $id, $tipo )->language_code ?? null;
+}
+
+/** Traduzioni WPML di un elemento: [ lingua => id ], originale compreso. */
+function wpf_traduzioni( int $id, string $tipo ): array {
+	$trid = apply_filters( 'wpml_element_trid', null, $id, $tipo );
+	if ( ! $trid ) {
+		return [];
+	}
+	$elenco = apply_filters( 'wpml_get_element_translations', [], $trid, $tipo );
+	$out    = [];
+	foreach ( (array) $elenco as $lingua => $t ) {
+		$out[ $lingua ] = (int) $t->element_id;
+	}
+	return $out;
+}
+
 /**
  * @param array    $cfg   contenuto di wpml.json
  * @param bool     $prova vero: non scrive, segnala solo le differenze
@@ -19,6 +84,13 @@ function wpf_wpml_applica( array $cfg, bool $prova, callable $diff ): bool {
 	if ( ! $sitepress || ! class_exists( '\WPML\LanguageEditor\Endpoint\SaveLanguages' ) ) {
 		WP_CLI::warning( 'WPML non è attivo: configurazione delle lingue saltata' );
 		return false;
+	}
+	// Classi interne di WPML usate qui sotto: se un aggiornamento ne toglie una ci si ferma prima di scrivere
+	foreach ( [ '\WPML\LanguageEditor\Presets\CatalogueSyncRunner', '\WPML\FP\Right' ] as $classe ) {
+		if ( ! class_exists( $classe ) ) {
+			WP_CLI::warning( "questa versione di WPML non ha {$classe}: lingue non configurate, va adeguato wpml.php" );
+			return false;
+		}
 	}
 
 	$attive_ora = array_keys( $sitepress->get_active_languages() );
@@ -38,11 +110,11 @@ function wpf_wpml_applica( array $cfg, bool $prova, callable $diff ): bool {
 	}
 	$impostazioni_diverse = [];
 	foreach ( $impostazioni as $nome => $valore ) {
-		if ( wpf_json( $impostazioni_ora[ $nome ] ?? null ) !== wpf_json( $valore ) ) {
+		if ( wpf_diverso( $impostazioni_ora[ $nome ] ?? null, $valore ) ) {
 			$impostazioni_diverse[] = $nome;
 		}
 	}
-	$setup_diverso = wpf_json( get_option( 'WPML(setup)' ) ) !== wpf_json( $cfg['setup'] );
+	$setup_diverso = wpf_diverso( get_option( 'WPML(setup)' ), $cfg['setup'] );
 
 	if ( ! $lingue_uguali ) {
 		$diff( 'lingue', implode( ',', $attive_ora ) . ' (predefinita ' . $sitepress->get_default_language() . ')', implode( ',', $attive_cfg ) . ' (predefinita ' . $cfg['predefinita'] . ')' );
@@ -58,10 +130,6 @@ function wpf_wpml_applica( array $cfg, bool $prova, callable $diff ): bool {
 	}
 
 	if ( ! $lingue_uguali ) {
-		if ( ! class_exists( '\WPML\LanguageEditor\Presets\CatalogueSyncRunner' ) ) {
-			WP_CLI::warning( 'questa versione di WPML non ha CatalogueSyncRunner: lingue non configurate, va adeguato wpml.php' );
-			return false;
-		}
 		\WPML\LanguageEditor\Presets\CatalogueSyncRunner::create()->run();
 		$lingue = array_map(
 			function ( $l ) {
@@ -121,7 +189,7 @@ function wpf_wpml_cancella_post( int $id, string $tipo ): void {
 	global $sitepress;
 	$dettagli = wpf_dettagli_lingua( $id, $tipo );
 	wp_delete_post( $id, true );
-	if ( $sitepress && $dettagli && ! empty( $dettagli->trid ) ) {
+	if ( $sitepress && method_exists( $sitepress, 'delete_element_translation' ) && $dettagli && ! empty( $dettagli->trid ) ) {
 		// WPML vuole il trid come stringa (is_string): con un intero non cancella nulla
 		$sitepress->delete_element_translation( (string) $dettagli->trid, $tipo, $dettagli->language_code );
 	}

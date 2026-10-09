@@ -1,8 +1,9 @@
 <?php
 /**
- * Costanti e funzioni condivise da export, apply e ritratto della configurazione e da
- * init-wordpress.sh, che ne legge nomi e percorsi con «php -r» per non ripeterli (oc:8717). Il file
- * si carica anche senza WordPress: solo le funzioni che lo usano lo richiedono.
+ * Costanti e funzioni condivise da export, apply e ritratto della configurazione (oc:8717): segreti,
+ * segnaposti dell'URL, chiavi stabili dei post, Theme Options di Impreza, .htaccess e blocco
+ * dell'apply. Quelle che servono anche a init-wordpress.sh stanno in costanti.php; quelle dei menu in
+ * menu.php, quelle di WPML in wpml.php.
  *
  * Nei file di config/ tre segnaposti sostituiscono ciò che cambia da un sito all'altro:
  * - @url_sito       l'indirizzo del sito (@url_sito_json nella forma con le barre protette,
@@ -11,26 +12,12 @@
  * - @chiave:<nome>  un post esportato, al posto del suo id.
  */
 
+require_once __DIR__ . '/costanti.php';
+
 const WPF_SEGNAPOSTO_URL = '@url_sito';
 const WPF_SEGRETO        = '@segreto';
 const WPF_RIFERIMENTO    = '@chiave:';
 const WPF_META_CHIAVE    = '_wp_forestas_chiave';
-
-// Percorsi montati dal compose (compose.yml): li legge anche init-wordpress.sh
-const WPF_DIR_PLUGIN = '/opt/wp-forestas/plugins';
-const WPF_DIR_CONFIG = '/opt/wp-forestas/config';
-
-// Opzioni di controllo, lette anche da init-wordpress.sh. Scritta dall'init quando installa WordPress:
-// solo un sito nato così riceve l'apply automatico. La seconda la scrive l'apply riuscito.
-const WPF_OPZIONE_DA_FARE = 'wp_forestas_config_da_applicare';
-const WPF_OPZIONE_FATTO   = 'wp_forestas_config_applicata';
-// Blocco che impedisce due apply nello stesso momento (l'automatico dell'init e uno lanciato dall'host)
-const WPF_OPZIONE_APPLY_IN_CORSO = 'wp_forestas_apply_in_corso';
-// Dopo quanti secondi un apply «in corso» si considera interrotto e il blocco si può togliere. Deve
-// superare il tempo massimo dell'apply automatico, che init-wordpress.sh ricava da qui
-const WPF_APPLY_SCADENZA = 2400;
-// Plugin commerciali la cui attivazione automatica è fallita: l'init la ritenta (vedi il passo 7c)
-const WPF_OPZIONE_DA_ATTIVARE = 'wp_forestas_plugin_da_attivare';
 
 // Impostazioni del sito versionate in sito.json (export) e mostrate nel ritratto
 const WPF_OPZIONI_SITO = [ 'blogname', 'blogdescription', 'permalink_structure', 'show_on_front', 'page_on_front', 'page_for_posts' ];
@@ -44,17 +31,6 @@ const WPF_GFONTS_GIRI = 20;
 
 // Tipi di post costruiti con il builder di Impreza: sono configurazione, non contenuti
 const WPF_TIPI_BUILDER = [ 'us_header', 'us_page_block', 'us_content_template', 'us_grid_layout' ];
-
-// Impostazioni di WPML che WPML calcola o genera da sé: non sono configurazione e, esportate,
-// comparirebbero come differenze a ogni export da un sito ricreato
-const WPF_WPML_INTERNE = [
-	[ 'st', 'was_frontend_visited_key' ],
-	[ 'translation-management', 'custom_fields_translation' ],
-	[ 'translation-management', 'custom_term_fields_translation' ],
-	// Id della pagina usata come root page: su un altro sito sarebbe un'altra pagina. L'export avvisa
-	// se è impostata, l'apply lascia quella del sito.
-	[ 'urls', 'root_page' ],
-];
 
 // Theme Options di Impreza che non sono configurazione: la modalità manutenzione (la accende la licenza
 // di sviluppo, su UAT sempre, o il pannello: versionata accenderebbe la manutenzione anche su un sito di
@@ -76,12 +52,6 @@ const WPF_META_CALCOLATI = [ '_us_jsoncss_data', '_us_faceted_filter_items', '_u
 const WPF_META_ESCLUSI_POST = '/^(_edit_|_wp_old|_wpml|_icl_)/';
 // Metadati dei post con l'id di un allegato della Libreria media: non si esportano, l'export avvisa
 const WPF_META_ALLEGATI = [ '_thumbnail_id' ];
-
-// Metadati standard delle voci di menu: già rappresentati dai campi di wpf_voci_menu(). Gli altri (mega
-// menu e pulsante di Impreza, «us_mega_menu_settings», «_menu_item_btn_style»…) si esportano a parte.
-const WPF_META_VOCE_STANDARD = [ '_menu_item_type', '_menu_item_menu_item_parent', '_menu_item_object_id', '_menu_item_object', '_menu_item_target', '_menu_item_classes', '_menu_item_xfn', '_menu_item_url', '_menu_item_orphaned' ];
-// Altri metadati delle voci che non si esportano: per una voce di menu nessun «_wp_…» è un'impostazione
-const WPF_META_ESCLUSI_VOCE = '/^(_edit_|_wp_|_wpml|_icl_)/';
 
 // Attributi del builder che contengono id di allegati della Libreria media («image="12"», «images="3,4"»)
 const WPF_ATTRIBUTI_ALLEGATO = '/\b(image|images|img|ids|bg_image|logo|icon_image)="\d/';
@@ -130,34 +100,6 @@ function wpf_togli_segreti( array $dati, array &$tolti, string $percorso = '' ):
 			$tolti[]       = $qui;
 		} elseif ( is_array( $valore ) ) {
 			$dati[ $nome ] = wpf_togli_segreti( $valore, $tolti, $qui );
-		}
-	}
-	return $dati;
-}
-
-/**
- * Toglie, a qualsiasi profondità, le impostazioni di WPML che descrivono il sito da cui si esporta e
- * non la configurazione:
- * - i segni delle migrazioni già eseguite («…_has_run», «…migration_complete…») e dei controlli già
- *   fatti: scritti su un sito nuovo, WPML salterebbe migrazioni mai eseguite e non creerebbe tabelle
- *   come wp_icl_mo_files_domains;
- * - i valori che WPML calcola sul sito: default_categories contiene id di termini (su un sito nuovo
- *   l'id della categoria inglese di UAT era il menu), gettext_theme_domain_name e
- *   theme_language_folders dipendono da temi e percorsi del sito, i «…_readonly_config» (e la loro
- *   «…_source») li ricava dai wpml-config.xml dei plugin, setup_wizard_step e
- *   language_selector_initialized sono passi del wizard già fatti, db_ok_for_gettext_context e
- *   autoregister_strings_were_new_translations_loaded sono controlli di String Translation.
- */
-function wpf_togli_stato_wpml( array $dati ): array {
-	$stato = '/_has_run$|migration_complete|_migrated$|_verified$|^ajx_health_checked$|^migrated_site$'
-		. '|^default_categories$|^gettext_theme_domain_name$|^theme_language_folders$|_readonly_config(_source)?$'
-		. '|^setup_wizard_step$|^language_selector_initialized$|^db_ok_for_gettext_context$'
-		. '|_were_new_translations_loaded$/';
-	foreach ( $dati as $nome => $valore ) {
-		if ( is_string( $nome ) && preg_match( $stato, $nome ) ) {
-			unset( $dati[ $nome ] );
-		} elseif ( is_array( $valore ) ) {
-			$dati[ $nome ] = wpf_togli_stato_wpml( $valore );
 		}
 	}
 	return $dati;
@@ -230,152 +172,6 @@ function wpf_post_per_chiave( string $chiave ): ?WP_Post {
 }
 
 /**
- * Voci di un menu lette dal database, nell'ordine del menu. Non si usa wp_get_nav_menu_items(): il suo
- * filtro lascia a WPML aggiungere le voci del selettore di lingua (che non esistono nel database) e
- * togliere quella della «root page», e da WP-CLI quel filtro è attivo.
- *
- * @return WP_Post[]
- */
-function wpf_voci_db( int $id_menu ): array {
-	$ids = get_objects_in_term( $id_menu, 'nav_menu' );
-	if ( is_wp_error( $ids ) || ! $ids ) {
-		return [];
-	}
-	$voci = get_posts(
-		[
-			'post_type'        => 'nav_menu_item',
-			'post__in'         => $ids,
-			'post_status'      => 'any',
-			'orderby'          => 'menu_order',
-			'order'            => 'ASC',
-			'numberposts'      => -1,
-			'suppress_filters' => true,
-		]
-	);
-	return array_map( 'wp_setup_nav_menu_item', $voci );
-}
-
-/**
- * Link relativo di un post nella sua lingua. Da WP-CLI WPML converte il link di una traduzione in quello
- * del post nella lingua corrente (la predefinita): si passa alla lingua del post e poi si torna indietro.
- */
-function wpf_link_relativo( int $id ): string {
-	$lingua = wpf_lingua( $id, 'post_' . get_post_type( $id ) );
-	$prima  = apply_filters( 'wpml_current_language', null );
-	if ( $lingua ) {
-		do_action( 'wpml_switch_language', $lingua );
-	}
-	$link = wp_make_link_relative( get_permalink( $id ) );
-	if ( $lingua ) {
-		do_action( 'wpml_switch_language', $prima );
-	}
-	return $link;
-}
-
-/**
- * Posizione di una voce nel suo menu (0 = la prima), o null. Serve a collegare le voci di un menu
- * tradotto a quelle dell'originale: gli id cambiano da un sito all'altro, la posizione no.
- */
-function wpf_posizione_voce( int $id_voce ): ?int {
-	$menu = wp_get_object_terms( $id_voce, 'nav_menu', [ 'fields' => 'ids' ] );
-	if ( is_wp_error( $menu ) || ! $menu ) {
-		return null;
-	}
-	$posizione = array_search( $id_voce, array_map( fn( $v ) => (int) $v->ID, wpf_voci_db( (int) $menu[0] ) ), true );
-	return $posizione === false ? null : $posizione;
-}
-
-/**
- * Voci di un menu nella forma dei file di config/: la stessa per l'export e per il confronto
- * dell'apply, così ogni differenza (destinazione, gerarchia, target, classi, metadati, legame con la
- * traduzione) viene vista. La destinazione è:
- * - «post», la chiave stabile, per un post esportato in config/;
- * - «pagina», tipo e percorso, per un altro post o pagina: l'apply lo ritrova sul sito di destinazione
- *   e la voce resta un collegamento a quel post (con link e traduzione che WordPress e WPML seguono);
- * - «custom», l'URL, per un link e per una categoria.
- * «originale» è, per una voce di un menu tradotto, la posizione della voce che traduce nel menu
- * originale (il gruppo di traduzione di WPML).
- */
-function wpf_voci_menu( int $id_menu ): array {
-	$voci        = [];
-	$indici      = []; // id della voce => posizione nell'elenco, per ricollegare i sottomenu
-	$predefinita = apply_filters( 'wpml_default_language', null );
-	foreach ( wpf_voci_db( $id_menu ) as $i => $voce ) {
-		$indici[ $voce->ID ] = $i;
-		$destinazione        = [ 'tipo' => 'custom', 'url' => $voce->url ];
-		if ( $voce->type === 'post_type' ) {
-			$chiave = get_post_meta( (int) $voce->object_id, WPF_META_CHIAVE, true );
-			if ( $chiave ) {
-				$destinazione = [ 'tipo' => 'post', 'post' => WPF_RIFERIMENTO . $chiave ];
-			} elseif ( get_post( (int) $voce->object_id ) ) {
-				$destinazione = [
-					'tipo'      => 'pagina',
-					'post_type' => $voce->object,
-					'percorso'  => get_page_uri( (int) $voce->object_id ),
-					'url'       => wpf_link_relativo( (int) $voce->object_id ),
-				];
-			}
-		} elseif ( $voce->type === 'taxonomy' ) {
-			// Con la tassonomia non registrata (plugin spento) get_term_link restituisce un errore
-			$link         = get_term_link( (int) $voce->object_id, $voce->object );
-			$destinazione = [ 'tipo' => 'custom', 'url' => is_wp_error( $link ) ? $voce->url : wp_make_link_relative( $link ) ];
-		}
-		$originale = null;
-		$lingua    = wpf_lingua( (int) $voce->ID, 'post_nav_menu_item' );
-		if ( $lingua && $predefinita && $lingua !== $predefinita ) {
-			$id_originale = wpf_traduzioni( (int) $voce->ID, 'post_nav_menu_item' )[ $predefinita ] ?? null;
-			$originale    = $id_originale && $id_originale !== (int) $voce->ID ? wpf_posizione_voce( $id_originale ) : null;
-		}
-		$voci[] = [
-			'titolo'       => $voce->title,
-			'destinazione' => $destinazione,
-			'genitore'     => $voce->menu_item_parent ? ( $indici[ (int) $voce->menu_item_parent ] ?? null ) : null,
-			'target'       => $voce->target,
-			'classi'       => array_values( array_filter( (array) $voce->classes ) ),
-			'descrizione'  => $voce->description,
-			'attr_title'   => $voce->attr_title,
-			'xfn'          => $voce->xfn,
-			'meta'         => wpf_meta_voce( (int) $voce->ID ),
-			'originale'    => $originale,
-		];
-	}
-	return $voci;
-}
-
-/**
- * Metadati di una voce di menu oltre a quelli standard: le impostazioni di Impreza (mega menu, voce
- * come pulsante, righe tolte) e di altri plugin. Senza, un sito ricreato avrebbe le voci ma non il mega
- * menu.
- */
-function wpf_meta_voce( int $id ): array {
-	$meta = [];
-	foreach ( get_post_meta( $id ) as $nome => $valori ) {
-		if ( in_array( $nome, WPF_META_VOCE_STANDARD, true ) || preg_match( WPF_META_ESCLUSI_VOCE, $nome ) ) {
-			continue;
-		}
-		$meta[ $nome ] = maybe_unserialize( $valori[0] );
-	}
-	return $meta;
-}
-
-/**
- * Plugin commerciali da docker/plugins/commerciali.txt, montato in WPF_DIR_PLUGIN: «#» apre un
- * commento, spazi e righe vuote si ignorano. È l'unica lettura del file: init-wordpress.sh e
- * bin/wordpress-config.sh la chiamano con «php -r».
- */
-function wpf_plugin_commerciali(): array {
-	$file = WPF_DIR_PLUGIN . '/commerciali.txt';
-	if ( ! is_readable( $file ) ) {
-		if ( class_exists( 'WP_CLI' ) ) {
-			WP_CLI::warning( "{$file} non trovato: elenco dei plugin commerciali vuoto" );
-		}
-		return [];
-	}
-	$slug = array_map( fn( $r ) => preg_replace( '/\s+/', '', preg_replace( '/#.*/', '', $r ) ), file( $file ) );
-	return array_values( array_filter( $slug, 'strlen' ) );
-}
-
-/**
  * Versioni del codice da cui dipende il formato di config/: registrate dall'export (versioni.json) e
  * confrontate dall'apply, perché opzioni esportate da un Impreza o un WPML di versione diversa possono
  * avere uno schema diverso.
@@ -404,35 +200,9 @@ function wpf_originali_prima( array $elenco ): array {
 	return $elenco;
 }
 
-/**
- * Vero se l'indirizzo punta a questa macchina (localhost o 127.0.0.1): lì licenze e chiavi dei servizi
- * esterni non si applicano, perché il sito si registrerebbe presso i fornitori con un indirizzo locale.
- * init-wordpress.sh la usa con «php -r» su WP_URL.
- */
-function wpf_indirizzo_locale( string $url ): bool {
-	return in_array( parse_url( $url, PHP_URL_HOST ), [ 'localhost', '127.0.0.1' ], true );
-}
-
 /** Vero se il sito risponde su questa macchina (vedi wpf_indirizzo_locale). */
 function wpf_sito_locale(): bool {
 	return wpf_indirizzo_locale( home_url() );
-}
-
-/**
- * Il menu con la chiave stabile indicata, salvata come metadato del termine. Lo slug di un menu si
- * cambia dal pannello e WPML lo modifica nelle traduzioni: la chiave no.
- */
-function wpf_menu_per_chiave( string $chiave ): ?WP_Term {
-	$termini = get_terms(
-		[
-			'taxonomy'   => 'nav_menu',
-			'hide_empty' => false,
-			'meta_key'   => WPF_META_CHIAVE,
-			'meta_value' => $chiave,
-			'number'     => 1,
-		]
-	);
-	return ( ! is_wp_error( $termini ) && $termini ) ? $termini[0] : null;
 }
 
 /**
@@ -552,26 +322,12 @@ function wpf_json( $dati ): string {
 	return json_encode( wpf_ordina( $dati ), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . "\n";
 }
 
-/** Dettagli WPML di un elemento (lingua, trid, lingua di partenza), o null senza WPML. */
-function wpf_dettagli_lingua( int $id, string $tipo ): ?object {
-	return apply_filters( 'wpml_element_language_details', null, [ 'element_id' => $id, 'element_type' => $tipo ] ) ?: null;
+/** Vero se due valori sono diversi nella forma dei file di config/ (chiavi ordinate, stesso JSON). */
+function wpf_diverso( $a, $b ): bool {
+	return wpf_json( $a ) !== wpf_json( $b );
 }
 
-/** Lingua WPML di un elemento, o null senza WPML. */
-function wpf_lingua( int $id, string $tipo ): ?string {
-	return wpf_dettagli_lingua( $id, $tipo )->language_code ?? null;
-}
-
-/** Traduzioni WPML di un elemento: [ lingua => id ], originale compreso. */
-function wpf_traduzioni( int $id, string $tipo ): array {
-	$trid = apply_filters( 'wpml_element_trid', null, $id, $tipo );
-	if ( ! $trid ) {
-		return [];
-	}
-	$elenco = apply_filters( 'wpml_get_element_translations', [], $trid, $tipo );
-	$out    = [];
-	foreach ( (array) $elenco as $lingua => $t ) {
-		$out[ $lingua ] = (int) $t->element_id;
-	}
-	return $out;
+/** Nome dell'opzione con le Theme Options di Impreza («usof_options_Impreza»). */
+function wpf_nome_theme_options(): string {
+	return 'usof_options_' . ( defined( 'US_THEMENAME' ) ? US_THEMENAME : 'Impreza' );
 }

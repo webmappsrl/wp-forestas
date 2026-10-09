@@ -4,6 +4,161 @@
  * (mega menu e pulsanti di Impreza) (oc:8717).
  */
 
+require_once __DIR__ . '/comune.php';
+require_once __DIR__ . '/wpml.php';
+
+// Metadati standard delle voci di menu: già rappresentati dai campi di wpf_voci_menu(). Gli altri (mega
+// menu e pulsante di Impreza, «us_mega_menu_settings», «_menu_item_btn_style»…) si esportano a parte.
+const WPF_META_VOCE_STANDARD = [ '_menu_item_type', '_menu_item_menu_item_parent', '_menu_item_object_id', '_menu_item_object', '_menu_item_target', '_menu_item_classes', '_menu_item_xfn', '_menu_item_url', '_menu_item_orphaned' ];
+// Altri metadati delle voci che non si esportano: per una voce di menu nessun «_wp_…» è un'impostazione
+const WPF_META_ESCLUSI_VOCE = '/^(_edit_|_wp_|_wpml|_icl_)/';
+
+/**
+ * Voci di un menu lette dal database, nell'ordine del menu. Non si usa wp_get_nav_menu_items(): il suo
+ * filtro lascia a WPML aggiungere le voci del selettore di lingua (che non esistono nel database) e
+ * togliere quella della «root page», e da WP-CLI quel filtro è attivo.
+ *
+ * @return WP_Post[]
+ */
+function wpf_voci_db( int $id_menu ): array {
+	$ids = get_objects_in_term( $id_menu, 'nav_menu' );
+	if ( is_wp_error( $ids ) || ! $ids ) {
+		return [];
+	}
+	$voci = get_posts(
+		[
+			'post_type'        => 'nav_menu_item',
+			'post__in'         => $ids,
+			'post_status'      => 'any',
+			'orderby'          => 'menu_order',
+			'order'            => 'ASC',
+			'numberposts'      => -1,
+			'suppress_filters' => true,
+		]
+	);
+	return array_map( 'wp_setup_nav_menu_item', $voci );
+}
+
+/**
+ * Link relativo di un post nella sua lingua. Da WP-CLI WPML converte il link di una traduzione in quello
+ * del post nella lingua corrente (la predefinita): si passa alla lingua del post e poi si torna indietro.
+ */
+function wpf_link_relativo( int $id ): string {
+	$lingua = wpf_lingua( $id, 'post_' . get_post_type( $id ) );
+	$prima  = apply_filters( 'wpml_current_language', null );
+	if ( $lingua ) {
+		do_action( 'wpml_switch_language', $lingua );
+	}
+	$link = wp_make_link_relative( get_permalink( $id ) );
+	if ( $lingua ) {
+		do_action( 'wpml_switch_language', $prima );
+	}
+	return $link;
+}
+
+/**
+ * Posizione di una voce nel suo menu (0 = la prima), o null. Serve a collegare le voci di un menu
+ * tradotto a quelle dell'originale: gli id cambiano da un sito all'altro, la posizione no.
+ */
+function wpf_posizione_voce( int $id_voce ): ?int {
+	$menu = wp_get_object_terms( $id_voce, 'nav_menu', [ 'fields' => 'ids' ] );
+	if ( is_wp_error( $menu ) || ! $menu ) {
+		return null;
+	}
+	$posizione = array_search( $id_voce, array_map( fn( $v ) => (int) $v->ID, wpf_voci_db( (int) $menu[0] ) ), true );
+	return $posizione === false ? null : $posizione;
+}
+
+/**
+ * Voci di un menu nella forma dei file di config/: la stessa per l'export e per il confronto
+ * dell'apply, così ogni differenza (destinazione, gerarchia, target, classi, metadati, legame con la
+ * traduzione) viene vista. La destinazione è:
+ * - «post», la chiave stabile, per un post esportato in config/;
+ * - «pagina», tipo e percorso, per un altro post o pagina: l'apply lo ritrova sul sito di destinazione
+ *   e la voce resta un collegamento a quel post (con link e traduzione che WordPress e WPML seguono);
+ * - «custom», l'URL, per un link e per una categoria.
+ * «originale» è, per una voce di un menu tradotto, la posizione della voce che traduce nel menu
+ * originale (il gruppo di traduzione di WPML).
+ */
+function wpf_voci_menu( int $id_menu ): array {
+	$voci        = [];
+	$indici      = []; // id della voce => posizione nell'elenco, per ricollegare i sottomenu
+	$predefinita = apply_filters( 'wpml_default_language', null );
+	foreach ( wpf_voci_db( $id_menu ) as $i => $voce ) {
+		$indici[ $voce->ID ] = $i;
+		$destinazione        = [ 'tipo' => 'custom', 'url' => $voce->url ];
+		if ( $voce->type === 'post_type' ) {
+			$chiave = get_post_meta( (int) $voce->object_id, WPF_META_CHIAVE, true );
+			if ( $chiave ) {
+				$destinazione = [ 'tipo' => 'post', 'post' => WPF_RIFERIMENTO . $chiave ];
+			} elseif ( get_post( (int) $voce->object_id ) ) {
+				$destinazione = [
+					'tipo'      => 'pagina',
+					'post_type' => $voce->object,
+					'percorso'  => get_page_uri( (int) $voce->object_id ),
+					'url'       => wpf_link_relativo( (int) $voce->object_id ),
+				];
+			}
+		} elseif ( $voce->type === 'taxonomy' ) {
+			// Con la tassonomia non registrata (plugin spento) get_term_link restituisce un errore
+			$link         = get_term_link( (int) $voce->object_id, $voce->object );
+			$destinazione = [ 'tipo' => 'custom', 'url' => is_wp_error( $link ) ? $voce->url : wp_make_link_relative( $link ) ];
+		}
+		$originale = null;
+		$lingua    = wpf_lingua( (int) $voce->ID, 'post_nav_menu_item' );
+		if ( $lingua && $predefinita && $lingua !== $predefinita ) {
+			$id_originale = wpf_traduzioni( (int) $voce->ID, 'post_nav_menu_item' )[ $predefinita ] ?? null;
+			$originale    = $id_originale && $id_originale !== (int) $voce->ID ? wpf_posizione_voce( $id_originale ) : null;
+		}
+		$voci[] = [
+			'titolo'       => $voce->title,
+			'destinazione' => $destinazione,
+			'genitore'     => $voce->menu_item_parent ? ( $indici[ (int) $voce->menu_item_parent ] ?? null ) : null,
+			'target'       => $voce->target,
+			'classi'       => array_values( array_filter( (array) $voce->classes ) ),
+			'descrizione'  => $voce->description,
+			'attr_title'   => $voce->attr_title,
+			'xfn'          => $voce->xfn,
+			'meta'         => wpf_meta_voce( (int) $voce->ID ),
+			'originale'    => $originale,
+		];
+	}
+	return $voci;
+}
+
+/**
+ * Metadati di una voce di menu oltre a quelli standard: le impostazioni di Impreza (mega menu, voce
+ * come pulsante, righe tolte) e di altri plugin. Senza, un sito ricreato avrebbe le voci ma non il mega
+ * menu.
+ */
+function wpf_meta_voce( int $id ): array {
+	$meta = [];
+	foreach ( get_post_meta( $id ) as $nome => $valori ) {
+		if ( in_array( $nome, WPF_META_VOCE_STANDARD, true ) || preg_match( WPF_META_ESCLUSI_VOCE, $nome ) ) {
+			continue;
+		}
+		$meta[ $nome ] = maybe_unserialize( $valori[0] );
+	}
+	return $meta;
+}
+
+/**
+ * Il menu con la chiave stabile indicata, salvata come metadato del termine. Lo slug di un menu si
+ * cambia dal pannello e WPML lo modifica nelle traduzioni: la chiave no.
+ */
+function wpf_menu_per_chiave( string $chiave ): ?WP_Term {
+	$termini = get_terms(
+		[
+			'taxonomy'   => 'nav_menu',
+			'hide_empty' => false,
+			'meta_key'   => WPF_META_CHIAVE,
+			'meta_value' => $chiave,
+			'number'     => 1,
+		]
+	);
+	return ( ! is_wp_error( $termini ) && $termini ) ? $termini[0] : null;
+}
+
 /**
  * I menu originali vengono prima delle traduzioni: le voci di un menu tradotto si collegano alle voci
  * dell'originale già a posto. Se le voci di un originale vengono ricreate, il legame delle voci tradotte
@@ -26,7 +181,7 @@ function wpf_menu_applica( array $menu, bool $prova, callable $diff, callable $r
 		$voci_confronto = wpf_togli_segreti( $voci_ora, $scarto );
 		// Un config/ esportato prima che le voci avessero questi campi vale come se fossero vuoti
 		$voci_cfg    = array_map( fn( $v ) => $v + [ 'xfn' => '', 'meta' => [], 'originale' => null ], $m['voci'] );
-		$voci_uguali = $termine && wpf_json( $voci_confronto ) === wpf_json( $voci_cfg );
+		$voci_uguali = $termine && ! wpf_diverso( $voci_confronto, $voci_cfg );
 		// Anche lo slug conta: l'header di Impreza richiama il menu per slug («source»: «main-menu»)
 		$nome_uguale = $termine && $termine->name === $m['nome'] && $termine->slug === $m['slug'];
 		if ( $termine ) {
@@ -94,7 +249,14 @@ function wpf_menu_crea( array $m ): ?WP_Term {
 		WP_CLI::warning( "menu {$m['slug']}: " . $nuovo->get_error_message() );
 		return null;
 	}
-	wp_update_term( $nuovo, 'nav_menu', [ 'slug' => $m['slug'] ] );
+	$slug = wp_update_term( $nuovo, 'nav_menu', [ 'slug' => $m['slug'] ] );
+	if ( is_wp_error( $slug ) || get_term( $nuovo, 'nav_menu' )->slug !== $m['slug'] ) {
+		// Lo slug è già di un altro menu (con un'altra chiave): l'header lo richiama per slug, quindi un
+		// menu con uno slug diverso non servirebbe. Si toglie e lo si segnala.
+		WP_CLI::warning( "menu {$m['chiave']}: lo slug «{$m['slug']}» è già di un altro menu, il menu non è stato creato" );
+		wp_delete_nav_menu( $nuovo );
+		return null;
+	}
 	update_term_meta( $nuovo, WPF_META_CHIAVE, $m['chiave'] );
 	return get_term( $nuovo, 'nav_menu' );
 }

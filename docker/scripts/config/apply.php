@@ -76,7 +76,13 @@ foreach ( (array) $leggi( 'versioni.json' ) as $nome => $versione ) {
 	}
 	WP_CLI::warning( "config/ è stato esportato con {$nome} {$versione}, il sito ha " . ( $sul_sito ?? 'nessuna versione' ) . ': controlla le differenze prima di confermare' );
 	$serie = fn( $v ) => implode( '.', array_slice( explode( '.', (string) $v ), 0, 2 ) ); // «9.4.1» → «9.4»
-	if ( $automatico && $sul_sito && $serie( $versione ) !== $serie( $sul_sito ) ) {
+	if ( $automatico && ! $sul_sito ) {
+		// Senza Impreza o un plugin (zip non ancora copiato) metà della configurazione non si potrebbe
+		// applicare: l'apply automatico aspetta, senza consumare un tentativo (vedi init-wordpress.sh, 8c)
+		WP_CLI::warning( "manca {$nome}: l'apply automatico aspetta che sia installato" );
+		WP_CLI::halt( 3 );
+	}
+	if ( $automatico && $serie( $versione ) !== $serie( $sul_sito ) ) {
 		WP_CLI::warning( 'versione diversa: l\'apply automatico non applica, guarda le differenze con bin/wordpress-config.sh apply' );
 		WP_CLI::halt( 1 );
 	}

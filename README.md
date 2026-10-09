@@ -21,7 +21,7 @@ provarlo.
 | `docker/themes/` | qui va messo `impreza.zip` (escluso da git) |
 | `docker/plugins/` | zip dei plugin commerciali (esclusi da git); l'elenco è in `commerciali.txt`, versionato |
 | `config/` | configurazione versionata del sito: Theme Options, header, footer, Home, menu, WPML |
-| `docker/scripts/config/` | export, apply, ritratto e licenza Impreza, eseguiti con `wp eval-file`; montati dal compose. `comune.php` contiene anche nomi e percorsi che legge l'init |
+| `docker/scripts/config/` | export, apply, ritratto e licenza Impreza, eseguiti con `wp eval-file`; montati dal compose (non copiati nell'immagine). `costanti.php` contiene i nomi e i percorsi che legge l'init |
 | `bin/wordpress-config.sh` | comando sull'host per export, apply, ritratto e zip |
 | `backup/` | backup creati da `apply --conferma` (esclusi da git) |
 | `themes/forestas-child/` | child theme di Impreza, montato in `wp-content/themes/forestas-child` |
@@ -71,7 +71,7 @@ era fallita: spenti dal pannello restano spenti) e installa ciò che manca.
 
 `init-wordpress.sh` sta nell'immagine: dopo una sua modifica va ricostruita (`scripts/wordpress-up.sh`
 di `forestas`). Gli script PHP della configurazione invece sono montati dal repo e valgono subito; l'init
-legge nomi e percorsi da `comune.php`, e se quel file non si carica (un errore arrivato con un pull)
+legge nomi e percorsi da `costanti.php`, e se quel file non si carica (un errore arrivato con un pull)
 WordPress parte lo stesso, con un AVVISO, senza `.htaccess`, licenza e apply.
 
 - Le **chiavi di sicurezza** le genera WP-CLI in `wp-config.php`, che sta nel volume: non vanno nel
@@ -206,8 +206,9 @@ Il comando trova da solo il container che monta il child da questa cartella; se 
   all'installazione, poi l'apply lo sostituisce con `blogname` del repo.
 - `config/versioni.json` registra le versioni di Impreza, UpSolution Core e dei plugin commerciali
   da cui è stato fatto l'export; l'apply avvisa se il sito ne ha altre. L'apply automatico di un sito
-  appena installato, che nessuno guarda, con una versione principale diversa (Impreza 9 contro 10)
-  non applica: si guardano le differenze e si lancia a mano.
+  appena installato, che nessuno guarda, con una versione diversa, anche solo minore (Impreza 9.4
+  contro 9.5), non applica: si guardano le differenze e si lancia a mano. Se manca Impreza o un plugin
+  dell'elenco aspetta che arrivi lo zip, entro i 3 giorni dall'installazione in cui vale.
 - Il backup di `apply --conferma` è un export in sola lettura in `backup/<data-ora>/`, senza segreti;
   si rimette con `apply --da backup/<data-ora> --conferma`. Impreza conserva anche un suo backup delle
   Theme Options, ripristinabile dal pannello. Un apply che riesce solo in parte termina con errore e
@@ -221,6 +222,13 @@ Il comando trova da solo il container che monta il child da questa cartella; se 
 - **Aggiornamenti di Impreza e WPML**: dal pannello di UAT, dove ci sono le licenze. Subito dopo, su
   UAT, `bin/wordpress-config.sh zip` rigenera gli zip nelle cartelle escluse da git; copiali in locale
   e nella cartella condivisa. Altrimenti un sito ricreato tornerebbe alle versioni vecchie.
+  Poi la prova: su un WordPress usa e getta (`APP_NAME=prova`, «Avvio da solo») con gli zip nuovi,
+  `export` e subito dopo `apply`, che deve dare «nessuna differenza»; altrimenti export o apply vanno
+  adeguati alla nuova versione (le funzioni da controllare sono in
+  `docs/knowledge/inizializzazione-wordpress.md`, «Dipendenze»). Infine `export` in locale per
+  aggiornare `config/versioni.json`: l'apply automatico non applica un `config/` di un'altra versione.
+- L'apply riscrive dei post esportati anche stato, riassunto e ordine: un header messo in bozza dal
+  pannello torna come nel repo. `sito.json` può contenere solo le impostazioni che l'export scrive.
 - Con «salva i Google Fonts in locale» attivo nelle Theme Options, l'apply scarica i font sul sito:
   Impreza lo fa da sé solo aprendo la pagina delle Theme Options. Se non ci riesce (per esempio senza
   rete verso Google) lo dice, la configurazione resta applicata e a ogni avvio l'init ricorda di

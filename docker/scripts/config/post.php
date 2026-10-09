@@ -4,6 +4,9 @@
  * Impreza e pagine a cui puntano le opzioni (oc:8717).
  */
 
+require_once __DIR__ . '/comune.php';
+require_once __DIR__ . '/wpml.php';
+
 /**
  * Le pagine (la Home e le altre a cui puntano le opzioni) sono anche contenuto della redazione: se
  * esistono già si aggiornano solo con $pagine vero (bin/wordpress-config.sh apply --pagine), così un
@@ -65,7 +68,7 @@ function wpf_post_applica( array $post_cfg, bool $prova, callable $diff, bool $p
 				}
 			}
 			foreach ( $meta as $nome => $valore ) {
-				if ( wpf_json( get_post_meta( $esistente->ID, $nome, true ) ) !== wpf_json( $valore ) ) {
+				if ( wpf_diverso( get_post_meta( $esistente->ID, $nome, true ), $valore ) ) {
 					$diversi[] = "meta {$nome}";
 				}
 			}
@@ -115,14 +118,21 @@ function wpf_post_ricollega( array $p, bool $prova, callable $diff ): ?WP_Post {
 			'post_type'        => $p['post_type'],
 			'name'             => $p['post_name'],
 			'post_status'      => 'any',
-			'numberposts'      => 1,
+			'numberposts'      => -1,
 			'orderby'          => 'ID',
 			'order'            => 'ASC',
 			'suppress_filters' => true,
 		]
 	);
-	$candidato = $candidati[0] ?? null;
-	if ( ! $candidato || get_post_meta( $candidato->ID, WPF_META_CHIAVE, true ) ) {
+	// Con WPML lo stesso slug può esserci in più lingue: si ricollega solo il post nella lingua giusta
+	$tipo_wpml = 'post_' . $p['post_type'];
+	$candidati = array_filter(
+		$candidati,
+		fn( $c ) => ! get_post_meta( $c->ID, WPF_META_CHIAVE, true )
+			&& ( empty( $p['lingua'] ) || in_array( wpf_lingua( $c->ID, $tipo_wpml ), [ null, $p['lingua'] ], true ) )
+	);
+	$candidato = reset( $candidati ) ?: null;
+	if ( ! $candidato ) {
 		return null;
 	}
 	$diff( "post {$p['chiave']}", "senza chiave (id {$candidato->ID})", 'ricollegato' );

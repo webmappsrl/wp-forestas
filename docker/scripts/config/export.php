@@ -13,6 +13,7 @@
 
 require_once __DIR__ . '/comune.php';
 require_once __DIR__ . '/wpml.php';
+require_once __DIR__ . '/menu.php';
 
 $dir = (string) getenv( 'WPF_EXPORT_DIR' );
 if ( $dir === '' ) {
@@ -37,7 +38,7 @@ $avvisi             = [];
 
 // --- Quali post sono configurazione: quelli del builder e le pagine a cui puntano le opzioni -----
 
-$impreza = (array) get_option( 'usof_options_' . US_THEMENAME, [] );
+$impreza = (array) get_option( wpf_nome_theme_options(), [] );
 $sito    = [];
 foreach ( WPF_OPZIONI_SITO as $nome ) {
 	$sito[ $nome ] = get_option( $nome );

@@ -5,6 +5,9 @@
  * funzione restituisce falso se qualcosa non è riuscito.
  */
 
+require_once __DIR__ . '/comune.php';
+require_once __DIR__ . '/wpml.php';
+
 /**
  * Theme Options di Impreza: riferimenti «@chiave:» risolti, segreti, stato del pannello e allegati
  * lasciati come sono sul sito.
@@ -19,7 +22,7 @@ function wpf_impreza_applica( array $impreza, bool $prova, callable $diff, calla
 			return false;
 		}
 	}
-	$ora     = (array) get_option( 'usof_options_' . US_THEMENAME, [] );
+	$ora     = (array) get_option( wpf_nome_theme_options(), [] );
 	$impreza = wpf_ripristina_segreti( $impreza, $ora );
 	foreach ( WPF_IMPREZA_STATO as $nome ) {
 		unset( $impreza[ $nome ] ); // stato, non configurazione: resta quello del sito
@@ -45,7 +48,7 @@ function wpf_impreza_applica( array $impreza, bool $prova, callable $diff, calla
 	if ( $chiave_manutenzione ) {
 		$impreza['maintenance_private_key'] = $chiave_manutenzione;
 	}
-	$diverse = array_keys( array_filter( $impreza, fn( $v, $k ) => wpf_json( $ora[ $k ] ?? null ) !== wpf_json( $v ), ARRAY_FILTER_USE_BOTH ) );
+	$diverse = array_keys( array_filter( $impreza, fn( $v, $k ) => wpf_diverso( $ora[ $k ] ?? null, $v ), ARRAY_FILTER_USE_BOTH ) );
 	foreach ( $diverse as $nome ) {
 		$diff( "impreza: {$nome}", $ora[ $nome ] ?? null, $impreza[ $nome ] );
 	}
@@ -89,7 +92,7 @@ function wpf_child_applica( array $child, bool $prova, callable $diff ): bool {
 	foreach ( $child as $nome => $valore ) {
 		$ora    = get_theme_mod( $nome );
 		$valore = wpf_ripristina_segreti( $valore, $ora );
-		if ( wpf_json( $ora ) === wpf_json( $valore ) ) {
+		if ( ! wpf_diverso( $ora, $valore ) ) {
 			continue;
 		}
 		$diff( "tema: {$nome}", $ora, $valore );
@@ -119,7 +122,7 @@ function wpf_posizioni_applica( array $posizioni_cfg, array $id_menu, bool $prov
 	}
 	$ora   = get_nav_menu_locations();
 	$nuove = array_replace( $ora, $posizioni );
-	if ( $posizioni && wpf_json( $ora ) !== wpf_json( $nuove ) ) {
+	if ( $posizioni && wpf_diverso( $ora, $nuove ) ) {
 		$diff( 'posizioni dei menu', $ora, $nuove );
 		if ( ! $prova ) {
 			set_theme_mod( 'nav_menu_locations', $nuove );
@@ -136,6 +139,13 @@ function wpf_posizioni_applica( array $posizioni_cfg, array $id_menu, bool $prov
 function wpf_sito_applica( array $sito, bool $prova, callable $diff, callable $risolvi ): bool {
 	$ok = true;
 	foreach ( $sito as $nome => $valore ) {
+		if ( ! in_array( $nome, WPF_OPZIONI_SITO, true ) ) {
+			// Solo le opzioni che l'export scrive: un sito.json modificato con «siteurl» o «home»
+			// sposterebbe il sito su un altro indirizzo
+			WP_CLI::warning( "sito.json: {$nome} non è fra le impostazioni gestite (WPF_OPZIONI_SITO), la salto" );
+			$ok = false;
+			continue;
+		}
 		if ( $valore === null ) {
 			continue;
 		}

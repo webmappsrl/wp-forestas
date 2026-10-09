@@ -18,7 +18,7 @@ GEOHUB_REF=92d2ae43b7b4569f1f257bcc38d809266d4bdddd
 GEOHUB_TARBALL="https://github.com/webmappsrl/wp-geohub/archive/${GEOHUB_REF}.tar.gz"
 # Child theme versionato in themes/forestas-child, montato qui dal compose
 CHILD_DIR="${WP_PATH}/wp-content/themes/forestas-child"
-# Script PHP della configurazione: comune.php contiene anche nomi e percorsi che usa questo script
+# Script PHP della configurazione: costanti.php contiene anche nomi e percorsi che usa questo script
 CONFIG_LIB=/usr/local/lib/wp-forestas
 # UpSolution Core: Theme Options e builder di Impreza, contenuto nel tema nella sua stessa versione
 USCORE_ZIP="${WP_PATH}/wp-content/themes/Impreza/common/plugins/us-core.zip"
@@ -34,20 +34,20 @@ RETE_CONNESSIONE=20
 
 log() { echo "[init-wordpress] $*"; }
 
-# Esegue codice PHP con le costanti e le funzioni di comune.php, senza WordPress: nomi delle opzioni,
+# Esegue codice PHP con le costanti e le funzioni di costanti.php, senza WordPress: nomi delle opzioni,
 # percorsi ed elenco dei plugin commerciali stanno solo lì
-config_php() { php -r "require '${CONFIG_LIB}/comune.php'; $1"; }
+config_php() { php -r "require '${CONFIG_LIB}/costanti.php'; $1"; }
 
-# comune.php è montato dal repo e cambia con un pull: se non si carica (errore di sintassi, mount
+# costanti.php è montato dal repo e cambia con un pull: se non si carica (errore di sintassi, mount
 # mancante) WordPress deve partire lo stesso. Si usano i valori di riserva qui sotto, che sono quelli
 # del compose, e i passi della configurazione falliscono con un AVVISO.
-COMUNE_OK=true
+COSTANTI_OK=true
 if ! config_php '' >/dev/null 2>&1; then
-    COMUNE_OK=false
+    COSTANTI_OK=false
 fi
 # config_valore <codice PHP> <valore di riserva>
 config_valore() {
-    if $COMUNE_OK; then config_php "$1" 2>/dev/null || echo "$2"; else echo "$2"; fi
+    if $COSTANTI_OK; then config_php "$1" 2>/dev/null || echo "$2"; else echo "$2"; fi
 }
 
 # Zip dei plugin commerciali (WPML) in docker/plugins/, esclusa da git: si copiano a mano o li crea
@@ -59,6 +59,9 @@ CONFIG_DIR=$(config_valore 'echo WPF_DIR_CONFIG;' /opt/wp-forestas/config)
 OPZIONE_DA_FARE=$(config_valore 'echo WPF_OPZIONE_DA_FARE;' wp_forestas_config_da_applicare)
 OPZIONE_FATTO=$(config_valore 'echo WPF_OPZIONE_FATTO;' wp_forestas_config_applicata)
 OPZIONE_DA_ATTIVARE=$(config_valore 'echo WPF_OPZIONE_DA_ATTIVARE;' wp_forestas_plugin_da_attivare)
+OPZIONE_INSTALLATO=$(config_valore 'echo WPF_OPZIONE_INSTALLATO;' wp_forestas_installato_il)
+# Finestra, in secondi dall'installazione, in cui l'apply automatico vale
+APPLY_FINESTRA=$(config_valore 'echo WPF_APPLY_FINESTRA;' 259200)
 # Plugin commerciali attesi, da docker/plugins/commerciali.txt
 PLUGIN_COMMERCIALI=$(config_valore 'echo implode( " ", wpf_plugin_commerciali() );' '')
 # Tempo massimo dell'apply automatico: più corto della scadenza del suo blocco
@@ -80,18 +83,37 @@ slug_zip() {
 }
 
 # Vero se WP_URL punta a questa macchina: lì licenze e chiavi dei servizi esterni non si applicano
-# (criterio unico: wpf_indirizzo_locale in comune.php). Se comune.php non si carica si risponde «sì»:
+# (criterio unico: wpf_indirizzo_locale in costanti.php). Se il file non si carica si risponde «sì»:
 # meglio non applicare una licenza che registrarla con un indirizzo sbagliato.
 url_locale() {
-    $COMUNE_OK || return 0
+    $COSTANTI_OK || return 0
     local esito=0
     config_php 'exit( wpf_indirizzo_locale( (string) getenv( "WP_URL" ) ) ? 0 : 1 );' 2>/dev/null || esito=$?
     [ "$esito" -ne 1 ]
 }
 
-if ! $COMUNE_OK; then
-    log "AVVISO: ${CONFIG_LIB}/comune.php non si carica (errore nel repo?): WordPress parte, ma .htaccess, licenza e configurazione di config/ restano da fare"
+if ! $COSTANTI_OK; then
+    log "AVVISO: ${CONFIG_LIB}/costanti.php non si carica (errore nel repo?): WordPress parte, ma .htaccess, licenza e configurazione di config/ restano da fare"
 fi
+
+# attiva_plugin <slug> <appena installato: sì|no>: attiva un plugin installato e spento. Appena
+# installato si attiva sempre; altrimenti solo se a spegnerlo è stata un'attivazione fallita di questo
+# script (opzione <OPZIONE_DA_ATTIVARE>_<slug>), perché spento dal pannello può essere voluto.
+attiva_plugin() {
+    local slug=$1 nuovo=$2 segno="${OPZIONE_DA_ATTIVARE}_$1"
+    $WP plugin is-active "$slug" && return 0
+    if [ "$nuovo" != sì ] && [ -z "$($WP option get "$segno" 2>/dev/null || true)" ]; then
+        log "AVVISO: il plugin ${slug} è installato ma spento: se non è voluto, attivalo dal pannello"
+        return 0
+    fi
+    log "attivo il plugin ${slug}"
+    if $WP plugin activate "$slug"; then
+        $WP option delete "$segno" >/dev/null 2>&1 || true
+    else
+        log "AVVISO: attivazione del plugin ${slug} non riuscita, riprovo al prossimo avvio"
+        $WP option update "$segno" 1 >/dev/null || true
+    fi
+}
 
 # 0. Configurazione: senza queste variabili non si può installare nulla
 mancanti=()
@@ -180,6 +202,7 @@ if ! $WP core is-installed; then
     # Solo un sito nato qui riceve l'apply automatico della configurazione (passo 8c): su un sito
     # esistente cancellerebbe ciò che è stato fatto dal pannello
     $WP option add "$OPZIONE_DA_FARE" 0 >/dev/null || log "AVVISO: impossibile segnare il sito come da configurare"
+    $WP option add "$OPZIONE_INSTALLATO" "$AVVIO" >/dev/null || true
 fi
 
 # 4b. .htaccess: con i permalink «belli» Apache deve girare ogni indirizzo a index.php. Da WP-CLI
@@ -221,21 +244,8 @@ if [ ! -f "${GEOHUB_DIR}/index.php" ]; then
     fi
     rm -rf "$tmp"
 fi
-# Si attiva appena installato; spento in seguito si riattiva solo se a spegnerlo è stata un'attivazione
-# fallita di questo script, come per i plugin commerciali al passo 7c
-geohub_da_attivare="${OPZIONE_DA_ATTIVARE}_wm-package"
-if [ -f "${GEOHUB_DIR}/index.php" ] && ! $WP plugin is-active wm-package; then
-    if [ -n "${geohub_appena_scaricato:-}" ] || [ -n "$($WP option get "$geohub_da_attivare" 2>/dev/null || true)" ]; then
-        log "attivo wp-geohub"
-        if $WP plugin activate wm-package; then
-            $WP option delete "$geohub_da_attivare" >/dev/null 2>&1 || true
-        else
-            log "AVVISO: attivazione di wp-geohub non riuscita, riprovo al prossimo avvio"
-            $WP option update "$geohub_da_attivare" 1 >/dev/null || true
-        fi
-    else
-        log "AVVISO: wp-geohub è installato ma spento: se non è voluto, attivalo dal pannello"
-    fi
+if [ -f "${GEOHUB_DIR}/index.php" ]; then
+    attiva_plugin wm-package "$( [ -n "${geohub_appena_scaricato:-}" ] && echo sì || echo no )"
 fi
 
 # 7. Tema Impreza (commerciale: solo se c'è lo zip in docker/themes/, copiato a mano o creato con
@@ -279,26 +289,15 @@ for zip in "$PLUGIN_ZIP_DIR"/*.zip; do
     slug=$(slug_zip "$zip" || true)
     [ -n "$slug" ] || { log "AVVISO: $(basename "$zip") non è uno zip leggibile"; continue; }
     trovati="${trovati}${slug} "
-    da_attivare="${OPZIONE_DA_ATTIVARE}_${slug}"
     if ! $WP plugin is-installed "$slug"; then
-        log "installo e attivo il plugin ${slug}"
-        if ! $WP plugin install "$zip"; then
-            log "AVVISO: installazione del plugin ${slug} non riuscita, riprovo al prossimo avvio"
-        elif ! $WP plugin activate "$slug"; then
-            log "AVVISO: attivazione del plugin ${slug} non riuscita, riprovo al prossimo avvio"
-            $WP option update "$da_attivare" 1 >/dev/null || true
-        fi
-    elif ! $WP plugin is-active "$slug"; then
-        if [ -n "$($WP option get "$da_attivare" 2>/dev/null || true)" ]; then
-            log "riprovo ad attivare il plugin ${slug}"
-            if $WP plugin activate "$slug"; then
-                $WP option delete "$da_attivare" >/dev/null || true
-            else
-                log "AVVISO: attivazione del plugin ${slug} non riuscita, riprovo al prossimo avvio"
-            fi
+        log "installo il plugin ${slug}"
+        if $WP plugin install "$zip"; then
+            attiva_plugin "$slug" sì
         else
-            log "AVVISO: il plugin ${slug} è installato ma spento: se non è voluto, attivalo dal pannello"
+            log "AVVISO: installazione del plugin ${slug} non riuscita, riprovo al prossimo avvio"
         fi
+    else
+        attiva_plugin "$slug" no
     fi
 done
 for slug in $PLUGIN_COMMERCIALI; do
@@ -335,38 +334,56 @@ elif [ "$($WP option get us_license_secret 2>/dev/null || true)" != "$IMPREZA_LI
 fi
 
 # 8c. Configurazione versionata: si applica da sola solo su un sito installato da questo script
-#     (opzione wp_forestas_config_da_applicare, scritta al passo 4), al massimo APPLY_TENTATIVI volte.
-#     Su un sito esistente, e dopo, solo con bin/wordpress-config.sh apply.
+#     (opzione OPZIONE_DA_FARE, scritta al passo 4), al massimo APPLY_TENTATIVI volte e solo entro
+#     APPLY_FINESTRA dall'installazione: dopo, il sito può essere stato cambiato dal pannello e un apply
+#     senza anteprima né backup lo sovrascriverebbe. Su un sito esistente, e dopo, solo con
+#     bin/wordpress-config.sh apply.
 tentativi=$($WP option get "$OPZIONE_DA_FARE" 2>/dev/null || true)
 # Un valore non numerico (opzione cambiata a mano) farebbe fallire il confronto e uscire lo script
 if [ -n "$tentativi" ] && [[ ! "$tentativi" =~ ^[0-9]+$ ]]; then
     log "AVVISO: ${OPZIONE_DA_FARE} vale «${tentativi}», non è un numero: riparto da 0 tentativi"
     tentativi=0
 fi
+installato=$($WP option get "$OPZIONE_INSTALLATO" 2>/dev/null || true)
+if [ -n "$tentativi" ] && [[ ! "$installato" =~ ^[0-9]+$ ]]; then
+    # Sito installato da un init che non scriveva la data: la finestra parte adesso
+    installato=$AVVIO
+    $WP option update "$OPZIONE_INSTALLATO" "$installato" >/dev/null || true
+fi
 config_presente=false
 ls "$CONFIG_DIR"/*.json >/dev/null 2>&1 && config_presente=true
-if [ -n "$tentativi" ] && ! $config_presente; then
-    # Sito installato senza config/: l'apply automatico non deve partire mesi dopo, quando un pull porta
-    # config/ su un sito ormai cambiato dal pannello
-    log "config/ vuota all'installazione: niente apply automatico, quando ci sarà si applica a mano"
+smetti_apply_automatico() {
+    log "$1"
     $WP option delete "$OPZIONE_DA_FARE" >/dev/null || true
+}
+if [ -n "$tentativi" ] && ! $config_presente; then
+    # Sito installato senza config/: l'apply automatico non deve partire quando un pull porta config/
+    # su un sito ormai cambiato dal pannello
+    smetti_apply_automatico "config/ vuota all'installazione: niente apply automatico, quando ci sarà si applica a mano"
+elif [ -n "$tentativi" ] && [ $((AVVIO - installato)) -gt "$APPLY_FINESTRA" ]; then
+    smetti_apply_automatico "AVVISO: sono passati più di $((APPLY_FINESTRA / 86400)) giorni dall'installazione: niente più apply automatico, lancialo a mano con bin/wordpress-config.sh apply"
+elif [ -n "$tentativi" ] && [ "$tentativi" -ge "$APPLY_TENTATIVI" ]; then
+    smetti_apply_automatico "AVVISO: configurazione non applicata dopo ${APPLY_TENTATIVI} tentativi: lanciala a mano con bin/wordpress-config.sh apply"
 elif [ -n "$tentativi" ]; then
-    if [ "$tentativi" -ge "$APPLY_TENTATIVI" ]; then
-        log "AVVISO: configurazione non applicata dopo ${APPLY_TENTATIVI} tentativi: lanciala a mano con bin/wordpress-config.sh apply"
-        $WP option delete "$OPZIONE_DA_FARE" >/dev/null || true
-    else
-        $WP option update "$OPZIONE_DA_FARE" $((tentativi + 1)) >/dev/null || true
-        log "applico la configurazione di config/ (tentativo $((tentativi + 1)) di ${APPLY_TENTATIVI})"
-        esito=0
-        WPF_AUTOMATICO=1 wp_script "$APPLY_ATTESA" apply.php || esito=$?
-        if [ "$esito" -eq 124 ]; then
+    $WP option update "$OPZIONE_DA_FARE" $((tentativi + 1)) >/dev/null || true
+    log "applico la configurazione di config/ (tentativo $((tentativi + 1)) di ${APPLY_TENTATIVI})"
+    esito=0
+    WPF_AUTOMATICO=1 wp_script "$APPLY_ATTESA" apply.php || esito=$?
+    case "$esito" in
+        0) ;;
+        3)
+            # Manca Impreza o un plugin di config/versioni.json (zip non ancora copiato): non è un
+            # tentativo fallito, si riprova quando c'è (entro la finestra)
+            $WP option update "$OPZIONE_DA_FARE" "$tentativi" >/dev/null || true
+            log "AVVISO: configurazione rimandata finché tema e plugin di config/versioni.json non sono installati"
+            ;;
+        124)
             # Interrotto dal tempo massimo: PHP non toglie il proprio blocco, lo toglie l'init
             log "AVVISO: configurazione interrotta dopo ${APPLY_ATTESA} secondi, riprovo al prossimo avvio"
             $WP eval "require '${CONFIG_LIB}/comune.php'; wpf_sblocca_apply();" >/dev/null 2>&1 || true
-        elif [ "$esito" -ne 0 ]; then
-            log "AVVISO: configurazione non applicata del tutto, riprovo al prossimo avvio"
-        fi
-    fi
+            ;;
+        *) log "AVVISO: configurazione non applicata del tutto, riprovo al prossimo avvio" ;;
+    esac
 elif $config_presente && [ -z "$($WP option get "$OPZIONE_FATTO" 2>/dev/null || true)" ]; then
     log "config/ non applicata a questo sito: non si applica da sola, vedi bin/wordpress-config.sh apply"
 fi

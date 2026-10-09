@@ -6,6 +6,7 @@
 
 require_once __DIR__ . '/comune.php';
 require_once __DIR__ . '/wpml.php';
+require_once __DIR__ . '/menu.php';
 require_once ABSPATH . 'wp-admin/includes/plugin.php';
 
 $righe  = [];
@@ -30,15 +31,19 @@ foreach ( array_merge( [ 'us-core', 'wm-package' ], $commerciali ) as $cartella 
 	$righe[] = "versione {$cartella}: " . $plugin( $cartella );
 }
 
-$impreza = (array) get_option( 'usof_options_' . ( defined( 'US_THEMENAME' ) ? US_THEMENAME : 'Impreza' ), [] );
-foreach ( [ 'header_id', 'footer_id', 'maintenance_page' ] as $nome ) {
-	$righe[] = "impreza {$nome}: " . $chiave( $impreza[ $nome ] ?? 0 );
+$impreza = (array) get_option( wpf_nome_theme_options(), [] );
+// Tutti i riferimenti a un post (header, footer, contenuti e titlebar per tipo di pagina, pagine come
+// la 404): l'id cambia da un sito all'altro, la chiave stabile no
+foreach ( $impreza as $nome => $valore ) {
+	if ( wpf_opzione_riferimento( (string) $nome, $valore ) ) {
+		$righe[] = "impreza {$nome}: " . $chiave( $valore );
+	}
 }
 $tolti     = [];
 $confronto = wpf_togli_segreti( $impreza, $tolti );
 foreach ( $confronto as $nome => $valore ) {
 	if ( wpf_opzione_riferimento( (string) $nome, $valore ) ) {
-		unset( $confronto[ $nome ] ); // già stampati con la chiave: gli id cambiano da un sito all'altro
+		unset( $confronto[ $nome ] ); // stampati sopra con la chiave: gli id cambiano da un sito all'altro
 	} elseif ( in_array( $nome, wpf_campi_upload(), true ) ) {
 		// Allegati della Libreria media: l'id cambia da un sito all'altro e l'apply non li porta, quindi
 		// restano fuori dall'impronta. Si segnala solo che ci sono.
