@@ -315,7 +315,8 @@ Le altre scelte prese durante l'implementazione sono nelle «Decisioni» qui sot
   wp-geohub spento a mano rimasto spento al riavvio; ritratto identico a quello del locale ricostruito
   con `scripts/wordpress-up.sh`, apply «nessuna differenza» su tutti e due.
 
-- **Review interna (09/10), un bloccante e nove cleanup corretti**. Il bloccante: `CLAUDE.md`
+- **Settima review (09/10), fatta da una sessione di review separata su `ae84296`: un bloccante e
+  nove cleanup corretti in `60ce74c`**. Il bloccante: `CLAUDE.md`
   svuotato per errore nel commit `ae84296`, da uno script che lo apriva in scrittura (e quindi lo
   troncava) mentre lo leggeva per rinominare una funzione; ripristinato da `88ddb13` e aggiornato. I
   cleanup:
@@ -340,6 +341,20 @@ Le altre scelte prese durante l'implementazione sono nelle «Decisioni» qui sot
   Fra i facoltativi, il ricollegamento di un post per slug ora sceglie solo un post nella lingua giusta.
   Resta ipotetico il ripristino dei segreti delle voci di menu per posizione: se le voci cambiano
   ordine, un segreto torna sulla voce sbagliata (oggi nessuna voce ha segreti).
+
+- **Ottava review (09/10), sessione di review separata su `60ce74c`: approvato con riserve**. Il
+  bloccante e i nove cleanup della settima risultano risolti; restavano quattro cleanup, corretti in
+  `d8d4fe4`: il commento di `commerciali.txt` citava ancora `comune.php`; due voci delle note su
+  `comune.php` contraddicevano la decisione nuova (ora dicono che il file è cambiato in `60ce74c`); la
+  pagina di conoscenza non citava la finestra dei 3 giorni in due punti; `wpml_collect()` era chiamata
+  senza controllare che esista. Aggiunta la riga sul costo del controllo delle classi interne di WPML
+  (se un aggiornamento le rinomina, ogni apply resta parziale finché `wpml.php` non è adeguato).
+
+- **Nona review (09/10), sessione di review separata su `d8d4fe4`: approvato**, nessun bloccante e
+  nessun cleanup residuo. Restano i passi di rilascio: PR di `wp-forestas` verso `develop` e di
+  `forestas` verso `main`, con il puntatore del submodule aggiornato a parte; su UAT gli zip di
+  Impreza 9.4 e WPML prima di qualsiasi reset, poi `scripts/wordpress-up.sh`, Child Theme
+  Configurator disattivato e `bin/wordpress-config.sh apply` letto prima di `--conferma`.
 
 ## Decisioni
 
