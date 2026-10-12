@@ -28,8 +28,8 @@ builder, quindi una modifica fatta lì va persa al primo apply.
 
 **Header, tablet e mobile (fino a 1024px)**, non nel mockup: definito dal dev sul modello del sito
 attuale in produzione. L'header è fisso in cima. Riga in alto con il blocco istituzionale FESR a
-sinistra e IT · EN a destra; riga del logo con il pulsante di ricerca (riquadro di 45px sul fondo dei
-campi, scuro al tocco) e l'hamburger (riquadro arancio di 45px con la scritta «menu», che a menu aperto
+sinistra e IT · EN a destra; riga del logo con la ricerca (sotto i 600px un riquadro di 45px sul fondo
+dei campi, scuro al tocco; fra 601 e 1024px il campo intero) e l'hamburger (riquadro arancio di 45px con la scritta «menu», che a menu aperto
 diventa «chiudi»). Il menu è un pannello che entra ed esce da destra, a tutta larghezza sotto l'header
 e alto quanto lo schermo: voci principali, poi i link di servizio, poi «Seguici su» con i social. A
 menu aperto la pagina non scorre.
@@ -110,7 +110,8 @@ in `config/`), e chi lavora sul sito li ritrova dove Impreza li mette.
 - [ ] Nel pannello compaiono, dopo le voci principali, i link di servizio e «Seguici su» con i social,
       senza voci nascoste in `main-menu` e senza ripetere gli URL dei social fuori da `config/`
 - [ ] A menu aperto la pagina non scorre; il pulsante del menu diventa «chiudi» («close» in inglese)
-- [ ] Su tablet e mobile ricerca e menu sono riquadri di 45px come sul sito attuale: ricerca sul fondo
+- [ ] Su tablet e mobile il menu è un riquadro di 45px come sul sito attuale; la ricerca lo è sotto i
+      600px (fra 601 e 1024px resta il campo intero): ricerca sul fondo
       dei campi (`--inputs-background`), scura al tocco; menu arancio `#F59F1A` con la scritta «menu»
 
 **Social, lingua, ricerca**
@@ -136,7 +137,9 @@ in `config/`), e chi lavora sul sito li ritrova dove Impreza li mette.
 - [ ] Header tablet e mobile: nella riga in alto, a sinistra delle lingue, si restringe con lo spazio
 - [ ] Footer: prima riga, centrato, alto 80px su desktop e a tutta larghezza su mobile, sopra il filo
       oro e separato dal contenuto da una riga sottile
-- [ ] In ogni posizione la bandiera UE non è più piccola del logo del sito che le sta vicino
+- [ ] In ogni posizione la bandiera UE non è più piccola del logo del sito che le sta vicino: sotto i
+      600px il logo dell'header scala con la larghezza (`max-width: min(193px, 48vw)`), verificato da
+      320 a 600px
 
 **Inglese**
 
@@ -166,7 +169,8 @@ in `config/`), e chi lavora sul sito li ritrova dove Impreza li mette.
 - [ ] Il nome del pulsante del menu segue la scritta visibile: «Menu» chiuso, «Chiudi» / «Close»
       aperto (WCAG 2.5.3)
 - [ ] A pannello aperto Esc lo chiude e riporta il focus sul pulsante; Tab e Maiusc+Tab restano fra il
-      pulsante e i link del pannello (WCAG 2.4.3, 2.4.7)
+      pulsante e i link del pannello (WCAG 2.4.3, 2.4.7); se la finestra passa al desktop col pannello
+      aperto, la tastiera non resta bloccata
 - [ ] Testo bianco del pulsante «chiudi» con contrasto di almeno 4,5:1 (fondo `hsl(17deg 76% 40%)`,
       5,55:1; WCAG 1.4.3)
 - [ ] Le tre `nav` hanno un nome distinto nella lingua della pagina («Menu principale», «Link di
@@ -178,7 +182,6 @@ in `config/`), e chi lavora sul sito li ritrova dove Impreza li mette.
 
 - [ ] Trappola nel `CLAUDE.md` di `wp-forestas`: header, footer e gli altri oggetti dei builder si
       modificano solo in locale; sui server l'apply li sovrascrive sempre
-- [ ] Trappola nel `CLAUDE.md`: il pannello mobile dipende dai 96px dell'header
 - [ ] Pagina di conoscenza `docs/knowledge/8757-…` e sua riga nella tabella «Conoscenza» del `CLAUDE.md`
 
 ## Rischi
@@ -212,8 +215,8 @@ in `config/`), e chi lavora sul sito li ritrova dove Impreza li mette.
 - **Dimensione dell'emblema UE** — le linee guida vietano che sia più piccolo degli altri loghi.
   Mitigazione: altezze del blocco scelte perché la bandiera resti più alta del logo del sito a ogni
   larghezza (logo dell'header ridotto a 15px su mobile).
-- **Header fisso e altezza del pannello mobile** — legati ai 96px dell'header mobile (36 + 60): se
-  cambiano le altezze delle righe nell'Header Builder, va aggiornato anche il CSS del pannello.
+- **Header fisso e altezza del pannello mobile** — il pannello si posiziona sotto l'header con
+  `--header-sticky-height` di Impreza, quindi segue da sé le altezze dell'Header Builder.
 - Gli URL social sono quelli forniti dal cliente: il numero WhatsApp è senza prefisso internazionale
   e l'handle X è `SardegnSentieri`. Si usano così come sono.
 
@@ -249,10 +252,11 @@ Tutto nel submodule `wp-forestas`; nessuna modifica in `forestas` né in `wm-pac
   `[forestas_lingue]`, `[forestas_fesr]`; filtro che aggiunge servizio e social al pannello mobile;
   link «Vai al contenuto»; caricamento di `menu-mobile.js`; funzione `forestas_testo()` per le
   stringhe nella lingua corrente
-- `themes/forestas-child/assets/js/menu-mobile.js` — nuovo: nome del pulsante, Esc, focus nel pannello
+- `themes/forestas-child/assets/js/menu-mobile.js` — nuovo: scritta e nome del pulsante, focus nel
+  pannello
 - `themes/forestas-child/style.css` — stili di header, pannello mobile e footer, `Version` alzata
 - `docker/scripts/config/comune.php` — `us_og_image` fra i meta calcolati che l'export esclude
-- `CLAUDE.md` — trappole sugli oggetti dei builder sovrascritti dall'apply e sul pannello mobile
-  legato ai 96px dell'header; riga dell'indice «Conoscenza»
+- `CLAUDE.md` — trappola sugli oggetti dei builder sovrascritti dall'apply; riga dell'indice
+  «Conoscenza»
 - `docs/knowledge/8757-header-e-footer-di-wordpress-forestas-secondo-il-mockup.md` — nuova pagina di
   conoscenza

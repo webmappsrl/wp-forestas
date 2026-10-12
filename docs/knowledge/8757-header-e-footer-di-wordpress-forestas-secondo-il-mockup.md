@@ -21,25 +21,40 @@ versionata»). Ciò che Impreza non sa fare sta nel child theme.
   (44px). La voce attiva del menu prende il colore del tipo di contenuto dalla classe della voce
   (`tipo-sentiero`, …), con una sottolineatura legata al testo.
 - **Tablet e mobile (fino a 1024px):** l'header è fisso (`sticky` solo per `tablets` e `mobiles`) e
-  alto **96px** (riga in alto 36 + riga del logo 60). Il menu è un pannello che entra da destra
-  (`mobile_layout="panel"`), alto `100dvh − 96px`; in coda alle voci un filtro `wp_nav_menu_items` del
-  child aggiunge i link di servizio e i social, letti dall'header della lingua corrente così gli URL
-  restano solo in `config/`. A menu aperto la pagina non scorre (`html:has(…)` con
-  `overflow: hidden`).
+  alto 96px (riga in alto 36 + riga del logo 60), che Impreza pubblica in `--header-sticky-height`.
+  Il menu è un pannello che entra da destra (`mobile_layout="panel"`), posizionato sotto l'header con
+  quella variabile e alto quanto il resto dello schermo; in coda alle voci un filtro
+  `wp_nav_menu_items` del child aggiunge i link di servizio e i social. Social e «Seguici su» si
+  leggono dall'header della lingua corrente, cercando gli elementi per tipo e classe (non per id, che
+  il builder rinumera), così il PHP non ripete gli URL; gli URL stanno comunque in ognuna delle
+  quattro copie di header e footer (IT, EN) di `config/post.json`. A menu aperto la pagina non scorre
+  (`html:has(…)` con `overflow: hidden`).
 - **Footer:** blocco FESR («versione 2») in cima, poi il filo oro, poi logo, social, contatti, link
   istituzionali e la striscia scura con l'anno corrente.
 - **Accessibilità** (Linee guida AgID: EN 301 549, WCAG 2.1 AA): link «Vai al contenuto» da
-  `wp_body_open`; `assets/js/menu-mobile.js` allinea il nome del pulsante alla scritta («Menu» /
-  «Chiudi»), chiude il pannello con Esc e tiene il focus nel pannello; le `nav` hanno nomi distinti
-  con gli attributi HTML personalizzati di Impreza (`custom_html_atts`).
+  `wp_body_open`; `assets/js/menu-mobile.js` cambia insieme scritta e nome del pulsante («menu» /
+  «chiudi», WCAG 2.5.3) e tiene il focus nel pannello finché il pulsante si vede (Impreza non chiude il
+  pannello quando la finestra passa al desktop); ascolta in fase di cattura, perché Impreza chiude il
+  pannello con Maiusc+Tab sulla prima voce. Esc lo gestisce Impreza, che riporta anche il focus sul
+  pulsante. Le `nav` hanno nomi distinti con gli attributi HTML personalizzati di Impreza
+  (`custom_html_atts`).
 
 Vincoli:
 
 - l'emblema UE del blocco FESR non può essere più piccolo degli altri loghi (Linee guida beneficiari
   PR FESR Sardegna): le altezze del blocco e del logo del sito sono scelte insieme, a ogni larghezza;
-- il pannello mobile è legato ai 96px dell'header (vedi la trappola nel `CLAUDE.md`);
+  sotto i 600px il logo dell'header scala con la larghezza (`min(193px, 48vw)`) perché il blocco si
+  restringe accanto alle lingue;
+- Impreza dà al pannello mobile un `min-height` pari allo schermo intero: il child lo annulla, se no
+  il fondo con servizio e social finisce fuori dallo schermo;
 - `us_og_image` è fra i meta calcolati che l'export esclude (`WPF_META_CALCOLATI`): Impreza lo
-  ricalcola dal logo a ogni salvataggio e cambierebbe a ogni `Version` del child.
+  ricalcola a ogni salvataggio dalla prima immagine del contenuto (oggi il blocco FESR nel footer),
+  che porta `?ver=` della `Version` del child, e cambierebbe a ogni nuova versione;
+- **rilascio e rollback toccano sempre insieme child e `config/`:** il child arriva con il pull,
+  header e footer solo con l'apply. Con il solo child il sito mostra header e footer demo con il CSS
+  nuovo; con la sola configurazione (o tornando indietro solo sul child) mostra gli shortcode
+  `[forestas_logo]`, `[forestas_fesr]`, `[forestas_lingue]` come testo. Tornando indietro, i post
+  inglesi di header e footer restano nel sito e vanno cancellati a mano dal pannello.
 
 ## Perché così
 
@@ -64,6 +79,13 @@ Vincoli:
   li ha voluti nel pannello come sul sito attuale; ora il filtro li legge dall'header.
 - **Blocco FESR nella riga di servizio su desktop** (oc:8757, superata): per farlo stare servivano
   spazi ridotti, «Seguici su» nascosto e ricerca stretta fino a 1439px. Spostato in una terza riga.
+- **Altezza dell'header mobile scritta a mano (96px) nel CSS** (oc:8757, superata): andava
+  aggiornata a ogni cambio delle righe nell'Header Builder; ora il CSS usa `--header-sticky-height`.
+- **Social e «Seguici su» letti per id (`socials:1`, `html:1`)** (oc:8757, superata): ricreando
+  l'elemento dal pannello l'id cambia e la riga sparisce senza errori.
+- **Esc gestito anche dallo script del child** (oc:8757, superata): lo fa già Impreza.
+- **Opzione nativa «skip_to_content_btn» di Impreza** (oc:8757, scartata): ha un'etichetta sola per
+  tutte le lingue nelle Theme Options e mette `role="button"` su un link.
 - **Pannello con `bottom: 0`** (oc:8757, superata): Impreza dà al pannello `min-height` pari allo
   schermo intero, e il fondo con social e servizio finiva fuori. Ora altezza esplicita e
   `min-height: 0`.

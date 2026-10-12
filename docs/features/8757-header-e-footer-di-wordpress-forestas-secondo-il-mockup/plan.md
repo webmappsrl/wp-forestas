@@ -172,6 +172,8 @@ Tutti gli elementi demo (`text:1…7`, `cart:1`, `image:1`, `hwrapper:1`) si tol
 
 ### Task 4: Footer italiano
 
+> ⚠️ L'implementazione ha deviato da questo task: [notes.md](notes.md#task-4-footer-italiano)
+
 **File:**
 - Modifica: `config/post.json`, voce `us_page_block-footer` (`post_content`, shortcode)
 
@@ -241,6 +243,8 @@ Regole da coprire, con le misure del mockup (`.ds-serv`, `.ds-head`, `.ds-nav`, 
 ---
 
 ### Task 6: Versione inglese
+
+> ⚠️ L'implementazione ha deviato da questo task: [notes.md](notes.md#task-6-versione-inglese)
 
 **File:**
 - Modifica: `config/menu.json` (`menu-main-menu-en-us`, `menu-servizio-menu-en-us`,

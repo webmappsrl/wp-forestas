@@ -24,12 +24,29 @@
   menu desktop più il campo di ricerca usciva dallo schermo. Impreza passa all'hamburger con
   `innerWidth < mobile_width`, quindi per coprire 1024 il valore è 1025.
 - **Fra 1025 e 1199px** logo a 22px e meno spazio fra le voci: altrimenti NEWS usciva dallo schermo.
-- **Ricerca su tablet** (901–1024px): resta il campo intero, non la sola icona chiesta dall'overview;
+- **Ricerca su tablet** (601–1024px): resta il campo intero, non la sola icona chiesta dall'overview;
   su mobile è l'icona.
+- **Colore dei link di servizio:** il piano chiedeva `--ink-2`, variabile del mockup che nel child non
+  esiste. I link prendono il colore del testo della riga in alto dalle Theme Options (contrasto 8,9:1).
+- **Misure del logo:** quelle del piano (26px desktop, 20px mobile) sono state cambiate su richiesta
+  del dev: vedi la tabella delle altezze in `style.css` e «Decisioni».
 - **Media query al posto delle classi `type_desktop` / `type_mobile`**: nella pagina caricata in un
   iframe stretto Impreza mostra l'hamburger ma lascia `type_desktop` sull'elemento menu; il CSS che
   dipende dalla larghezza usa quindi `@media (min-width: 1025px)` / `(max-width: 1024px)`, allineate
   a `mobile_width`.
+
+### Task 4: footer italiano
+
+- Il logo sta in un `vc_column_text` invece che in un `us_html`: esegue lo shortcode allo stesso modo
+  e non richiede il contenuto codificato in base64.
+- Dopo l'implementazione il footer ha avuto una prima riga con il blocco istituzionale FESR e il filo
+  oro è passato dal bordo del footer a quella riga (vedi «Decisioni»).
+- Il salvataggio dal pannello (Templates → Reusable Blocks) non è stato fatto: resta da fare prima del
+  rilascio (vedi «Decisioni»).
+
+### Task 6: versione inglese
+
+- Il salvataggio dal pannello di header e footer inglesi non è stato fatto, come per l'italiano.
 
 ## Bug trovati
 
@@ -40,6 +57,16 @@
 - Il campo di ricerca era più alto della riga di servizio (48px contro 36): fissato a 28px.
 - Il colore delle icone social veniva sovrascritto dalla regola `color_text` di Impreza: serve il
   selettore `.w-socials.forestas-social`.
+
+- **Review `wm-review-ticket` (commit e462804), due bloccanti corretti:**
+  - sotto i 375px la bandiera UE dell'header era più bassa del logo (a 360px 14,7 contro 15px, a 320px
+    12,4 contro 14,8): il logo dell'header ora scala con `max-width: min(193px, 48vw)`; rimisurato da
+    320 a 600px, bandiera sempre più alta;
+  - col pannello mobile aperto e la finestra passata al desktop (rotazione, finestra allargata) Impreza
+    non chiude il pannello e `aria-expanded` resta `true`: `menu-mobile.js` tratteneva ancora il focus,
+    portandolo sul pulsante invisibile. Ora il pannello conta come aperto solo se il pulsante è visibile;
+    riprovato: su mobile il ciclo del focus funziona, su desktop Tab non viene più intercettato.
+  `Version` del child 1.1.23.
 
 ## Decisioni
 
@@ -113,7 +140,8 @@
 - **Accessibilità**, verifica chiesta dal dev rispetto alle Linee guida AgID (EN 301 549, WCAG 2.1 AA).
   axe-core su header e footer: nessuna violazione A/AA. Controlli manuali e correzioni:
   - nome del pulsante del menu allineato alla scritta visibile («Chiudi»/«Close» a menu aperto,
-    WCAG 2.5.3) e, nello stesso script `assets/js/menu-mobile.js`, Esc che chiude il pannello e focus
+    WCAG 2.5.3) e, nello stesso script `assets/js/menu-mobile.js`, Esc che chiude il pannello (ramo poi
+    tolto perché lo fa già Impreza, vedi «Pulizia dopo la review») e focus
     che resta nel pannello (WCAG 2.4.3, 2.4.7);
   - fondo del pulsante aperto scurito da `hsl(17deg 76% 45%)` (4,58:1 col bianco, al limite) a
     `hsl(17deg 76% 40%)` (5,55:1): è l'unico punto in cui ci si allontana dal sito attuale;
@@ -138,7 +166,7 @@
   il collegamento è stato annullato con un apply da `config/`, mai esportato.
 
 - Il meta `us_og_image` lo scrive Impreza da sé a ogni salvataggio (prima `<img>` del contenuto,
-  cioè il logo con `?ver=`): esportato, cambiava a ogni `Version` del child e rompeva il round-trip.
+  con `?ver=` della Version del child: nel footer oggi è il blocco FESR): esportato, cambiava a ogni `Version` del child e rompeva il round-trip.
   È stato aggiunto a `WPF_META_CALCOLATI` in `docker/scripts/config/comune.php`, come gli altri meta
   che UpSolution Core ricalcola.
 
@@ -147,15 +175,44 @@
   trappola), riga nella tabella «Conoscenza» del `CLAUDE.md` e seconda trappola oc:8757 sul pannello
   mobile legato all'altezza dell'header.
 
+- **Pulizia dopo la review** (cleanup di `wm-review-ticket`), `Version` del child 1.1.26:
+  - CSS riordinato per argomento (target, riga di servizio, logo e blocco FESR con una tabella delle
+    altezze, menu, tablet e mobile, footer, link di salto); l'altezza dell'header mobile non è più
+    scritta a mano in 5 punti ma presa da `--header-sticky-height` di Impreza; barra di
+    amministrazione esclusa sotto i 600px, dove WordPress non la tiene fissa; `#fff` sostituito da
+    `--testo-su-scuro`; tolti `position: relative` residuo, `max-height`, `width` e `overflow` doppi;
+    social del footer a sinistra fino a 1024px (era 900, mentre le colonne si impilano a 1024);
+  - voce attiva del menu: considera anche `current-menu-parent`, `current_page_parent`,
+    `current-page-ancestor`, e nel pannello mobile tiene il colore del tipo (prima la regola del
+    pannello, più specifica, lo copriva);
+  - campo di ricerca a 28px solo su desktop: su tablet e mobile la ricerca aperta resta alta quanto
+    vuole Impreza;
+  - `functions.php`: helper `forestas_asset_url()`; testi alternativi di logo e blocco FESR con
+    `forestas_testo()`, quindi in inglese sulle pagine inglesi; il filtro del pannello diviso in
+    `forestas_pannello_servizio()` e `forestas_pannello_social()`, che cerca social e «Seguici su» per
+    tipo e classe invece che per id; risolve `servizio-menu` solo dopo aver riconosciuto il menu
+    principale;
+  - `menu-mobile.js`: cambia anche la scritta visibile «menu»/«chiudi» (prima la metteva il CSS con
+    `::after`, in un secondo posto con le stesse parole); ascolta in fase di cattura, così Maiusc+Tab
+    sulla prima voce torna al pulsante invece di chiudere il pannello; tolto il ramo di Esc, che fa già
+    Impreza;
+  - classe del contenitore delle lingue rinominata `forestas-lingua-wrap` (si confondeva con il `<nav>`
+    `forestas-lingue`);
+  - trappola dei 96px tolta dal `CLAUDE.md`: non scatta più;
+  - lasciato il link «Vai al contenuto» del child invece dell'opzione nativa di Impreza, motivato nel
+    commento di `style.css`.
+  Durante la verifica nel browser due regressioni introdotte dalla pulizia, corrette: senza
+  `aspect-ratio` il blocco FESR dell'header sotto i 600px si annullava (largo 0px nella cella flex),
+  e il logo dell'header aveva perso `height: auto` sotto i 600px. Rimisurato: 360px bandiera 14,3
+  contro logo 13,5; 1025px e 1440px uguali a prima.
+
 ## Follow-up
 
-Rilievi minori della code review finale, non corretti:
+Rilievi minori della code review finale (prima review), non corretti:
 
 - le voci di servizio aggiunte dal filtro non hanno `w-nav-item level_1` né `current-menu-item`;
 - il filtro `wp_nav_menu_items` agisce su qualsiasi render di `main-menu`, non solo nell'header;
-- la voce attiva non considera `current_page_parent` / `current-page-ancestor`;
 - `--striscia-footer` e il bianco del testo duplicano i colori del footer delle Theme Options;
-- i social del footer tornano a sinistra sotto 900px, mentre le colonne si impilano già a 1024px.
 
 Nessun ticket aperto: si apriranno se e quando il dev lo chiede.
 

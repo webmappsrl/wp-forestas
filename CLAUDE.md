@@ -54,10 +54,6 @@ subagent.
   oggetti dei builder di Impreza) si modificano solo in locale e poi si esportano: l'apply li
   sovrascrive sempre (`WPF_TIPI_BUILDER`), anche senza `--pagine`, e una modifica fatta dal pannello
   di UAT o produzione va persa al primo apply (oc:8757)
-- Il pannello del menu mobile è posizionato sotto un header alto 96px (riga in alto 36 + riga del
-  logo 60) e annulla il `min-height` a tutto schermo che Impreza gli dà: cambiando le altezze delle
-  righe di tablet/mobile nell'Header Builder va aggiornato anche `style.css` del child, o il fondo del
-  pannello esce dallo schermo (oc:8757)
 - L'apply automatico vale solo nei 3 giorni dopo l'installazione (`WPF_APPLY_FINESTRA`) e aspetta,
   senza consumare tentativi, che tema e plugin di `config/versioni.json` siano installati: dopo, un
   sito cambiato dal pannello non viene più sovrascritto senza anteprima (oc:8717)

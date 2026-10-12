@@ -5,7 +5,7 @@ Template: Impreza
 Author: Webmapp
 Author URI: https://webmapp.it/
 Description: Child theme di Impreza per Sardegna Sentieri (Forestas). Versionato nel repo wp-forestas e montato dal compose: si modifica nel repo, non dal pannello.
-Version: 1.1.22
+Version: 1.1.26
 */
 
 
@@ -57,9 +57,367 @@ Version: 1.1.22
 	/* più scuro del sito attuale (45%): con il bianco a 12px serve almeno 4,5:1 (WCAG 1.4.3) */
 	--pulsante-menu-fondo-attivo: hsl(17deg 76% 40%);
 	--pulsante-menu-testo: #333333;
+	--testo-su-scuro: #FFFFFF;
 
 	/* Striscia di chiusura del footer (mockup «Canvas Fase 2», oc:8757) */
 	--striscia-footer: #1A1A1A;
+
+	/* Barra di amministrazione di WordPress (solo utenti loggati): fissa in cima, tranne sotto i 600px */
+	--forestas-barra-admin: var(--wp-admin--admin-bar--height, 0px);
+}
+@media (max-width: 600px) {
+	:root {
+		--forestas-barra-admin: 0px;
+	}
+}
+
+/*
+ * Header e footer del design system (oc:8757). Struttura e contenuti stanno in config/post.json
+ * (Header Builder e blocco riutilizzabile «Footer»): qui solo ciò che Impreza non sa fare.
+ * «mobile_width» del menu è 1025px: Impreza mostra l'hamburger sotto 1025, cioè fino a 1024px, e le
+ * media query del child usano la stessa soglia.
+ */
+
+/* Target cliccabili di almeno 24px (WCAG 2.2 2.5.8) per i link testuali di header, footer e pannello */
+.forestas-servizio .menu-item a,
+.forestas-legali .menu-item a,
+.forestas-pannello-servizio a,
+.forestas-lingue a {
+	display: inline-block;
+	min-height: 24px;
+	line-height: 24px;
+}
+
+/* Focus da tastiera visibile su tutti i link di header e footer */
+:is(.l-header, .l-footer) :is(a, button, input):focus-visible {
+	outline: 3px solid var(--focus);
+	outline-offset: 2px;
+}
+
+/* Riga di servizio: social, link, lingua, ricerca */
+.l-subheader.at_top {
+	font-size: 12px;
+	border-bottom: 1px solid var(--color-content-border);
+}
+.forestas-seguici {
+	font-size: 12.5px;
+}
+.w-socials.forestas-social .w-socials-item-link {
+	color: var(--sar-terra-testo);
+	font-size: 18px;
+	min-width: 24px;
+	min-height: 24px;
+}
+.forestas-lingue {
+	display: flex;
+	gap: 9px;
+	align-items: center;
+	text-transform: uppercase;
+}
+.forestas-lingue b {
+	font-weight: 600;
+	border-bottom: 2px solid var(--sar-terra-testo);
+	padding-bottom: 1px;
+}
+.forestas-lingue a {
+	min-width: 24px;
+	text-align: center;
+}
+/* Riga di servizio su desktop: nessun elemento va a capo, spazi fra gli elementi a 12px */
+@media (min-width: 1025px) {
+	/* Campo di ricerca alto quanto la riga di servizio (su tablet e mobile la ricerca aperta occupa la
+	   riga del logo e resta alta quanto vuole Impreza) */
+	.l-header .w-search.forestas-cerca {
+		--inputs-height: 28px;
+	}
+	.l-header .w-search.forestas-cerca input {
+		height: 28px;
+	}
+	.l-header .w-menu.forestas-servizio .menu {
+		flex-wrap: nowrap;
+		white-space: nowrap;
+	}
+	.l-header .w-menu.forestas-servizio .menu-item {
+		padding: 0 .5rem;
+	}
+	.l-header .forestas-seguici {
+		white-space: nowrap;
+	}
+	.l-subheader.at_top .l-subheader-cell > * {
+		margin-left: 12px;
+	}
+	.l-subheader.at_top .l-subheader-cell > *:first-child {
+		margin-left: 0;
+	}
+	.l-subheader.at_top .l-subheader-cell > .forestas-lingua-wrap {
+		margin-left: 20px;
+	}
+	/* Terza riga, solo su desktop e laptop: il blocco istituzionale FESR */
+	.l-subheader.at_bottom {
+		border-top: 1px solid var(--color-content-border);
+	}
+}
+
+/*
+ * Logo del sito e blocco istituzionale FESR. Le proporzioni le danno gli attributi width/height delle
+ * <img> (il blocco dell'header ha anche aspect-ratio, vedi sotto). Le altezze vanno scelte insieme: la bandiera UE (circa l'81% dell'altezza del blocco
+ * «versione 1», il 56% della «versione 2») non può essere più piccola del logo che le sta vicino
+ * (Linee guida beneficiari PR FESR Sardegna, «Blocco istituzionale»).
+ *
+ * | larghezza        | logo header | logo footer | blocco header       |
+ * | da 1200px        | 22px        | 22px        | 28px                |
+ * | 1025-1199px      | 20px        | 20px        | 25px                |
+ * | 601-1024px       | 15px        | 18px        | 28px                |
+ * | fino a 600px     | min(193px, 48vw) di larghezza | 231px | si restringe accanto alle lingue |
+ */
+.forestas-logo {
+	display: block;
+	line-height: 0;
+}
+.forestas-logo-wrap {
+	flex-shrink: 0;
+}
+.forestas-logo img {
+	height: 22px;
+	width: auto;
+	max-width: none;
+}
+.forestas-fesr-wrap {
+	line-height: 0;
+}
+.l-header .forestas-fesr {
+	display: block;
+	height: 28px;
+	width: auto;
+	max-width: none;
+	/* Non ridondante con width/height dell'<img>: sotto i 600px il blocco sta in una cella flex che si
+	   restringe, e senza aspect-ratio la sua larghezza si annulla */
+	aspect-ratio: 1400 / 98;
+}
+@media (min-width: 1025px) and (max-width: 1199px) {
+	.forestas-logo img {
+		height: 20px;
+	}
+	.l-header .forestas-fesr {
+		height: 25px;
+	}
+}
+@media (max-width: 1024px) {
+	.forestas-logo img {
+		height: 18px;
+	}
+	.l-header .forestas-logo img {
+		height: 15px;
+	}
+}
+@media (max-width: 600px) {
+	.forestas-logo-wrap {
+		flex-shrink: 1;
+		min-width: 0;
+	}
+	.forestas-logo img {
+		height: auto;
+		width: 100%;
+		max-width: 231px;
+	}
+	/* Il logo dell'header scala con la larghezza, perché il blocco qui sopra si restringe */
+	.l-header .forestas-logo img {
+		height: auto;
+		max-width: min(193px, 48vw);
+	}
+	.l-header .w-html.forestas-fesr-wrap {
+		min-width: 0;
+		flex-shrink: 1;
+		margin-right: 12px;
+	}
+	.l-header .forestas-fesr {
+		height: auto;
+		width: 100%;
+		max-width: 400px;
+	}
+}
+
+/* Menu principale: maiuscolo, voce attiva nel colore del tipo di contenuto */
+.forestas-nav .w-nav-list.level_1 > .menu-item > .w-nav-anchor {
+	font-size: var(--forestas-voce-menu, 12px);
+	font-weight: 600;
+	letter-spacing: .02em;
+	text-transform: uppercase;
+}
+.forestas-nav .tipo-sentiero    { --tipo-voce: var(--tipo-sentiero); }
+.forestas-nav .tipo-itinerario  { --tipo-voce: var(--tipo-itinerario); }
+.forestas-nav .tipo-cammino     { --tipo-voce: var(--tipo-cammino); }
+.forestas-nav .tipo-da-vedere   { --tipo-voce: var(--tipo-da-vedere); }
+.forestas-nav .tipo-da-sapere   { --tipo-voce: var(--tipo-da-sapere); }
+.forestas-nav .tipo-mappa       { --tipo-voce: var(--sar-blu); }
+.forestas-nav .tipo-news        { --tipo-voce: var(--tipo-news); }
+/* La voce è attiva sulla sua pagina e sulle pagine figlie (anche gli articoli, per NEWS) */
+.forestas-nav .w-nav-list.level_1 > .menu-item:is(.current-menu-item, .current-menu-ancestor, .current-menu-parent, .current_page_parent, .current-page-ancestor) > .w-nav-anchor {
+	color: var(--tipo-voce, var(--sar-blu));
+}
+@media (min-width: 1025px) {
+	/* Sottolineatura legata al testo della voce, non all'altezza della riga dell'header */
+	.forestas-nav .w-nav-list.level_1 > .menu-item > .w-nav-anchor > .w-nav-title {
+		position: relative;
+	}
+	.forestas-nav .w-nav-list.level_1 > .menu-item:is(.current-menu-item, .current-menu-ancestor, .current-menu-parent, .current_page_parent, .current-page-ancestor) > .w-nav-anchor > .w-nav-title::after {
+		content: "";
+		position: absolute;
+		left: 0;
+		right: 0;
+		bottom: -7px;
+		height: 2px;
+		background: currentColor;
+	}
+	/* Link di servizio e social aggiunti in coda al menu principale: solo nel pannello mobile */
+	.forestas-nav .forestas-solo-mobile {
+		display: none;
+	}
+}
+/* Fra il passaggio all'hamburger e 1200px le sette voci stanno su una riga solo con meno spazio fra loro */
+@media (min-width: 1025px) and (max-width: 1199px) {
+	.forestas-nav .w-nav-list.level_1 > .menu-item > .w-nav-anchor {
+		padding-left: 8px;
+		padding-right: 8px;
+		letter-spacing: 0;
+	}
+}
+
+/*
+ * Tablet e mobile (fino a 1024px). L'header è fisso in cima e la sua altezza la pubblica Impreza in
+ * --header-sticky-height (96px: riga in alto 36 + riga del logo 60).
+ */
+@media (max-width: 1024px) {
+	:root {
+		--forestas-sotto-header: calc(var(--header-sticky-height, 96px) + var(--forestas-barra-admin));
+	}
+	/* L'elemento che riceve il focus da tastiera non finisce sotto l'header fisso (WCAG 2.2 2.4.11) */
+	html {
+		scroll-padding-top: calc(var(--forestas-sotto-header) + 8px);
+	}
+
+	/* Ricerca e hamburger: riquadri di 45px come sul sito attuale */
+	/* Il display lo decide Impreza (nascosto dove si vede il campo): qui si centra senza toccarlo */
+	.l-header .w-search.forestas-cerca .w-search-open {
+		width: 45px;
+		height: 45px;
+		padding: 0;
+		background: var(--inputs-background);
+		color: var(--color-content-text);
+		font-size: 18px;
+		line-height: 45px;
+		text-align: center;
+	}
+	/* Al tocco, al passaggio e al focus: fondo scuro e icona bianca, come in produzione */
+	.l-header .w-search.forestas-cerca .w-search-open:is(:hover, :active, :focus-visible),
+	.l-header .w-search.forestas-cerca.active .w-search-open {
+		background: var(--pulsante-cerca-fondo);
+		color: var(--testo-su-scuro);
+	}
+	.l-header .w-search.forestas-cerca .w-search-open i {
+		vertical-align: middle;
+	}
+	.l-header .forestas-nav .w-nav-control {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 3px;
+		width: 45px;
+		height: 45px;
+		padding: 0;
+		background: var(--pulsante-menu-fondo);
+		color: var(--pulsante-menu-testo);
+	}
+	/* Impreza separa gli elementi dell'header di circa 22px: fra ricerca e menu ne bastano 8 */
+	.l-header .l-subheader-cell .w-nav.forestas-nav {
+		margin-left: 8px;
+	}
+	/* Scritta «menu»/«chiudi»: la cambia assets/js/menu-mobile.js insieme al nome accessibile */
+	.l-header .forestas-nav .w-nav-control > span {
+		margin: 0;
+		font-size: 12px;
+		line-height: 1;
+	}
+	.l-header .forestas-nav .w-nav-control:is(:hover, :focus-visible, [aria-expanded="true"]) {
+		background: var(--pulsante-menu-fondo-attivo);
+		color: var(--testo-su-scuro);
+	}
+
+	/*
+	 * Pannello del menu, come sul sito attuale: entra da destra (opzioni dell'Header Builder) e occupa
+	 * lo schermo sotto l'header. Deve stare tutto nello schermo: spazi e caratteri si riducono con
+	 * l'altezza disponibile (unità dvh), e solo su schermi molto bassi il pannello scorre.
+	 */
+	.l-header .forestas-nav {
+		--forestas-voce-menu: clamp(15px, 2.6dvh, 20px);
+	}
+	/* Il selettore deve battere «.w-nav.type_mobile.m_layout_panel .w-nav-list.level_1» di Impreza */
+	.l-header .w-nav.forestas-nav.m_layout_panel .w-nav-list.level_1 {
+		/* Altezza esplicita, non «bottom: 0»: se l'header fisso fa da contenitore il pannello finirebbe
+		   oltre il fondo dello schermo. 100dvh segue anche la barra degli indirizzi dei telefoni. */
+		top: var(--forestas-sotto-header);
+		bottom: auto;
+		left: 0;
+		right: 0;
+		height: calc(100vh - var(--forestas-sotto-header));
+		height: calc(100dvh - var(--forestas-sotto-header));
+		min-height: 0; /* Impreza gli dà come minimo l'altezza dello schermo intero */
+		display: flex;
+		flex-direction: column;
+		padding: clamp(6px, 2dvh, 20px) 0 clamp(8px, 2.5dvh, 24px);
+		box-shadow: none;
+		border-top: 1px solid var(--color-content-border);
+		overflow-y: auto;
+		overscroll-behavior: contain;
+	}
+	.l-header .w-nav.forestas-nav.m_layout_panel .w-nav-list.level_1 > .menu-item > .w-nav-anchor {
+		margin: 0;
+		padding: clamp(5px, 1.6dvh, 14px) 20px;
+		line-height: 1.2;
+		color: var(--color-content-text);
+	}
+	/* La voce attiva tiene il colore del tipo anche nel pannello (la regola sopra è più specifica) */
+	.l-header .w-nav.forestas-nav.m_layout_panel .w-nav-list.level_1 > .menu-item:is(.current-menu-item, .current-menu-ancestor, .current-menu-parent, .current_page_parent, .current-page-ancestor) > .w-nav-anchor {
+		color: var(--tipo-voce, var(--sar-blu));
+	}
+	.forestas-pannello-servizio {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 4px 24px;
+		margin: auto 10px 0;
+		padding: clamp(8px, 1.8dvh, 16px) 10px;
+		border-top: 1px solid var(--color-content-border);
+		border-bottom: 1px solid var(--color-content-border);
+		font-size: 14px;
+		letter-spacing: .04em;
+		text-transform: uppercase;
+	}
+	.forestas-pannello-servizio a {
+		color: var(--color-content-text);
+	}
+	.forestas-pannello-social {
+		padding: clamp(8px, 1.8dvh, 16px) 20px 0;
+	}
+	.forestas-pannello-social .forestas-seguici {
+		display: block;
+		margin-bottom: clamp(4px, 1.2dvh, 12px);
+		font-size: 15px;
+	}
+	.forestas-pannello-social .w-socials-list {
+		display: flex;
+		flex-wrap: nowrap;
+		justify-content: space-between;
+		max-width: 360px;
+	}
+	.forestas-pannello-social .w-socials.forestas-social .w-socials-item-link {
+		font-size: clamp(24px, 4dvh, 32px);
+	}
+
+	/* A menu aperto la pagina non scorre, come sul sito attuale («has-mobile-menu-open») */
+	html:has(.l-header .forestas-nav .w-nav-control[aria-expanded="true"]) {
+		overflow: hidden;
+	}
 }
 
 /*
@@ -86,7 +444,6 @@ Version: 1.1.22
 	height: 80px;
 	width: auto;
 	max-width: 100%;
-	aspect-ratio: 1400 / 161;
 }
 @media (max-width: 600px) {
 	.forestas-footer-fesr .forestas-fesr-2 {
@@ -97,361 +454,6 @@ Version: 1.1.22
 .l-section.forestas-footer {
 	border-top: 3px solid var(--sar-oro);
 }
-
-/*
- * Header del design system (oc:8757). Struttura e contenuti stanno nell'Header Builder (config/post.json):
- * qui solo ciò che Impreza non sa fare dalle opzioni.
- */
-
-/* Riga di servizio: social, link, lingua, ricerca */
-.l-subheader.at_top {
-	font-size: 12px;
-	border-bottom: 1px solid var(--color-content-border, #EEEBE5);
-}
-.forestas-seguici {
-	font-size: 12.5px;
-}
-.w-socials.forestas-social .w-socials-item-link {
-	color: var(--sar-terra-testo);
-	font-size: 18px;
-	min-width: 24px;
-	min-height: 24px;
-}
-.forestas-servizio .menu-item a {
-	display: inline-block;
-	min-height: 24px;
-	line-height: 24px;
-}
-/* Campo di ricerca: alto quanto la riga di servizio */
-.l-header .w-search.forestas-cerca {
-	--inputs-height: 28px;
-}
-.l-header .w-search.forestas-cerca input {
-	height: 28px;
-}
-.forestas-lingue {
-	display: flex;
-	gap: 9px;
-	align-items: center;
-	text-transform: uppercase;
-}
-.forestas-lingue b {
-	font-weight: 600;
-	border-bottom: 2px solid var(--sar-terra-testo);
-	padding-bottom: 1px;
-}
-.forestas-lingue a {
-	display: inline-block;
-	min-width: 24px;
-	min-height: 24px;
-	line-height: 24px;
-	text-align: center;
-}
-
-/*
- * Blocco istituzionale FESR (oc:8757): su desktop e laptop in una terza riga sotto il menu, su tablet
- * e mobile nella riga in alto accanto alle lingue. Altezza 28px: la bandiera UE (circa
- * l'81% dell'altezza del file) misura così almeno quanto l'altezza del logo del sito, come chiedono
- * le linee guida («l'emblema Ue non può essere di dimensioni minori a quelle di altri loghi»).
- */
-.forestas-fesr-wrap {
-	line-height: 0;
-}
-.l-header .forestas-fesr {
-	display: block;
-	height: 28px;
-	width: auto;
-	max-width: none;
-	aspect-ratio: 1400 / 98;
-}
-/* Riga di servizio su desktop: nessun elemento va a capo, spazi fra gli elementi a 12px */
-@media (min-width: 1025px) {
-	.l-header .w-menu.forestas-servizio .menu {
-		flex-wrap: nowrap;
-		white-space: nowrap;
-	}
-	.l-header .w-menu.forestas-servizio .menu-item {
-		padding: 0 .5rem;
-	}
-	.l-header .forestas-seguici {
-		white-space: nowrap;
-	}
-	.l-subheader.at_top .l-subheader-cell > * {
-		margin-left: 12px;
-	}
-	.l-subheader.at_top .l-subheader-cell > *:first-child {
-		margin-left: 0;
-	}
-	.l-subheader.at_top .l-subheader-cell > .forestas-lingua {
-		margin-left: 20px;
-	}
-
-	/* Terza riga dell'header, solo su desktop e laptop: il blocco istituzionale FESR */
-	.l-subheader.at_bottom {
-		border-top: 1px solid var(--color-content-border);
-	}
-}
-/* Fino a 1199px il blocco scende a 25px: il logo lì è alto 20px e la bandiera UE resta più alta */
-@media (min-width: 1025px) and (max-width: 1199px) {
-	.l-header .forestas-fesr {
-		height: 25px;
-	}
-}
-/* Sotto i 600px il blocco prende lo spazio libero accanto al selettore di lingua */
-@media (max-width: 600px) {
-	.l-header .w-html.forestas-fesr-wrap {
-		min-width: 0;
-		flex-shrink: 1;
-		margin-right: 12px;
-	}
-	.l-header .forestas-fesr {
-		height: auto;
-		width: 100%;
-		max-width: 400px;
-	}
-}
-
-/* Logo: altezza fissa, larghezza dal rapporto del file (1155×90), nessuno spostamento al caricamento */
-.forestas-logo {
-	display: block;
-	line-height: 0;
-}
-.forestas-logo-wrap {
-	flex-shrink: 0;
-}
-.forestas-logo img {
-	height: 22px;
-	width: auto;
-	max-width: none;
-	aspect-ratio: 1155 / 90;
-}
-@media (max-width: 1024px) {
-	.forestas-logo img {
-		height: 18px;
-	}
-}
-/* Nell'header con l'hamburger (fino a 1024px) il logo è più piccolo che nel footer */
-@media (max-width: 1024px) {
-	.l-header .forestas-logo img {
-		height: 15px;
-	}
-}
-/* Sotto i 600px il logo si restringe con la cella, così logo, lente e hamburger stanno anche a 320px */
-@media (max-width: 600px) {
-	.forestas-logo-wrap {
-		flex-shrink: 1;
-		min-width: 0;
-	}
-	.forestas-logo img {
-		height: auto;
-		width: 100%;
-		max-width: 231px;
-	}
-	.l-header .forestas-logo img {
-		height: auto;
-		max-width: 193px;
-	}
-}
-
-/* Menu principale: maiuscolo, voce attiva nel colore del tipo di contenuto */
-.forestas-nav .w-nav-list.level_1 > .menu-item > .w-nav-anchor {
-	font-size: var(--forestas-voce-menu, 12px);
-	font-weight: 600;
-	letter-spacing: .02em;
-	text-transform: uppercase;
-}
-@media (min-width: 1025px) {
-	.forestas-nav .w-nav-list.level_1 > .menu-item > .w-nav-anchor {
-		position: relative;
-	}
-}
-.forestas-nav .tipo-sentiero    { --tipo-voce: var(--tipo-sentiero); }
-.forestas-nav .tipo-itinerario  { --tipo-voce: var(--tipo-itinerario); }
-.forestas-nav .tipo-cammino     { --tipo-voce: var(--tipo-cammino); }
-.forestas-nav .tipo-da-vedere   { --tipo-voce: var(--tipo-da-vedere); }
-.forestas-nav .tipo-da-sapere   { --tipo-voce: var(--tipo-da-sapere); }
-.forestas-nav .tipo-mappa       { --tipo-voce: var(--sar-blu); }
-.forestas-nav .tipo-news        { --tipo-voce: var(--tipo-news); }
-.forestas-nav .w-nav-list.level_1 > .menu-item:is(.current-menu-item, .current-menu-ancestor) > .w-nav-anchor {
-	color: var(--tipo-voce, var(--sar-blu));
-}
-/* La sottolineatura è legata al testo della voce, non all'altezza della riga dell'header */
-@media (min-width: 1025px) {
-	.forestas-nav .w-nav-list.level_1 > .menu-item > .w-nav-anchor > .w-nav-title {
-		position: relative;
-	}
-	.forestas-nav .w-nav-list.level_1 > .menu-item:is(.current-menu-item, .current-menu-ancestor) > .w-nav-anchor > .w-nav-title::after {
-		content: "";
-		position: absolute;
-		left: 0;
-		right: 0;
-		bottom: -7px;
-		height: 2px;
-		background: currentColor;
-	}
-}
-
-/* Fra il passaggio all'hamburger e 1200px le sette voci stanno su una riga solo con meno spazio fra loro */
-@media (min-width: 1025px) and (max-width: 1199px) {
-	.forestas-logo img {
-		height: 20px;
-	}
-	.forestas-nav .w-nav-list.level_1 > .menu-item > .w-nav-anchor {
-		padding-left: 8px;
-		padding-right: 8px;
-		letter-spacing: 0;
-	}
-}
-
-/* Ricerca e hamburger su tablet e mobile: riquadri pieni di 45px come sul sito attuale */
-@media (max-width: 1024px) {
-	/* Il display lo decide Impreza (nascosto dove si vede il campo): qui si centra senza toccarlo */
-	.l-header .w-search.forestas-cerca .w-search-open {
-		width: 45px;
-		height: 45px;
-		padding: 0;
-		background: var(--inputs-background);
-		color: var(--color-content-text);
-		font-size: 18px;
-		line-height: 45px;
-		text-align: center;
-	}
-	/* Al tocco, al passaggio e al focus: fondo scuro e icona bianca, come in produzione */
-	.l-header .w-search.forestas-cerca .w-search-open:is(:hover, :active, :focus-visible),
-	.l-header .w-search.forestas-cerca.active .w-search-open {
-		background: var(--pulsante-cerca-fondo);
-		color: #fff;
-	}
-	.l-header .w-search.forestas-cerca .w-search-open i {
-		vertical-align: middle;
-	}
-	.l-header .forestas-nav .w-nav-control {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-		gap: 3px;
-		width: 45px;
-		height: 45px;
-		padding: 0;
-		background: var(--pulsante-menu-fondo);
-		color: var(--pulsante-menu-testo);
-	}
-	/* Impreza separa gli elementi dell'header di circa 22px: fra ricerca e menu ne bastano 8 */
-	.l-header .l-subheader-cell .w-nav.forestas-nav {
-		margin-left: 8px;
-	}
-	.l-header .forestas-nav .w-nav-control > span {
-		margin: 0;
-		font-size: 12px;
-		line-height: 1;
-	}
-	.l-header .forestas-nav .w-nav-control:is(:hover, :focus-visible, [aria-expanded="true"]) {
-		background: var(--pulsante-menu-fondo-attivo);
-		color: #fff;
-	}
-	/* A menu aperto l'etichetta diventa «chiudi» («close» in inglese), come sul sito attuale */
-	.l-header .forestas-nav .w-nav-control[aria-expanded="true"] > span {
-		font-size: 0;
-	}
-	.l-header .forestas-nav .w-nav-control[aria-expanded="true"] > span::after {
-		content: "chiudi";
-		font-size: 12px;
-	}
-	html[lang^="en"] .l-header .forestas-nav .w-nav-control[aria-expanded="true"] > span::after {
-		content: "close";
-	}
-}
-
-/* Link di servizio aggiunti al menu principale: solo nel menu a scomparsa di tablet e mobile */
-/* «mobile_width» del menu nell'Header Builder è 1025px: Impreza mostra l'hamburger sotto 1025, cioè fino a 1024 */
-@media (min-width: 1025px) {
-	.forestas-nav .forestas-solo-mobile {
-		display: none;
-	}
-}
-/*
- * Pannello del menu su tablet e mobile, come sul sito attuale: entra da destra (opzioni dell'Header
- * Builder) e occupa lo schermo sotto l'header, che su tablet e mobile è fisso in cima (96px: riga in
- * alto 36 + riga del logo 60). Deve stare tutto nello schermo: spazi e caratteri si riducono con
- * l'altezza disponibile (unità dvh), e solo su schermi molto bassi il pannello scorre.
- */
-@media (max-width: 1024px) {
-	.l-header .forestas-nav {
-		--forestas-voce-menu: clamp(15px, 2.6dvh, 20px);
-	}
-	/* Il selettore deve battere «.w-nav.type_mobile.m_layout_panel .w-nav-list.level_1» di Impreza */
-	.l-header .w-nav.forestas-nav.m_layout_panel .w-nav-list.level_1 {
-		/* Altezza esplicita, non «bottom: 0»: se l'header fisso fa da contenitore il pannello finirebbe
-		   oltre il fondo dello schermo. 100dvh segue anche la barra degli indirizzi dei telefoni. */
-		top: calc(96px + var(--wp-admin--admin-bar--height, 0px));
-		bottom: auto;
-		left: 0;
-		right: 0;
-		width: 100%;
-		height: calc(100vh - 96px - var(--wp-admin--admin-bar--height, 0px));
-		height: calc(100dvh - 96px - var(--wp-admin--admin-bar--height, 0px));
-		max-height: calc(100dvh - 96px - var(--wp-admin--admin-bar--height, 0px));
-		min-height: 0; /* Impreza gli dà come minimo l'altezza dello schermo intero */
-		display: flex;
-		flex-direction: column;
-		padding: clamp(6px, 2dvh, 20px) 0 clamp(8px, 2.5dvh, 24px);
-		box-shadow: none;
-		border-top: 1px solid var(--color-content-border);
-		overflow-y: auto;
-		overscroll-behavior: contain;
-	}
-	.l-header .w-nav.forestas-nav.m_layout_panel .w-nav-list.level_1 > .menu-item > .w-nav-anchor {
-		margin: 0;
-		padding: clamp(5px, 1.6dvh, 14px) 20px;
-		line-height: 1.2;
-		font-weight: 600;
-		letter-spacing: .02em;
-		color: var(--color-content-text);
-	}
-	.forestas-pannello-servizio {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 4px 24px;
-		margin: auto 10px 0;
-		padding: clamp(8px, 1.8dvh, 16px) 10px;
-		border-top: 1px solid var(--color-content-border);
-		border-bottom: 1px solid var(--color-content-border);
-		font-size: 14px;
-		letter-spacing: .04em;
-		text-transform: uppercase;
-	}
-	.forestas-pannello-servizio a {
-		color: var(--color-content-text);
-		min-height: 24px;
-		line-height: 24px;
-	}
-	.forestas-pannello-social {
-		padding: clamp(8px, 1.8dvh, 16px) 20px 0;
-	}
-	.forestas-pannello-social .forestas-seguici {
-		display: block;
-		margin-bottom: clamp(4px, 1.2dvh, 12px);
-		font-size: 15px;
-	}
-	.forestas-pannello-social .w-socials-list {
-		display: flex;
-		flex-wrap: nowrap;
-		justify-content: space-between;
-		max-width: 360px;
-	}
-	.forestas-pannello-social .w-socials.forestas-social .w-socials-item-link {
-		font-size: clamp(24px, 4dvh, 32px);
-	}
-
-	/* A menu aperto la pagina non scorre, come sul sito attuale («has-mobile-menu-open») */
-	html:has(.l-header .forestas-nav .w-nav-control[aria-expanded="true"]),
-	html:has(.l-header .forestas-nav .w-nav-control[aria-expanded="true"]) body {
-		overflow: hidden;
-	}
-}
-
-/* Footer del design system (oc:8757): contenuto nel blocco riutilizzabile «Footer» */
 .forestas-footer-r2 {
 	margin-top: 16px;
 }
@@ -471,14 +473,9 @@ Version: 1.1.22
 	letter-spacing: .02em;
 	text-transform: uppercase;
 }
-.forestas-legali .menu-item a {
-	display: inline-block;
-	min-height: 24px;
-	line-height: 24px;
-}
 .l-section.forestas-footer-bar {
 	background: var(--striscia-footer);
-	color: #fff;
+	color: var(--testo-su-scuro);
 	font-size: 12px;
 }
 .forestas-footer-bar .l-section-h {
@@ -495,7 +492,8 @@ Version: 1.1.22
 .forestas-footer-bar span:last-child {
 	opacity: .85;
 }
-@media (max-width: 900px) {
+/* Fino a 1024px le colonne del footer si impilano (tablets_columns="1"): social allineati a sinistra */
+@media (max-width: 1024px) {
 	.forestas-footer .forestas-social-wrap {
 		justify-content: flex-start;
 	}
@@ -503,7 +501,8 @@ Version: 1.1.22
 
 /*
  * Link «Vai al contenuto» (oc:8757): fuori dallo schermo finché non riceve il focus da tastiera, poi
- * in alto a sinistra sopra l'header.
+ * in alto a sinistra sopra l'header. Non è l'opzione nativa di Impreza («skip_to_content_btn»):
+ * quella ha un'etichetta sola per tutte le lingue nelle Theme Options e mette role="button" su un link.
  */
 .forestas-salta {
 	position: absolute;
@@ -512,26 +511,13 @@ Version: 1.1.22
 	z-index: 1000;
 	padding: 10px 16px;
 	background: var(--sar-blu);
-	color: #fff;
+	color: var(--testo-su-scuro);
 	font-weight: 600;
 	text-decoration: none;
 }
 .forestas-salta:focus {
 	top: 8px;
-	color: #fff;
-	outline: 3px solid var(--focus);
-	outline-offset: 2px;
-}
-
-/* Con l'header fisso di tablet e mobile, l'elemento che riceve il focus non finisce sotto l'header */
-@media (max-width: 1024px) {
-	html {
-		scroll-padding-top: calc(96px + var(--wp-admin--admin-bar--height, 0px) + 8px);
-	}
-}
-
-/* Focus da tastiera visibile su tutti i link di header e footer */
-:is(.l-header, .l-footer) :is(a, button, input):focus-visible {
+	color: var(--testo-su-scuro);
 	outline: 3px solid var(--focus);
 	outline-offset: 2px;
 }
