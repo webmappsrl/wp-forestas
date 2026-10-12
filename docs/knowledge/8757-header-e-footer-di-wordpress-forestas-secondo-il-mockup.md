@@ -32,7 +32,7 @@ versionata»). Ciò che Impreza non sa fare sta nel child theme.
 - **Footer:** blocco FESR («versione 2») in cima, poi il filo oro, poi logo, social, contatti, link
   istituzionali e la striscia scura con l'anno corrente.
 - **Accessibilità** (Linee guida AgID: EN 301 549, WCAG 2.1 AA): link «Vai al contenuto» da
-  `wp_body_open`; `assets/js/menu-mobile.js` cambia insieme scritta e nome del pulsante («menu» /
+  `wp_body_open`, che per chi è loggato compare sotto la barra di amministrazione; `assets/js/menu-mobile.js` cambia insieme scritta e nome del pulsante («menu» /
   «chiudi», WCAG 2.5.3) e tiene il focus nel pannello finché il pulsante si vede (Impreza non chiude il
   pannello quando la finestra passa al desktop); ascolta in fase di cattura, perché Impreza chiude il
   pannello con Maiusc+Tab sulla prima voce. Esc lo gestisce Impreza, che riporta anche il focus sul

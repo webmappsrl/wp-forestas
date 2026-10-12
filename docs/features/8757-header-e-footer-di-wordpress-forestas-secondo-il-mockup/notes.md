@@ -267,7 +267,9 @@
 - **Modifiche a `overview.md` dopo l'approvazione, chieste dalle review:** il selettore «IT · EN»
   diventato «IT EN» (righe di «Cosa cambia» e requisito del selettore), il requisito della trappola
   sulla soglia 1024/1025px fra quelli di documentazione, e i «Moduli toccati» (`comune.php` con i nuovi
-  meta calcolati, `CLAUDE.md`, `inizializzazione-wordpress.md`).
+  meta calcolati, `CLAUDE.md`, `inizializzazione-wordpress.md`). Dopo la terza review: requisito del
+  link di salto sotto la barra di amministrazione, requisito della trappola sulle due copie IT/EN,
+  `README.md` e le nuove funzioni di `functions.php` fra i «Moduli toccati».
 
 ## Follow-up
 

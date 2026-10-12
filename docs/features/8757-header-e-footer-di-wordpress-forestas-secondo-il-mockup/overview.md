@@ -165,7 +165,8 @@ in `config/`), e chi lavora sul sito li ritrova dove Impreza li mette.
 
 - [ ] Nessuna violazione WCAG 2.0/2.1/2.2 A e AA di axe-core in header e footer
 - [ ] Il primo elemento della pagina è il link «Vai al contenuto» / «Skip to content», visibile al
-      focus, che porta al `<main id="page-content">` (WCAG 2.4.1)
+      focus, che porta al `<main id="page-content">` (WCAG 2.4.1); per chi è loggato compare sotto
+      la barra di amministrazione, a ogni larghezza
 - [ ] Il nome del pulsante del menu segue la scritta visibile: «Menu» chiuso, «Chiudi» / «Close»
       aperto (WCAG 2.5.3)
 - [ ] A pannello aperto Esc lo chiude e riporta il focus sul pulsante; Tab e Maiusc+Tab restano fra il
@@ -182,6 +183,7 @@ in `config/`), e chi lavora sul sito li ritrova dove Impreza li mette.
 
 - [ ] Trappola nel `CLAUDE.md` di `wp-forestas`: header, footer e gli altri oggetti dei builder si
       modificano solo in locale; sui server l'apply li sovrascrive sempre
+- [ ] Trappola nel `CLAUDE.md`: header e footer esistono in due copie, IT ed EN, da cambiare insieme
 - [ ] Trappola nel `CLAUDE.md`: la soglia 1024/1025px sta in tre posti da cambiare insieme
 - [ ] Pagina di conoscenza `docs/knowledge/8757-…` e sua riga nella tabella «Conoscenza» del `CLAUDE.md`
 
@@ -250,16 +252,18 @@ Tutto nel submodule `wp-forestas`; nessuna modifica in `forestas` né in `wm-pac
 - `themes/forestas-child/assets/img/blocco-istituzionale-fesr.png` e
   `blocco-istituzionale-fesr-2.png` — nuovi
 - `themes/forestas-child/functions.php` — shortcode `[forestas_logo]`, `[forestas_anno]`,
-  `[forestas_lingue]`, `[forestas_fesr]`; filtro che aggiunge servizio e social al pannello mobile;
-  link «Vai al contenuto»; caricamento di `menu-mobile.js`; funzione `forestas_testo()` per le
-  stringhe nella lingua corrente
+  `[forestas_lingue]`, `[forestas_fesr]`; filtro che aggiunge servizio e social al pannello mobile
+  (`forestas_pannello_servizio()`, `forestas_pannello_social()`, `forestas_voce_pannello()`); link
+  «Vai al contenuto»; caricamento di CSS e `menu-mobile.js` con la Version del child; funzioni
+  `forestas_testo()`, `forestas_versione()`, `forestas_asset_url()`
 - `themes/forestas-child/assets/js/menu-mobile.js` — nuovo: scritta e nome del pulsante, focus nel
   pannello
 - `themes/forestas-child/style.css` — stili di header, pannello mobile e footer, `Version` alzata
 - `docker/scripts/config/comune.php` — `us_og_image`, `_us_page_block_ids` e
   `_us_posts_per_archive_page` fra i meta calcolati che l'export esclude
-- `CLAUDE.md` — trappole sugli oggetti dei builder sovrascritti dall'apply e sulla soglia
-  1024/1025px in tre posti; riga dell'indice «Conoscenza»
+- `CLAUDE.md` — trappole sugli oggetti dei builder sovrascritti dall'apply, sulla soglia
+  1024/1025px in tre posti e sulle due copie IT/EN di header e footer; riga dell'indice «Conoscenza»
+- `README.md` — la `Version` del child si alza anche per JavaScript e immagini
 - `docs/knowledge/inizializzazione-wordpress.md` — dipendenze dal codice interno di Impreza usate dal
   child
 - `docs/knowledge/8757-header-e-footer-di-wordpress-forestas-secondo-il-mockup.md` — nuova pagina di
