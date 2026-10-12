@@ -137,6 +137,18 @@ con un apply di prova su un WordPress usa e getta prima di quello su UAT:
   `wpml_is_setup_complete`, `icl_add_string_translation` con `ICL_TM_COMPLETE`, i filtri e le azioni
   `wpml_element_language_details`, `wpml_set_element_language_details`, `wpml_object_id`,
   `wpml_switch_language`, le tabelle `icl_strings`/`icl_string_translations` lette da export e apply.
+- **Child theme, header e footer** (oc:8757; dettaglio in
+  [8757-header-e-footer-…](8757-header-e-footer-di-wordpress-forestas-secondo-il-mockup.md)): se
+  questi punti cambiano, il pannello del menu mobile perde servizio, social o focus senza dare errori.
+  - UpSolution Core: `us_get_page_area_id( 'header' )`; il formato del JSON dell'Header Builder
+    (chiavi `tipo:n` in `data`, contenuto degli elementi `html` in `base64(rawurlencode())`,
+    `el_class`, `custom_html_atts`); l'attributo `items` di `[us_socials]` in JSON `rawurlencode`; la
+    classe `US_Walker_Nav_Menu` del walker dell'elemento menu; il meta `us_og_image` e
+    `_us_posts_per_archive_page`, ricalcolati a ogni salvataggio (`WPF_META_CALCOLATI`).
+  - Markup e CSS di Impreza usati dal child: `.w-nav-control` con `aria-expanded` e lo `<span>` della
+    scritta, `.w-nav-list.level_1`, `.m_layout_panel`, `.w-search-open`, la variabile
+    `--header-sticky-height`, il `<main id="page-content">`; in `menu.js` la chiusura con Esc e con
+    Maiusc+Tab sulla prima voce, e il pannello non chiuso al passaggio al desktop.
 
 Una versione diversa (anche solo minore) ferma l'apply automatico; un apply a mano avvisa e mostra le
 differenze prima di `--conferma`. Dopo ogni aggiornamento la prova è: su un WordPress usa e getta

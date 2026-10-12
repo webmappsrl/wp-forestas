@@ -43,9 +43,10 @@ const WPF_IMPREZA_PAGINE = [ 'page_404', 'search_page' ];
 
 // Metadati dei post che i plugin ricavano da sé a ogni salvataggio: UpSolution Core dal contenuto
 // (us_save_post: stili degli elementi, filtri, schema FAQ; meta-tags.php: immagine Open Graph dalla
-// prima <img> del contenuto), WPML Media dagli allegati usati (id che cambiano da un sito all'altro).
+// prima <img> del contenuto; list.php: blocchi riutilizzabili usati e paginazione degli archivi), WPML
+// Media dagli allegati usati (id che cambiano da un sito all'altro).
 // Non si esportano e non si applicano: li ricalcola il salvataggio del post fatto dall'apply.
-const WPF_META_CALCOLATI = [ '_us_jsoncss_data', '_us_faceted_filter_items', '_us_schema_markup_faq', 'us_og_image', 'copied_media_ids', 'referenced_media_ids' ];
+const WPF_META_CALCOLATI = [ '_us_jsoncss_data', '_us_faceted_filter_items', '_us_schema_markup_faq', 'us_og_image', '_us_page_block_ids', '_us_posts_per_archive_page', 'copied_media_ids', 'referenced_media_ids' ];
 
 // Metadati dei post che non si esportano: modifica in corso e slug vecchi di WordPress, collegamenti di
 // WPML (le traduzioni si esportano a parte). «_wp_page_template», il modello della pagina, invece resta.

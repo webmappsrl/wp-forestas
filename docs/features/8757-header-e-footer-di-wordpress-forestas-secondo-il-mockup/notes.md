@@ -8,7 +8,7 @@
 
 - **Selettore di lingua**: non è l'elemento `dropdown` di Impreza con `source=wpml`, che sa mostrare
   solo bandiere o nomi lunghi delle lingue. È uno shortcode del child, `[forestas_lingue]`, dentro un
-  elemento `html`: legge le lingue da WPML (`wpml_active_languages`) e stampa «IT · EN» in linea come
+  elemento `html`: legge le lingue da WPML (`wpml_active_languages`) e stampa «IT EN» in linea come
   nel mockup, con la lingua corrente in grassetto.
 - **Link di servizio su tablet e mobile**: il pannello dell'hamburger mostra solo il menu
   dell'elemento. Un filtro `wp_nav_menu_items` del child aggiunge in coda al menu principale le voci
@@ -187,8 +187,9 @@
     pannello, più specifica, lo copriva);
   - campo di ricerca a 28px solo su desktop: su tablet e mobile la ricerca aperta resta alta quanto
     vuole Impreza;
-  - `functions.php`: helper `forestas_asset_url()`; testi alternativi di logo e blocco FESR con
-    `forestas_testo()`, quindi in inglese sulle pagine inglesi; il filtro del pannello diviso in
+  - `functions.php`: helper `forestas_asset_url()`; testo alternativo del blocco FESR con
+    `forestas_testo()`, quindi in inglese sulle pagine inglesi (quello del logo resta «Sardegna
+    Sentieri», fisso: è un nome proprio); il filtro del pannello diviso in
     `forestas_pannello_servizio()` e `forestas_pannello_social()`, che cerca social e «Seguici su» per
     tipo e classe invece che per id; risolve `servizio-menu` solo dopo aver riconosciuto il menu
     principale;
@@ -205,6 +206,41 @@
   `aspect-ratio` il blocco FESR dell'header sotto i 600px si annullava (largo 0px nella cella flex),
   e il logo dell'header aveva perso `height: auto` sotto i 600px. Rimisurato: 360px bandiera 14,3
   contro logo 13,5; 1025px e 1440px uguali a prima.
+
+- **Seconda review** (sessione di review, commit b8b42ce: 12 cleanup), `Version` del child 1.1.27:
+  - selettore di lingua: il mockup mostra «IT EN» senza separatore (`<b>IT</b><span>EN</span>`, con
+    9px di spazio); il codice è già così, erano i documenti a dire «IT · EN»: corretti overview, note,
+    pagina di conoscenza e commento di `functions.php`. `plan.md` resta com'era, perché è il piano
+    approvato;
+  - filtro del pannello limitato all'elemento menu di Impreza (walker `US_Walker_Nav_Menu`): un widget
+    o un «menu aggiuntivo» che mostra `main-menu` non riceve più servizio e social;
+  - link di servizio nel pannello con `target`, `rel` e `title` delle voci di menu;
+  - `functions.php`: `forestas_versione()` al posto delle tre chiamate a `wp_get_theme()`, un solo
+    callback su `wp_enqueue_scripts` per CSS e JS, `forestas_voce_pannello()` per il markup delle due
+    voci aggiunte. Lo script resta caricato con `get_stylesheet_directory_uri()` e non con
+    `forestas_asset_url()`, perché `wp_enqueue_script` aggiunge da sé `?ver=`;
+  - CSS: un'unica regola di focus anche per il link di salto, che ora scende sotto la barra di
+    amministrazione; `--grigio-scuro` condiviso dai due token che usavano `#333333`; convenzione dei
+    nomi delle variabili scritta in `:root`; commento unico sulla soglia 1024/1025px;
+  - trappola nel `CLAUDE.md` sulla soglia 1024/1025px, che sta in tre posti;
+  - `_us_posts_per_archive_page` e `_us_page_block_ids` fra i meta calcolati (`comune.php`): li scrive
+    `us-core/functions/list.php` a ogni salvataggio; export rifatto, il meta è sparito dai footer;
+  - dipendenze dal codice interno di Impreza usate dal child aggiunte all'elenco «Dipendenze» di
+    `docs/knowledge/inizializzazione-wordpress.md`;
+  - checkbox di `plan.md` spuntate per i passi eseguiti; restano aperti i tre passi con il salvataggio
+    dal pannello (Task 3 passo 3, Task 4 passo 2, Task 6 passo 2). I passi «commit» dei singoli task
+    sono spuntati ma sono stati fatti come due commit unici (e462804, b8b42ce), su richiesta del dev.
+  Non applicati, con il motivo:
+  - la lista dei cinque stati «corrente» del menu resta in tre regole (colore su desktop, sottolineatura,
+    colore nel pannello): unirle richiederebbe di sovrascrivere il colore delle voci di Impreza con una
+    variabile senza un valore di ripiego affidabile;
+  - le misure del blocco FESR restano sia negli attributi dell'`<img>` sia nell'`aspect-ratio` del CSS:
+    senza quest'ultimo il blocco si annulla nella cella flex (regressione già vista);
+  - le dimensioni dei caratteri (12px, 12.5px, 11.5px) restano letterali: sono valori del mockup usati
+    ciascuno in un solo contesto;
+  - header e footer restano copiati per lingua: vedi la pagina di conoscenza, «Perché così»;
+  - prefissi: `forestas_` è il child, `wpf_` gli script di configurazione; scritto nella pagina di
+    conoscenza, senza rinominare nulla.
 
 ## Follow-up
 

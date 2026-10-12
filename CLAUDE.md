@@ -54,6 +54,10 @@ subagent.
   oggetti dei builder di Impreza) si modificano solo in locale e poi si esportano: l'apply li
   sovrascrive sempre (`WPF_TIPI_BUILDER`), anche senza `--pagine`, e una modifica fatta dal pannello
   di UAT o produzione va persa al primo apply (oc:8757)
+- La soglia tablet/desktop è una sola ma sta in tre posti: `tablets_breakpoint` (1024px) in
+  `config/impreza.json`, `mobile_width` (1025px) del menu nei due header IT/EN in `config/post.json`,
+  le media query `max-width: 1024px` / `min-width: 1025px` del child. Cambiandone una sola, fra le due
+  soglie l'header desktop convive col pannello mobile o viceversa (oc:8757)
 - L'apply automatico vale solo nei 3 giorni dopo l'installazione (`WPF_APPLY_FINESTRA`) e aspetta,
   senza consumare tentativi, che tema e plugin di `config/versioni.json` siano installati: dopo, un
   sito cambiato dal pannello non viene più sovrascritto senza anteprima (oc:8717)

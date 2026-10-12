@@ -14,7 +14,7 @@ versionata»). Ciò che Impreza non sa fare sta nel child theme.
   (`us-core/templates/elements/html.php`). Per cambiare l'header conviene farlo dal pannello in
   locale e poi `export`, invece di scrivere a mano nel JSON.
 - **Shortcode del child** (`functions.php`), usati dentro header e footer:
-  `[forestas_logo]`, `[forestas_anno]`, `[forestas_lingue]` (IT · EN da WPML, codice breve),
+  `[forestas_logo]`, `[forestas_anno]`, `[forestas_lingue]` (IT EN da WPML, codice breve),
   `[forestas_fesr]` / `[forestas_fesr versione="2"]` (blocco istituzionale FESR). Le immagini stanno
   in `themes/forestas-child/assets/img/`, non negli uploads.
 - **Desktop (da 1025px):** tre righe. Servizio (36px), logo e menu (84px), blocco FESR centrato
@@ -53,7 +53,7 @@ Vincoli:
 - **rilascio e rollback toccano sempre insieme child e `config/`:** il child arriva con il pull,
   header e footer solo con l'apply. Con il solo child il sito mostra header e footer demo con il CSS
   nuovo; con la sola configurazione (o tornando indietro solo sul child) mostra gli shortcode
-  `[forestas_logo]`, `[forestas_fesr]`, `[forestas_lingue]` come testo. Tornando indietro, i post
+  `[forestas_logo]`, `[forestas_fesr]`, `[forestas_lingue]`, `[forestas_anno]` come testo. Tornando indietro, i post
   inglesi di header e footer restano nel sito e vanno cancellati a mano dal pannello.
 
 ## Perché così
@@ -65,10 +65,18 @@ Vincoli:
   URL calcolato da `get_stylesheet_directory_uri()` valgono in locale, UAT e produzione; un percorso
   scritto nel JSON o un'immagine negli uploads no.
 - **Selettore di lingua da shortcode** (oc:8757): il `dropdown` di Impreza con `source=wpml` mostra
-  solo bandiere o nomi lunghi, non «IT · EN» in linea come nel mockup.
+  solo bandiere o nomi lunghi, non «IT EN» in linea come nel mockup.
 - **Menu mobile come sul sito attuale** (oc:8757): pannello da destra, header fisso, pagina bloccata,
   pulsanti a riquadro. Il fondo del pulsante aperto è più scuro di quello di produzione
   (`hsl(17deg 76% 40%)` contro 45%) per arrivare a 4,5:1 col testo bianco.
+- **Header e footer copiati per lingua** (oc:8757): WPML traduce gli oggetti dei builder di Impreza
+  come post separati, uno per lingua. Ridurre la copia vorrebbe dire tenere un solo header e tradurne
+  i testi con WPML String Translation dentro il JSON dell'Header Builder: non provato. Rischio
+  accettato: un URL social sta in quattro posti (header e footer, IT ed EN), e `mobile_width` o
+  un'altra opzione dell'header va cambiata in due. Chi cambia uno dei due header cambia anche l'altro,
+  poi `export` e `git diff config/` mostrano se le copie sono allineate.
+- **Prefissi** (oc:8757): `forestas_` per funzioni e shortcode del child, `wpf_` per gli script di
+  configurazione in `docker/scripts/config/`.
 - **Blocco FESR in header e footer** (oc:8757): richiesto dal cliente per le regole di visibilità del
   PR FESR 2021-2027; in footer sarebbe bastato, l'header segue la buona prassi di mostrarlo senza
   scorrere.

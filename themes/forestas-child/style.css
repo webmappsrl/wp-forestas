@@ -5,7 +5,7 @@ Template: Impreza
 Author: Webmapp
 Author URI: https://webmapp.it/
 Description: Child theme di Impreza per Sardegna Sentieri (Forestas). Versionato nel repo wp-forestas e montato dal compose: si modifica nel repo, non dal pannello.
-Version: 1.1.26
+Version: 1.1.27
 */
 
 
@@ -50,14 +50,21 @@ Version: 1.1.26
 
 	--focus: #0B63C5;
 
-	/* Pulsanti di ricerca e menu dell'header su tablet e mobile, come sul sito attuale in produzione
-	   (oc:8757): fondo scuro della ricerca quando è attiva, arancio del sito attuale per il menu */
-	--pulsante-cerca-fondo: #333333;
+	/*
+	 * Da qui in giù le variabili di oc:8757. Convenzione: i colori hanno nomi di design come quelli
+	 * sopra (--pulsante-*, --striscia-footer, --testo-su-scuro); le misure calcolate per il layout
+	 * hanno il prefisso --forestas-.
+	 */
+	--grigio-scuro: #333333;
+	--testo-su-scuro: #FFFFFF;
+
+	/* Pulsanti di ricerca e menu dell'header su tablet e mobile, come sul sito attuale in produzione:
+	   fondo scuro della ricerca quando è attiva, arancio del sito attuale per il menu */
+	--pulsante-cerca-fondo: var(--grigio-scuro);
 	--pulsante-menu-fondo: #F59F1A;
 	/* più scuro del sito attuale (45%): con il bianco a 12px serve almeno 4,5:1 (WCAG 1.4.3) */
 	--pulsante-menu-fondo-attivo: hsl(17deg 76% 40%);
-	--pulsante-menu-testo: #333333;
-	--testo-su-scuro: #FFFFFF;
+	--pulsante-menu-testo: var(--grigio-scuro);
 
 	/* Striscia di chiusura del footer (mockup «Canvas Fase 2», oc:8757) */
 	--striscia-footer: #1A1A1A;
@@ -74,8 +81,14 @@ Version: 1.1.26
 /*
  * Header e footer del design system (oc:8757). Struttura e contenuti stanno in config/post.json
  * (Header Builder e blocco riutilizzabile «Footer»): qui solo ciò che Impreza non sa fare.
- * «mobile_width» del menu è 1025px: Impreza mostra l'hamburger sotto 1025, cioè fino a 1024px, e le
- * media query del child usano la stessa soglia.
+ *
+ * Soglia tablet/desktop, una sola in tre posti che vanno cambiati insieme (trappola nel CLAUDE.md):
+ * - «tablets_breakpoint: 1024px» delle Theme Options (config/impreza.json): layout tablet dell'header,
+ *   header fisso, --header-sticky-height;
+ * - «mobile_width: 1025px» del menu nei due header IT/EN (config/post.json): Impreza mostra
+ *   l'hamburger sotto 1025, cioè fino a 1024px;
+ * - le media query del child: «max-width: 1024px» e «min-width: 1025px».
+ * Le soglie 600px e 1200px sono solo del child.
  */
 
 /* Target cliccabili di almeno 24px (WCAG 2.2 2.5.8) per i link testuali di header, footer e pannello */
@@ -88,8 +101,9 @@ Version: 1.1.26
 	line-height: 24px;
 }
 
-/* Focus da tastiera visibile su tutti i link di header e footer */
-:is(.l-header, .l-footer) :is(a, button, input):focus-visible {
+/* Focus da tastiera visibile su tutti i link di header e footer e sul link «Vai al contenuto» */
+:is(.l-header, .l-footer) :is(a, button, input):focus-visible,
+.forestas-salta:focus-visible {
 	outline: 3px solid var(--focus);
 	outline-offset: 2px;
 }
@@ -160,9 +174,10 @@ Version: 1.1.26
 
 /*
  * Logo del sito e blocco istituzionale FESR. Le proporzioni le danno gli attributi width/height delle
- * <img> (il blocco dell'header ha anche aspect-ratio, vedi sotto). Le altezze vanno scelte insieme: la bandiera UE (circa l'81% dell'altezza del blocco
- * «versione 1», il 56% della «versione 2») non può essere più piccola del logo che le sta vicino
- * (Linee guida beneficiari PR FESR Sardegna, «Blocco istituzionale»).
+ * <img>; il blocco dell'header ha anche aspect-ratio, vedi sotto. Le altezze vanno scelte insieme: la
+ * bandiera UE (circa l'81% dell'altezza del blocco «versione 1», il 56% della «versione 2») non può
+ * essere più piccola del logo che le sta vicino (Linee guida beneficiari PR FESR Sardegna, «Blocco
+ * istituzionale»).
  *
  * | larghezza        | logo header | logo footer | blocco header       |
  * | da 1200px        | 22px        | 22px        | 28px                |
@@ -516,8 +531,6 @@ Version: 1.1.26
 	text-decoration: none;
 }
 .forestas-salta:focus {
-	top: 8px;
-	color: var(--testo-su-scuro);
-	outline: 3px solid var(--focus);
-	outline-offset: 2px;
+	/* sotto la barra di amministrazione, per gli utenti loggati */
+	top: calc(8px + var(--forestas-barra-admin));
 }

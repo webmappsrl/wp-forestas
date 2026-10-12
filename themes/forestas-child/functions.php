@@ -11,22 +11,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /*
- * UpSolution Core carica lo style.css del child («theme-style») con la versione di Impreza: l'URL
- * cambierebbe solo aggiornando il padre e i browser terrebbero il CSS vecchio. Qui prende la Version
- * del child, da alzare a ogni modifica del CSS.
- */
-add_action(
-	'wp_enqueue_scripts',
-	function () {
-		$stile = wp_styles()->query( 'theme-style', 'registered' );
-		if ( $stile && is_child_theme() ) {
-			$stile->ver = wp_get_theme()->get( 'Version' );
-		}
-	},
-	PHP_INT_MAX
-);
-
-/*
  * Testo nella lingua corrente di WPML, per le stringhe del child che si vedono o che lo screen reader
  * legge (oc:8757). Il child non ha file di traduzione: le lingue del sito sono due, italiano e inglese.
  */
@@ -39,7 +23,14 @@ function forestas_testo( string $italiano, string $inglese ): string {
  * nella cache dei browser (oc:8757).
  */
 function forestas_asset_url( string $percorso ): string {
-	return add_query_arg( 'ver', wp_get_theme()->get( 'Version' ), get_stylesheet_directory_uri() . '/' . $percorso );
+	return add_query_arg( 'ver', forestas_versione(), get_stylesheet_directory_uri() . '/' . $percorso );
+}
+
+/*
+ * Version del child (intestazione di style.css): da alzare a ogni modifica di CSS, JS o immagini.
+ */
+function forestas_versione(): string {
+	return (string) wp_get_theme()->get( 'Version' );
 }
 
 /*
@@ -70,7 +61,7 @@ add_shortcode(
 );
 
 /*
- * Selettore di lingua dell'header, «IT · EN» in linea come nel mockup (oc:8757). Il dropdown di
+ * Selettore di lingua dell'header, «IT EN» in linea come nel mockup (oc:8757). Il dropdown di
  * Impreza mostra solo bandiere o nomi lunghi: qui si leggono le lingue da WPML e si stampa il codice
  * breve, con la lingua corrente evidenziata.
  */
@@ -130,8 +121,16 @@ add_shortcode(
 );
 
 /*
+ * Voce aggiunta in coda al menu principale per il pannello mobile, nascosta su desktop (oc:8757).
+ */
+function forestas_voce_pannello( string $classe, string $contenuto ): string {
+	return '<li class="menu-item forestas-solo-mobile ' . esc_attr( $classe ) . '">' . $contenuto . '</li>';
+}
+
+/*
  * Riga dei link di servizio per il pannello del menu mobile: le voci di «servizio-menu» nella lingua
- * corrente (oc:8757).
+ * corrente (oc:8757), con target, rel e title impostati nel menu. Il menu di servizio è piatto: le
+ * sottovoci, se un giorno ci fossero, compaiono in fila con le altre.
  */
 function forestas_pannello_servizio(): string {
 	$originale = wp_get_nav_menu_object( 'servizio-menu' );
@@ -142,10 +141,24 @@ function forestas_pannello_servizio(): string {
 
 	$link = '';
 	foreach ( wp_get_nav_menu_items( $servizio ) ?: [] as $voce ) {
-		$link .= sprintf( '<a href="%s">%s</a>', esc_url( $voce->url ), esc_html( $voce->title ) );
+		$attributi = [ 'href' => esc_url( $voce->url ) ];
+		if ( $voce->target ) {
+			$attributi['target'] = esc_attr( $voce->target );
+		}
+		if ( $voce->xfn ) {
+			$attributi['rel'] = esc_attr( $voce->xfn );
+		}
+		if ( $voce->attr_title ) {
+			$attributi['title'] = esc_attr( $voce->attr_title );
+		}
+		$html = '';
+		foreach ( $attributi as $nome => $valore ) {
+			$html .= sprintf( ' %s="%s"', $nome, $valore );
+		}
+		$link .= sprintf( '<a%s>%s</a>', $html, esc_html( $voce->title ) );
 	}
 
-	return '<li class="menu-item forestas-solo-mobile forestas-pannello-servizio">' . $link . '</li>';
+	return forestas_voce_pannello( 'forestas-pannello-servizio', $link );
 }
 
 /*
@@ -175,21 +188,26 @@ function forestas_pannello_social(): string {
 		return '';
 	}
 
-	return sprintf(
-		'<li class="menu-item forestas-solo-mobile forestas-pannello-social"><span class="forestas-seguici">%s</span>%s</li>',
-		esc_html( $seguici ),
-		do_shortcode( '[us_socials items="' . rawurlencode( wp_json_encode( $social ) ) . '" icons_color="text" shape="none" hide_tooltip="1" el_class="forestas-social"]' )
+	return forestas_voce_pannello(
+		'forestas-pannello-social',
+		'<span class="forestas-seguici">' . esc_html( $seguici ) . '</span>'
+			. do_shortcode( '[us_socials items="' . rawurlencode( wp_json_encode( $social ) ) . '" icons_color="text" shape="none" hide_tooltip="1" el_class="forestas-social"]' )
 	);
 }
 
 /*
  * Pannello del menu su tablet e mobile, come sul sito attuale (oc:8757): dopo le voci principali, la
  * riga dei link di servizio e la riga «Seguici su» con i social. Sono voci aggiunte in coda al menu
- * principale (in ogni lingua), nascoste su desktop dalla classe «forestas-solo-mobile».
+ * principale (in ogni lingua), nascoste su desktop dalla classe «forestas-solo-mobile». Solo nell'elemento
+ * «menu» di Impreza (walker US_Walker_Nav_Menu): un widget o un «menu aggiuntivo» che mostra
+ * «main-menu» non le riceve.
  */
 add_filter(
 	'wp_nav_menu_items',
 	function ( $voci, $args ) {
+		if ( ! class_exists( 'US_Walker_Nav_Menu' ) || ! ( $args->walker instanceof US_Walker_Nav_Menu ) ) {
+			return $voci;
+		}
 		$principale = wp_get_nav_menu_object( 'main-menu' );
 		$questo     = $args->menu instanceof WP_Term ? $args->menu : wp_get_nav_menu_object( $args->menu );
 		if ( ! $principale || ! $questo ) {
@@ -219,20 +237,30 @@ add_action(
 );
 
 /*
- * Accessibilità del menu mobile (oc:8757): scritta e nome del pulsante «menu» / «chiudi» (WCAG 2.5.3)
- * e focus che resta nel pannello finché è aperto. La scritta «menu» viene dall'Header Builder; quella
- * a menu aperto da qui.
+ * CSS e JS del child (oc:8717, oc:8757). UpSolution Core carica lo style.css del child («theme-style»)
+ * con la versione di Impreza: l'URL cambierebbe solo aggiornando il padre e i browser terrebbero il CSS
+ * vecchio, quindi qui prende la Version del child. Priorità massima perché lo stile è registrato da
+ * UpSolution Core sullo stesso hook.
+ *
+ * menu-mobile.js: scritta e nome del pulsante «menu» / «chiudi» (WCAG 2.5.3) e focus che resta nel
+ * pannello finché è aperto. La scritta «menu» viene dall'Header Builder; quella a menu aperto da qui.
  */
 add_action(
 	'wp_enqueue_scripts',
 	function () {
+		$stile = wp_styles()->query( 'theme-style', 'registered' );
+		if ( $stile && is_child_theme() ) {
+			$stile->ver = forestas_versione();
+		}
+
 		wp_enqueue_script(
 			'forestas-menu-mobile',
 			get_stylesheet_directory_uri() . '/assets/js/menu-mobile.js',
 			[],
-			wp_get_theme()->get( 'Version' ),
+			forestas_versione(),
 			[ 'in_footer' => true, 'strategy' => 'defer' ]
 		);
 		wp_localize_script( 'forestas-menu-mobile', 'forestasMenu', [ 'chiudi' => forestas_testo( 'chiudi', 'close' ) ] );
-	}
+	},
+	PHP_INT_MAX
 );

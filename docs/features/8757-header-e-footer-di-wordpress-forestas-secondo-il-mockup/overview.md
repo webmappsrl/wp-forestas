@@ -20,7 +20,7 @@ builder, quindi una modifica fatta lì va persa al primo apply.
 **Header, desktop e laptop (da 1025px)** — tre righe:
 
 - riga di servizio (36px): «Seguici su» con sei icone social, i link Contatti, Segnalazioni, FAQ,
-  App, il selettore di lingua IT · EN, il campo «Cerca nel sito»;
+  App, il selettore di lingua IT EN, il campo «Cerca nel sito»;
 - riga principale (84px): logo a sinistra, menu principale in maiuscolo a destra (SENTIERI,
   ITINERARI, CAMMINI, DA VEDERE, DA SAPERE, MAPPA INTERATTIVA, NEWS). La voce attiva prende il colore
   del tipo di contenuto con una sottolineatura di 2px sotto il testo;
@@ -28,7 +28,7 @@ builder, quindi una modifica fatta lì va persa al primo apply.
 
 **Header, tablet e mobile (fino a 1024px)**, non nel mockup: definito dal dev sul modello del sito
 attuale in produzione. L'header è fisso in cima. Riga in alto con il blocco istituzionale FESR a
-sinistra e IT · EN a destra; riga del logo con la ricerca (sotto i 600px un riquadro di 45px sul fondo
+sinistra e IT EN a destra; riga del logo con la ricerca (sotto i 600px un riquadro di 45px sul fondo
 dei campi, scuro al tocco; fra 601 e 1024px il campo intero) e l'hamburger (riquadro arancio di 45px con la scritta «menu», che a menu aperto
 diventa «chiudi»). Il menu è un pannello che entra ed esce da destra, a tutta larghezza sotto l'header
 e alto quanto lo schermo: voci principali, poi i link di servizio, poi «Seguici su» con i social. A
@@ -124,7 +124,7 @@ in `config/`), e chi lavora sul sito li ritrova dove Impreza li mette.
       WhatsApp `https://api.whatsapp.com/send?phone=3351785162`,
       YouTube `https://www.youtube.com/channel/UCq0HJqMdbZA8ThGm7S6dwmQ`
 - [ ] Il selettore di lingua legge le lingue da WPML (shortcode `[forestas_lingue]` del child): mostra
-      IT · EN in quest'ordine, codice breve in maiuscolo, lingua attiva in grassetto e sottolineata in `--sar-terra-testo`.
+      IT EN in quest'ordine, codice breve in maiuscolo, lingua attiva in grassetto e sottolineata in `--sar-terra-testo`.
       `languages_order` in `config/wpml.json` diventa `[ "it", "en-us" ]`
 - [ ] Il campo di ricerca ha l'aspetto del mockup e il segnaposto «Cerca nel sito» / «Search the
       site»; usa la ricerca standard di WordPress
@@ -182,6 +182,7 @@ in `config/`), e chi lavora sul sito li ritrova dove Impreza li mette.
 
 - [ ] Trappola nel `CLAUDE.md` di `wp-forestas`: header, footer e gli altri oggetti dei builder si
       modificano solo in locale; sui server l'apply li sovrascrive sempre
+- [ ] Trappola nel `CLAUDE.md`: la soglia 1024/1025px sta in tre posti da cambiare insieme
 - [ ] Pagina di conoscenza `docs/knowledge/8757-…` e sua riga nella tabella «Conoscenza» del `CLAUDE.md`
 
 ## Rischi
@@ -255,8 +256,11 @@ Tutto nel submodule `wp-forestas`; nessuna modifica in `forestas` né in `wm-pac
 - `themes/forestas-child/assets/js/menu-mobile.js` — nuovo: scritta e nome del pulsante, focus nel
   pannello
 - `themes/forestas-child/style.css` — stili di header, pannello mobile e footer, `Version` alzata
-- `docker/scripts/config/comune.php` — `us_og_image` fra i meta calcolati che l'export esclude
-- `CLAUDE.md` — trappola sugli oggetti dei builder sovrascritti dall'apply; riga dell'indice
-  «Conoscenza»
+- `docker/scripts/config/comune.php` — `us_og_image`, `_us_page_block_ids` e
+  `_us_posts_per_archive_page` fra i meta calcolati che l'export esclude
+- `CLAUDE.md` — trappole sugli oggetti dei builder sovrascritti dall'apply e sulla soglia
+  1024/1025px in tre posti; riga dell'indice «Conoscenza»
+- `docs/knowledge/inizializzazione-wordpress.md` — dipendenze dal codice interno di Impreza usate dal
+  child
 - `docs/knowledge/8757-header-e-footer-di-wordpress-forestas-secondo-il-mockup.md` — nuova pagina di
   conoscenza
