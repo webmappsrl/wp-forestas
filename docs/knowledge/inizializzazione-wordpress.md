@@ -142,12 +142,14 @@ con un apply di prova su un WordPress usa e getta prima di quello su UAT:
   questi punti cambiano, il pannello del menu mobile perde servizio, social o focus senza dare errori.
   - UpSolution Core: `us_get_page_area_id( 'header' )`; il formato del JSON dell'Header Builder
     (chiavi `tipo:n` in `data`, contenuto degli elementi `html` in `base64(rawurlencode())`,
-    `el_class`, `custom_html_atts`); l'attributo `items` di `[us_socials]` in JSON `rawurlencode`; la
-    classe `US_Walker_Nav_Menu` del walker dell'elemento menu; il meta `us_og_image` e
-    `_us_posts_per_archive_page`, ricalcolati a ogni salvataggio (`WPF_META_CALCOLATI`).
+    `el_class`, `custom_html_atts`); l'attributo `items` di `[us_socials]` in JSON `rawurlencode`; i
+    meta `us_og_image`, `_us_page_block_ids` e `_us_posts_per_archive_page`, calcolati da us-core
+    (`WPF_META_CALCOLATI`).
+  - Impreza: la classe `US_Walker_Nav_Menu` (`Impreza/common/functions/menu.php`), che us-core
+    istanzia per l'elemento menu e con cui il child riconosce il menu dell'header.
   - Markup e CSS di Impreza usati dal child: `.w-nav-control` con `aria-expanded` e lo `<span>` della
     scritta, `.w-nav-list.level_1`, `.m_layout_panel`, `.w-search-open`, la variabile
-    `--header-sticky-height`, il `<main id="page-content">`; in `menu.js` la chiusura con Esc e con
+    `--header-sticky-height`, il `<main id="page-content">`; in `Impreza/common/js/elements/menu.js` la chiusura con Esc e con
     Maiusc+Tab sulla prima voce, e il pannello non chiuso al passaggio al desktop.
 
 Una versione diversa (anche solo minore) ferma l'apply automatico; un apply a mano avvisa e mostra le

@@ -141,19 +141,18 @@ function forestas_pannello_servizio(): string {
 
 	$link = '';
 	foreach ( wp_get_nav_menu_items( $servizio ) ?: [] as $voce ) {
-		$attributi = [ 'href' => esc_url( $voce->url ) ];
-		if ( $voce->target ) {
-			$attributi['target'] = esc_attr( $voce->target );
-		}
-		if ( $voce->xfn ) {
-			$attributi['rel'] = esc_attr( $voce->xfn );
-		}
-		if ( $voce->attr_title ) {
-			$attributi['title'] = esc_attr( $voce->attr_title );
-		}
+		// Valori grezzi nella mappa, escape al momento della stampa
+		$attributi = array_filter(
+			[
+				'href'   => $voce->url,
+				'target' => $voce->target,
+				'rel'    => $voce->xfn,
+				'title'  => $voce->attr_title,
+			]
+		);
 		$html = '';
 		foreach ( $attributi as $nome => $valore ) {
-			$html .= sprintf( ' %s="%s"', $nome, $valore );
+			$html .= sprintf( ' %s="%s"', $nome, 'href' === $nome ? esc_url( $valore ) : esc_attr( $valore ) );
 		}
 		$link .= sprintf( '<a%s>%s</a>', $html, esc_html( $voce->title ) );
 	}

@@ -47,6 +47,11 @@
 ### Task 6: versione inglese
 
 - Il salvataggio dal pannello di header e footer inglesi non è stato fatto, come per l'italiano.
+- Passo 4 («verifica la pagina inglese» con `curl /en/`): così com'è scritto non può passare, perché la
+  Home non ha la traduzione inglese e `/en/` rimanda con un 301 alla Home italiana. La verifica è stata
+  fatta su una 404 inglese (`/en/prova-8757/`, `lang="en-US"`): TRAILS, Follow us, Search the site,
+  ACCESSIBILITY STATEMENT, «Autonomous Region» presenti; SENTIERI, «Seguici su», «Cerca nel sito»
+  assenti.
 
 ## Bug trovati
 
@@ -173,7 +178,8 @@
 - Documentazione finale: pagina di conoscenza `docs/knowledge/8757-header-e-footer-di-wordpress-forestas-secondo-il-mockup.md`
   (controllata con `wm-context-guard`: tolta una ripetizione del vincolo dei 96px, che resta solo come
   trappola), riga nella tabella «Conoscenza» del `CLAUDE.md` e seconda trappola oc:8757 sul pannello
-  mobile legato all'altezza dell'header.
+  mobile legato all'altezza dell'header. Quella trappola è stata tolta con la pulizia della prima
+  review, quando il CSS è passato a `--header-sticky-height`.
 
 - **Pulizia dopo la review** (cleanup di `wm-review-ticket`), `Version` del child 1.1.26:
   - CSS riordinato per argomento (target, riga di servizio, logo e blocco FESR con una tabella delle
@@ -236,18 +242,38 @@
     variabile senza un valore di ripiego affidabile;
   - le misure del blocco FESR restano sia negli attributi dell'`<img>` sia nell'`aspect-ratio` del CSS:
     senza quest'ultimo il blocco si annulla nella cella flex (regressione già vista);
-  - le dimensioni dei caratteri (12px, 12.5px, 11.5px) restano letterali: sono valori del mockup usati
-    ciascuno in un solo contesto;
   - header e footer restano copiati per lingua: vedi la pagina di conoscenza, «Perché così»;
   - prefissi: `forestas_` è il child, `wpf_` gli script di configurazione; scritto nella pagina di
     conoscenza, senza rinominare nulla.
+
+- **Terza review** (sessione di review, commit e0777a8: 14 cleanup), `Version` del child 1.1.28:
+  - link di salto sotto la barra di amministrazione anche sotto i 600px (usa direttamente
+    `--wp-admin--admin-bar--height`: lì la barra è assoluta in cima alla pagina, come il link);
+  - commento di `comune.php` corretto: `_us_page_block_ids` e `_us_posts_per_archive_page` us-core li
+    calcola su `post_updated`, che non scatta su un post appena creato dall'apply;
+  - commento sulle soglie in `style.css`: anche 600px è di Impreza (`mobiles_breakpoint`), e
+    `breakpoint: 900px` nel JSON dell'header è ignorato (`custom_breakpoint` 0);
+  - variabili rinominate secondo la convenzione: `--tipo-voce` → `--voce-attiva` (si confondeva con i
+    token `--tipo-*`), `--forestas-voce-menu` → `--carattere-voce-menu`; nuove `--carattere-piccolo`
+    (12px, quattro usi) e `--carattere-servizio` (12.5px, due usi); `11.5px` resta letterale, un solo
+    uso. Il motivo scritto nella seconda review («ciascuna in un solo contesto») era sbagliato;
+  - escape dei link di servizio spostato alla stampa, con valori grezzi nella mappa degli attributi;
+  - README: la `Version` si alza anche per JS e immagini; pagina «Inizializzazione»: aggiunto
+    `_us_page_block_ids`, `US_Walker_Nav_Menu` attribuita a Impreza, percorso completo di `menu.js`;
+  - `CLAUDE.md`: header e footer copiati per lingua (nella riga dell'indice e in una trappola) e
+    mezza riga sul `breakpoint: 900px` da non toccare;
+  - follow-up superato del filtro `wp_nav_menu_items` tolto; nota sulla «seconda trappola» corretta;
+    deviazione del Task 6, passo 4, registrata.
+- **Modifiche a `overview.md` dopo l'approvazione, chieste dalle review:** il selettore «IT · EN»
+  diventato «IT EN» (righe di «Cosa cambia» e requisito del selettore), il requisito della trappola
+  sulla soglia 1024/1025px fra quelli di documentazione, e i «Moduli toccati» (`comune.php` con i nuovi
+  meta calcolati, `CLAUDE.md`, `inizializzazione-wordpress.md`).
 
 ## Follow-up
 
 Rilievi minori della code review finale (prima review), non corretti:
 
 - le voci di servizio aggiunte dal filtro non hanno `w-nav-item level_1` né `current-menu-item`;
-- il filtro `wp_nav_menu_items` agisce su qualsiasi render di `main-menu`, non solo nell'header;
 - `--striscia-footer` e il bianco del testo duplicano i colori del footer delle Theme Options;
 
 Nessun ticket aperto: si apriranno se e quando il dev lo chiede.

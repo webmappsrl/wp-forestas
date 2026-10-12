@@ -131,9 +131,10 @@ in `git status` di questo repo.
   che sta nel volume e non nel repo.
 - **Restano fuori dal repo** contenuti e uploads. Theme Options, header, footer, Home, menu e WPML
   non stanno nel child ma in `config/`: vedi [Configurazione versionata](#configurazione-versionata).
-- A ogni modifica del CSS alza la `Version` nell'intestazione di `style.css` (1.0.1 per un ritocco,
-  1.1.0 per una sezione nuova): finisce nell'URL del file (`style.css?ver=1.0.1`) e i browser
-  scaricano quello nuovo. Impreza userebbe la propria versione: è `functions.php` del child a
+- A ogni modifica del CSS, del JavaScript o delle immagini del child alza la `Version`
+  nell'intestazione di `style.css` (1.0.1 per un ritocco, 1.1.0 per una sezione nuova): finisce
+  nell'URL dei file (`style.css?ver=1.0.1`, e così script e immagini caricati dal child) e i browser
+  scaricano quelli nuovi. Impreza userebbe la propria versione: è `functions.php` del child a
   sostituirla.
 
 ## Configurazione versionata

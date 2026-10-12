@@ -5,7 +5,7 @@ Template: Impreza
 Author: Webmapp
 Author URI: https://webmapp.it/
 Description: Child theme di Impreza per Sardegna Sentieri (Forestas). Versionato nel repo wp-forestas e montato dal compose: si modifica nel repo, non dal pannello.
-Version: 1.1.27
+Version: 1.1.28
 */
 
 
@@ -51,10 +51,13 @@ Version: 1.1.27
 	--focus: #0B63C5;
 
 	/*
-	 * Da qui in giù le variabili di oc:8757. Convenzione: i colori hanno nomi di design come quelli
-	 * sopra (--pulsante-*, --striscia-footer, --testo-su-scuro); le misure calcolate per il layout
-	 * hanno il prefisso --forestas-.
+	 * Da qui in giù le variabili globali di oc:8757. Convenzione, valida anche per quelle definite più
+	 * avanti fuori da :root: i colori hanno nomi di design come quelli sopra (--pulsante-*,
+	 * --striscia-footer, --testo-su-scuro, --voce-attiva); le dimensioni del carattere iniziano con
+	 * --carattere-; le misure calcolate per il layout hanno il prefisso --forestas-.
 	 */
+	--carattere-piccolo: 12px;      /* riga di servizio, scritta dei pulsanti, striscia del footer */
+	--carattere-servizio: 12.5px;   /* «Seguici su», contatti del footer */
 	--grigio-scuro: #333333;
 	--testo-su-scuro: #FFFFFF;
 
@@ -88,7 +91,9 @@ Version: 1.1.27
  * - «mobile_width: 1025px» del menu nei due header IT/EN (config/post.json): Impreza mostra
  *   l'hamburger sotto 1025, cioè fino a 1024px;
  * - le media query del child: «max-width: 1024px» e «min-width: 1025px».
- * Le soglie 600px e 1200px sono solo del child.
+ * Anche 600px è una soglia di Impreza («mobiles_breakpoint» in config/impreza.json, layout mobile
+ * dell'header); 1200px è solo del child. L'opzione «breakpoint: 900px» che si legge nel JSON dei due
+ * header è ignorata, perché «custom_breakpoint» è 0: non è quella da cambiare.
  */
 
 /* Target cliccabili di almeno 24px (WCAG 2.2 2.5.8) per i link testuali di header, footer e pannello */
@@ -110,11 +115,11 @@ Version: 1.1.27
 
 /* Riga di servizio: social, link, lingua, ricerca */
 .l-subheader.at_top {
-	font-size: 12px;
+	font-size: var(--carattere-piccolo);
 	border-bottom: 1px solid var(--color-content-border);
 }
 .forestas-seguici {
-	font-size: 12.5px;
+	font-size: var(--carattere-servizio);
 }
 .w-socials.forestas-social .w-socials-item-link {
 	color: var(--sar-terra-testo);
@@ -254,21 +259,21 @@ Version: 1.1.27
 
 /* Menu principale: maiuscolo, voce attiva nel colore del tipo di contenuto */
 .forestas-nav .w-nav-list.level_1 > .menu-item > .w-nav-anchor {
-	font-size: var(--forestas-voce-menu, 12px);
+	font-size: var(--carattere-voce-menu, var(--carattere-piccolo));
 	font-weight: 600;
 	letter-spacing: .02em;
 	text-transform: uppercase;
 }
-.forestas-nav .tipo-sentiero    { --tipo-voce: var(--tipo-sentiero); }
-.forestas-nav .tipo-itinerario  { --tipo-voce: var(--tipo-itinerario); }
-.forestas-nav .tipo-cammino     { --tipo-voce: var(--tipo-cammino); }
-.forestas-nav .tipo-da-vedere   { --tipo-voce: var(--tipo-da-vedere); }
-.forestas-nav .tipo-da-sapere   { --tipo-voce: var(--tipo-da-sapere); }
-.forestas-nav .tipo-mappa       { --tipo-voce: var(--sar-blu); }
-.forestas-nav .tipo-news        { --tipo-voce: var(--tipo-news); }
+.forestas-nav .tipo-sentiero    { --voce-attiva: var(--tipo-sentiero); }
+.forestas-nav .tipo-itinerario  { --voce-attiva: var(--tipo-itinerario); }
+.forestas-nav .tipo-cammino     { --voce-attiva: var(--tipo-cammino); }
+.forestas-nav .tipo-da-vedere   { --voce-attiva: var(--tipo-da-vedere); }
+.forestas-nav .tipo-da-sapere   { --voce-attiva: var(--tipo-da-sapere); }
+.forestas-nav .tipo-mappa       { --voce-attiva: var(--sar-blu); }
+.forestas-nav .tipo-news        { --voce-attiva: var(--tipo-news); }
 /* La voce è attiva sulla sua pagina e sulle pagine figlie (anche gli articoli, per NEWS) */
 .forestas-nav .w-nav-list.level_1 > .menu-item:is(.current-menu-item, .current-menu-ancestor, .current-menu-parent, .current_page_parent, .current-page-ancestor) > .w-nav-anchor {
-	color: var(--tipo-voce, var(--sar-blu));
+	color: var(--voce-attiva, var(--sar-blu));
 }
 @media (min-width: 1025px) {
 	/* Sottolineatura legata al testo della voce, non all'altezza della riga dell'header */
@@ -351,7 +356,7 @@ Version: 1.1.27
 	/* Scritta «menu»/«chiudi»: la cambia assets/js/menu-mobile.js insieme al nome accessibile */
 	.l-header .forestas-nav .w-nav-control > span {
 		margin: 0;
-		font-size: 12px;
+		font-size: var(--carattere-piccolo);
 		line-height: 1;
 	}
 	.l-header .forestas-nav .w-nav-control:is(:hover, :focus-visible, [aria-expanded="true"]) {
@@ -365,7 +370,7 @@ Version: 1.1.27
 	 * l'altezza disponibile (unità dvh), e solo su schermi molto bassi il pannello scorre.
 	 */
 	.l-header .forestas-nav {
-		--forestas-voce-menu: clamp(15px, 2.6dvh, 20px);
+		--carattere-voce-menu: clamp(15px, 2.6dvh, 20px);
 	}
 	/* Il selettore deve battere «.w-nav.type_mobile.m_layout_panel .w-nav-list.level_1» di Impreza */
 	.l-header .w-nav.forestas-nav.m_layout_panel .w-nav-list.level_1 {
@@ -394,7 +399,7 @@ Version: 1.1.27
 	}
 	/* La voce attiva tiene il colore del tipo anche nel pannello (la regola sopra è più specifica) */
 	.l-header .w-nav.forestas-nav.m_layout_panel .w-nav-list.level_1 > .menu-item:is(.current-menu-item, .current-menu-ancestor, .current-menu-parent, .current_page_parent, .current-page-ancestor) > .w-nav-anchor {
-		color: var(--tipo-voce, var(--sar-blu));
+		color: var(--voce-attiva, var(--sar-blu));
 	}
 	.forestas-pannello-servizio {
 		display: flex;
@@ -476,7 +481,7 @@ Version: 1.1.27
 	justify-content: flex-end;
 }
 .forestas-contatti {
-	font-size: 12.5px;
+	font-size: var(--carattere-servizio);
 	line-height: 1.5;
 }
 .forestas-contatti a {
@@ -491,7 +496,7 @@ Version: 1.1.27
 .l-section.forestas-footer-bar {
 	background: var(--striscia-footer);
 	color: var(--testo-su-scuro);
-	font-size: 12px;
+	font-size: var(--carattere-piccolo);
 }
 .forestas-footer-bar .l-section-h {
 	padding-top: 9px;
@@ -531,6 +536,7 @@ Version: 1.1.27
 	text-decoration: none;
 }
 .forestas-salta:focus {
-	/* sotto la barra di amministrazione, per gli utenti loggati */
-	top: calc(8px + var(--forestas-barra-admin));
+	/* sotto la barra di amministrazione, per gli utenti loggati: qui la sua altezza vale anche sotto i
+	   600px, dove WordPress la lascia in cima alla pagina (assoluta) e il link è a sua volta assoluto */
+	top: calc(8px + var(--wp-admin--admin-bar--height, 0px));
 }
