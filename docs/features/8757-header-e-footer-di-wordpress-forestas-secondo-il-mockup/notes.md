@@ -1,0 +1,171 @@
+> Ticket: oc:8757
+
+# Notes — Header e footer di WordPress Forestas secondo il mockup
+
+## Divergenze dal piano, task per task
+
+### Task 3: header italiano
+
+- **Selettore di lingua**: non è l'elemento `dropdown` di Impreza con `source=wpml`, che sa mostrare
+  solo bandiere o nomi lunghi delle lingue. È uno shortcode del child, `[forestas_lingue]`, dentro un
+  elemento `html`: legge le lingue da WPML (`wpml_active_languages`) e stampa «IT · EN» in linea come
+  nel mockup, con la lingua corrente in grassetto.
+- **Link di servizio su tablet e mobile**: il pannello dell'hamburger mostra solo il menu
+  dell'elemento. Un filtro `wp_nav_menu_items` del child aggiunge in coda al menu principale le voci
+  di `servizio-menu` (nella lingua corrente), con la classe `forestas-solo-mobile` che le nasconde su
+  desktop. In `main-menu` non ci sono voci nascoste.
+- **Social su mobile**: in un primo momento solo nel footer, per non ripetere gli URL in PHP fuori da
+  `config/`. Superato dopo la review: ora sono anche nel pannello del menu, letti dall'header (vedi
+  «Decisioni»).
+
+### Task 5: stili del child
+
+- **Hamburger fino a 1024px** (`mobile_width` del menu `1025px`, non 900px): fra 900 e 1024px il
+  menu desktop più il campo di ricerca usciva dallo schermo. Impreza passa all'hamburger con
+  `innerWidth < mobile_width`, quindi per coprire 1024 il valore è 1025.
+- **Fra 1025 e 1199px** logo a 22px e meno spazio fra le voci: altrimenti NEWS usciva dallo schermo.
+- **Ricerca su tablet** (901–1024px): resta il campo intero, non la sola icona chiesta dall'overview;
+  su mobile è l'icona.
+- **Media query al posto delle classi `type_desktop` / `type_mobile`**: nella pagina caricata in un
+  iframe stretto Impreza mostra l'hamburger ma lascia `type_desktop` sull'elemento menu; il CSS che
+  dipende dalla larghezza usa quindi `@media (min-width: 1025px)` / `(max-width: 1024px)`, allineate
+  a `mobile_width`.
+
+## Bug trovati
+
+- Il logo, in un elemento `html` dentro una cella flex, veniva schiacciato in larghezza a 960px:
+  risolto con `flex-shrink: 0` sull'elemento e `max-width: none` sull'immagine.
+- A 320px il logo rigido spingeva l'hamburger fuori schermo: sotto 600px il logo si restringe con la
+  cella.
+- Il campo di ricerca era più alto della riga di servizio (48px contro 36): fissato a 28px.
+- Il colore delle icone social veniva sovrascritto dalla regola `color_text` di Impreza: serve il
+  selettore `.w-socials.forestas-social`.
+
+## Decisioni
+
+- Tag di Orchestrator: non associati né creati, su indicazione del dev.
+- Dopo la review il dev ha chiesto il logo un po' più piccolo in header e footer: altezza 22px su
+  desktop (era 26), 20px fra 1025 e 1199px (era 22), 18px fino a 1024px (era 20), al massimo 231px di
+  larghezza sotto 600px (era 257). `Version` del child 1.1.1.
+- Poi ha chiesto la riga del menu principale un po' più alta: `middle_height` 84px su desktop e
+  laptop (era 72), tablet e mobile invariati a 60px. La sottolineatura della voce attiva ora è legata
+  al testo (`.w-nav-title::after`, 7px sotto) invece che a una distanza fissa dal fondo della riga,
+  così non si sposta quando cambia l'altezza. `Version` del child 1.1.2.
+- Infine ha chiesto, solo per l'header con l'hamburger (fino a 1024px), i pulsanti di ricerca e menu
+  come sul sito attuale in produzione: riquadri di 45px, ricerca su fondo `#333333` con icona
+  bianca, menu su arancio `#F59F1A` con l'etichetta «menu» sotto l'icona, `hsl(17deg 76% 45%)` (poi
+  scurito al 40% per il contrasto, vedi «Accessibilità») con
+  testo bianco a menu aperto o al passaggio. Valori presi dal CSS di produzione
+  (`--custom-theme-brand-color`, `--custom-theme-color-bg-04`, `--header-navigation-toggle-mobile-size`),
+  dichiarati come variabili `--pulsante-*` nel child. L'etichetta è l'opzione «testo accanto
+  all'icona» del menu di Impreza (`mobile_icon_text`), quindi è in `config/post.json`. Il pulsante di
+  ricerca a icona compare solo sotto i 600px: fra 601 e 1024 resta il campo. `Version` del child
+  1.1.3.
+- Spazio fra il pulsante di ricerca e l'hamburger ridotto da circa 22px (lo spazio di Impreza fra gli
+  elementi dell'header) a 8px, solo fino a 1024px. `Version` del child 1.1.4.
+- **Blocco istituzionale FESR nell'header**, richiesto dal cliente via mail (loghi UE del PR FESR
+  Sardegna 2021-2027) e dal dev nella riga di servizio, accanto alle lingue. Le linee guida
+  (Kit UE § 6.1; Linee guida beneficiari PR FESR Sardegna, «Blocco istituzionale») chiedono
+  l'emblema UE «in maniera prominente» e mai più piccolo degli altri loghi; la visibilità senza
+  scorrere è indicata come buona prassi, non come obbligo. File: «versione 1» ufficiale, ridotto a
+  1400×98 px e versionato in `themes/forestas-child/assets/img/blocco-istituzionale-fesr.png`,
+  stampato dallo shortcode `[forestas_fesr]` (elemento `html:4` dell'header, IT ed EN). Dopo una
+  prima prova nella riga di servizio, il dev l'ha voluto **su desktop e laptop in una terza riga
+  dell'header sotto il menu** (44px, centrato) e **su tablet e mobile nella
+  riga in alto, a sinistra delle lingue**, dove si restringe con lo spazio libero. Altezze: 28px
+  (bandiera UE ~23px, logo del sito 22px), 25px fra 1025 e 1199px (logo 20px). Su mobile a 375px il
+  blocco è alto 20px (bandiera ~16px) contro i 18px del logo: risolto più avanti, rimpicciolendo il
+  logo dell'header su mobile.
+  `Version` del child 1.1.10.
+- Pulsante di ricerca su tablet e mobile: a riposo ha il fondo dei campi del sito
+  (`--inputs-background`, lo stesso del campo di ricerca desktop) e l'icona scura; il fondo scuro
+  `#333333` con icona bianca vale solo al tocco, al passaggio e al focus. Aperta la ricerca, Impreza
+  mostra il campo a tutta larghezza al posto del pulsante. `Version` del child 1.1.11.
+- **Menu a pannello su tablet e mobile**, come sul sito attuale (screenshot del dev): l'hamburger apre
+  un pannello che entra ed esce da destra (`mobile_layout="panel"`, `mobile_effect_p="afr"`), a tutta
+  larghezza sotto l'header, che resta visibile; il pulsante diventa «chiudi» («close» in inglese) sul
+  fondo arancio scuro (oggi `hsl(17deg 76% 40%)`, vedi «Accessibilità»). Voci principali a 20px; in fondo, fra due filetti, i link di servizio in
+  maiuscolo, poi «Seguici su» con i sei social a 32px in color terra. Questo **supera la decisione
+  presa nel Task 3** di tenere i social solo nel footer: il filtro `wp_nav_menu_items` del child li
+  legge dall'header della lingua corrente (`socials:1`, `html:1`), quindi gli URL restano solo in
+  `config/post.json`. `Version` del child 1.1.15.
+- Due correzioni al pannello chieste dal dev, allineate al sito attuale (`--header-position: fixed` e
+  `.has-mobile-menu-open { overflow: hidden }` nel suo CSS): su tablet e mobile **l'header è fisso** in
+  cima (`sticky` dell'Header Builder solo per `tablets` e `mobiles`), e **a menu aperto la pagina non
+  scorre** (`html:has(... [aria-expanded="true"])` con `overflow: hidden`). Il pannello ha un'altezza
+  esplicita `100dvh - 96px` e `min-height: 0`: Impreza gli dava come minimo l'altezza dello schermo
+  intero, e il fondo con social e link di servizio finiva fuori. Spazi, caratteri e icone si riducono
+  con l'altezza (`clamp` in `dvh`): provato a 568, 667 e 812px di altezza, tutto visibile.
+  `Version` del child 1.1.18.
+- Logo dell'header più piccolo su tablet e mobile: 15px di altezza fino a 1024px (era 18) e al
+  massimo 193px di larghezza sotto 600px (era 231); il logo del footer non cambia. A 375px la bandiera
+  UE del blocco istituzionale (~16px) è ora più alta del logo del sito (15px): il punto sulle
+  dimensioni dell'emblema su mobile è risolto. `Version` del child 1.1.19.
+- **Blocco istituzionale FESR nel footer**, richiesto dal dev: il file ufficiale «versione 2» (testi
+  sotto i loghi), ridotto a 1400×161 px e versionato in
+  `themes/forestas-child/assets/img/blocco-istituzionale-fesr-2.png`, stampato da
+  `[forestas_fesr versione="2"]` (lo shortcode ora sceglie la versione). È la prima riga del blocco
+  riutilizzabile «Footer» (IT ed EN), centrata, alta 80px su desktop e a tutta larghezza sotto 600px
+  (bandiera UE ~21px contro i 18px del logo del footer a 375px). Sopra ha una riga sottile come quella
+  dell'header che la separa dal contenuto; il filo oro, che prima era il bordo del footer
+  (`.l-footer`, oc:8717), ora sta sopra la riga del logo e dei social, cioè sotto i loghi. Gli stili
+  del blocco nell'header sono stati limitati a `.l-header`. `Version` del child 1.1.21.
+- **Accessibilità**, verifica chiesta dal dev rispetto alle Linee guida AgID (EN 301 549, WCAG 2.1 AA).
+  axe-core su header e footer: nessuna violazione A/AA. Controlli manuali e correzioni:
+  - nome del pulsante del menu allineato alla scritta visibile («Chiudi»/«Close» a menu aperto,
+    WCAG 2.5.3) e, nello stesso script `assets/js/menu-mobile.js`, Esc che chiude il pannello e focus
+    che resta nel pannello (WCAG 2.4.3, 2.4.7);
+  - fondo del pulsante aperto scurito da `hsl(17deg 76% 45%)` (4,58:1 col bianco, al limite) a
+    `hsl(17deg 76% 40%)` (5,55:1): è l'unico punto in cui ci si allontana dal sito attuale;
+  - link «Vai al contenuto» / «Skip to content» con `wp_body_open` (WCAG 2.4.1);
+  - nomi distinti alle tre `nav` con gli attributi HTML personalizzati di Impreza
+    (`custom_html_atts`), IT ed EN; etichetta del selettore «Lingua»/«Language» e tolto
+    `aria-current` dal `<b>` della lingua attiva;
+  - `scroll-padding-top` sotto i 1024px per l'header fisso (WCAG 2.2 2.4.11).
+  Verificati nel browser: primo Tab sul link di salto, Esc, ciclo del focus, contrasto, axe pulito
+  (resta solo `heading-order` nel contenuto demo della Home, fuori da header e footer).
+  `Version` del child 1.1.22.
+- URL social usati esattamente come forniti dal cliente: WhatsApp senza prefisso internazionale
+  (`phone=3351785162`), handle X `SardegnSentieri`.
+- Il campo di ricerca usa la ricerca standard di WordPress, che oggi non trova sentieri, itinerari e
+  POI (stanno nel backend Laravel).
+- Header e footer si costruiscono con due generatori usati solo in sessione (non nel repo): quello che
+  conta è il risultato in `config/post.json`, verificato con un secondo export identico al primo.
+- Il salvataggio dell'header dal pannello (Templates → Headers) non è stato provato durante
+  l'implementazione: il browser non era autenticato nel pannello. Va fatto dal dev, seguito da
+  `bin/wordpress-config.sh export` e `git diff config/`.
+- La voce attiva del menu è stata provata collegando per un momento SENTIERI alla Home con WP-CLI;
+  il collegamento è stato annullato con un apply da `config/`, mai esportato.
+
+- Il meta `us_og_image` lo scrive Impreza da sé a ogni salvataggio (prima `<img>` del contenuto,
+  cioè il logo con `?ver=`): esportato, cambiava a ogni `Version` del child e rompeva il round-trip.
+  È stato aggiunto a `WPF_META_CALCOLATI` in `docker/scripts/config/comune.php`, come gli altri meta
+  che UpSolution Core ricalcola.
+
+- Documentazione finale: pagina di conoscenza `docs/knowledge/8757-header-e-footer-di-wordpress-forestas-secondo-il-mockup.md`
+  (controllata con `wm-context-guard`: tolta una ripetizione del vincolo dei 96px, che resta solo come
+  trappola), riga nella tabella «Conoscenza» del `CLAUDE.md` e seconda trappola oc:8757 sul pannello
+  mobile legato all'altezza dell'header.
+
+## Follow-up
+
+Rilievi minori della code review finale, non corretti:
+
+- le voci di servizio aggiunte dal filtro non hanno `w-nav-item level_1` né `current-menu-item`;
+- il filtro `wp_nav_menu_items` agisce su qualsiasi render di `main-menu`, non solo nell'header;
+- la voce attiva non considera `current_page_parent` / `current-page-ancestor`;
+- `--striscia-footer` e il bianco del testo duplicano i colori del footer delle Theme Options;
+- i social del footer tornano a sinistra sotto 900px, mentre le colonne si impilano già a 1024px.
+
+Nessun ticket aperto: si apriranno se e quando il dev lo chiede.
+
+- Collegare il campo di ricerca alla ricerca del catasto (Elasticsearch del backend Laravel).
+- Collegare voci di menu e link (oggi `#`) alle pagine, quando esisteranno.
+- Prima della messa online: il link «Dichiarazione di accessibilità» del footer deve portare alla
+  dichiarazione dell'ente sul portale AgID (Legge 4/2004); l'indirizzo lo fornisce il cliente.
+- La Home non ha la traduzione inglese: `/en/` rimanda alla Home italiana, quindi dalla Home il link
+  EN del selettore non porta a una pagina inglese. Header e footer inglesi si vedono sulle pagine
+  inglesi (provati su una 404 sotto `/en/`).
+- Sostituire il logo con una versione senza «BETA», quando arriva.
+- Rivedere il layout tablet e mobile quando il mockup lo definirà.
+- Far validare al cliente le etichette inglesi, in particolare «WALKS» per «Cammini».

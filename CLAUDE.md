@@ -50,6 +50,14 @@ subagent.
   `costanti.php` che l'init usa (`config_php`) vale anche per un init vecchio ancora nell'immagine.
   `costanti.php` resta piccolo e senza dipendenze; se non si carica l'init usa i valori di riserva e
   WordPress parte senza `.htaccess`, licenza e apply: un AVVISO nei log, non un errore (oc:8717)
+- `us_header`, `us_page_block`, `us_content_template` e `us_grid_layout` (header, footer e altri
+  oggetti dei builder di Impreza) si modificano solo in locale e poi si esportano: l'apply li
+  sovrascrive sempre (`WPF_TIPI_BUILDER`), anche senza `--pagine`, e una modifica fatta dal pannello
+  di UAT o produzione va persa al primo apply (oc:8757)
+- Il pannello del menu mobile è posizionato sotto un header alto 96px (riga in alto 36 + riga del
+  logo 60) e annulla il `min-height` a tutto schermo che Impreza gli dà: cambiando le altezze delle
+  righe di tablet/mobile nell'Header Builder va aggiornato anche `style.css` del child, o il fondo del
+  pannello esce dallo schermo (oc:8757)
 - L'apply automatico vale solo nei 3 giorni dopo l'installazione (`WPF_APPLY_FINESTRA`) e aspetta,
   senza consumare tentativi, che tema e plugin di `config/versioni.json` siano installati: dopo, un
   sito cambiato dal pannello non viene più sovrascritto senza anteprima (oc:8717)
@@ -86,3 +94,4 @@ subagent.
 | Argomento | Cosa copre | Pagina |
 |---|---|---|
 | Inizializzazione di WordPress | perché lo script lavora a passi, perché il core non sta nell'immagine, cosa succede senza GitHub o senza Impreza | [docs/knowledge/inizializzazione-wordpress.md](docs/knowledge/inizializzazione-wordpress.md) |
+| Header e footer del sito | oggetti di Impreza scritti in codice, shortcode del child, menu mobile, blocco FESR, accessibilità | [docs/knowledge/8757-header-e-footer-di-wordpress-forestas-secondo-il-mockup.md](docs/knowledge/8757-header-e-footer-di-wordpress-forestas-secondo-il-mockup.md) |
