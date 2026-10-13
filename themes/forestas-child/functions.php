@@ -241,8 +241,8 @@ add_action(
  * vecchio, quindi qui prende la Version del child. Priorità massima perché lo stile è registrato da
  * UpSolution Core sullo stesso hook.
  *
- * menu-mobile.js: scritta e nome del pulsante «menu» / «chiudi» (WCAG 2.5.3), focus che resta nel
- * pannello finché è aperto, pannello posizionato sotto l'header e riga del pulsante riportata in vista. La scritta «menu» viene dall'Header Builder; quella a menu aperto da qui.
+ * menu-mobile.js: cosa fa è nel suo commento di testa. La scritta «menu» viene dall'Header Builder;
+ * quella a menu aperto («chiudi» / «close») arriva da qui, con wp_localize_script.
  */
 add_action(
 	'wp_enqueue_scripts',

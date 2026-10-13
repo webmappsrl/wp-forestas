@@ -25,8 +25,12 @@
 
 	// Aperto solo se il pulsante si vede: passando al desktop (rotazione, finestra allargata) Impreza non
 	// chiude il pannello e lascia aria-expanded a true, ma il menu non è più a scomparsa
+	function espanso() {
+		return pulsante.getAttribute( 'aria-expanded' ) === 'true';
+	}
+
 	function aperto() {
-		return pulsante.getAttribute( 'aria-expanded' ) === 'true' && pulsante.offsetParent !== null;
+		return espanso() && pulsante.offsetParent !== null;
 	}
 
 	// Margine superiore dello schermo: il fondo della barra admin dove è fissa (da 601px, solo per chi è
@@ -48,13 +52,13 @@
 	}
 
 	function aggiornaPulsante() {
-		var espanso = pulsante.getAttribute( 'aria-expanded' ) === 'true';
-		if ( espanso ) {
+		var stato = espanso();
+		if ( stato ) {
 			posizionaPannello();
 		}
-		pulsante.setAttribute( 'aria-label', espanso ? testoAperto : nomeChiuso );
+		pulsante.setAttribute( 'aria-label', stato ? testoAperto : nomeChiuso );
 		if ( etichetta ) {
-			etichetta.textContent = espanso ? testoAperto : testoChiuso;
+			etichetta.textContent = stato ? testoAperto : testoChiuso;
 		}
 	}
 
@@ -67,9 +71,9 @@
 
 	new MutationObserver( aggiornaPulsante ).observe( pulsante, { attributes: true, attributeFilter: [ 'aria-expanded' ] } );
 	aggiornaPulsante();
-	// Dopo il resize di Impreza (debounce di 5ms), che decide se il menu è ancora a scomparsa: prima,
-	// tornando da desktop a pannello ancora aperto, aperto() sarebbe falso e il pannello resterebbe al
-	// posto calcolato prima della rotazione
+	// Si aspetta che l'header di Impreza abbia la geometria finale (header.js ricalcola al resize con un
+	// debounce) prima di misurarlo. Se il pulsante si vede lo decide invece subito una media query del
+	// CSS dell'header
 	var attesa;
 	window.addEventListener( 'resize', function () {
 		clearTimeout( attesa );

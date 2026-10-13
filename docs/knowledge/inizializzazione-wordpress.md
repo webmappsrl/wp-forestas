@@ -151,7 +151,12 @@ con un apply di prova su un WordPress usa e getta prima di quello su UAT:
     scritta, `.w-nav-list.level_1`, `.m_layout_panel`, `.w-search-open`, `.l-subheader` (contenitore della
     riga del pulsante e selettore che batte l'hover di Impreza), la classe `no-touch`, la variabile
     `--header-sticky-height`, il `<main id="page-content">`; in `Impreza/common/js/elements/menu.js` la chiusura con Esc e con
-    Maiusc+Tab sulla prima voce, e il pannello non chiuso al passaggio al desktop.
+    Maiusc+Tab sulla prima voce, il pannello non chiuso al passaggio al desktop e la classe
+    `w-nav-open` su `<html>` a menu aperto.
+  - Core di WordPress: `#wpadminbar`, il suo `position` che passa da `fixed` ad `absolute` sotto i
+    600px, e `--wp-admin--admin-bar--height` con lo `scroll-padding-top` di `admin-bar.css`. Se
+    cambiano, `limiteAlto()` di `menu-mobile.js` restituisce 0 senza errori e «chiudi» torna sotto la
+    barra.
 
 Una versione diversa (anche solo minore) ferma l'apply automatico; un apply a mano avvisa e mostra le
 differenze prima di `--conferma`. Dopo ogni aggiornamento la prova è: su un WordPress usa e getta

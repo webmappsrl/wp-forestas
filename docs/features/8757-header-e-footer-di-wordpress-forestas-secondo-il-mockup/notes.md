@@ -42,11 +42,13 @@
 - Dopo l'implementazione il footer ha avuto una prima riga con il blocco istituzionale FESR e il filo
   oro è passato dal bordo del footer a quella riga (vedi «Decisioni»).
 - Il salvataggio dal pannello (Templates → Reusable Blocks) non è stato fatto: resta da fare prima del
-  rilascio (vedi «Decisioni»).
+  rilascio (vedi «Decisioni»). **⚠️ Superato (2026-10-13):** fatto per le copie IT, vedi «Follow-up».
 
 ### Task 6: versione inglese
 
 - Il salvataggio dal pannello di header e footer inglesi non è stato fatto, come per l'italiano.
+  **⚠️ Aggiornato (2026-10-13):** resta non fatto per le copie EN, perché in locale WPML non è
+  registrato; rischio accettato dal dev, vedi «Follow-up».
 - Passo 4 («verifica la pagina inglese» con `curl /en/`): così com'è scritto non può passare, perché la
   Home non ha la traduzione inglese e `/en/` rimanda con un 301 alla Home italiana. La verifica è stata
   fatta su una 404 inglese (`/en/prova-8757/`, `lang="en-US"`): TRAILS, Follow us, Search the site,
@@ -119,7 +121,8 @@
   fondo arancio scuro (oggi `hsl(17deg 76% 40%)`, vedi «Accessibilità»). Voci principali a 20px; in fondo, fra due filetti, i link di servizio in
   maiuscolo, poi «Seguici su» con i sei social a 32px in color terra. Questo **supera la decisione
   presa nel Task 3** di tenere i social solo nel footer: il filtro `wp_nav_menu_items` del child li
-  legge dall'header della lingua corrente (`socials:1`, `html:1`), quindi gli URL restano solo in
+  legge dall'header della lingua corrente (`socials:1`, `html:1`; **⚠️ Superato:** la lettura per id è
+  stata sostituita da quella per tipo e classe, vedi «Pulizia dopo la review»), quindi gli URL restano solo in
   `config/post.json`. `Version` del child 1.1.15.
 - **⚠️ Superato (2026-10-13), vedi «Correzione dopo le review»:** l'header non è più fisso e il
   pannello non è più alto `100dvh - 96px` ma parte dal bordo dell'header calcolato da
@@ -171,7 +174,7 @@
   conta è il risultato in `config/post.json`, verificato con un secondo export identico al primo.
 - Il salvataggio dell'header dal pannello (Templates → Headers) non è stato provato durante
   l'implementazione: il browser non era autenticato nel pannello. Va fatto dal dev, seguito da
-  `bin/wordpress-config.sh export` e `git diff config/`.
+  `bin/wordpress-config.sh export` e `git diff config/`. **⚠️ Superato (2026-10-13):** fatto per le copie IT, vedi «Follow-up».
 - La voce attiva del menu è stata provata collegando per un momento SENTIERI alla Home con WP-CLI;
   il collegamento è stato annullato con un apply da `config/`, mai esportato.
 
@@ -190,7 +193,9 @@
   - CSS riordinato per argomento (target, riga di servizio, logo e blocco FESR con una tabella delle
     altezze, menu, tablet e mobile, footer, link di salto); l'altezza dell'header mobile non è più
     scritta a mano in 5 punti ma presa da `--header-sticky-height` di Impreza; barra di
-    amministrazione esclusa sotto i 600px, dove WordPress non la tiene fissa; `#fff` sostituito da
+    amministrazione esclusa sotto i 600px, dove WordPress non la tiene fissa (**⚠️ Superato
+    (2026-10-13):** il bordo dell'header lo calcola `menu-mobile.js`, vedi «Correzione dopo le
+    review» e «Quarta review»); `#fff` sostituito da
     `--testo-su-scuro`; tolti `position: relative` residuo, `max-height`, `width` e `overflow` doppi;
     social del footer a sinistra fino a 1024px (era 900, mentre le colonne si impilano a 1024);
   - voce attiva del menu: considera anche `current-menu-parent`, `current_page_parent`,
@@ -333,7 +338,8 @@ Un bloccante e 11 cleanup mandati dalla sessione di review; tutti applicati. Chi
   a 700px con la pagina scesa di 60 e 85px «chiudi» stava a 30–75 e 8–53px, sotto la barra (fino a
   46). Ora il limite è il fondo della barra quando è `position: fixed`, altrimenti 0. Dopo: «chiudi»
   a 54–99px a 700px e a 40–85px a 900px; pannello sempre dal bordo dell'header.
-- **1. Link di salto coperto dopo uno scroll** (da loggato, da 601px): `scroll-padding-top` pari
+- **⚠️ Superato (quinta review):** rilievo errato, regola tolta. **1. Link di salto coperto dopo uno
+  scroll** (da loggato, da 601px): `scroll-padding-top` pari
   all'altezza della barra di amministrazione da 601px, a ogni larghezza. Verificato da loggato a 700,
   900 e 1280px con la pagina scesa di 500px: il link sta a 54 e 40px, sotto la barra.
 - **2. Link di salto col mouse sopra:** `.no-touch a:hover` di Impreza gli dava il colore dei link sul
@@ -342,7 +348,8 @@ Un bloccante e 11 cleanup mandati dalla sessione di review; tutti applicati. Chi
 - **3.** Tolta `--forestas-barra-admin`: la riserva di `--forestas-sotto-header` usa
   `--wp-admin--admin-bar--height`, che a pagina in cima è giusta a ogni larghezza; commenti accorciati.
 - **4. Doppia rotazione:** il ricalcolo al ridimensionamento parte 50ms dopo l'ultimo evento, dopo
-  quello di Impreza (5ms). Verificato: menu aperto a 390px, finestra a 1280, scroll di 300px, ritorno
+  quello di Impreza (5ms). **⚠️ Motivo corretto nella quinta review:** l'attesa serve all'header, non
+  alla visibilità del pulsante. Verificato: menu aperto a 390px, finestra a 1280, scroll di 300px, ritorno
   a 390: «chiudi» a 8px e pannello dal bordo dell'header.
 - **5.** `header` e riga del pulsante calcolati una volta all'avvio, tolti i controlli che non
   scattavano mai e il `Math.max`; commento di `functions.php` aggiornato.
@@ -363,11 +370,96 @@ Un bloccante e 11 cleanup mandati dalla sessione di review; tutti applicati. Chi
 - **Pagina di conoscenza:** barra di amministrazione fissa da 601px (46/32px), `scroll-padding-top` e
   hover del link di salto, riga del pulsante portata in vista anche sotto la barra.
 
+## Quinta review (2026-10-13, su b9b43e7)
+
+Nessun bloccante; 17 cleanup mandati dalla sessione di review. Applicati tutti; il 17 dopo la
+decisione del dev. Child alla Version 1.1.32.
+
+- **Correzione di due rilievi errati della quarta review:**
+  - **1.** Lo `scroll-padding-top` del child era un doppione: WordPress 7.1.3 lo mette già su `html`
+    per chi è loggato (`admin-bar.min.css`: `scroll-padding-top: var(--wp-admin--admin-bar--height)`,
+    32px e 46px sotto 782px), anche sotto i 600px. Regola e commento tolti, frase della pagina di
+    conoscenza corretta. Verifica rifatta da loggato a 700 e 900px, pagina scesa di 500px, Tab fino
+    al link di salto: a 54 e 40px, sotto la barra (46 e 32).
+  - **2.** La visibilità del pulsante del menu (e quindi `aperto()`) la decide subito una media query
+    del CSS dell'header di Impreza, non il debounce di `menu.js`. L'attesa di 50ms al
+    ridimensionamento resta, ma per dare all'header di Impreza (`header.js`) la geometria finale prima
+    di misurarlo: commento corretto.
+- **3.** `min-width: 24px` e `text-align: center` per i link testuali di header, footer e pannello:
+  «FAQ» e «App» misuravano 23×24px fra 1025 e 1440px. Dopo: nessun link sotto 24×24 a 1025, 1100 e
+  1440px.
+- **4.** Requisito del pannello precisato nell'overview: sugli schermi bassi e sui telefoni in
+  orizzontale il pannello scorre.
+- **5.** Pagina bloccata con `html.w-nav-open` (classe messa e tolta da Impreza in `menu.js`) invece
+  di `html:has(…)`: tolto il limite noto sui Safari iOS senza `:has()`. Verificato da anonimo e da
+  loggato a 390px: a menu aperto la rotella non fa scorrere, alla chiusura sì; passando a 1280px col
+  pannello aperto la classe resta ma la regola, limitata a 1024px, non blocca più la pagina.
+- **6.** Commento di `functions.php` ridotto a un rimando al commento di testa di `menu-mobile.js`,
+  più la nota su `wp_localize_script`; commento di `style.css` andato a capo.
+- **7.** Commento di `comune.php` precisato: il salvataggio vale solo per `page`, `us_page_block` e
+  `us_content_template`, la lettura in front-end solo per pagina di ricerca, pagina degli articoli e
+  template d'archivio (verificato in `us-core/functions/list.php`).
+- **8.** `espanso()` estratta in `menu-mobile.js`; commento del token `--pulsante-cerca-fondo` esteso
+  a passaggio, tocco e focus.
+- **9–10.** Rollback nella pagina di conoscenza: `--da wp-forestas/backup/<data-ora>` lanciando da
+  `forestas` (lo script legge `--da` rispetto alla cartella corrente; i backup stanno in
+  `${REPO}/backup`), il backup giusto è il primo del rilascio, l'apply ripristina il sito e non la
+  cartella; il child si riporta indietro con `git revert` in `wp-forestas`, puntatore in `forestas` e
+  `scripts/wordpress-up.sh`.
+- **11.** Rischio «Rollback» dell'overview sostituito con un rimando alla procedura a passi.
+- **12.** `forestas/docs/howto/messa-in-opera-wordpress-uat.md`: una riga su child e `config/` da
+  rilasciare insieme, con rimando alla pagina di conoscenza. È nel repo `forestas`, non committata.
+- **13.** Dichiarazione di accessibilità (L. 4/2004) nella pagina di conoscenza, come passo da fare
+  prima della messa in produzione.
+- **14.** «Dipendenze» di `inizializzazione-wordpress.md`: `#wpadminbar`, il suo `position`,
+  `--wp-admin--admin-bar--height` con lo `scroll-padding-top` del core, e la classe `w-nav-open`.
+- **15.** Etichette «Superato» sulle frasi delle note ancora valide in apparenza (social letti per id,
+  barra di amministrazione esclusa sotto i 600px) e sui punti 1 e 4 della quarta review.
+- **16.** Registrate qui sotto le modifiche all'overview della prima pulizia (b8b42ce).
+- **17. Deciso dal dev:** per chi è loggato il primo elemento raggiungibile da tastiera è il link di
+  WordPress «Vai alla barra degli strumenti» (`tabindex=1`), non «Vai al contenuto». Il comportamento
+  del core non si tocca; il requisito dell'overview ora dice che il link di salto è il primo elemento
+  per chi non è loggato, e che per chi è loggato viene dopo quello di WordPress.
+- Regressione: axe (WCAG 2.0/2.1/2.2 A e AA) da anonimo e da loggato a 390, 800 e 1280px, pannello
+  chiuso e aperto, hover su ogni link e pulsante: nessuna violazione; Tab, Maiusc+Tab, Esc, apertura
+  dopo uno scroll e prova della barra di amministrazione (12 casi) corretti.
+- **Modifiche a `overview.md`:** requisito del pannello (schermi bassi e orizzontale: scorre),
+  rischio «Rollback», requisito del link di salto (primo elemento per chi non è loggato) e l'howto
+  di `forestas` fra i «Moduli toccati». Nella pagina di conoscenza, fra le alternative superate, il
+  blocco della pagina con `:has()` e lo `scroll-padding-top` del child. Modifiche fatte nella prima pulizia (b8b42ce) e non registrate allora: ricerca
+  a campo intero fra 601 e 1024px («Cosa cambia» e requisito dei pulsanti), bandiera UE con il logo
+  dell'header a `min(193px, 48vw)` sotto i 600px (rischio sull'emblema), tastiera non bloccata quando
+  la finestra passa al desktop col pannello aperto (requisito del focus), requisito della «trappola
+  dei 96px» tolto.
+
 ## Follow-up
 
-**Requisito di rilascio, ancora aperto:** salvare dal pannello in locale header e footer, IT ed EN,
-poi `export` e `git diff config/`, che deve risultare vuoto o con sole differenze attese. Non ancora
-fatto: lo fa il dev.
+**Requisito di rilascio: prova del salvataggio dal pannello (2026-10-13).** Il dev ha salvato dal
+pannello in locale, senza modifiche di contenuto, l'header IT (Header Builder) e il footer IT (Live
+Builder); poi `export` e `git diff config/`:
+
+- **header IT:** nessun valore cambiato né tolto (confronto campo per campo del JSON); l'Header
+  Builder aggiunge solo i campi vuoti (`""`) del suo modulo che il JSON scritto in codice non aveva
+  (`wrapper_start_*`/`wrapper_end_*`, `css`, `conditions_copy_paste`, `custom_html_atts` sugli
+  elementi che non li usano, intestazioni di sezione del menu) e sposta `custom_html_atts` più in alto;
+- **footer IT:** il `<br>` dopo «Contattaci» diventa un a capo (`\r\n`); la pagina stampa comunque
+  `Contattaci<br />`, quindi a schermo non cambia nulla;
+- **header e footer EN non provati:** in locale WPML non è registrato (la site key di UAT non si usa
+  in locale, README) e il pannello non salva le traduzioni; il dev non vuole per ora registrare il
+  sito locale. Stessa struttura degli IT, generata dallo stesso script: rischio basso. Resta non
+  provato solo ciò che fa WPML salvando una traduzione (campi copiati o sincronizzati fra le lingue).
+  Rischio accettato dal dev; la prova si fa se il sito locale verrà registrato su WPML.
+
+Confronto della resa (2026-10-13): stessa pagina con la versione scritta in codice e con quella salvata
+dal pannello, applicate una dopo l'altra in locale; HTML di header e footer, CSS inline e posizione e
+misure di ogni elemento visibile, a 1280 e a 390px. Tutto identico, tranne un a capo dopo il `<br>` di
+«Contattaci» nell'HTML del footer, che non cambia la resa. Poi il sito è stato riportato alla versione
+salvata, e l'export coincide con quella.
+
+Esito: modificarli dal pannello è sicuro, almeno per le copie IT.
+
+Modifica a `overview.md`: il requisito sul salvataggio una tantum dal pannello ora dice che è fatto
+per le copie IT e non per le EN, con il motivo.
 
 Rilievi minori della code review finale (prima review), non corretti:
 

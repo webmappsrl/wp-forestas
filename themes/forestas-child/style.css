@@ -5,7 +5,7 @@ Template: Impreza
 Author: Webmapp
 Author URI: https://webmapp.it/
 Description: Child theme di Impreza per Sardegna Sentieri (Forestas). Versionato nel repo wp-forestas e montato dal compose: si modifica nel repo, non dal pannello.
-Version: 1.1.31
+Version: 1.1.32
 */
 
 
@@ -62,7 +62,8 @@ Version: 1.1.31
 	--testo-su-scuro: #FFFFFF;
 
 	/* Pulsanti di ricerca e menu dell'header su tablet e mobile, come sul sito attuale in produzione:
-	   fondo scuro della ricerca quando è attiva, arancio del sito attuale per il menu */
+	   fondo scuro della ricerca al passaggio, al tocco, al focus e quando è aperta; arancio del sito
+	   attuale per il menu */
 	--pulsante-cerca-fondo: var(--grigio-scuro);
 	--pulsante-menu-fondo: #F59F1A;
 	/* più scuro del sito attuale (45%): con il bianco a 12px serve almeno 4,5:1 (WCAG 1.4.3) */
@@ -71,15 +72,6 @@ Version: 1.1.31
 
 	/* Striscia di chiusura del footer (mockup «Canvas Fase 2», oc:8757) */
 	--striscia-footer: #1A1A1A;
-}
-
-/* Barra di amministrazione (utenti loggati): da 601px è fissa in cima, e l'elemento che riceve il focus
-   da tastiera, compreso il link «Vai al contenuto», non deve finirci sotto (WCAG 2.4.11). Sotto i
-   600px scorre con la pagina e non copre nulla */
-@media (min-width: 601px) {
-	html {
-		scroll-padding-top: var(--wp-admin--admin-bar--height, 0px);
-	}
 }
 
 /*
@@ -103,8 +95,10 @@ Version: 1.1.31
 .forestas-pannello-servizio a,
 .forestas-lingue a {
 	display: inline-block;
+	min-width: 24px;
 	min-height: 24px;
 	line-height: 24px;
+	text-align: center;
 }
 
 /* Focus da tastiera visibile su tutti i link di header e footer e sul link «Vai al contenuto» */
@@ -295,7 +289,8 @@ Version: 1.1.31
 		display: none;
 	}
 }
-/* Fra il passaggio all'hamburger e 1200px le sette voci stanno su una riga solo con meno spazio fra loro */
+/* Fra il passaggio all'hamburger e 1200px le sette voci stanno su una riga solo con meno spazio
+   fra loro */
 @media (min-width: 1025px) and (max-width: 1199px) {
 	.forestas-nav .w-nav-list.level_1 > .menu-item > .w-nav-anchor {
 		padding-left: 8px;
@@ -435,8 +430,9 @@ Version: 1.1.31
 		font-size: clamp(24px, 4dvh, 32px);
 	}
 
-	/* A menu aperto la pagina non scorre, come sul sito attuale («has-mobile-menu-open») */
-	html:has(.l-header .forestas-nav .w-nav-control[aria-expanded="true"]) {
+	/* A menu aperto la pagina non scorre, come sul sito attuale («has-mobile-menu-open»). La classe la
+	   mette e la toglie Impreza (common/js/elements/menu.js), senza CSS proprio */
+	html.w-nav-open {
 		overflow: hidden;
 	}
 }

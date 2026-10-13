@@ -81,7 +81,9 @@ in `config/`), e chi lavora sul sito li ritrova dove Impreza li mette.
       `bin/wordpress-config.sh apply --conferma`. Il contenuto scritto a mano si apre e si salva una
       volta dal pannello in locale, poi si esporta: in `config/` va la forma normalizzata dal builder,
       così un salvataggio successivo dal pannello non produce un diff enorme. Dopo l'apply, un
-      `export` non produce differenze in `config/`
+      `export` non produce differenze in `config/`. Fatto per header e footer IT; le copie EN restano
+      nella forma scritta in codice, perché in locale WPML non è registrato e il pannello non salva
+      le traduzioni (rischio accettato dal dev, `notes.md`, «Follow-up»)
 - [ ] Header e footer sono visibili in Templates → Headers e Templates → Reusable Blocks
 
 **Logo e anno**
@@ -106,8 +108,9 @@ in `config/`), e chi lavora sul sito li ritrova dove Impreza li mette.
       menu versionati in `config/menu.json` (`servizio-menu` e `footer-menu`), con voci a `#`. Il
       footer non usa più `main-menu`
 - [ ] Il menu mobile è un pannello che entra ed esce da destra (`mobile_layout="panel"`), a tutta
-      larghezza sotto l'header e alto quanto lo schermo (`100dvh` meno l'header): tutto il contenuto
-      resta visibile, con spazi e caratteri che si riducono con l'altezza disponibile
+      larghezza sotto l'header e alto dal bordo dell'header al fondo dello schermo: spazi e caratteri
+      si riducono con l'altezza disponibile, così sui telefoni in verticale tutto il contenuto resta
+      visibile; sugli schermi bassi e sui telefoni in orizzontale il pannello scorre
 - [ ] Nel pannello compaiono, dopo le voci principali, i link di servizio e «Seguici su» con i social,
       senza voci nascoste in `main-menu` e senza ripetere gli URL dei social fuori da `config/`
 - [ ] A menu aperto la pagina non scorre; il pulsante del menu diventa «chiudi» («close» in inglese)
@@ -165,10 +168,11 @@ in `config/`), e chi lavora sul sito li ritrova dove Impreza li mette.
 **Accessibilità** (Linee guida AgID, cioè EN 301 549 e WCAG 2.1 AA; verificato con axe-core)
 
 - [ ] Nessuna violazione WCAG 2.0/2.1/2.2 A e AA di axe-core in header e footer
-- [ ] Il primo elemento della pagina è il link «Vai al contenuto» / «Skip to content», visibile al
-      focus, che porta al `<main id="page-content">` (WCAG 2.4.1); per chi è loggato compare sotto
-      la barra di amministrazione, a ogni larghezza e anche con la pagina scesa (WCAG 2.4.11); col
-      mouse sopra mantiene il contrasto
+- [ ] Per chi non è loggato il primo elemento della pagina è il link «Vai al contenuto» / «Skip to
+      content», visibile al focus, che porta al `<main id="page-content">` (WCAG 2.4.1). Per chi è
+      loggato viene dopo il link di WordPress «Vai alla barra degli strumenti» (comportamento del
+      core, non si tocca) e compare sotto la barra di amministrazione, a ogni larghezza e anche con
+      la pagina scesa (WCAG 2.4.11); col mouse sopra mantiene il contrasto
 - [ ] Il nome del pulsante del menu segue la scritta visibile: «Menu» chiuso, «Chiudi» / «Close»
       aperto (WCAG 2.5.3)
 - [ ] A pannello aperto Esc lo chiude e riporta il focus sul pulsante; Tab e Maiusc+Tab restano fra il
@@ -209,9 +213,9 @@ in `config/`), e chi lavora sul sito li ritrova dove Impreza li mette.
   arriva prima, header e footer restano quelli demo con il CSS nuovo; se si torna indietro solo sul
   child, header e footer mostrano `[forestas_logo]` come testo. Mitigazione: rilascio e rollback
   toccano sempre entrambi, child e apply.
-- **Rollback**: un `git revert` più un apply riporta header e footer italiani, ma i post inglesi
-  creati restano nel sito e vanno cancellati a mano dal pannello (WP-CLI non toglie la riga di
-  traduzione WPML).
+- **Rollback**: l'apply non cancella né i post né i menu assenti da `config/`, quindi header e
+  footer inglesi e cinque menu restano nel sito e vanno tolti a mano. Mitigazione: procedura a passi
+  nella pagina di conoscenza `docs/knowledge/8757-…`, «Come funziona oggi».
 - **Apply fermato dalle versioni**: se `config/versioni.json` non corrisponde alle versioni installate,
   l'apply si ferma e header e footer restano quelli demo. Mitigazione: si controlla l'esito
   dell'apply.
@@ -276,3 +280,5 @@ Tutto nel submodule `wp-forestas`; nessuna modifica in `forestas` né in `wm-pac
   child
 - `docs/knowledge/8757-header-e-footer-di-wordpress-forestas-secondo-il-mockup.md` — nuova pagina di
   conoscenza
+- Fuori da questo repo, in `forestas`: `docs/howto/messa-in-opera-wordpress-uat.md` — child e
+  configurazione da rilasciare insieme, con rimando alla pagina di conoscenza (commit deciso dal dev)
