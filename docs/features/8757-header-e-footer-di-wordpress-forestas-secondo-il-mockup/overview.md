@@ -167,7 +167,8 @@ in `config/`), e chi lavora sul sito li ritrova dove Impreza li mette.
 - [ ] Nessuna violazione WCAG 2.0/2.1/2.2 A e AA di axe-core in header e footer
 - [ ] Il primo elemento della pagina è il link «Vai al contenuto» / «Skip to content», visibile al
       focus, che porta al `<main id="page-content">` (WCAG 2.4.1); per chi è loggato compare sotto
-      la barra di amministrazione, a ogni larghezza
+      la barra di amministrazione, a ogni larghezza e anche con la pagina scesa (WCAG 2.4.11); col
+      mouse sopra mantiene il contrasto
 - [ ] Il nome del pulsante del menu segue la scritta visibile: «Menu» chiuso, «Chiudi» / «Close»
       aperto (WCAG 2.5.3)
 - [ ] A pannello aperto Esc lo chiude e riporta il focus sul pulsante; Tab e Maiusc+Tab restano fra il
@@ -175,8 +176,9 @@ in `config/`), e chi lavora sul sito li ritrova dove Impreza li mette.
       aperto, la tastiera non resta bloccata
 - [ ] Testo bianco del pulsante «chiudi» con contrasto di almeno 4,5:1 (fondo `hsl(17deg 76% 40%)`,
       5,55:1; WCAG 1.4.3), anche con il mouse sopra
-- [ ] Aprendo il menu, anche con la pagina scesa, il pulsante «chiudi» è tutto nello schermo e il
-      pannello parte subito sotto l'header, senza coprirlo (WCAG 2.4.11)
+- [ ] Aprendo il menu, anche con la pagina scesa, il pulsante «chiudi» è tutto nello schermo, e per
+      chi è loggato sotto la barra di amministrazione; il pannello parte subito sotto l'header, senza
+      coprirlo (WCAG 2.4.11)
 - [ ] Le tre `nav` hanno un nome distinto nella lingua della pagina («Menu principale», «Link di
       servizio», «Link istituzionali»); l'etichetta del selettore è «Lingua» / «Language»
 
@@ -186,6 +188,8 @@ in `config/`), e chi lavora sul sito li ritrova dove Impreza li mette.
       modificano solo in locale; sui server l'apply li sovrascrive sempre
 - [ ] Trappola nel `CLAUDE.md`: header e footer esistono in due copie, IT ed EN, da cambiare insieme
 - [ ] Trappola nel `CLAUDE.md`: la soglia 1024/1025px sta in tre posti da cambiare insieme
+- [ ] Trappola nel `CLAUDE.md`: i colori al passaggio del mouse nell'header perdono contro
+      `.no-touch .l-subheader.at_middle a:hover` di Impreza senza `.l-subheader` nel selettore
 - [ ] Pagina di conoscenza `docs/knowledge/8757-…` e sua riga nella tabella «Conoscenza» del `CLAUDE.md`
 
 ## Rischi
@@ -220,9 +224,9 @@ in `config/`), e chi lavora sul sito li ritrova dove Impreza li mette.
   Mitigazione: altezze del blocco scelte perché la bandiera resti più alta del logo del sito a ogni
   larghezza (logo dell'header ridotto a 15px su mobile).
 - **Posizione del pannello mobile** — l'header scorre con la pagina e sopra può esserci la barra di
-  amministrazione (sotto i 600px scorre anche lei): il pannello si apre dal bordo inferiore
-  dell'header come si vede in quel momento, calcolato da `menu-mobile.js` all'apertura, mai sopra
-  l'header.
+  amministrazione, fissa in cima da 601px e che scorre con la pagina sotto i 600px: il pannello si
+  apre dal bordo inferiore dell'header come si vede in quel momento, calcolato da `menu-mobile.js`
+  all'apertura, mai sopra l'header; la riga di «chiudi» viene prima portata in vista sotto la barra.
 - Gli URL social sono quelli forniti dal cliente: il numero WhatsApp è senza prefisso internazionale
   e l'handle X è `SardegnSentieri`. Si usano così come sono.
 
@@ -265,7 +269,8 @@ Tutto nel submodule `wp-forestas`; nessuna modifica in `forestas` né in `wm-pac
 - `docker/scripts/config/comune.php` — `us_og_image`, `_us_page_block_ids` e
   `_us_posts_per_archive_page` fra i meta calcolati che l'export esclude
 - `CLAUDE.md` — trappole sugli oggetti dei builder sovrascritti dall'apply, sulla soglia
-  1024/1025px in tre posti e sulle due copie IT/EN di header e footer; riga dell'indice «Conoscenza»
+  1024/1025px in tre posti, sulle due copie IT/EN di header e footer e sull'hover di Impreza
+  nell'header; riga dell'indice «Conoscenza»
 - `README.md` — la `Version` del child si alza anche per JavaScript e immagini
 - `docs/knowledge/inizializzazione-wordpress.md` — dipendenze dal codice interno di Impreza usate dal
   child

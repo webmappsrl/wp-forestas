@@ -121,7 +121,10 @@
   presa nel Task 3** di tenere i social solo nel footer: il filtro `wp_nav_menu_items` del child li
   legge dall'header della lingua corrente (`socials:1`, `html:1`), quindi gli URL restano solo in
   `config/post.json`. `Version` del child 1.1.15.
-- Due correzioni al pannello chieste dal dev, allineate al sito attuale (`--header-position: fixed` e
+- **⚠️ Superato (2026-10-13), vedi «Correzione dopo le review»:** l'header non è più fisso e il
+  pannello non è più alto `100dvh - 96px` ma parte dal bordo dell'header calcolato da
+  `menu-mobile.js`. Resta valida la pagina bloccata a menu aperto. Testo originale:
+  Due correzioni al pannello chieste dal dev, allineate al sito attuale (`--header-position: fixed` e
   `.has-mobile-menu-open { overflow: hidden }` nel suo CSS): su tablet e mobile **l'header è fisso** in
   cima (`sticky` dell'Header Builder solo per `tablets` e `mobiles`), e **a menu aperto la pagina non
   scorre** (`html:has(... [aria-expanded="true"])` con `overflow: hidden`). Il pannello ha un'altezza
@@ -154,7 +157,9 @@
   - nomi distinti alle tre `nav` con gli attributi HTML personalizzati di Impreza
     (`custom_html_atts`), IT ed EN; etichetta del selettore «Lingua»/«Language» e tolto
     `aria-current` dal `<b>` della lingua attiva;
-  - `scroll-padding-top` sotto i 1024px per l'header fisso (WCAG 2.2 2.4.11).
+  - `scroll-padding-top` sotto i 1024px per l'header fisso (WCAG 2.2 2.4.11). **⚠️ Superato
+    (2026-10-13):** tolto con l'header fisso; ora `scroll-padding-top` vale l'altezza della barra di
+    amministrazione da 601px, vedi «Quarta review».
   Verificati nel browser: primo Tab sul link di salto, Esc, ciclo del focus, contrasto, axe pulito
   (resta solo `heading-order` nel contenuto demo della Home, fuori da header e footer).
   `Version` del child 1.1.22.
@@ -318,7 +323,51 @@ link e pulsanti dell'header, dei 13 del footer e dei 17 del pannello, nessun pro
 Tab e Maiusc+Tab restano nel pannello aperto, Esc lo chiude e riporta il focus sul pulsante. Dopo uno
 scroll di 80px «chiudi» è tutto visibile e il pannello parte subito sotto.
 
+## Quarta review (2026-10-13, su 9751df0)
+
+Un bloccante e 11 cleanup mandati dalla sessione di review; tutti applicati. Child alla Version 1.1.31.
+
+- **Bloccante, riprodotto prima della correzione:** da loggato fra 601 e 1024px la barra di
+  amministrazione è fissa in cima (46px fino a 782px, 32px oltre) e l'header, non più sticky, le
+  scorre sotto. `menu-mobile.js` riportava la riga del pulsante in vista solo se usciva dallo schermo:
+  a 700px con la pagina scesa di 60 e 85px «chiudi» stava a 30–75 e 8–53px, sotto la barra (fino a
+  46). Ora il limite è il fondo della barra quando è `position: fixed`, altrimenti 0. Dopo: «chiudi»
+  a 54–99px a 700px e a 40–85px a 900px; pannello sempre dal bordo dell'header.
+- **1. Link di salto coperto dopo uno scroll** (da loggato, da 601px): `scroll-padding-top` pari
+  all'altezza della barra di amministrazione da 601px, a ogni larghezza. Verificato da loggato a 700,
+  900 e 1280px con la pagina scesa di 500px: il link sta a 54 e 40px, sotto la barra.
+- **2. Link di salto col mouse sopra:** `.no-touch a:hover` di Impreza gli dava il colore dei link sul
+  fondo blu; regola `.no-touch .forestas-salta:hover` nel child. axe, col link a fuoco e il mouse
+  sopra: nessun problema di contrasto.
+- **3.** Tolta `--forestas-barra-admin`: la riserva di `--forestas-sotto-header` usa
+  `--wp-admin--admin-bar--height`, che a pagina in cima è giusta a ogni larghezza; commenti accorciati.
+- **4. Doppia rotazione:** il ricalcolo al ridimensionamento parte 50ms dopo l'ultimo evento, dopo
+  quello di Impreza (5ms). Verificato: menu aperto a 390px, finestra a 1280, scroll di 300px, ritorno
+  a 390: «chiudi» a 8px e pannello dal bordo dell'header.
+- **5.** `header` e riga del pulsante calcolati una volta all'avvio, tolti i controlli che non
+  scattavano mai e il `Math.max`; commento di `functions.php` aggiornato.
+- **6–8.** Segnati come superati i punti di queste note sull'header fisso e sullo
+  `scroll-padding-top`; quarta trappola fra i requisiti di documentazione e i «Moduli toccati»
+  dell'overview; nella pagina di conoscenza `--header-sticky-height` descritta come sola riserva.
+- **9.** Commento di `comune.php` corretto: la prima lettura in front-end ricalcola tutti e due i meta
+  (verificato in `us-core/functions/list.php`).
+- **10.** Rollback scritto come procedura a passi nella pagina di conoscenza (verificato che
+  `menu.php` non cancella menu).
+- **11.** `.l-subheader` e `no-touch` fra le «Dipendenze» di `inizializzazione-wordpress.md`; limite
+  noto del pannello (solo all'apertura e al ridimensionamento, `:has()` assente prima di Safari iOS 16)
+  nella pagina di conoscenza.
+- **Modifiche a `overview.md`:** requisito della trappola sull'hover di Impreza fra quelli di
+  documentazione, e la stessa trappola fra i «Moduli toccati» del `CLAUDE.md`; requisito del link di
+  salto esteso alla pagina scesa e al mouse sopra; requisito di «chiudi» esteso alla barra di
+  amministrazione fissa; rischio sulla posizione del pannello con la barra fissa da 601px.
+- **Pagina di conoscenza:** barra di amministrazione fissa da 601px (46/32px), `scroll-padding-top` e
+  hover del link di salto, riga del pulsante portata in vista anche sotto la barra.
+
 ## Follow-up
+
+**Requisito di rilascio, ancora aperto:** salvare dal pannello in locale header e footer, IT ed EN,
+poi `export` e `git diff config/`, che deve risultare vuoto o con sole differenze attese. Non ancora
+fatto: lo fa il dev.
 
 Rilievi minori della code review finale (prima review), non corretti:
 

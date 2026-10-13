@@ -12,7 +12,9 @@ versionata»). Ciò che Impreza non sa fare sta nel child theme.
 - **Header JSON dentro JSON:** `post_content` dell'header è il JSON dell'Header Builder, salvato come
   stringa in `config/post.json`. Gli elementi `html` hanno il contenuto in `base64(rawurlencode(…))`
   (`us-core/templates/elements/html.php`). Per cambiare l'header conviene farlo dal pannello in
-  locale e poi `export`, invece di scrivere a mano nel JSON.
+  locale e poi `export`, invece di scrivere a mano nel JSON. Su questi header e footer, scritti in
+  codice, quel giro (salvataggio dal pannello, export, `git diff config/` vuoto) non è ancora stato
+  verificato: è un requisito di rilascio di oc:8757.
 - **Shortcode del child** (`functions.php`), usati dentro header e footer:
   `[forestas_logo]`, `[forestas_anno]`, `[forestas_lingue]` (IT EN da WPML, codice breve),
   `[forestas_fesr]` / `[forestas_fesr versione="2"]` (blocco istituzionale FESR). Le immagini stanno
@@ -25,21 +27,27 @@ versionata»). Ciò che Impreza non sa fare sta nel child theme.
   logo 60), che Impreza pubblica in `--header-sticky-height`. Il menu è un pannello che entra da
   destra (`mobile_layout="panel"`), alto dal bordo inferiore dell'header al fondo dello schermo. Quel
   bordo lo calcola `menu-mobile.js` all'apertura (`--forestas-sotto-header`): dipende da quanto la
-  pagina è scesa e dalla barra di amministrazione, che sotto i 600px scorre con la pagina e che il
-  solo CSS non può conoscere; in coda alle voci un filtro
+  pagina è scesa e dalla barra di amministrazione, fissa in cima da 601px (46px fino a 782px, 32px
+  oltre) e che scorre con la pagina sotto i 600px: il solo CSS non può conoscerlo; in coda alle voci un filtro
   `wp_nav_menu_items` del child aggiunge i link di servizio e i social. Social e «Seguici su» si
   leggono dall'header della lingua corrente, cercando gli elementi per tipo e classe (non per id, che
   il builder rinumera), così il PHP non ripete gli URL; gli URL stanno comunque in ognuna delle
   quattro copie di header e footer (IT, EN) di `config/post.json`. A menu aperto la pagina non scorre
-  (`html:has(…)` con `overflow: hidden`).
+  (`html:has(…)` con `overflow: hidden`). Limite noto: il pannello si posiziona solo all'apertura e
+  al ridimensionamento, e presuppone la pagina bloccata; su Safari iOS precedente alla 16 (senza
+  `:has()`) la pagina può scorrere sotto il pannello.
 - **Footer:** blocco FESR («versione 2») in cima, poi il filo oro, poi logo, social, contatti, link
   istituzionali e la striscia scura con l'anno corrente.
 - **Accessibilità** (Linee guida AgID: EN 301 549, WCAG 2.1 AA): link «Vai al contenuto» da
-  `wp_body_open`, che per chi è loggato compare sotto la barra di amministrazione; `assets/js/menu-mobile.js` cambia insieme scritta e nome del pulsante («menu» /
+  `wp_body_open`, che per chi è loggato compare sotto la barra di amministrazione; da 601px, dove la
+  barra è fissa, `scroll-padding-top` della sua altezza tiene sotto la barra anche l'elemento che
+  riceve il focus su una pagina già scesa; col mouse sopra il link tiene il bianco grazie a
+  `.no-touch .forestas-salta:hover`, che batte `.no-touch a:hover` di Impreza; `assets/js/menu-mobile.js` cambia insieme scritta e nome del pulsante («menu» /
   «chiudi», WCAG 2.5.3) e tiene il focus nel pannello finché il pulsante si vede (Impreza non chiude il
   pannello quando la finestra passa al desktop); ascolta in fase di cattura, perché Impreza chiude il
   pannello con Maiusc+Tab sulla prima voce. Esc lo gestisce Impreza, che riporta anche il focus sul
-  pulsante. All'apertura, se la riga del pulsante è tagliata in alto, la porta tutta nello schermo:
+  pulsante. All'apertura, se la riga del pulsante è tagliata in alto o finisce sotto la barra di
+  amministrazione fissa, la porta tutta in vista:
   a menu aperto la pagina non scorre e «chiudi» resterebbe in parte nascosto (WCAG 2.4.11). Il colore
   di «chiudi» col mouse sopra lo decide il child con `.l-subheader` nel selettore, per battere
   `.no-touch .l-subheader.at_middle a:hover` di Impreza (trappola nel `CLAUDE.md`). Le `nav` hanno nomi distinti con gli attributi HTML personalizzati di Impreza
@@ -59,8 +67,19 @@ Vincoli:
 - **rilascio e rollback toccano sempre insieme child e `config/`:** il child arriva con il pull,
   header e footer solo con l'apply. Con il solo child il sito mostra header e footer demo con il CSS
   nuovo; con la sola configurazione (o tornando indietro solo sul child) mostra gli shortcode
-  `[forestas_logo]`, `[forestas_fesr]`, `[forestas_lingue]`, `[forestas_anno]` come testo. Tornando indietro, i post
-  inglesi di header e footer restano nel sito e vanno cancellati a mano dal pannello.
+  `[forestas_logo]`, `[forestas_fesr]`, `[forestas_lingue]`, `[forestas_anno]` come testo. Il
+  rollback, a passi:
+  1. riporta `config/` alla versione precedente con `bin/wordpress-config.sh apply --da
+     backup/<data-ora> --conferma` (README, «Configurazione versionata»), cioè con il backup fatto
+     dall'apply del rilascio;
+  2. subito dopo torna indietro sul child (checkout del commit precedente), così gli shortcode non
+     restano a lungo senza la loro definizione;
+  3. cancella a mano ciò che l'apply non toglie, perché non cancella né i post né i menu assenti da
+     `config/` (`menu.php` toglie solo voci; il suo `wp_delete_nav_menu` annulla una creazione
+     fallita): in Templates → Headers e in Reusable Blocks, con la lingua EN, header e footer
+     inglesi, poi svuota il cestino; in Aspetto → Menu `servizio-menu`, `footer-menu`, `main-menu-en`,
+     `servizio-menu-en` e `footer-menu-en`. `main-menu-en`, traduzione WPML di `main-menu`, darebbe
+     altrimenti le 7 voci nuove alle pagine inglesi.
 
 ## Perché così
 
@@ -98,7 +117,9 @@ Vincoli:
   di amministrazione scorre via e Impreza teneva l'header a 46px dal bordo, e il pannello, posizionato
   con il solo CSS, copriva la riga del logo.
 - **Altezza dell'header mobile scritta a mano (96px) nel CSS** (oc:8757, superata): andava
-  aggiornata a ogni cambio delle righe nell'Header Builder; ora il CSS usa `--header-sticky-height`.
+  aggiornata a ogni cambio delle righe nell'Header Builder. Ora il bordo dell'header lo calcola
+  `menu-mobile.js` (`--forestas-sotto-header`); `--header-sticky-height` serve solo da riserva nel
+  CSS se lo script non gira.
 - **Social e «Seguici su» letti per id (`socials:1`, `html:1`)** (oc:8757, superata): ricreando
   l'elemento dal pannello l'id cambia e la riga sparisce senza errori.
 - **Esc gestito anche dallo script del child** (oc:8757, superata): lo fa già Impreza.

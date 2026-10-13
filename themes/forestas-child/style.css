@@ -5,7 +5,7 @@ Template: Impreza
 Author: Webmapp
 Author URI: https://webmapp.it/
 Description: Child theme di Impreza per Sardegna Sentieri (Forestas). Versionato nel repo wp-forestas e montato dal compose: si modifica nel repo, non dal pannello.
-Version: 1.1.30
+Version: 1.1.31
 */
 
 
@@ -71,13 +71,14 @@ Version: 1.1.30
 
 	/* Striscia di chiusura del footer (mockup «Canvas Fase 2», oc:8757) */
 	--striscia-footer: #1A1A1A;
-
-	/* Barra di amministrazione di WordPress (solo utenti loggati): fissa in cima, tranne sotto i 600px */
-	--forestas-barra-admin: var(--wp-admin--admin-bar--height, 0px);
 }
-@media (max-width: 600px) {
-	:root {
-		--forestas-barra-admin: 0px;
+
+/* Barra di amministrazione (utenti loggati): da 601px è fissa in cima, e l'elemento che riceve il focus
+   da tastiera, compreso il link «Vai al contenuto», non deve finirci sotto (WCAG 2.4.11). Sotto i
+   600px scorre con la pagina e non copre nulla */
+@media (min-width: 601px) {
+	html {
+		scroll-padding-top: var(--wp-admin--admin-bar--height, 0px);
 	}
 }
 
@@ -306,12 +307,12 @@ Version: 1.1.30
 /*
  * Tablet e mobile (fino a 1024px). L'header sta in cima alla pagina e scorre con essa, come su desktop
  * (non sticky). È alto 96px (riga in alto 36 + riga del logo 60), che Impreza pubblica in
- * --header-sticky-height. --forestas-sotto-header è il bordo inferiore dell'header nello schermo: qui
- * il valore a pagina in cima, a menu aperto lo ricalcola assets/js/menu-mobile.js.
+ * --header-sticky-height. --forestas-sotto-header, il bordo inferiore dell'header nello schermo, lo
+ * calcola assets/js/menu-mobile.js all'apertura del menu: qui solo la riserva se lo script non gira.
  */
 @media (max-width: 1024px) {
 	:root {
-		--forestas-sotto-header: calc(var(--header-sticky-height, 96px) + var(--forestas-barra-admin));
+		--forestas-sotto-header: calc(var(--header-sticky-height, 96px) + var(--wp-admin--admin-bar--height, 0px));
 	}
 
 	/* Ricerca e hamburger: riquadri di 45px come sul sito attuale */
@@ -535,8 +536,11 @@ Version: 1.1.30
 	font-weight: 600;
 	text-decoration: none;
 }
+/* Col mouse sopra, «.no-touch a:hover» di Impreza lo colorerebbe del colore dei link sul fondo blu */
+.no-touch .forestas-salta:hover {
+	color: var(--testo-su-scuro);
+}
 .forestas-salta:focus {
-	/* sotto la barra di amministrazione, per gli utenti loggati: qui la sua altezza vale anche sotto i
-	   600px, dove WordPress la lascia in cima alla pagina (assoluta) e il link è a sua volta assoluto */
+	/* sotto la barra di amministrazione, per chi è loggato */
 	top: calc(8px + var(--wp-admin--admin-bar--height, 0px));
 }

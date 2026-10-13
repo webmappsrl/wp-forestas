@@ -148,7 +148,8 @@ con un apply di prova su un WordPress usa e getta prima di quello su UAT:
   - Impreza: la classe `US_Walker_Nav_Menu` (`Impreza/common/functions/menu.php`), che us-core
     istanzia per l'elemento menu e con cui il child riconosce il menu dell'header.
   - Markup e CSS di Impreza usati dal child: `.w-nav-control` con `aria-expanded` e lo `<span>` della
-    scritta, `.w-nav-list.level_1`, `.m_layout_panel`, `.w-search-open`, la variabile
+    scritta, `.w-nav-list.level_1`, `.m_layout_panel`, `.w-search-open`, `.l-subheader` (contenitore della
+    riga del pulsante e selettore che batte l'hover di Impreza), la classe `no-touch`, la variabile
     `--header-sticky-height`, il `<main id="page-content">`; in `Impreza/common/js/elements/menu.js` la chiusura con Esc e con
     Maiusc+Tab sulla prima voce, e il pannello non chiuso al passaggio al desktop.
 
