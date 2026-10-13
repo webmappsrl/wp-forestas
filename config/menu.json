@@ -1,6 +1,90 @@
 {
     "menu": [
         {
+            "chiave": "menu-footer-menu",
+            "lingua": "it",
+            "nome": "footer-menu",
+            "originale": null,
+            "slug": "footer-menu",
+            "voci": [
+                {
+                    "attr_title": "",
+                    "classi": [],
+                    "descrizione": "",
+                    "destinazione": {
+                        "tipo": "custom",
+                        "url": "#"
+                    },
+                    "genitore": null,
+                    "meta": [],
+                    "originale": null,
+                    "target": "",
+                    "titolo": "AREA RISERVATA",
+                    "xfn": ""
+                },
+                {
+                    "attr_title": "",
+                    "classi": [],
+                    "descrizione": "",
+                    "destinazione": {
+                        "tipo": "custom",
+                        "url": "#"
+                    },
+                    "genitore": null,
+                    "meta": [],
+                    "originale": null,
+                    "target": "",
+                    "titolo": "NOTE LEGALI",
+                    "xfn": ""
+                },
+                {
+                    "attr_title": "",
+                    "classi": [],
+                    "descrizione": "",
+                    "destinazione": {
+                        "tipo": "custom",
+                        "url": "#"
+                    },
+                    "genitore": null,
+                    "meta": [],
+                    "originale": null,
+                    "target": "",
+                    "titolo": "PRIVACY",
+                    "xfn": ""
+                },
+                {
+                    "attr_title": "",
+                    "classi": [],
+                    "descrizione": "",
+                    "destinazione": {
+                        "tipo": "custom",
+                        "url": "#"
+                    },
+                    "genitore": null,
+                    "meta": [],
+                    "originale": null,
+                    "target": "",
+                    "titolo": "CREDITI",
+                    "xfn": ""
+                },
+                {
+                    "attr_title": "",
+                    "classi": [],
+                    "descrizione": "",
+                    "destinazione": {
+                        "tipo": "custom",
+                        "url": "#"
+                    },
+                    "genitore": null,
+                    "meta": [],
+                    "originale": null,
+                    "target": "",
+                    "titolo": "DICHIARAZIONE DI ACCESSIBILITÀ",
+                    "xfn": ""
+                }
+            ]
+        },
+        {
             "chiave": "menu-main-menu",
             "lingua": "it",
             "nome": "main-menu",
@@ -9,22 +93,9 @@
             "voci": [
                 {
                     "attr_title": "",
-                    "classi": [],
-                    "descrizione": "",
-                    "destinazione": {
-                        "post": "@chiave:page-home",
-                        "tipo": "post"
-                    },
-                    "genitore": null,
-                    "meta": [],
-                    "originale": null,
-                    "target": "",
-                    "titolo": "Home",
-                    "xfn": ""
-                },
-                {
-                    "attr_title": "",
-                    "classi": [],
+                    "classi": [
+                        "tipo-sentiero"
+                    ],
                     "descrizione": "",
                     "destinazione": {
                         "tipo": "custom",
@@ -34,12 +105,14 @@
                     "meta": [],
                     "originale": null,
                     "target": "",
-                    "titolo": "Chi siamo",
+                    "titolo": "SENTIERI",
                     "xfn": ""
                 },
                 {
                     "attr_title": "",
-                    "classi": [],
+                    "classi": [
+                        "tipo-itinerario"
+                    ],
                     "descrizione": "",
                     "destinazione": {
                         "tipo": "custom",
@@ -49,9 +122,103 @@
                     "meta": [],
                     "originale": null,
                     "target": "",
-                    "titolo": "Blog",
+                    "titolo": "ITINERARI",
                     "xfn": ""
                 },
+                {
+                    "attr_title": "",
+                    "classi": [
+                        "tipo-cammino"
+                    ],
+                    "descrizione": "",
+                    "destinazione": {
+                        "tipo": "custom",
+                        "url": "#"
+                    },
+                    "genitore": null,
+                    "meta": [],
+                    "originale": null,
+                    "target": "",
+                    "titolo": "CAMMINI",
+                    "xfn": ""
+                },
+                {
+                    "attr_title": "",
+                    "classi": [
+                        "tipo-da-vedere"
+                    ],
+                    "descrizione": "",
+                    "destinazione": {
+                        "tipo": "custom",
+                        "url": "#"
+                    },
+                    "genitore": null,
+                    "meta": [],
+                    "originale": null,
+                    "target": "",
+                    "titolo": "DA VEDERE",
+                    "xfn": ""
+                },
+                {
+                    "attr_title": "",
+                    "classi": [
+                        "tipo-da-sapere"
+                    ],
+                    "descrizione": "",
+                    "destinazione": {
+                        "tipo": "custom",
+                        "url": "#"
+                    },
+                    "genitore": null,
+                    "meta": [],
+                    "originale": null,
+                    "target": "",
+                    "titolo": "DA SAPERE",
+                    "xfn": ""
+                },
+                {
+                    "attr_title": "",
+                    "classi": [
+                        "tipo-mappa"
+                    ],
+                    "descrizione": "",
+                    "destinazione": {
+                        "tipo": "custom",
+                        "url": "#"
+                    },
+                    "genitore": null,
+                    "meta": [],
+                    "originale": null,
+                    "target": "",
+                    "titolo": "MAPPA INTERATTIVA",
+                    "xfn": ""
+                },
+                {
+                    "attr_title": "",
+                    "classi": [
+                        "tipo-news"
+                    ],
+                    "descrizione": "",
+                    "destinazione": {
+                        "tipo": "custom",
+                        "url": "#"
+                    },
+                    "genitore": null,
+                    "meta": [],
+                    "originale": null,
+                    "target": "",
+                    "titolo": "NEWS",
+                    "xfn": ""
+                }
+            ]
+        },
+        {
+            "chiave": "menu-servizio-menu",
+            "lingua": "it",
+            "nome": "servizio-menu",
+            "originale": null,
+            "slug": "servizio-menu",
+            "voci": [
                 {
                     "attr_title": "",
                     "classi": [],
@@ -65,6 +232,332 @@
                     "originale": null,
                     "target": "",
                     "titolo": "Contatti",
+                    "xfn": ""
+                },
+                {
+                    "attr_title": "",
+                    "classi": [],
+                    "descrizione": "",
+                    "destinazione": {
+                        "tipo": "custom",
+                        "url": "#"
+                    },
+                    "genitore": null,
+                    "meta": [],
+                    "originale": null,
+                    "target": "",
+                    "titolo": "Segnalazioni",
+                    "xfn": ""
+                },
+                {
+                    "attr_title": "",
+                    "classi": [],
+                    "descrizione": "",
+                    "destinazione": {
+                        "tipo": "custom",
+                        "url": "#"
+                    },
+                    "genitore": null,
+                    "meta": [],
+                    "originale": null,
+                    "target": "",
+                    "titolo": "FAQ",
+                    "xfn": ""
+                },
+                {
+                    "attr_title": "",
+                    "classi": [],
+                    "descrizione": "",
+                    "destinazione": {
+                        "tipo": "custom",
+                        "url": "#"
+                    },
+                    "genitore": null,
+                    "meta": [],
+                    "originale": null,
+                    "target": "",
+                    "titolo": "App",
+                    "xfn": ""
+                }
+            ]
+        },
+        {
+            "chiave": "menu-footer-menu-en-us",
+            "lingua": "en-us",
+            "nome": "footer-menu-en",
+            "originale": "menu-footer-menu",
+            "slug": "footer-menu-en",
+            "voci": [
+                {
+                    "attr_title": "",
+                    "classi": [],
+                    "descrizione": "",
+                    "destinazione": {
+                        "tipo": "custom",
+                        "url": "#"
+                    },
+                    "genitore": null,
+                    "meta": [],
+                    "originale": 0,
+                    "target": "",
+                    "titolo": "RESERVED AREA",
+                    "xfn": ""
+                },
+                {
+                    "attr_title": "",
+                    "classi": [],
+                    "descrizione": "",
+                    "destinazione": {
+                        "tipo": "custom",
+                        "url": "#"
+                    },
+                    "genitore": null,
+                    "meta": [],
+                    "originale": 1,
+                    "target": "",
+                    "titolo": "LEGAL NOTES",
+                    "xfn": ""
+                },
+                {
+                    "attr_title": "",
+                    "classi": [],
+                    "descrizione": "",
+                    "destinazione": {
+                        "tipo": "custom",
+                        "url": "#"
+                    },
+                    "genitore": null,
+                    "meta": [],
+                    "originale": 2,
+                    "target": "",
+                    "titolo": "PRIVACY",
+                    "xfn": ""
+                },
+                {
+                    "attr_title": "",
+                    "classi": [],
+                    "descrizione": "",
+                    "destinazione": {
+                        "tipo": "custom",
+                        "url": "#"
+                    },
+                    "genitore": null,
+                    "meta": [],
+                    "originale": 3,
+                    "target": "",
+                    "titolo": "CREDITS",
+                    "xfn": ""
+                },
+                {
+                    "attr_title": "",
+                    "classi": [],
+                    "descrizione": "",
+                    "destinazione": {
+                        "tipo": "custom",
+                        "url": "#"
+                    },
+                    "genitore": null,
+                    "meta": [],
+                    "originale": 4,
+                    "target": "",
+                    "titolo": "ACCESSIBILITY STATEMENT",
+                    "xfn": ""
+                }
+            ]
+        },
+        {
+            "chiave": "menu-main-menu-en-us",
+            "lingua": "en-us",
+            "nome": "main-menu-en",
+            "originale": "menu-main-menu",
+            "slug": "main-menu-en",
+            "voci": [
+                {
+                    "attr_title": "",
+                    "classi": [
+                        "tipo-sentiero"
+                    ],
+                    "descrizione": "",
+                    "destinazione": {
+                        "tipo": "custom",
+                        "url": "#"
+                    },
+                    "genitore": null,
+                    "meta": [],
+                    "originale": 0,
+                    "target": "",
+                    "titolo": "TRAILS",
+                    "xfn": ""
+                },
+                {
+                    "attr_title": "",
+                    "classi": [
+                        "tipo-itinerario"
+                    ],
+                    "descrizione": "",
+                    "destinazione": {
+                        "tipo": "custom",
+                        "url": "#"
+                    },
+                    "genitore": null,
+                    "meta": [],
+                    "originale": 1,
+                    "target": "",
+                    "titolo": "ITINERARIES",
+                    "xfn": ""
+                },
+                {
+                    "attr_title": "",
+                    "classi": [
+                        "tipo-cammino"
+                    ],
+                    "descrizione": "",
+                    "destinazione": {
+                        "tipo": "custom",
+                        "url": "#"
+                    },
+                    "genitore": null,
+                    "meta": [],
+                    "originale": 2,
+                    "target": "",
+                    "titolo": "WALKS",
+                    "xfn": ""
+                },
+                {
+                    "attr_title": "",
+                    "classi": [
+                        "tipo-da-vedere"
+                    ],
+                    "descrizione": "",
+                    "destinazione": {
+                        "tipo": "custom",
+                        "url": "#"
+                    },
+                    "genitore": null,
+                    "meta": [],
+                    "originale": 3,
+                    "target": "",
+                    "titolo": "SIGHTS",
+                    "xfn": ""
+                },
+                {
+                    "attr_title": "",
+                    "classi": [
+                        "tipo-da-sapere"
+                    ],
+                    "descrizione": "",
+                    "destinazione": {
+                        "tipo": "custom",
+                        "url": "#"
+                    },
+                    "genitore": null,
+                    "meta": [],
+                    "originale": 4,
+                    "target": "",
+                    "titolo": "GOOD TO KNOW",
+                    "xfn": ""
+                },
+                {
+                    "attr_title": "",
+                    "classi": [
+                        "tipo-mappa"
+                    ],
+                    "descrizione": "",
+                    "destinazione": {
+                        "tipo": "custom",
+                        "url": "#"
+                    },
+                    "genitore": null,
+                    "meta": [],
+                    "originale": 5,
+                    "target": "",
+                    "titolo": "INTERACTIVE MAP",
+                    "xfn": ""
+                },
+                {
+                    "attr_title": "",
+                    "classi": [
+                        "tipo-news"
+                    ],
+                    "descrizione": "",
+                    "destinazione": {
+                        "tipo": "custom",
+                        "url": "#"
+                    },
+                    "genitore": null,
+                    "meta": [],
+                    "originale": 6,
+                    "target": "",
+                    "titolo": "NEWS",
+                    "xfn": ""
+                }
+            ]
+        },
+        {
+            "chiave": "menu-servizio-menu-en-us",
+            "lingua": "en-us",
+            "nome": "servizio-menu-en",
+            "originale": "menu-servizio-menu",
+            "slug": "servizio-menu-en",
+            "voci": [
+                {
+                    "attr_title": "",
+                    "classi": [],
+                    "descrizione": "",
+                    "destinazione": {
+                        "tipo": "custom",
+                        "url": "#"
+                    },
+                    "genitore": null,
+                    "meta": [],
+                    "originale": 0,
+                    "target": "",
+                    "titolo": "Contact",
+                    "xfn": ""
+                },
+                {
+                    "attr_title": "",
+                    "classi": [],
+                    "descrizione": "",
+                    "destinazione": {
+                        "tipo": "custom",
+                        "url": "#"
+                    },
+                    "genitore": null,
+                    "meta": [],
+                    "originale": 1,
+                    "target": "",
+                    "titolo": "Report an issue",
+                    "xfn": ""
+                },
+                {
+                    "attr_title": "",
+                    "classi": [],
+                    "descrizione": "",
+                    "destinazione": {
+                        "tipo": "custom",
+                        "url": "#"
+                    },
+                    "genitore": null,
+                    "meta": [],
+                    "originale": 2,
+                    "target": "",
+                    "titolo": "FAQ",
+                    "xfn": ""
+                },
+                {
+                    "attr_title": "",
+                    "classi": [],
+                    "descrizione": "",
+                    "destinazione": {
+                        "tipo": "custom",
+                        "url": "#"
+                    },
+                    "genitore": null,
+                    "meta": [],
+                    "originale": 3,
+                    "target": "",
+                    "titolo": "App",
                     "xfn": ""
                 }
             ]

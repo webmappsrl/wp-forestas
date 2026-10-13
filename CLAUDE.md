@@ -50,6 +50,23 @@ subagent.
   `costanti.php` che l'init usa (`config_php`) vale anche per un init vecchio ancora nell'immagine.
   `costanti.php` resta piccolo e senza dipendenze; se non si carica l'init usa i valori di riserva e
   WordPress parte senza `.htaccess`, licenza e apply: un AVVISO nei log, non un errore (oc:8717)
+- `us_header`, `us_page_block`, `us_content_template` e `us_grid_layout` (header, footer e altri
+  oggetti dei builder di Impreza) si modificano solo in locale e poi si esportano: l'apply li
+  sovrascrive sempre (`WPF_TIPI_BUILDER`), anche senza `--pagine`, e una modifica fatta dal pannello
+  di UAT o produzione va persa al primo apply (oc:8757)
+- La soglia tablet/desktop è una sola ma sta in tre posti: `tablets_breakpoint` (1024px) in
+  `config/impreza.json`, `mobile_width` (1025px) del menu nei due header IT/EN in `config/post.json`,
+  le media query `max-width: 1024px` / `min-width: 1025px` del child. Cambiandone una sola, fra le due
+  soglie l'header desktop convive col pannello mobile o viceversa. Il `breakpoint: 900px` che si legge
+  nel JSON degli header è ignorato (`custom_breakpoint` 0): non è quello da cambiare (oc:8757)
+- Header e footer esistono in due copie, italiana e inglese (`config/post.json`): URL social, contatti
+  e opzioni dell'header vanno cambiati in tutte e due, e il pannello mobile inglese legge i social
+  dall'header inglese. Dopo l'export, `git diff config/` mostra se le copie sono allineate (knowledge
+  8757, «Perché così») (oc:8757)
+- Nell'header, i colori al passaggio del mouse del child perdono contro `.no-touch .l-subheader.at_middle
+  a:hover` di Impreza, che dà a ogni link e pulsante della riga centrale il blu dei link: serve
+  `.l-subheader` nel selettore. Succede solo col mouse, quindi su un telefono non si vede; il pulsante
+  «chiudi» era sceso a 1,66:1 (oc:8757)
 - L'apply automatico vale solo nei 3 giorni dopo l'installazione (`WPF_APPLY_FINESTRA`) e aspetta,
   senza consumare tentativi, che tema e plugin di `config/versioni.json` siano installati: dopo, un
   sito cambiato dal pannello non viene più sovrascritto senza anteprima (oc:8717)
@@ -86,3 +103,4 @@ subagent.
 | Argomento | Cosa copre | Pagina |
 |---|---|---|
 | Inizializzazione di WordPress | perché lo script lavora a passi, perché il core non sta nell'immagine, cosa succede senza GitHub o senza Impreza | [docs/knowledge/inizializzazione-wordpress.md](docs/knowledge/inizializzazione-wordpress.md) |
+| Header e footer del sito | oggetti di Impreza scritti in codice e copiati per lingua, shortcode del child, menu mobile, blocco FESR, accessibilità | [docs/knowledge/8757-header-e-footer-di-wordpress-forestas-secondo-il-mockup.md](docs/knowledge/8757-header-e-footer-di-wordpress-forestas-secondo-il-mockup.md) |
