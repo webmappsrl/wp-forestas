@@ -68,10 +68,14 @@ foreach ( WPF_OPZIONI_SITO as $nome ) {
 	$righe[] = "sito {$nome}: " . ( in_array( $nome, WPF_OPZIONI_SITO_PAGINA, true ) ? $chiave( get_option( $nome ) ) : get_option( $nome ) );
 }
 
-foreach ( wp_get_nav_menus() as $m ) {
-	$voci    = wpf_voci_menu( $m->term_id ); // metadati delle voci compresi (mega menu di Impreza)
-	$righe[] = "menu {$m->slug}: " . implode( ', ', array_column( $voci, 'titolo' ) ) . ' (' . md5( wpf_json( $voci ) ) . ')';
-}
+wpf_wpml_tutte_le_lingue(
+	function () use ( &$righe ) {
+		foreach ( wp_get_nav_menus() as $m ) {
+			$voci    = wpf_voci_menu( $m->term_id ); // metadati delle voci compresi (mega menu di Impreza)
+			$righe[] = "menu {$m->slug}: " . implode( ', ', array_column( $voci, 'titolo' ) ) . ' (' . md5( wpf_json( $voci ) ) . ')';
+		}
+	}
+);
 foreach ( get_nav_menu_locations() as $posizione => $id_menu ) {
 	$righe[] = "posizione menu {$posizione}: " . ( get_term_meta( $id_menu, WPF_META_CHIAVE, true ) ?: '-' );
 }

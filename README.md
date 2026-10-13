@@ -16,7 +16,7 @@ provarlo.
 | Percorso | Cosa |
 |---|---|
 | `compose.yml` | servizi `wordpress` (PHP 8.3 + Apache) e `mariadb` (11.4), volumi `wordpress-<APP_NAME>` e `mariadb-<APP_NAME>` |
-| `docker/configs/php/` | immagine con le estensioni di WordPress e WP-CLI |
+| `docker/configs/php/` | immagine con le estensioni di WordPress e WP-CLI; `wordpress.ini` con i limiti di PHP e gli errori nei log, mai in pagina |
 | `docker/scripts/init-wordpress.sh` | a ogni avvio porta WordPress allo stato atteso, un passo alla volta |
 | `docker/themes/` | qui va messo `impreza.zip` (escluso da git) |
 | `docker/plugins/` | zip dei plugin commerciali (esclusi da git); l'elenco è in `commerciali.txt`, versionato |
@@ -260,5 +260,5 @@ perché l'installazione c'è già.
 
 ```bash
 docker exec -it wordpress-<APP_NAME> wp --allow-root --path=/var/www/html <comando>
-docker logs wordpress-<APP_NAME>
+docker logs wordpress-<APP_NAME>    # anche avvisi ed errori PHP: in pagina non compaiono
 ```

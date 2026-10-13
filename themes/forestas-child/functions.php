@@ -212,7 +212,11 @@ add_filter(
 		if ( ! $principale || ! $questo ) {
 			return $voci;
 		}
-		if ( (int) apply_filters( 'wpml_object_id', $questo->term_id, 'nav_menu', true, apply_filters( 'wpml_default_language', null ) ) !== (int) $principale->term_id ) {
+		// Tutti e due nella lingua predefinita: con i filtri di WPML attivi (UAT) anche «main-menu» cercato
+		// per slug arriva già nella lingua della pagina, e il confronto diretto fallirebbe in inglese
+		$predefinita = apply_filters( 'wpml_default_language', null );
+		$originale   = fn( WP_Term $menu ): int => (int) apply_filters( 'wpml_object_id', $menu->term_id, 'nav_menu', true, $predefinita );
+		if ( $originale( $questo ) !== $originale( $principale ) ) {
 			return $voci;
 		}
 

@@ -189,24 +189,30 @@ $chiave_menu = function ( WP_Term $termine, string $predefinita ) use ( $scrivi 
 };
 $menu        = [];
 $chiavi_menu = []; // term_id => chiave
-$termini     = wp_get_nav_menus();
-// Prima gli originali: la chiave di una traduzione deriva da quella del suo originale
-$tradotto = fn( WP_Term $t ): int => (int) ( wpf_lingua( $t->term_taxonomy_id, 'tax_nav_menu' ) !== $lingua_predefinita );
-usort( $termini, fn( $a, $b ) => $tradotto( $a ) <=> $tradotto( $b ) );
-foreach ( $termini as $termine ) {
-	// Per i termini WPML usa il term_taxonomy_id, non il term_id
-	$lingua    = wpf_lingua( $termine->term_taxonomy_id, 'tax_nav_menu' );
-	$originale = null;
-	if ( $lingua && $lingua !== $lingua_predefinita ) {
-		$tt_originale = wpf_traduzioni( $termine->term_taxonomy_id, 'tax_nav_menu' )[ $lingua_predefinita ] ?? null;
-		$t_originale  = $tt_originale ? get_term_by( 'term_taxonomy_id', $tt_originale, 'nav_menu' ) : null;
-		$originale    = $t_originale ? ( $chiavi_menu[ $t_originale->term_id ] ?? null ) : null;
+// Su tutte le lingue e senza conversione degli id di WPML, o i menu tradotti si leggono come i loro
+// originali (wpml.php, wpf_wpml_tutte_le_lingue)
+wpf_wpml_tutte_le_lingue(
+	function () use ( &$menu, &$chiavi_menu, $chiave_menu, $lingua_predefinita, &$tolti ) {
+		$termini     = wp_get_nav_menus();
+		// Prima gli originali: la chiave di una traduzione deriva da quella del suo originale
+		$tradotto = fn( WP_Term $t ): int => (int) ( wpf_lingua( $t->term_taxonomy_id, 'tax_nav_menu' ) !== $lingua_predefinita );
+		usort( $termini, fn( $a, $b ) => $tradotto( $a ) <=> $tradotto( $b ) );
+		foreach ( $termini as $termine ) {
+			// Per i termini WPML usa il term_taxonomy_id, non il term_id
+			$lingua    = wpf_lingua( $termine->term_taxonomy_id, 'tax_nav_menu' );
+			$originale = null;
+			if ( $lingua && $lingua !== $lingua_predefinita ) {
+				$tt_originale = wpf_traduzioni( $termine->term_taxonomy_id, 'tax_nav_menu' )[ $lingua_predefinita ] ?? null;
+				$t_originale  = $tt_originale ? get_term_by( 'term_taxonomy_id', $tt_originale, 'nav_menu' ) : null;
+				$originale    = $t_originale ? ( $chiavi_menu[ $t_originale->term_id ] ?? null ) : null;
+			}
+			$chiave                           = $chiave_menu( $termine, $originale ? "{$originale}-{$lingua}" : 'menu-' . $termine->slug );
+			$chiavi_menu[ $termine->term_id ] = $chiave;
+			$voci                             = wpf_togli_segreti( wpf_voci_menu( $termine->term_id ), $tolti );
+			$menu[]                           = [ 'chiave' => $chiave, 'slug' => $termine->slug, 'nome' => $termine->name, 'lingua' => $lingua, 'originale' => $originale, 'voci' => $voci ];
+		}
 	}
-	$chiave                           = $chiave_menu( $termine, $originale ? "{$originale}-{$lingua}" : 'menu-' . $termine->slug );
-	$chiavi_menu[ $termine->term_id ] = $chiave;
-	$voci                             = wpf_togli_segreti( wpf_voci_menu( $termine->term_id ), $tolti );
-	$menu[]                           = [ 'chiave' => $chiave, 'slug' => $termine->slug, 'nome' => $termine->name, 'lingua' => $lingua, 'originale' => $originale, 'voci' => $voci ];
-}
+);
 $posizioni = [];
 foreach ( get_nav_menu_locations() as $posizione => $id_menu ) {
 	if ( isset( $chiavi_menu[ $id_menu ] ) ) {

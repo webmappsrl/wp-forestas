@@ -77,6 +77,10 @@ in `config/`), e chi lavora sul sito li ritrova dove Impreza li mette.
       (`mobile_width` del menu 1025px) e su tablet e mobile l'header non è sticky: scorre con la pagina come su desktop
 - [ ] Il footer «Footer» (`us_page_block`) ha la struttura del mockup e sostituisce interamente il
       contenuto demo
+- [ ] Con i filtri di WPML attivi (primo passo del wizard completato, come su UAT) l'apply crea e
+      aggiorna i menu tradotti con le loro voci, e l'export li legge senza mescolarli agli originali;
+      l'apply completa quel passo anche su un sito configurato dagli script, così il locale si
+      comporta come UAT
 - [ ] Header e footer sono scritti in `config/post.json` e arrivano nel sito con
       `bin/wordpress-config.sh apply --conferma`. Il contenuto scritto a mano si apre e si salva una
       volta dal pannello in locale, poi si esporta: in `config/` va la forma normalizzata dal builder,
@@ -252,7 +256,14 @@ in `config/`), e chi lavora sul sito li ritrova dove Impreza li mette.
 
 ## Moduli toccati
 
-Tutto nel submodule `wp-forestas`; nessuna modifica in `forestas` né in `wm-package`.
+Tutto nel submodule `wp-forestas`, tranne l'howto di UAT in `forestas` (in fondo); nessuna modifica in
+`wm-package`.
+
+- `docker/scripts/config/wpml.php` — primo passo del wizard di WPML completato dall'apply;
+  `wpf_wpml_tutte_le_lingue()` per leggere e scrivere i menu tradotti con i filtri di WPML attivi
+- `docker/scripts/config/apply.php`, `export.php`, `ritratto.php` — menu letti e scritti con
+  `wpf_wpml_tutte_le_lingue()`
+- `docker/configs/php/wordpress.ini` — errori PHP nei log del container, mai in pagina
 
 - `config/post.json` — `us_header-header` (header IT), `us_page_block-footer` (footer IT) e le
   traduzioni `-en-us`
@@ -267,6 +278,8 @@ Tutto nel submodule `wp-forestas`; nessuna modifica in `forestas` né in `wm-pac
   (`forestas_pannello_servizio()`, `forestas_pannello_social()`, `forestas_voce_pannello()`); link
   «Vai al contenuto»; caricamento di CSS e `menu-mobile.js` con la Version del child; funzioni
   `forestas_testo()`, `forestas_versione()`, `forestas_asset_url()`
+- `themes/forestas-child/functions.php` (filtro del pannello) — menu della pagina e `main-menu`
+  confrontati nella lingua predefinita, per i filtri di WPML attivi
 - `themes/forestas-child/assets/js/menu-mobile.js` — nuovo: scritta e nome del pulsante, focus nel
   pannello, posizione del pannello sotto l'header
 - `themes/forestas-child/style.css` — stili di header, pannello mobile e footer, `Version` alzata
@@ -275,9 +288,9 @@ Tutto nel submodule `wp-forestas`; nessuna modifica in `forestas` né in `wm-pac
 - `CLAUDE.md` — trappole sugli oggetti dei builder sovrascritti dall'apply, sulla soglia
   1024/1025px in tre posti, sulle due copie IT/EN di header e footer e sull'hover di Impreza
   nell'header; riga dell'indice «Conoscenza»
-- `README.md` — la `Version` del child si alza anche per JavaScript e immagini
+- `README.md` — la `Version` del child si alza anche per JavaScript e immagini; `wordpress.ini` nella tabella e gli errori PHP in `docker logs`
 - `docs/knowledge/inizializzazione-wordpress.md` — dipendenze dal codice interno di Impreza usate dal
-  child
+  child; errori PHP nei log del container
 - `docs/knowledge/8757-header-e-footer-di-wordpress-forestas-secondo-il-mockup.md` — nuova pagina di
   conoscenza
 - Fuori da questo repo, in `forestas`: `docs/howto/messa-in-opera-wordpress-uat.md` — child e
