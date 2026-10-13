@@ -86,6 +86,12 @@ subagent.
 - WPML si configura solo con le sue API (`CatalogueSyncRunner`, `SaveLanguages` con `presetCode`,
   `save_settings`): su un sito nuovo, senza sincronizzare il catalogo, l'API risponde
   `missing_preset` (oc:8717)
+- I filtri per lingua di WPML si accendono solo con il primo passo del wizard completato
+  (`existing_content_language_verified`): l'apply lo completa, così il locale si comporta come UAT.
+  Con i filtri attivi, da WP-CLI la lingua corrente è quella predefinita: `get_terms()` non vede i
+  menu (e i termini) tradotti e `get_term()` ne converte l'id in quello dell'originale. Il codice
+  degli script che legge o scrive menu tradotti va dentro `wpf_wpml_tutte_le_lingue()`; nel child si
+  confrontano i menu nella lingua predefinita (oc:8757)
 - Da WP-CLI WPML non toglie la riga di traduzione di un post cancellato (lo fa solo dal pannello o
   dal sito) e converte il link di una traduzione in quello della lingua predefinita: negli script di
   `docker/scripts/config/` si cancella con `wpf_wpml_cancella_post` e si prende il link con

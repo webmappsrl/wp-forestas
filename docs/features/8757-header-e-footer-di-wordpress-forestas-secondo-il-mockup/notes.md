@@ -432,6 +432,87 @@ decisione del dev. Child alla Version 1.1.32.
   la finestra passa al desktop col pannello aperto (requisito del focus), requisito della «trappola
   dei 96px» tolto.
 
+## Rilascio su UAT e correzione per WPML con i filtri attivi (2026-10-13)
+
+**Rilascio su UAT** (dev in remoto, eseguito da Claude via SSH): `forestas` su `2340c96` (PR #25),
+`wp-forestas` su `7dfe79c` (PR #4), `scripts/wordpress-up.sh` (immagine dalla cache, container non
+ricreati), `apply` in anteprima con le 11 differenze attese, poi `apply --conferma`. **Backup per il
+rollback: `wp-forestas/backup/2026-10-13-123738`** su UAT, l'unico del rilascio.
+
+**Difetto 1, menu tradotti.** Dopo l'apply UAT aveva 13 voci inglesi nei tre menu italiani: per ogni
+menu inglese la prima voce era nel menu giusto, le successive in quello italiano, e l'anteprima
+segnalava ancora 6 differenze. Causa: su UAT WPML ha i suoi filtri attivi, in locale no. I filtri si
+accendono quando è completato il primo passo del wizard («lingua dei contenuti esistenti»,
+`existing_content_language_verified`): su UAT lo è (wizard fatto dal pannello), in locale no, perché
+le lingue impostate con l'API non lo completano e l'export lo scarta come stato (`_verified$`). Con i
+filtri attivi la lingua corrente è l'italiano: `get_terms()` non vede i menu inglesi e `get_term()`
+converte l'id di un menu inglese in quello del suo originale. Non dipende dalla registrazione di WPML:
+completato quel passo, il locale ha riprodotto le stesse 6 differenze e lo stesso export sbagliato
+(`menu.json`, 123 righe).
+
+- **Correzione dei dati su UAT**, autorizzata dal dev: le 13 voci in lingua `en-us` spostate dai menu
+  italiani a quelli inglesi (6→10, 7→9, 8→11), conteggi ricalcolati. Nel database ogni menu ha le
+  voci di `config/`.
+- **Correzione del codice** (branch `fix/oc-8757-menu-e-pannello-con-wpml-attivo`):
+  - `wpml.php`: l'apply completa il primo passo del wizard con `WPML_Installation::finish_step1()`
+    (`wpml_get_setup_instance()`), come il wizard; assegna la lingua ai contenuti esistenti solo se il
+    sito non ha ancora traduzioni. Su UAT non scatta, perché il passo è già completato;
+  - `wpml.php`: nuova `wpf_wpml_tutte_le_lingue()`, che esegue un blocco con WPML su tutte le lingue
+    e senza conversione degli id (`\WPML\Utils\AutoAdjustIds::runWithout`, l'API con cui WPML stesso
+    la spegne); la usano l'apply dei menu, l'export dei menu e il ritratto.
+- **Verifica in locale, con i filtri attivi:** stato di UAT prima del rilascio ricreato (backup di UAT
+  applicato, menu e header/footer inglesi tolti), poi apply del repo: 11 modifiche, poi «nessuna
+  differenza»; sei menu con chiave, lingua e voci giuste, nessuna voce orfana; export identico a
+  `config/`. **Su UAT in sola anteprima** (script corretti copiati in una cartella temporanea del
+  container, poi cancellata, `WPF_PROVA=1`): «nessuna differenza», contro le 6 di prima.
+
+**Difetto 2, pannello mobile inglese senza servizio e social.** Il filtro `wp_nav_menu_items` del child
+confrontava il menu della pagina con `main-menu` cercato per slug; con i filtri di WPML attivi quella
+ricerca restituisce già il menu nella lingua della pagina, e in inglese il confronto falliva.
+Correzione: si confrontano tutti e due convertiti nella lingua predefinita. Verificato in locale, IT
+ed EN; Version del child 1.1.33.
+
+**Verifiche su UAT prima del merge, in sola lettura** (chieste dal dev; script corretti in una cartella
+temporanea del container, poi cancellata, checkout del server non toccato):
+
+- export con gli script corretti (`WPF_SOLA_LETTURA=1`): i 7 file identici byte per byte a `config/`;
+- logica del filtro del pannello nel contesto inglese: `main-menu` cercato per slug arriva come
+  `main-menu-en`; condizione vecchia «no» (servizio e social assenti), nuova «sì»; in italiano «sì»;
+- PHP di UAT legge già `wordpress.ini` da `conf.d` (`memory_limit` 256M, `upload_max_filesize` 64M):
+  le tre righe nuove arrivano con la ricostruzione dell'immagine.
+
+Non provati su UAT fino al rilascio: la resa del child 1.1.33, la ricostruzione dell'immagine (il
+container di WordPress viene ricreato, pochi secondi di sito irraggiungibile), la scrittura dei menu
+(l'apply non avrà differenze), il primo passo del wizard (su UAT è già completato). Dopo il rilascio:
+confronto di resa locale/UAT su IT ed EN.
+
+Regressione in locale con i filtri attivi: axe senza violazioni da anonimo e da loggato a 390, 800 e
+1280px, hover, tastiera, 12 casi su 12 della barra di amministrazione, target, pagina bloccata.
+
+**Fino al rilascio di questa correzione su UAT non va lanciato `apply --conferma` lì:** con gli
+script vecchi rinominerebbe i menu italiani come quelli inglesi.
+
+**Avviso PHP sulla 404 inglese di UAT** («Undefined array key 0 in class-wp-query.php line 3754»),
+chiesto dal dev. Causa, dal codice di us-core (`us_display_maintenance_page`): su UAT la licenza di
+sviluppo di Impreza tiene accesa la modalità manutenzione, con la Home (id 7) come pagina di
+manutenzione, quindi chi non è loggato vede la Home al posto di ogni pagina, 404 compresa. In inglese
+us-core cerca la Home tradotta, che non esiste, e la richiede con una `WP_Query` che i filtri di WPML
+limitano all'inglese: la query è vuota e `the_post()` dà l'avviso. In locale la manutenzione è spenta
+(nessuna licenza). L'avviso sparisce quando la Home avrà la traduzione inglese (pagine inglesi: altro
+ticket, deciso dal dev).
+
+Si vedeva in pagina perché l'immagine non ha un `php.ini`: PHP usava `display_errors` acceso e
+`log_errors` spento, cioè errori mostrati ai visitatori, con i percorsi del server, e non registrati.
+**Correzione** in `docker/configs/php/wordpress.ini`: `display_errors = Off`, `log_errors = On`,
+`error_log = /dev/stderr`. Verificata in locale dopo `scripts/wordpress-up.sh` (immagine ricostruita,
+container ricreato) con una pagina di prova temporanea, poi cancellata: l'avviso non compare in pagina
+e finisce in `docker logs`. Su UAT arriva con `wordpress-up.sh`, che stavolta ricostruisce l'immagine;
+README aggiornato (tabella e «Comandi utili»).
+
+**Modifiche a `overview.md`:** requisito sull'apply e l'export con WPML attivo; «Moduli toccati» con
+`wpml.php`, `apply.php`, `export.php`, `ritratto.php`, il filtro del pannello, `wordpress.ini`, il
+README e `inizializzazione-wordpress.md` (errori nei log), e la frase «nessuna modifica in `forestas`» corretta (c'è l'howto di UAT).
+
 ## Follow-up
 
 **Requisito di rilascio: prova del salvataggio dal pannello (2026-10-13).** Il dev ha salvato dal

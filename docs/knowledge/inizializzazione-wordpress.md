@@ -12,6 +12,11 @@ qui conta come si comporta e perché.
 - **Il core non sta nell'immagine:** lo scarica WP-CLI nel volume `wordpress-<APP_NAME>`, che
   contiene l'intera cartella di WordPress (core, `wp-config.php`, plugin, temi, lingue, uploads).
   Ricostruire l'immagine o ricreare il container non perde nulla.
+- **Errori PHP nei log, non in pagina** (oc:8757): `docker/configs/php/wordpress.ini` spegne
+  `display_errors` e manda gli errori su stderr, quindi in `docker logs wordpress-<APP_NAME>`. Senza,
+  PHP li mostrava ai visitatori con i percorsi del server e non li registrava; una pagina bianca o
+  incompleta si indaga dai log. `wordpress.ini` sta nell'immagine: una sua modifica vale dopo
+  `scripts/wordpress-up.sh` di `forestas`.
 - **GitHub non raggiungibile:** il sito parte lo stesso con un avviso nei log; `wp-geohub` si scarica
   al riavvio successivo.
 - **Zip di Impreza assente:** avviso nei log, tema di default. Il tema si riconosce dallo slug della
@@ -134,6 +139,8 @@ con un apply di prova su un WordPress usa e getta prima di quello su UAT:
   `\WPML\FP\Right`, `wpml_collect`, `WPML_Package_Translation_Schema::run_update`,
   `WPML_Config::load_config_run`,
   `$sitepress->delete_element_translation` (vuole il trid come stringa), `$sitepress->save_settings`,
+  `wpml_get_setup_instance()->finish_step1()` e l'impostazione `existing_content_language_verified`,
+  `\WPML\Utils\AutoAdjustIds::runWithout` (oc:8757),
   `wpml_is_setup_complete`, `icl_add_string_translation` con `ICL_TM_COMPLETE`, i filtri e le azioni
   `wpml_element_language_details`, `wpml_set_element_language_details`, `wpml_object_id`,
   `wpml_switch_language`, le tabelle `icl_strings`/`icl_string_translations` lette da export e apply.

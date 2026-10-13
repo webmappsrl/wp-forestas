@@ -49,6 +49,29 @@ function wpf_togli_stato_wpml( array $dati ): array {
 	return $dati;
 }
 
+/**
+ * Esegue $fai con WPML su tutte le lingue e senza conversione degli id (oc:8757). Con i filtri di WPML
+ * attivi (primo passo del wizard completato, come su UAT) la lingua corrente è quella predefinita:
+ * get_terms() non vede i menu tradotti e get_term() converte l'id di un menu tradotto in quello del suo
+ * originale. Così l'apply scriveva le voci dei menu inglesi in quelli italiani e l'export li leggeva
+ * mescolati. «runWithout» è l'API con cui WPML stesso spegne la conversione e la riaccende dopo.
+ */
+function wpf_wpml_tutte_le_lingue( callable $fai ) {
+	global $sitepress;
+	if ( ! $sitepress ) {
+		return $fai();
+	}
+	$lingua = apply_filters( 'wpml_current_language', null );
+	do_action( 'wpml_switch_language', 'all' );
+	try {
+		return class_exists( '\WPML\Utils\AutoAdjustIds' )
+			? ( new \WPML\Utils\AutoAdjustIds( $sitepress ) )->runWithout( $fai )
+			: $fai();
+	} finally {
+		do_action( 'wpml_switch_language', $lingua );
+	}
+}
+
 /** Dettagli WPML di un elemento (lingua, trid, lingua di partenza), o null senza WPML. */
 function wpf_dettagli_lingua( int $id, string $tipo ): ?object {
 	return apply_filters( 'wpml_element_language_details', null, [ 'element_id' => $id, 'element_type' => $tipo ] ) ?: null;
@@ -119,6 +142,11 @@ function wpf_wpml_applica( array $cfg, bool $prova, callable $diff ): bool {
 		}
 	}
 	$setup_diverso = wpf_diverso( get_option( 'WPML(setup)' ), $cfg['setup'] );
+	// Il primo passo del wizard di WPML («lingua dei contenuti esistenti») accende i filtri per lingua di
+	// query, termini e menu. Le lingue salvate con l'API non lo completano: senza, il sito si comporta
+	// diversamente da uno configurato dal pannello come UAT, e i problemi dei menu tradotti non si vedono
+	// in locale (oc:8757). Non è un'impostazione da esportare: è uno stato, da raggiungere.
+	$verificato = (bool) $sitepress->get_setting( 'existing_content_language_verified' );
 
 	if ( ! $lingue_uguali ) {
 		$diff( 'lingue', implode( ',', $attive_ora ) . ' (predefinita ' . $sitepress->get_default_language() . ')', implode( ',', $attive_cfg ) . ' (predefinita ' . $cfg['predefinita'] . ')' );
@@ -128,6 +156,9 @@ function wpf_wpml_applica( array $cfg, bool $prova, callable $diff ): bool {
 	}
 	if ( $setup_diverso ) {
 		$diff( 'stato del wizard', 'diverso', 'come nel repo' );
+	}
+	if ( ! $verificato ) {
+		$diff( 'primo passo del wizard (lingua dei contenuti esistenti)', 'non completato', 'completato' );
 	}
 	if ( $prova ) {
 		return true;
@@ -150,6 +181,16 @@ function wpf_wpml_applica( array $cfg, bool $prova, callable $diff ): bool {
 			WP_CLI::warning( 'WPML ha rifiutato le lingue: ' . json_encode( $errore ) );
 			return false;
 		}
+	}
+	if ( ! $verificato ) {
+		if ( ! function_exists( 'wpml_get_setup_instance' ) || ! method_exists( 'WPML_Installation', 'finish_step1' ) ) {
+			WP_CLI::warning( 'questa versione di WPML non ha WPML_Installation::finish_step1(): wizard non completato, va adeguato wpml.php' );
+			return false;
+		}
+		// Assegna la lingua predefinita ai contenuti esistenti solo se il sito non ha ancora traduzioni
+		wpml_get_setup_instance()->finish_step1( $cfg['predefinita'] );
+		$impostazioni_ora = $sitepress->get_settings();
+		$impostazioni     = array_replace( $impostazioni_ora, $impostazioni );
 	}
 	if ( $impostazioni_diverse ) {
 		$sitepress->save_settings( $impostazioni );

@@ -129,7 +129,7 @@ $risolvi    = function ( $valore ) use ( &$ok, &$segnalati, $prova, $chiavi_cfg,
 
 $menu_cfg = (array) $leggi( 'menu.json' );
 $id_menu  = []; // chiave => term_id
-$ok       = wpf_menu_applica( (array) ( $menu_cfg['menu'] ?? [] ), $prova, $diff, $risolvi, $id_menu ) && $ok;
+$ok       = wpf_wpml_tutte_le_lingue( fn() => wpf_menu_applica( (array) ( $menu_cfg['menu'] ?? [] ), $prova, $diff, $risolvi, $id_menu ) ) && $ok;
 
 // --- 3. Opzioni: Theme Options e loro traduzioni, tema, posizioni dei menu, sito ------------
 
