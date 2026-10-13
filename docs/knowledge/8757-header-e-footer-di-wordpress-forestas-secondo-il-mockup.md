@@ -106,6 +106,13 @@ Vincoli:
 - **Menu mobile come sul sito attuale** (oc:8757): pannello da destra, pagina bloccata,
   pulsanti a riquadro. Il fondo del pulsante aperto è più scuro di quello di produzione
   (`hsl(17deg 76% 40%)` contro 45%) per arrivare a 4,5:1 col testo bianco.
+- **Menu letti e scritti su tutte le lingue** (oc:8757): con i filtri di WPML attivi, che si accendono
+  completando il primo passo del wizard («lingua dei contenuti esistenti»), la lingua corrente di
+  WP-CLI è quella predefinita: `get_terms()` non vede i menu tradotti e `get_term()` converte l'id di
+  un menu tradotto in quello del suo originale. Apply, export e ritratto lavorano sui menu dentro
+  `wpf_wpml_tutte_le_lingue()` (`wpml.php`), e l'apply completa quel passo anche sui siti configurati
+  dagli script: senza, in locale i filtri restavano spenti e i difetti si vedevano solo su UAT. Lo
+  stesso vale per il child: il filtro del pannello confronta i menu nella lingua predefinita.
 - **Header e footer copiati per lingua** (oc:8757): WPML traduce gli oggetti dei builder di Impreza
   come post separati, uno per lingua. Ridurre la copia vorrebbe dire tenere un solo header e tradurne
   i testi con WPML String Translation dentro il JSON dell'Header Builder: non provato. Rischio
