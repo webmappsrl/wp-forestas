@@ -63,6 +63,10 @@ subagent.
   e opzioni dell'header vanno cambiati in tutte e due, e il pannello mobile inglese legge i social
   dall'header inglese. Dopo l'export, `git diff config/` mostra se le copie sono allineate (knowledge
   8757, «Perché così») (oc:8757)
+- Nell'header, i colori al passaggio del mouse del child perdono contro `.no-touch .l-subheader.at_middle
+  a:hover` di Impreza, che dà a ogni link e pulsante della riga centrale il blu dei link: serve
+  `.l-subheader` nel selettore. Succede solo col mouse, quindi su un telefono non si vede; il pulsante
+  «chiudi» era sceso a 1,66:1 (oc:8757)
 - L'apply automatico vale solo nei 3 giorni dopo l'installazione (`WPF_APPLY_FINESTRA`) e aspetta,
   senza consumare tentativi, che tema e plugin di `config/versioni.json` siano installati: dopo, un
   sito cambiato dal pannello non viene più sovrascritto senza anteprima (oc:8717)

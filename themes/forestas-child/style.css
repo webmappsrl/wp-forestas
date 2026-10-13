@@ -5,7 +5,7 @@ Template: Impreza
 Author: Webmapp
 Author URI: https://webmapp.it/
 Description: Child theme di Impreza per Sardegna Sentieri (Forestas). Versionato nel repo wp-forestas e montato dal compose: si modifica nel repo, non dal pannello.
-Version: 1.1.28
+Version: 1.1.30
 */
 
 
@@ -86,8 +86,8 @@ Version: 1.1.28
  * (Header Builder e blocco riutilizzabile «Footer»): qui solo ciò che Impreza non sa fare.
  *
  * Soglia tablet/desktop, una sola in tre posti che vanno cambiati insieme (trappola nel CLAUDE.md):
- * - «tablets_breakpoint: 1024px» delle Theme Options (config/impreza.json): layout tablet dell'header,
- *   header fisso, --header-sticky-height;
+ * - «tablets_breakpoint: 1024px» delle Theme Options (config/impreza.json): layout tablet dell'header
+ *   e --header-sticky-height;
  * - «mobile_width: 1025px» del menu nei due header IT/EN (config/post.json): Impreza mostra
  *   l'hamburger sotto 1025, cioè fino a 1024px;
  * - le media query del child: «max-width: 1024px» e «min-width: 1025px».
@@ -304,16 +304,14 @@ Version: 1.1.28
 }
 
 /*
- * Tablet e mobile (fino a 1024px). L'header è fisso in cima e la sua altezza la pubblica Impreza in
- * --header-sticky-height (96px: riga in alto 36 + riga del logo 60).
+ * Tablet e mobile (fino a 1024px). L'header sta in cima alla pagina e scorre con essa, come su desktop
+ * (non sticky). È alto 96px (riga in alto 36 + riga del logo 60), che Impreza pubblica in
+ * --header-sticky-height. --forestas-sotto-header è il bordo inferiore dell'header nello schermo: qui
+ * il valore a pagina in cima, a menu aperto lo ricalcola assets/js/menu-mobile.js.
  */
 @media (max-width: 1024px) {
 	:root {
 		--forestas-sotto-header: calc(var(--header-sticky-height, 96px) + var(--forestas-barra-admin));
-	}
-	/* L'elemento che riceve il focus da tastiera non finisce sotto l'header fisso (WCAG 2.2 2.4.11) */
-	html {
-		scroll-padding-top: calc(var(--forestas-sotto-header) + 8px);
 	}
 
 	/* Ricerca e hamburger: riquadri di 45px come sul sito attuale */
@@ -359,7 +357,9 @@ Version: 1.1.28
 		font-size: var(--carattere-piccolo);
 		line-height: 1;
 	}
-	.l-header .forestas-nav .w-nav-control:is(:hover, :focus-visible, [aria-expanded="true"]) {
+	/* «.l-subheader» serve a battere «.no-touch .l-subheader.at_middle a:hover» di Impreza, che col mouse
+	   colorerebbe la scritta del blu dei link dell'header (1,66:1 sul fondo arancio scuro) */
+	.l-header .l-subheader .forestas-nav .w-nav-control:is(:hover, :focus-visible, [aria-expanded="true"]) {
 		background: var(--pulsante-menu-fondo-attivo);
 		color: var(--testo-su-scuro);
 	}
@@ -374,8 +374,8 @@ Version: 1.1.28
 	}
 	/* Il selettore deve battere «.w-nav.type_mobile.m_layout_panel .w-nav-list.level_1» di Impreza */
 	.l-header .w-nav.forestas-nav.m_layout_panel .w-nav-list.level_1 {
-		/* Altezza esplicita, non «bottom: 0»: se l'header fisso fa da contenitore il pannello finirebbe
-		   oltre il fondo dello schermo. 100dvh segue anche la barra degli indirizzi dei telefoni. */
+		/* Parte dal bordo inferiore dell'header (--forestas-sotto-header) e arriva al fondo dello schermo:
+		   100dvh segue anche la barra degli indirizzi dei telefoni. */
 		top: var(--forestas-sotto-header);
 		bottom: auto;
 		left: 0;

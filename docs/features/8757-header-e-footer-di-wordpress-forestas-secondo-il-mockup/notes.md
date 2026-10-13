@@ -271,6 +271,53 @@
   link di salto sotto la barra di amministrazione, requisito della trappola sulle due copie IT/EN,
   `README.md` e le nuove funzioni di `functions.php` fra i «Moduli toccati».
 
+## Correzione dopo le review: header mobile non sticky e pannello sotto l'header (2026-10-13)
+
+Problemi segnalati dal dev provando il sito in locale da loggato, a ≤600px; nessuna delle tre review
+li aveva visti, perché le prove erano fatte da anonimo o sopra i 600px:
+
+- **L'header di tablet e mobile era sticky** e il dev lo vuole fermo in cima alla pagina, come su
+  desktop. Da loggato era anche rotto: sotto i 600px la barra di amministrazione scorre via con la
+  pagina, ma Impreza teneva l'header fisso a 46px dal bordo, lasciando vedere il contenuto sopra.
+  Correzione: `sticky` 0 per `tablets` e `mobiles` nei due header IT/EN (`config/post.json`,
+  applicato ed esportato: il diff è solo quei quattro valori).
+- **Il pannello del menu copriva la riga del logo** e restava visibile solo «chiudi». Partiva da
+  `--header-sticky-height` + barra di amministrazione, ma la barra sotto i 600px vale 0 nel CSS
+  mentre occupa 46px sopra l'header: il pannello partiva 46px troppo in alto. Con l'header che scorre
+  il valore dipende anche da quanto la pagina è scesa. Correzione: `menu-mobile.js` all'apertura (e al
+  ridimensionamento a menu aperto) imposta `--forestas-sotto-header` al bordo inferiore dell'header
+  nello schermo; il valore del CSS resta come riserva senza JS.
+- Tolto lo `scroll-padding-top` sotto i 1024px e il relativo requisito dell'overview (WCAG 2.4.11):
+  serviva solo con l'header fisso. Child alla Version 1.1.29.
+- Verifica in headless (Chrome) a 390 e 800px, da anonimo e da loggato, con la pagina in cima e scesa
+  di 40px: header `pos_static` che esce dallo schermo scorrendo; pannello che parte esattamente dal
+  bordo inferiore dell'header (390 loggato: header 46–142, pannello da 142) e arriva al fondo.
+- **Modifiche a `overview.md`:** «Cosa cambia» e requisito dei layout tablet e mobile (header non
+  sticky), requisito dello `scroll-padding-top` tolto, rischio sul pannello riscritto.
+
+Verifica di accessibilità rifatta dopo la correzione (axe-core 4.10.2, regole WCAG 2.0/2.1/2.2 A e
+AA, su header, footer e pannello aperto; anonimo e loggato a 390, 800 e 1280px). Ha trovato due
+problemi, corretti:
+
+- **Contrasto di «chiudi» col mouse sopra: 1,66:1.** `.no-touch .l-subheader.at_middle a:hover` di
+  Impreza è più specifica della regola del child e colorava la scritta del blu dei link dell'header
+  (`#254877`) sul fondo arancio scuro. Succede solo con il mouse (classe `no-touch`): tablet con mouse,
+  finestra stretta del desktop. Le verifiche precedenti misuravano il pulsante col mouse altrove.
+  Correzione: `.l-subheader` aggiunto al selettore del child; Version 1.1.30.
+- **«chiudi» in parte fuori dallo schermo** aprendo il menu con la pagina scesa di qualche decina di
+  pixel: a menu aperto la pagina è bloccata e non si può risalire (WCAG 2.4.11). Correzione:
+  all'apertura `menu-mobile.js` porta la riga del pulsante tutta nello schermo.
+
+Modifiche a `overview.md` per queste due correzioni: requisito del contrasto di «chiudi» esteso al
+mouse sopra, requisito nuovo sul pulsante tutto visibile e sul pannello sotto l'header, «Moduli
+toccati» di `menu-mobile.js`. Nella pagina di conoscenza il paragrafo sull'accessibilità e l'alternativa
+superata dell'header sticky; nel `CLAUDE.md` la trappola dell'hover di Impreza.
+
+Esito finale: nessuna violazione con il pannello chiuso o aperto. Passando il mouse su ognuno dei 20-22
+link e pulsanti dell'header, dei 13 del footer e dei 17 del pannello, nessun problema di contrasto.
+Tab e Maiusc+Tab restano nel pannello aperto, Esc lo chiude e riporta il focus sul pulsante. Dopo uno
+scroll di 80px «chiudi» è tutto visibile e il pannello parte subito sotto.
+
 ## Follow-up
 
 Rilievi minori della code review finale (prima review), non corretti:

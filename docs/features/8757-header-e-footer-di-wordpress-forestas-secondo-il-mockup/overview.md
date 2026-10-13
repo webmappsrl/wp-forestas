@@ -27,7 +27,8 @@ builder, quindi una modifica fatta lì va persa al primo apply.
 - terza riga (44px): il blocco istituzionale FESR, centrato.
 
 **Header, tablet e mobile (fino a 1024px)**, non nel mockup: definito dal dev sul modello del sito
-attuale in produzione. L'header è fisso in cima. Riga in alto con il blocco istituzionale FESR a
+attuale in produzione. L'header sta in cima alla pagina e scorre con essa, come su desktop (non è
+sticky). Riga in alto con il blocco istituzionale FESR a
 sinistra e IT EN a destra; riga del logo con la ricerca (sotto i 600px un riquadro di 45px sul fondo
 dei campi, scuro al tocco; fra 601 e 1024px il campo intero) e l'hamburger (riquadro arancio di 45px con la scritta «menu», che a menu aperto
 diventa «chiudi»). Il menu è un pannello che entra ed esce da destra, a tutta larghezza sotto l'header
@@ -73,7 +74,7 @@ in `config/`), e chi lavora sul sito li ritrova dove Impreza li mette.
 - [ ] L'header «Header» (`us_header`) ha il layout desktop del mockup: riga di servizio e riga
       principale, con gli elementi nell'ordine del mockup, più la terza riga con il blocco FESR
 - [ ] L'header ha i layout tablet e mobile descritti sopra; l'hamburger compare fino a 1024px
-      (`mobile_width` del menu 1025px) e su tablet e mobile l'header è fisso (`sticky`)
+      (`mobile_width` del menu 1025px) e su tablet e mobile l'header non è sticky: scorre con la pagina come su desktop
 - [ ] Il footer «Footer» (`us_page_block`) ha la struttura del mockup e sostituisce interamente il
       contenuto demo
 - [ ] Header e footer sono scritti in `config/post.json` e arrivano nel sito con
@@ -173,11 +174,11 @@ in `config/`), e chi lavora sul sito li ritrova dove Impreza li mette.
       pulsante e i link del pannello (WCAG 2.4.3, 2.4.7); se la finestra passa al desktop col pannello
       aperto, la tastiera non resta bloccata
 - [ ] Testo bianco del pulsante «chiudi» con contrasto di almeno 4,5:1 (fondo `hsl(17deg 76% 40%)`,
-      5,55:1; WCAG 1.4.3)
+      5,55:1; WCAG 1.4.3), anche con il mouse sopra
+- [ ] Aprendo il menu, anche con la pagina scesa, il pulsante «chiudi» è tutto nello schermo e il
+      pannello parte subito sotto l'header, senza coprirlo (WCAG 2.4.11)
 - [ ] Le tre `nav` hanno un nome distinto nella lingua della pagina («Menu principale», «Link di
       servizio», «Link istituzionali»); l'etichetta del selettore è «Lingua» / «Language»
-- [ ] Con l'header fisso di tablet e mobile l'elemento che riceve il focus non finisce sotto l'header
-      (`scroll-padding-top`, WCAG 2.2 2.4.11)
 
 **Documentazione**
 
@@ -218,8 +219,10 @@ in `config/`), e chi lavora sul sito li ritrova dove Impreza li mette.
 - **Dimensione dell'emblema UE** — le linee guida vietano che sia più piccolo degli altri loghi.
   Mitigazione: altezze del blocco scelte perché la bandiera resti più alta del logo del sito a ogni
   larghezza (logo dell'header ridotto a 15px su mobile).
-- **Header fisso e altezza del pannello mobile** — il pannello si posiziona sotto l'header con
-  `--header-sticky-height` di Impreza, quindi segue da sé le altezze dell'Header Builder.
+- **Posizione del pannello mobile** — l'header scorre con la pagina e sopra può esserci la barra di
+  amministrazione (sotto i 600px scorre anche lei): il pannello si apre dal bordo inferiore
+  dell'header come si vede in quel momento, calcolato da `menu-mobile.js` all'apertura, mai sopra
+  l'header.
 - Gli URL social sono quelli forniti dal cliente: il numero WhatsApp è senza prefisso internazionale
   e l'handle X è `SardegnSentieri`. Si usano così come sono.
 
@@ -257,7 +260,7 @@ Tutto nel submodule `wp-forestas`; nessuna modifica in `forestas` né in `wm-pac
   «Vai al contenuto»; caricamento di CSS e `menu-mobile.js` con la Version del child; funzioni
   `forestas_testo()`, `forestas_versione()`, `forestas_asset_url()`
 - `themes/forestas-child/assets/js/menu-mobile.js` — nuovo: scritta e nome del pulsante, focus nel
-  pannello
+  pannello, posizione del pannello sotto l'header
 - `themes/forestas-child/style.css` — stili di header, pannello mobile e footer, `Version` alzata
 - `docker/scripts/config/comune.php` — `us_og_image`, `_us_page_block_ids` e
   `_us_posts_per_archive_page` fra i meta calcolati che l'export esclude

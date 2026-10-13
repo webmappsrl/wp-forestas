@@ -20,10 +20,13 @@ versionata»). Ciò che Impreza non sa fare sta nel child theme.
 - **Desktop (da 1025px):** tre righe. Servizio (36px), logo e menu (84px), blocco FESR centrato
   (44px). La voce attiva del menu prende il colore del tipo di contenuto dalla classe della voce
   (`tipo-sentiero`, …), con una sottolineatura legata al testo.
-- **Tablet e mobile (fino a 1024px):** l'header è fisso (`sticky` solo per `tablets` e `mobiles`) e
-  alto 96px (riga in alto 36 + riga del logo 60), che Impreza pubblica in `--header-sticky-height`.
-  Il menu è un pannello che entra da destra (`mobile_layout="panel"`), posizionato sotto l'header con
-  quella variabile e alto quanto il resto dello schermo; in coda alle voci un filtro
+- **Tablet e mobile (fino a 1024px):** l'header non è sticky (`sticky` 0 a ogni larghezza):
+  sta in cima alla pagina e scorre con essa, come su desktop. È alto 96px (riga in alto 36 + riga del
+  logo 60), che Impreza pubblica in `--header-sticky-height`. Il menu è un pannello che entra da
+  destra (`mobile_layout="panel"`), alto dal bordo inferiore dell'header al fondo dello schermo. Quel
+  bordo lo calcola `menu-mobile.js` all'apertura (`--forestas-sotto-header`): dipende da quanto la
+  pagina è scesa e dalla barra di amministrazione, che sotto i 600px scorre con la pagina e che il
+  solo CSS non può conoscere; in coda alle voci un filtro
   `wp_nav_menu_items` del child aggiunge i link di servizio e i social. Social e «Seguici su» si
   leggono dall'header della lingua corrente, cercando gli elementi per tipo e classe (non per id, che
   il builder rinumera), così il PHP non ripete gli URL; gli URL stanno comunque in ognuna delle
@@ -36,7 +39,10 @@ versionata»). Ciò che Impreza non sa fare sta nel child theme.
   «chiudi», WCAG 2.5.3) e tiene il focus nel pannello finché il pulsante si vede (Impreza non chiude il
   pannello quando la finestra passa al desktop); ascolta in fase di cattura, perché Impreza chiude il
   pannello con Maiusc+Tab sulla prima voce. Esc lo gestisce Impreza, che riporta anche il focus sul
-  pulsante. Le `nav` hanno nomi distinti con gli attributi HTML personalizzati di Impreza
+  pulsante. All'apertura, se la riga del pulsante è tagliata in alto, la porta tutta nello schermo:
+  a menu aperto la pagina non scorre e «chiudi» resterebbe in parte nascosto (WCAG 2.4.11). Il colore
+  di «chiudi» col mouse sopra lo decide il child con `.l-subheader` nel selettore, per battere
+  `.no-touch .l-subheader.at_middle a:hover` di Impreza (trappola nel `CLAUDE.md`). Le `nav` hanno nomi distinti con gli attributi HTML personalizzati di Impreza
   (`custom_html_atts`).
 
 Vincoli:
@@ -66,7 +72,7 @@ Vincoli:
   scritto nel JSON o un'immagine negli uploads no.
 - **Selettore di lingua da shortcode** (oc:8757): il `dropdown` di Impreza con `source=wpml` mostra
   solo bandiere o nomi lunghi, non «IT EN» in linea come nel mockup.
-- **Menu mobile come sul sito attuale** (oc:8757): pannello da destra, header fisso, pagina bloccata,
+- **Menu mobile come sul sito attuale** (oc:8757): pannello da destra, pagina bloccata,
   pulsanti a riquadro. Il fondo del pulsante aperto è più scuro di quello di produzione
   (`hsl(17deg 76% 40%)` contro 45%) per arrivare a 4,5:1 col testo bianco.
 - **Header e footer copiati per lingua** (oc:8757): WPML traduce gli oggetti dei builder di Impreza
@@ -87,6 +93,10 @@ Vincoli:
   li ha voluti nel pannello come sul sito attuale; ora il filtro li legge dall'header.
 - **Blocco FESR nella riga di servizio su desktop** (oc:8757, superata): per farlo stare servivano
   spazi ridotti, «Seguici su» nascosto e ricerca stretta fino a 1439px. Spostato in una terza riga.
+- **Header fisso (sticky) su tablet e mobile** (oc:8757, superata): copiava il sito attuale, ma il
+  dev vuole l'header fermo in cima come su desktop. Da loggato era anche rotto: sotto i 600px la barra
+  di amministrazione scorre via e Impreza teneva l'header a 46px dal bordo, e il pannello, posizionato
+  con il solo CSS, copriva la riga del logo.
 - **Altezza dell'header mobile scritta a mano (96px) nel CSS** (oc:8757, superata): andava
   aggiornata a ogni cambio delle righe nell'Header Builder; ora il CSS usa `--header-sticky-height`.
 - **Social e «Seguici su» letti per id (`socials:1`, `html:1`)** (oc:8757, superata): ricreando
