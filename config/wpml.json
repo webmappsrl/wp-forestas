@@ -64,8 +64,8 @@
         "interview_translators": 1,
         "language_negotiation_type": 1,
         "languages_order": [
-            "en-us",
-            "it"
+            "it",
+            "en-us"
         ],
         "notify_complete": 1,
         "posts_slug_translation": {
