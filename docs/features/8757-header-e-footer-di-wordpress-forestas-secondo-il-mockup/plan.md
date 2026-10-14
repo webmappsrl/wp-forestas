@@ -306,8 +306,8 @@ EN se WPML non li risolve da sé.
 
 Dopo lo scrum del 14/10/2026 (overview, «Cosa cambia»), branch
 `feature/oc-8757-header-e-footer-identici-al-sito-attuale` da `develop`. Il vincolo «colori solo da
-`--sar-*`/`--tipo-*`» qui sopra non vale più per header e footer: valgono le variabili `--sase-*` con
-i valori del tema Drupal.
+`--sar-*`/`--tipo-*`» qui sopra non vale più: quelle variabili sono state tolte dal child, e per header
+e footer valgono le variabili `--sase-*`, con i valori del tema Drupal o i colori delle Theme Options.
 
 **File:**
 - Modifica: `config/post.json` (header e footer IT/EN), `config/impreza.json`
@@ -338,8 +338,10 @@ i valori del tema Drupal.
   file ufficiale «versione 2» con scala comune, più Forestas e CAI del sito attuale, in
   `assets/img/loghi-footer/`; shortcode `[forestas_loghi_footer]`; disposizione confrontata con la
   produzione a 390, 768, 800, 1100 e 1440px.
-- [x] **Passo 8: loghi dell'header** — `[forestas_fesr]` stampa il blocco «versione 1» intero, poi
-  Forestas e CAI con il separatore del blocco, alti quanto la bandiera; verificati da 320 a 1920px.
+- [x] **Passo 8: loghi dell'header** — `[forestas_fesr]` (poi `[forestas_loghi_header]`, passo 9) stampa il blocco «versione 1» intero, poi
+  Forestas e CAI con il separatore del blocco, alti quanto la bandiera; verificati da 320 a 1920px
+  su poche larghezze (la review ha trovato la fascia 430-500px fuori regola: rifatto ogni 5px nel
+  passo 9).
 - [x] **Passo 9: correzioni della review di 5d2a098** — tocco sul velo, bandiera UE sotto i 600px,
   cleanup (notes, «Review del commit 5d2a098»); confronti con la produzione e axe ripetuti.
 - [ ] **Passo 10: commit (istruzione per l'utente)** — dopo `git diff config/`:

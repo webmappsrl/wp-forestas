@@ -103,7 +103,9 @@
   l'emblema UE «in maniera prominente» e mai più piccolo degli altri loghi; la visibilità senza
   scorrere è indicata come buona prassi, non come obbligo. File: «versione 1» ufficiale, ridotto a
   1400×98 px e versionato in `themes/forestas-child/assets/img/blocco-istituzionale-fesr.png`,
-  stampato dallo shortcode `[forestas_fesr]` (elemento `html:4` dell'header, IT ed EN). Dopo una
+  stampato dallo shortcode `[forestas_fesr]` (elemento `html:4` dell'header, IT ed EN). **Cambiato il
+  14/10/2026:** il file è ora 1100×77 e lo shortcode `[forestas_loghi_header]`, che stampa anche
+  Forestas e CAI (sezioni «Loghi dell'header» e «Review del commit 5d2a098»). Dopo una
   prima prova nella riga di servizio, il dev l'ha voluto **su desktop e laptop in una terza riga
   dell'header sotto il menu** (44px, centrato) e **su tablet e mobile nella
   riga in alto, a sinistra delle lingue**, dove si restringe con lo spazio libero. Altezze: 28px
@@ -139,7 +141,8 @@
   massimo 193px di larghezza sotto 600px (era 231); il logo del footer non cambia. A 375px la bandiera
   UE del blocco istituzionale (~16px) è ora più alta del logo del sito (15px): il punto sulle
   dimensioni dell'emblema su mobile è risolto. `Version` del child 1.1.19.
-- **Blocco istituzionale FESR nel footer**, richiesto dal dev: il file ufficiale «versione 2» (testi
+- **Blocco istituzionale FESR nel footer** (superata il 14/10/2026: nel footer ora c'è la riga dei
+  sei loghi, vedi «Riga dei loghi del footer»; file e variante `versione="2"` tolti), richiesto dal dev: il file ufficiale «versione 2» (testi
   sotto i loghi), ridotto a 1400×161 px e versionato in
   `themes/forestas-child/assets/img/blocco-istituzionale-fesr-2.png`, stampato da
   `[forestas_fesr versione="2"]` (lo shortcode ora sceglie la versione). È la prima riga del blocco
@@ -591,7 +594,8 @@ violazioni a 1440 e 390px, pannello chiuso e aperto.
   stesso motivo i pesi 500 e 700 del CSS del sito attuale sono stati tenuti: cadono su 400 e 600 come
   in produzione.
 - **Radice a 14px sotto i 960px**, come in produzione: il tema Drupal misura in rem. Nel child,
-  `html { font-size: 14px }` e la variabile `--sase-rem` per le misure di header e footer.
+  `html { font-size: 14px }` e la variabile `--sase-rem` per le misure di header e footer (poi
+  sostituita da `rem`, che con quella radice coincide: «Review del commit 5d2a098»).
 - **Accessibilità della prima versione rimossa dove cambiava l'aspetto**: target minimi di 24px sui
   link testuali (axe non segnala 2.5.8: i link rientrano nell'eccezione della spaziatura), arancio del
   pulsante «chiudi» più scuro (ora `hsl(17deg 76% 45%)` come in produzione, 4,58:1), focus `#0B63C5`
@@ -607,7 +611,8 @@ istituzionale 2021-2027, separati; Forestas e CAI restano i file del sito attual
   sardegna 21-27_ridotto_versione 2.png`, 6148×710, cartella `Assets/sardegnaprogrammazione` del
   progetto), separatori esclusi, con la **stessa fascia verticale e la stessa scala**: le proporzioni
   fra i quattro sono quelle del blocco. Ognuno sta, centrato, su una tela trasparente nel formato dei
-  loghi del sito attuale (342×178), al doppio (684×356) per gli schermi ad alta densità.
+  loghi del sito attuale (342×178), al doppio (684×356) per gli schermi ad alta densità; poi ridotti a
+  342×178, che è già il doppio delle caselle da 170px («Review del commit 5d2a098»).
 - Disposizione come in produzione: caselle larghe il 25% fino a 170px, da 768px su una riga con
   `space-between`, sotto su più righe centrate; immagini in linea. Il campo Drupal ha la classe
   `clearfix`, il cui `::after` vuoto è un settimo elemento della riga flex: aggiunge uno spazio (caselle
@@ -619,7 +624,8 @@ istituzionale 2021-2027, separati; Forestas e CAI restano i file del sito attual
   ma nella riga è più piccola dei loghi di Forestas e CAI, alti quanto la casella; le linee guida
   chiedono l'emblema «mai più piccolo degli altri loghi».
 - `[forestas_fesr]` serve ora solo all'header: tolti la variante `versione="2"` e il suo file
-  `blocco-istituzionale-fesr-2.png`.
+  `blocco-istituzionale-fesr-2.png`. Poi rinominato `[forestas_loghi_header]` («Review del commit
+  5d2a098»).
 - Nel sostituire il CSS del footer era sparita la regola che azzera il padding laterale delle sezioni
   di Impreza (contenuto rientrato di 40px e link istituzionali a capo): ripristinata, e ripetuti tutti
   i confronti.
@@ -665,7 +671,8 @@ riga; `min-height: 50px` e padding delle voci del menu (`--menu-items-gap`).
   minima (165px) del pulsante Drupal: il padding verticale 0.95em dà circa la stessa altezza, la
   larghezza minima non c'è;
 - primario e secondario diventano arancio e blu del sito attuale: `--sar-blu` e `--sar-verde` del child,
-  che vi rimandavano, ora hanno i valori del design system scritti (`#254877`, `#566D27`).
+  che vi rimandavano, ora hanno i valori del design system scritti (`#254877`, `#566D27`). Poi tolte, con le altre
+  variabili del prototipo, perché non le usava più nessuno («Review del commit 5d2a098»).
 
 Apply, export e secondo apply: «nessuna differenza».
 

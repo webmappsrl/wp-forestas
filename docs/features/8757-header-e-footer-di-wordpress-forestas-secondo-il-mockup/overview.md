@@ -318,8 +318,9 @@ in `config/`), e chi lavora sul sito li ritrova dove Impreza li mette.
   del pannello. Salvare la tipografia dalle Theme Options in locale può sostituirla: prima
   dell'export si controlla `git diff config/impreza.json`.
 - **Primario e secondario cambiati**: arancio e blu del sito attuale sostituiscono blu e verde del
-  design system in tutti gli elementi di Impreza che li usano (pulsanti, campi, contenuti demo).
-  `--sar-blu` e `--sar-verde` del child ora hanno i valori scritti, non più le variabili di Impreza.
+  design system in tutti gli elementi di Impreza che li usano (pulsanti, campi, contenuti demo). Le
+  variabili del prototipo nel child (`--sar-*`, `--tipo-*` e le altre), che vi rimandavano o non
+  erano più usate, sono state tolte.
 - **Emblema UE nella riga dei loghi del footer**: con le caselle uguali del sito attuale la bandiera
   UE resta più grande del logo del sito (verificato da 320 a 1920px), ma è più piccola dei loghi di
   Forestas e CAI che le stanno accanto, alti quanto la casella. Le linee guida chiedono l'emblema
