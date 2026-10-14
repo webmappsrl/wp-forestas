@@ -233,7 +233,8 @@ Il comando trova da solo il container che monta il child da questa cartella; se 
 - Con «salva i Google Fonts in locale» attivo nelle Theme Options, l'apply scarica i font sul sito:
   Impreza lo fa da sé solo aprendo la pagina delle Theme Options. Se non ci riesce (per esempio senza
   rete verso Google) lo dice, la configurazione resta applicata e a ogni avvio l'init ricorda di
-  rilanciare l'apply, che riprova solo i font; il ritratto mostra se sono aggiornati.
+  rilanciare l'apply, che riprova solo i font; il ritratto mostra se sono aggiornati. Oggi l'opzione è
+  spenta: il sito non usa Google Fonts, i font sono nel child (oc:8757, `CLAUDE.md`, «Trappole»).
 - `root_page` di WPML (una pagina come radice del sito) non sta in `config/`: è un id di pagina.
   L'export avvisa se è impostata; su un altro sito si reimposta da WPML → Lingue.
 

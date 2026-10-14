@@ -103,7 +103,9 @@
   l'emblema UE «in maniera prominente» e mai più piccolo degli altri loghi; la visibilità senza
   scorrere è indicata come buona prassi, non come obbligo. File: «versione 1» ufficiale, ridotto a
   1400×98 px e versionato in `themes/forestas-child/assets/img/blocco-istituzionale-fesr.png`,
-  stampato dallo shortcode `[forestas_fesr]` (elemento `html:4` dell'header, IT ed EN). Dopo una
+  stampato dallo shortcode `[forestas_fesr]` (elemento `html:4` dell'header, IT ed EN). **Cambiato il
+  14/10/2026:** il file è ora 1100×77 e lo shortcode `[forestas_loghi_header]`, che stampa anche
+  Forestas e CAI (sezioni «Loghi dell'header» e «Review del commit 5d2a098»). Dopo una
   prima prova nella riga di servizio, il dev l'ha voluto **su desktop e laptop in una terza riga
   dell'header sotto il menu** (44px, centrato) e **su tablet e mobile nella
   riga in alto, a sinistra delle lingue**, dove si restringe con lo spazio libero. Altezze: 28px
@@ -139,7 +141,8 @@
   massimo 193px di larghezza sotto 600px (era 231); il logo del footer non cambia. A 375px la bandiera
   UE del blocco istituzionale (~16px) è ora più alta del logo del sito (15px): il punto sulle
   dimensioni dell'emblema su mobile è risolto. `Version` del child 1.1.19.
-- **Blocco istituzionale FESR nel footer**, richiesto dal dev: il file ufficiale «versione 2» (testi
+- **Blocco istituzionale FESR nel footer** (superata il 14/10/2026: nel footer ora c'è la riga dei
+  sei loghi, vedi «Riga dei loghi del footer»; file e variante `versione="2"` tolti), richiesto dal dev: il file ufficiale «versione 2» (testi
   sotto i loghi), ridotto a 1400×161 px e versionato in
   `themes/forestas-child/assets/img/blocco-istituzionale-fesr-2.png`, stampato da
   `[forestas_fesr versione="2"]` (lo shortcode ora sceglie la versione). È la prima riga del blocco
@@ -486,6 +489,23 @@ container di WordPress viene ricreato, pochi secondi di sito irraggiungibile), l
 (l'apply non avrà differenze), il primo passo del wizard (su UAT è già completato). Dopo il rilascio:
 confronto di resa locale/UAT su IT ed EN.
 
+**Rilascio della correzione su UAT (2026-10-13)**, eseguito da Claude via SSH dopo il merge del dev
+(`wp-forestas` PR #5 e #6, `forestas` PR #26): `forestas` su `3c66c87`, `wp-forestas` su `82293fe`;
+`scripts/wordpress-up.sh` ha ricostruito l'immagine e ricreato il container di WordPress («WordPress
+pronto», nessun avviso all'avvio); `display_errors` spento e `log_errors` acceso; `apply` in anteprima:
+«nessuna differenza», quindi nessun `apply --conferma`. Verifiche, confrontando con il locale:
+
+- pagina italiana, a 1280 e 390px: HTML di header e footer e geometria di ogni elemento identici;
+- pagina inglese (404 sotto `/en/`): HTML di header e footer identico, pannello mobile con servizio e
+  social; geometria dell'header identica, il footer è solo più in basso (1316px a 1280, 2555px a 390)
+  perché su UAT la manutenzione mostra la Home demo al posto di «Page not found»: contenuti, fuori da
+  questo ticket;
+- child servito alla Version 1.1.33; l'avviso «Undefined array key 0» non compare più in pagina ed è
+  in `docker logs wordpress-forestasuat`;
+- axe da anonimo, IT ed EN, a 390, 800 e 1280px, pannello chiuso e aperto, hover su ogni link e
+  pulsante: nessuna violazione; apertura del menu dopo uno scroll: «chiudi» visibile, pannello subito
+  sotto l'header.
+
 Regressione in locale con i filtri attivi: axe senza violazioni da anonimo e da loggato a 390, 800 e
 1280px, hover, tastiera, 12 casi su 12 della barra di amministrazione, target, pagina bloccata.
 
@@ -512,6 +532,218 @@ README aggiornato (tabella e «Comandi utili»).
 **Modifiche a `overview.md`:** requisito sull'apply e l'export con WPML attivo; «Moduli toccati» con
 `wpml.php`, `apply.php`, `export.php`, `ritratto.php`, il filtro del pannello, `wordpress.ini`, il
 README e `inizializzazione-wordpress.md` (errori nei log), e la frase «nessuna modifica in `forestas`» corretta (c'è l'howto di UAT).
+
+## Header e footer identici al sito attuale, Theme Options dal tema Drupal (2026-10-14)
+
+Allo scrum del 14/10/2026 è emerso che il capitolato chiede la stessa UI del sito Drupal, salvo
+modifiche concordate: il prototipo «Canvas Fase 2» se ne discostava (voce del menu al passaggio del
+mouse, pesi e colori dei testi), e il cliente non lo considera un riferimento. Header e footer sono
+stati rifatti identici a sardegnasentieri.it, tenendo le aggiunte concordate (blocco FESR, CAMMINI);
+poi, su richiesta del dev, anche le Theme Options di Impreza su colori e tipografia. Branch
+`feature/oc-8757-header-e-footer-identici-al-sito-attuale`, da `develop`.
+
+**Fonti.** Il CSS in produzione e il tema Drupal «sardegnasentieri» della copia del repository
+caricata su UAT (`/root/sardegnasentieri.zip`, MD5 `23215ab201b6d7bf994378222c523a69`; SCSS in
+`docroot/themes/custom/sardegnasentieri/scss`, comportamento del menu in `js/header-navigation.js`).
+
+**Metodo.** Per ogni elemento di header, footer e pannello, posizione, misure, font, colori e
+spaziature letti dal browser sul sito in produzione e sul WordPress locale, e confrontati: a 1100,
+1280 e 1440px; a 800 e 1024px col mouse; a 390 e 768px su touch; menu chiuso e aperto; passaggio del
+mouse su voci, link e social. Esito: nessuna differenza oltre mezzo pixel, tranne quelle dovute alla
+riga FESR (header più alto di 36px su tablet e mobile, 44px su desktop) e alla voce CAMMINI. axe senza
+violazioni a 1440 e 390px, pannello chiuso e aperto.
+
+**Decisioni**
+
+- **Blocco FESR**: resta dov'era. Nell'header desktop la terza riga; su tablet e mobile la riga in
+  alto, ora da solo e centrato, perché IT EN passa nella riga del logo come sul sito attuale. Nel
+  footer prende il posto della riga dei loghi del sito attuale (POR FESR 2014-2020, Intense, Interreg
+  e gli altri), che non si riporta. **Superata lo stesso giorno:** nel footer la riga dei sei loghi
+  del sito attuale con i primi quattro aggiornati, nell'header gli stessi sei loghi (vedi «Riga dei
+  loghi del footer» e «Loghi dell'header», qui sotto).
+- **Bandiera UE e logo**: col logo largo come in produzione (fino a 382px, 28px di altezza a 1440px)
+  il blocco dell'header alto 28px avrebbe avuto la bandiera più piccola del logo. Ora è alto un
+  decimo della larghezza del logo (da 25,6 a 38,2px, nella riga di 44px); verificato da 320 a 1920px
+  in header e footer.
+- **CAMMINI**: il sito attuale non ha la voce. Prende la barra arancio del marchio, come le voci senza
+  sezione (MAPPA INTERATTIVA).
+- **X**: icona dell'uccellino come in produzione (`\f099` di Font Awesome 5 Brands sull'icona, perché
+  Impreza per «twitter» stampa il logo X in SVG); link e nome accessibile restano quelli dati dal
+  cliente (`x.com`, «X»).
+- **URL dei social**: restano quelli forniti dal cliente. In produzione l'Instagram dell'header è
+  `sardegna_sentieri` e X è `twitter.com`: non si copiano, sono contenuti decisi col cliente.
+- **Ordine dei social**: header e footer come in produzione (il footer ne ha cinque, senza X).
+- **Footer**: tolta «Rete Escursionistica della Sardegna · Agenzia Fo.Re.S.T.A.S.» dalla striscia,
+  che in produzione ha solo il copyright. L'anno resta quello corrente (`[forestas_anno]`): in
+  produzione è scritto a mano e fermo al 2024.
+- **Header fermo su tablet e mobile**: come in produzione (`--header-position: fixed` sotto i 1025px
+  con altezza almeno 480px, non sui tablet in orizzontale), con `position: sticky` e `top` negativo
+  pari alla riga FESR, così la riga FESR esce dallo schermo e resta ferma solo la riga del sito
+  attuale. Due ostacoli di Impreza: `.l-header { position: relative }` (battuto con `.header_hor`) e
+  `.l-canvas { overflow: hidden }`, che impedisce lo sticky: diventa `overflow: clip` fino a 1024px.
+- **Ricerca su tablet**: in produzione è un pulsante fino a 1024px; Impreza mostra il campo intero
+  sopra i 600px. Le regole che Impreza applica sotto i 600px sono estese fino a 1024px. Differenza di
+  comportamento rimasta: in produzione il pulsante porta alla pagina «Cerca nel sito», qui apre il
+  campo sopra la riga del logo, come già sotto i 600px.
+- **Pannello**: largo quanto il contenuto (`width: max-content`), con il velo grigio all'80% del sito
+  attuale; un tocco sul velo chiude il menu (`menu-mobile.js`), come in produzione. Restano i
+  comportamenti di accessibilità della prima versione (nome del pulsante, focus nel pannello, Esc).
+- **Font**: gli stessi file del sito attuale (woff2, 400 e 600), nel child con le licenze OFL. Work
+  Sans ha un nome proprio («Work Sans Sardegna Sentieri») perché la Work Sans variabile che Impreza
+  caricava avrebbe disegnato un vero 500 dove il sito attuale, senza quel peso, mostra il 400. Per lo
+  stesso motivo i pesi 500 e 700 del CSS del sito attuale sono stati tenuti: cadono su 400 e 600 come
+  in produzione.
+- **Radice a 14px sotto i 960px**, come in produzione: il tema Drupal misura in rem. Nel child,
+  `html { font-size: 14px }` e la variabile `--sase-rem` per le misure di header e footer (poi
+  sostituita da `rem`, che con quella radice coincide: «Review del commit 5d2a098»).
+- **Accessibilità della prima versione rimossa dove cambiava l'aspetto**: target minimi di 24px sui
+  link testuali (axe non segnala 2.5.8: i link rientrano nell'eccezione della spaziatura), arancio del
+  pulsante «chiudi» più scuro (ora `hsl(17deg 76% 45%)` come in produzione, 4,58:1), focus `#0B63C5`
+  (ora `#0089C7` con l'anello bianco del sito attuale). Restano link «Vai al contenuto», nomi delle
+  `nav`, nome del pulsante del menu e gestione del focus nel pannello, che non si vedono.
+
+**Riga dei loghi del footer** (richiesta del dev, stesso giorno): non più il blocco FESR «versione 2»
+intero, ma la riga dei sei loghi del sito attuale con la sua disposizione. I primi quattro (POR FESR
+2014-2020, Intense, Interreg Marittimo, Regione Sardegna) sono sostituiti dai quattro loghi del blocco
+istituzionale 2021-2027, separati; Forestas e CAI restano i file del sito attuale.
+
+- I quattro loghi sono ritagliati dal file ufficiale ad alta risoluzione (`blocco istituzionale
+  sardegna 21-27_ridotto_versione 2.png`, 6148×710, cartella `Assets/sardegnaprogrammazione` del
+  progetto), separatori esclusi, con la **stessa fascia verticale e la stessa scala**: le proporzioni
+  fra i quattro sono quelle del blocco. Ognuno sta, centrato, su una tela trasparente nel formato dei
+  loghi del sito attuale (342×178), al doppio (684×356) per gli schermi ad alta densità; poi ridotti a
+  342×178, che è già il doppio delle caselle da 170px («Review del commit 5d2a098»).
+- Disposizione come in produzione: caselle larghe il 25% fino a 170px, da 768px su una riga con
+  `space-between`, sotto su più righe centrate; immagini in linea. Il campo Drupal ha la classe
+  `clearfix`, il cui `::after` vuoto è un settimo elemento della riga flex: aggiunge uno spazio (caselle
+  di 165,7px a 1440px) e sotto i 768px finisce da solo in una terza riga. Riprodotto con lo stesso
+  `::after`, altrimenti caselle e altezza della riga non coincidono.
+- Verifica: posizioni e misure dei sei loghi uguali alla produzione a 390, 768, 800, 1100 e 1440px
+  (scarti sotto il mezzo pixel, dalle proporzioni dei vecchi file); axe senza violazioni.
+- **Da confermare col cliente:** la bandiera UE resta più grande del logo del sito (da 320 a 1920px),
+  ma nella riga è più piccola dei loghi di Forestas e CAI, alti quanto la casella; le linee guida
+  chiedono l'emblema «mai più piccolo degli altri loghi».
+- `[forestas_fesr]` serve ora solo all'header: tolti la variante `versione="2"` e il suo file
+  `blocco-istituzionale-fesr-2.png`. Poi rinominato `[forestas_loghi_header]` («Review del commit
+  5d2a098»).
+- Nel sostituire il CSS del footer era sparita la regola che azzera il padding laterale delle sezioni
+  di Impreza (contenuto rientrato di 40px e link istituzionali a capo): ripristinata, e ripetuti tutti
+  i confronti.
+
+**Loghi dell'header** (richiesta del dev, stesso giorno): sei, come nel footer. La riga dell'header è
+bassa (44px su desktop, 36px sotto), quindi non i loghi impilati del footer ma il blocco «versione 1»
+(testi accanto ai loghi), **intero**: ordine e proporzioni dei quattro loghi restano quelli del file
+ufficiale, come chiedono le linee guida. Dopo il blocco, Forestas e CAI (gli stessi file del footer,
+senza i margini trasparenti), ciascuno preceduto da un separatore con le misure di quelli del blocco
+(grigio `#919292`, alto il 65%, a 0,85 altezze dai loghi) e alto quanto la bandiera UE (82% del
+blocco): l'emblema non è mai più piccolo degli altri loghi. Verificato da 320 a 1920px: i sei loghi
+stanno nella riga, la bandiera è alta quanto Forestas e CAI e più del logo del sito. Sotto i 600px
+diventano piccoli (bandiera di 14,4px a 390px, 11,8px a 320px): è il prezzo di sei loghi su una riga.
+Confronti col sito attuale e axe invariati.
+
+**Fonte di design per i lavori futuri** (richiesta del dev): nel `CLAUDE.md`, prima voce di «Regole
+del repo», il riferimento per aspetto e comportamento del sito è il frontend Drupal, con la copia del
+repository su UAT (`/root/sardegnasentieri.zip`, come scaricarla ed estrarla, MD5, cartelle del tema).
+La copia estratta usata per questo lavoro sta sul disco del dev, nella cartella del progetto Forestas,
+non nel repo: il repo è pubblico e quel percorso vale solo sulla sua macchina.
+
+**Regole di Impreza da battere** (dettagli nei commenti di `style.css`): margini logici fra gli
+elementi delle celle dell'header; `--hwrapper-gap` di 16px scritto in linea sul gruppo «Seguici su»
+del footer; `background: none !important` sul pulsante di ricerca (fondo e lente stanno sull'icona) e
+`text-decoration: none !important` sui social (la sottolineatura al passaggio sta sull'icona);
+`display: inline-flex` del menu del footer e il suo layout verticale responsive
+(`responsive_width="0px"` nello shortcode); `margin-inline-end: -0.8rem` sull'ultimo elemento della
+riga; `min-height: 50px` e padding delle voci del menu (`--menu-items-gap`).
+
+**Theme Options** (`config/impreza.json`), dal tema Drupal:
+
+- colori di contenuto e contenuto alternativo, header, footer e sotto-footer, barra del browser
+  mobile, focus (valori nell'overview);
+- testo Work Sans 400 `1rem` interlinea 1.4, grassetto 700; titoli Montserrat 600 con le misure
+  fluide di `.sase-h1` e dei titoli nel corpo delle pagine (`.sase-page-body`). Lo spazio sotto i
+  titoli è quello che il tema Drupal mette prima dell'elemento seguente; h1 non ne ha uno (`margin:
+  unset`): 0.67em, il valore predefinito dei browser;
+- famiglie scritte con la virgola (`"Montserrat", sans-serif`): Impreza salta i nomi con la virgola
+  quando raccoglie i Google Fonts da scaricare (`us-core/functions/helpers.php`), così vale l'
+  `@font-face` del child. Senza più Google Fonts, «Store Google Fonts locally» va spento: acceso,
+  Impreza non arriva mai allo stato «scaricati» e l'apply segnalerebbe sempre una differenza;
+- pulsanti: primario e chiaro del sito attuale. Impreza non ha l'altezza fissa (3em) né la larghezza
+  minima (165px) del pulsante Drupal: il padding verticale 0.95em dà circa la stessa altezza, la
+  larghezza minima non c'è;
+- primario e secondario diventano arancio e blu del sito attuale: `--sar-blu` e `--sar-verde` del child,
+  che vi rimandavano, ora hanno i valori del design system scritti (`#254877`, `#566D27`). Poi tolte, con le altre
+  variabili del prototipo, perché non le usava più nessuno («Review del commit 5d2a098»).
+
+Apply, export e secondo apply: «nessuna differenza».
+
+**Bug trovato e corretto: menu aperto dopo uno scorrimento.** Con l'header sticky, il blocco dello
+scorrimento su `<html>` (`overflow: hidden`) fermava lo sticky: la riga del pulsante usciva dallo
+schermo e `menu-mobile.js`, per riportarla in vista, faceva tornare la pagina in cima. Il blocco ora
+sta sul body, come sul sito attuale. Verificato da anonimo a 390 e 768px su touch e da loggato a 390px
+(barra di amministrazione che scorre) e 700px (barra fissa): la pagina resta dov'era, la riga del
+pulsante resta in vista (sotto la barra, se è fissa) e il pannello parte subito sotto; a 768px un
+tocco sul velo chiude il menu. Con una finestra fra 576 e 1024px più larga che alta (per esempio
+900×800 col mouse) l'header non è fermo, come in produzione, e la pagina risale fino all'header per
+mostrare «chiudi», come nella versione precedente.
+
+## Review del commit 5d2a098 (2026-10-14)
+
+Review da un'altra sessione sul diff `develop...HEAD`: da correggere, 2 bloccanti e diversi cleanup.
+Il ticket resta com'è (released, decisione del dev).
+
+**Bloccante 1: il tocco sul velo attivava il link sotto.** Impreza chiude il menu al `touchend`
+(`closeOnClickOutside` in `common/js/elements/menu.js`): quando arrivava il `click`, il menu risultava
+già chiuso e il listener del child, che doveva annullarlo, non interveniva mai; il velo, pseudo-elemento
+del body, era sparito e il click sintetico cadeva sul link sotto. Ora `menu-mobile.js` ascolta il
+`touchend` in fase di cattura e, solo se il bersaglio è il velo (body o html) a menu aperto, annulla il
+click sintetico; la chiusura resta a Impreza. Tolto il vecchio listener sul `click`. Provato con un link
+sotto il punto toccato, a 800 e 1024px su touch: il menu si chiude e il link non si attiva (da anonimo
+e da loggato); da loggato la barra di amministrazione resta cliccabile a menu aperto. Col mouse non
+serve: il click va all'antenato comune di mousedown e mouseup, il body.
+
+**Bloccante 2: bandiera UE più piccola del logo del sito fra circa 430 e 500px.** Sotto i 600px il
+logo del sito si restringe accanto a lingue, ricerca e menu più lentamente dei sei loghi, che
+dipendono dalla larghezza intera. Sotto i 600px la riga ha margini di 10px invece di 5vmin e gli spazi
+intorno ai separatori scendono da 0,85 a 0,5 altezze (`--loghi-spazio`): blocco alto 20px a 390px.
+Verificato ogni 5px da 320 a 1024px e a 1025, 1100, 1199, 1200, 1440 e 1920px: bandiera sempre più
+grande del logo del sito (margine minimo 1px a 1025px), Forestas e CAI mai più alti della bandiera,
+loghi sempre dentro la riga. La verifica «da 320 a 1920px» scritta prima era fatta su poche larghezze.
+
+**Cleanup fatti**
+
+- Tolte dal child le variabili del prototipo (`--sar-*`, tinte, `--st-*`, `--tipo-*`, `--focus`),
+  inutilizzate o in conflitto con le `--sase-*`.
+- Le `--sase-*` dei colori che stanno anche nelle Theme Options rimandano alle variabili di Impreza
+  (`--color-content-*`, `--color-subfooter-*`); i pulsanti in `impreza.json` tornano a riferimenti
+  (`_content_primary`, `_content_link_hover`, `_content_text`, `_content_bg`).
+- `rem` al posto di `--sase-rem`, che lo replicava: con la radice a 14px sotto i 960px coincidono. La
+  radice sta in una sezione «Base» del CSS, che dice che vale per tutto il sito.
+- Variabili per i valori ripetuti (`--sase-larghezza-logo`, `--sase-spazio-riga-logo`,
+  `--sase-carattere-piccolo`, `--sase-larghezza-contenuto`, `--sase-separatore-loghi`, `--sase-fondo`).
+- Pulsante ricerca su touch a 45px (2.858em faceva 51px fra 960 e 1024px); social del pannello: 45px
+  solo sotto i 768px, senza riscrivere i valori di base; blocco dei loghi mobile dentro il blocco
+  `@media (max-width: 1024px)` principale; una sola forma di selettore per l'hover dei social.
+- «Vai al contenuto» con l'aspetto dei link di salto del sito attuale (`.sase-skip-links`): fondo
+  bianco, colore dei link, peso 500, contorno del colore del testo.
+- Shortcode `[forestas_fesr]` rinominato `[forestas_loghi_header]` (stampa sei loghi), con la classe
+  del contenitore `forestas-loghi-header-wrap`; helper `forestas_immagine()` per tutte le `<img>` del
+  child; tolte dal footer le classi `forestas-footer-sx`/`-dx`, senza CSS.
+- Immagini alle misure utili: loghi nuovi del footer 342×178 (il doppio delle caselle da 170px), blocco
+  dell'header 1100×77, Forestas e CAI dell'header alti 64px. L'header carica 81 KB di loghi invece di
+  157. Forestas e CAI restano in due copie: il footer ha bisogno dei margini trasparenti del sito
+  attuale per avere le stesse caselle, l'header no.
+- Documenti: commenti e knowledge sul font Work Sans, sul `device-width` e sulla riserva di
+  `--forestas-sotto-header`; trappola dello sticky con le eccezioni; trappola sulle regole di Impreza
+  da battere; selettori interni di Impreza nelle «Dipendenze» di `inizializzazione-wordpress.md`;
+  contrasti delle Theme Options sotto WCAG nei Rischi dell'overview, da far sapere al cliente.
+
+**Non fatto, facoltativo:** `scroll-padding-top` fino a 1024px per lo skip link sotto l'header
+sticky. Il focus sul `<main>` resta visibile, quindi non è una violazione di 2.4.11; l'altezza
+dell'header cambia con la larghezza e un valore fisso sarebbe sbagliato a molte larghezze.
+
+Dopo le correzioni: confronto con la produzione invariato (desktop 1100, 1280, 1440; touch 390 e 768;
+mouse 800 e 1024; pannello aperto; riga dei loghi del footer), axe senza violazioni, apply ed export
+senza differenze. Version del child 1.2.1.
 
 ## Follow-up
 
@@ -556,6 +788,6 @@ Nessun ticket aperto: si apriranno se e quando il dev lo chiede.
 - La Home non ha la traduzione inglese: `/en/` rimanda alla Home italiana, quindi dalla Home il link
   EN del selettore non porta a una pagina inglese. Header e footer inglesi si vedono sulle pagine
   inglesi (provati su una 404 sotto `/en/`).
-- Sostituire il logo con una versione senza «BETA», quando arriva.
-- Rivedere il layout tablet e mobile quando il mockup lo definirà.
+- Ricerca su tablet e mobile: in produzione il pulsante porta alla pagina «Cerca nel sito», qui apre
+  il campo nell'header; da decidere quando ci sarà la pagina dei risultati.
 - Far validare al cliente le etichette inglesi, in particolare «WALKS» per «Cammini».
