@@ -311,8 +311,12 @@ i valori del tema Drupal.
 
 **File:**
 - Modifica: `config/post.json` (header e footer IT/EN), `config/impreza.json`
-- Modifica: `themes/forestas-child/style.css`, `assets/js/menu-mobile.js`
-- Crea: `themes/forestas-child/assets/fonts/` (font e licenze OFL), `assets/img/cerca.svg`
+- Modifica: `themes/forestas-child/style.css`, `functions.php`, `assets/js/menu-mobile.js`,
+  `assets/img/blocco-istituzionale-fesr.png` (ridotto a 1100×77)
+- Crea: `themes/forestas-child/assets/fonts/` (font e licenze OFL), `assets/img/cerca.svg`,
+  `assets/img/loghi-header/`, `assets/img/loghi-footer/`
+- Cancella: `themes/forestas-child/assets/img/blocco-istituzionale-fesr-2.png`
+- Modifica: `README.md`, `docs/knowledge/inizializzazione-wordpress.md`
 - Modifica: `CLAUDE.md`, `docs/knowledge/8757-…`, `overview.md`, `notes.md`
 
 - [x] **Passo 1: misure del sito attuale** — CSS di produzione e SCSS del tema Drupal (copia su UAT):
@@ -336,5 +340,7 @@ i valori del tema Drupal.
   produzione a 390, 768, 800, 1100 e 1440px.
 - [x] **Passo 8: loghi dell'header** — `[forestas_fesr]` stampa il blocco «versione 1» intero, poi
   Forestas e CAI con il separatore del blocco, alti quanto la bandiera; verificati da 320 a 1920px.
-- [ ] **Passo 9: commit (istruzione per l'utente)** — dopo `git diff config/`:
+- [x] **Passo 9: correzioni della review di 5d2a098** — tocco sul velo, bandiera UE sotto i 600px,
+  cleanup (notes, «Review del commit 5d2a098»); confronti con la produzione e axe ripetuti.
+- [ ] **Passo 10: commit (istruzione per l'utente)** — dopo `git diff config/`:
   `git commit -m "feat(oc:8757): header e footer identici al sito attuale, Theme Options dal tema Drupal"`

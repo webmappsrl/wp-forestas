@@ -47,12 +47,12 @@ builder, quindi una modifica fatta lì va persa al primo apply.
 attuale: logo, IT EN, pulsante ricerca (riquadro grigio con la lente, scuro al passaggio e quando è
 aperto) e pulsante menu (riquadro arancio di 45px con la scritta «menu», che a menu aperto diventa
 «chiudi» su fondo arancio scuro). Come sul sito attuale l'header resta fermo in cima allo schermo
-mentre la pagina scorre (non sugli schermi alti meno di 480px né sui tablet in orizzontale); la riga
-FESR esce dallo schermo con lo scorrimento, così la parte ferma è alta come in produzione. Il menu è
+mentre la pagina scorre (non sugli schermi alti meno di 480px né sui dispositivi con lo schermo fra
+576 e 1024px tenuti in orizzontale); la riga dei loghi esce dallo schermo con lo scorrimento, così la parte ferma è alta come in produzione. Il menu è
 un pannello che entra da destra sotto l'header, largo quanto il suo contenuto (tutta la larghezza sui
 telefoni) e alto fino al fondo dello schermo: voci principali, poi in fondo i link di servizio e
-«Seguici su» con i social. Il resto della pagina è coperto da un velo scuro che chiude il menu al
-tocco, e non scorre.
+«Seguici su» con i social. Il resto della pagina è coperto da un velo scuro, e non scorre: un tocco
+sul velo chiude il menu senza attivare il link che sta sotto.
 
 **Footer**: in cima la riga dei sei loghi del sito attuale, con la stessa disposizione (caselle
 uguali larghe fino a 170px, su una riga da 768px, su due righe centrate sotto). I primi quattro
@@ -75,8 +75,8 @@ sia nell'header sia nel footer.
 
 **Blocco istituzionale FESR** (Coesione Italia 21-27 Sardegna, emblema UE «Cofinanziato dall'Unione
 europea», Repubblica Italiana, Regione Autonoma della Sardegna): i file ufficiali di
-sardegnaprogrammazione.it. Nell'header la «versione 1» (loghi su una riga), ridotta a 1400px di
-larghezza e versionata nel child, intera, seguita da Forestas e CAI: lo shortcode `[forestas_fesr]`
+sardegnaprogrammazione.it. Nell'header la «versione 1» (loghi su una riga), ridotta a 1100px di
+larghezza e versionata nel child, intera, seguita da Forestas e CAI: lo shortcode `[forestas_loghi_header]`
 stampa i sei loghi. Nel footer i quattro
 loghi separati, ritagliati dalla «versione 2» (testi sotto i loghi) con la stessa scala e la stessa
 fascia verticale, così le proporzioni fra i loghi restano quelle del file ufficiale; li stampa,
@@ -153,8 +153,9 @@ in `config/`), e chi lavora sul sito li ritrova dove Impreza li mette.
 - [ ] Il menu mobile è un pannello che entra ed esce da destra (`mobile_layout="panel"`), sotto
       l'header, largo quanto il suo contenuto (al massimo tutta la larghezza) e alto dal bordo
       dell'header al fondo dello schermo, con le misure del sito attuale; se il contenuto non ci sta,
-      il pannello scorre. Il resto della pagina è coperto da un velo grigio scuro all'80%, che chiude
-      il menu al tocco
+      il pannello scorre. Il resto della pagina è coperto da un velo grigio scuro all'80%: un tocco
+      sul velo chiude il menu e non attiva il link che sta sotto (provato a 800 e 1024px su touch,
+      con un link sotto il punto toccato), e la barra di amministrazione resta cliccabile
 - [ ] Nel pannello compaiono, dopo le voci principali, i link di servizio e «Seguici su» con i social,
       senza voci nascoste in `main-menu` e senza ripetere gli URL dei social fuori da `config/`
 - [ ] A menu aperto la pagina non scorre; il pulsante del menu diventa «chiudi» («close» in inglese)
@@ -194,7 +195,8 @@ in `config/`), e chi lavora sul sito li ritrova dove Impreza li mette.
 - [ ] Header desktop: terza riga sotto il menu, centrata, blocco alto un decimo della larghezza del
       logo (da 25,6 a 38,2px)
 - [ ] Header tablet e mobile: da soli nella riga in alto, centrati, blocco alto 28px finché la riga
-      ci sta, poi più piccoli con la larghezza (14,4px a 390px, 11,8px a 320px)
+      ci sta, poi più piccolo con la larghezza; sotto i 600px margini della riga di 10px e spazi fra
+      i loghi ridotti (blocco alto 20px a 390px e 16,2px a 320px, cioè bandiera di 16,4 e 13,3px)
 - [ ] Footer: i quattro loghi sono i primi quattro della riga dei loghi, nell'ordine del blocco
       ufficiale, seguiti da Forestas e CAI; la riga ha la disposizione del sito attuale a ogni
       larghezza (verificata a 390, 768, 800, 1100 e 1440px), sopra il filo arancio e separata dal
@@ -325,8 +327,15 @@ in `config/`), e chi lavora sul sito li ritrova dove Impreza li mette.
 - **`overflow: clip` su `.l-canvas`** fino a 1024px, al posto dell'`hidden` di Impreza, per lo
   sticky: taglia il contenuto allo stesso modo ma non è un contenitore di scorrimento.
 - **Dimensione dell'emblema UE** — le linee guida vietano che sia più piccolo degli altri loghi.
-  Mitigazione: altezze del blocco scelte perché la bandiera resti più alta del logo del sito a ogni
-  larghezza (logo dell'header ridotto a 15px su mobile).
+  Mitigazione nell'header: Forestas e CAI alti quanto la bandiera, blocco alto un decimo del logo
+  del sito su desktop, spazi ridotti sotto i 600px, dove il logo del sito si restringe e la bandiera
+  sarebbe stata più piccola fra circa 430 e 500px (trovato in review). Verificato ogni 5px da 320 a
+  1024px. Nel footer resta il punto da confermare col cliente, qui sotto.
+- **Contrasti delle Theme Options, fedeli al sito attuale ma sotto le soglie WCAG** fuori da header e
+  footer (trovati in review): testo `#4D4D4D` sull'arancio del pulsante «Contorno» al passaggio
+  3,97:1; link `#CA4D1C` sul fondo alternativo `#F5F5F5` 4,20:1, al passaggio `#D63D00` 4,26:1;
+  icona bianca del pulsante «torna su» sull'arancio 2,1:1 (sotto 3:1). Sono i colori di produzione:
+  vanno fatti sapere al cliente, che decide se correggerli.
 - **Posizione del pannello mobile** — l'header è fermo in cima, ma non sugli schermi bassi né sui
   tablet in orizzontale, e sopra può esserci la barra di amministrazione, fissa in cima da 601px e
   che scorre con la pagina sotto i 600px: il pannello si apre dal bordo inferiore dell'header come si
@@ -380,14 +389,15 @@ Tutto nel submodule `wp-forestas`, tranne l'howto di UAT in `forestas` (in fondo
 - `themes/forestas-child/assets/img/loghi-footer/` — nuovo: i sei loghi del footer (quattro ritagliati
   dal file ufficiale «versione 2», Forestas e CAI dal sito attuale)
 - `themes/forestas-child/functions.php` — shortcode `[forestas_logo]`, `[forestas_anno]`,
-  `[forestas_lingue]`, `[forestas_fesr]`, `[forestas_loghi_footer]`; filtro che aggiunge servizio e social al pannello mobile
+  `[forestas_lingue]`, `[forestas_loghi_header]`, `[forestas_loghi_footer]`, helper
+  `forestas_immagine()`; filtro che aggiunge servizio e social al pannello mobile
   (`forestas_pannello_servizio()`, `forestas_pannello_social()`, `forestas_voce_pannello()`); link
   «Vai al contenuto»; caricamento di CSS e `menu-mobile.js` con la Version del child; funzioni
   `forestas_testo()`, `forestas_versione()`, `forestas_asset_url()`
 - `themes/forestas-child/functions.php` (filtro del pannello) — menu della pagina e `main-menu`
   confrontati nella lingua predefinita, per i filtri di WPML attivi
 - `themes/forestas-child/assets/js/menu-mobile.js` — nuovo: scritta e nome del pulsante, focus nel
-  pannello, posizione del pannello sotto l'header, chiusura al tocco sul velo
+  pannello, posizione del pannello sotto l'header, tocco sul velo che non attiva il link sotto
 - `themes/forestas-child/style.css` — font, variabili `--sase-*` del sito attuale, stili di header,
   pannello mobile e footer, radice a 14px sotto i 960px, `Version` alzata
 - `docker/scripts/config/comune.php` — `us_og_image`, `_us_page_block_ids` e

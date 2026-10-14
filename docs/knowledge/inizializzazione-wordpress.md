@@ -156,10 +156,24 @@ con un apply di prova su un WordPress usa e getta prima di quello su UAT:
     istanzia per l'elemento menu e con cui il child riconosce il menu dell'header.
   - Markup e CSS di Impreza usati dal child: `.w-nav-control` con `aria-expanded` e lo `<span>` della
     scritta, `.w-nav-list.level_1`, `.m_layout_panel`, `.w-search-open`, `.l-subheader` (contenitore della
-    riga del pulsante e selettore che batte l'hover di Impreza), la classe `no-touch`, la variabile
-    `--header-sticky-height`, il `<main id="page-content">`; in `Impreza/common/js/elements/menu.js` la chiusura con Esc e con
-    Maiusc+Tab sulla prima voce, il pannello non chiuso al passaggio al desktop e la classe
+    riga del pulsante e selettore che batte l'hover di Impreza), la classe `no-touch`, il
+    `<main id="page-content">`; in `Impreza/common/js/elements/menu.js` la chiusura con Esc e con
+    Maiusc+Tab sulla prima voce, la chiusura al `touchend` fuori dal pannello (`closeOnClickOutside`,
+    da cui dipende il tocco sul velo), il pannello non chiuso al passaggio al desktop e la classe
     `w-nav-open` su `<html>` a menu aperto.
+  - Struttura e regole di Impreza che il CSS del child riprende o batte per avere le misure del sito
+    attuale: `.header_hor`, `.l-header`, `.l-subheader.at_top`/`.at_middle`/`.at_bottom`,
+    `.l-subheader-h`, `.l-subheader-cell` con i margini logici fra gli elementi, la variabile
+    `--padding-inline` delle righe, `.w-nav.type_desktop` con `--menu-items-gap` e il `min-height`
+    delle voci, `.w-nav-icon.style_custom_icon`, `.w-search.layout_simple.elm_in_header` e le sue
+    regole sotto i 600px (`common/css/elements/search.css`), `.w-search-form-btn` con
+    `background: none !important`, `.w-socials-item-link` con `text-decoration: none !important`,
+    `.w-hwrapper` con `--hwrapper-gap` in linea, `.w-menu.layout_hor` con `--main-gap` e
+    `display: inline-flex`, `.l-canvas` con `overflow: hidden` (il child lo porta a `clip` per lo
+    sticky), `.l-section`/`.l-section-h`/`.g-cols` del blocco riutilizzabile del footer, le variabili
+    `--color-content-*` e `--color-subfooter-*` a cui rimandano le `--sase-*`. Se cambiano, header e
+    footer si spostano di qualche pixel o perdono un effetto senza errori: dopo un aggiornamento di
+    Impreza si ripete il confronto con il sito attuale (knowledge 8757).
   - Core di WordPress: `#wpadminbar`, il suo `position` che passa da `fixed` ad `absolute` sotto i
     600px, e `--wp-admin--admin-bar--height` con lo `scroll-padding-top` di `admin-bar.css`. Se
     cambiano, `limiteAlto()` di `menu-mobile.js` restituisce 0 senza errori e «chiudi» torna sotto la

@@ -5,70 +5,38 @@ Template: Impreza
 Author: Webmapp
 Author URI: https://webmapp.it/
 Description: Child theme di Impreza per Sardegna Sentieri (Forestas). Versionato nel repo wp-forestas e montato dal compose: si modifica nel repo, non dal pannello.
-Version: 1.2.0
+Version: 1.2.1
 */
 
 
 /*
- * Colori del design system Forestas (oc:8717). Testi, fondi, bordi, link e colori primario/secondario
- * del sito stanno in Impreza → Theme Options → Colori, allineati al sito attuale (oc:8757: primario
- * arancio, secondario blu): blu e verde del marchio qui sotto non rimandano più a quelle variabili.
+ * Variabili di header e footer (oc:8757). Header e footer sono identici a quelli del sito attuale,
+ * sardegnasentieri.it (scrum del 14/10/2026: il capitolato chiede la stessa UI del sito Drupal, salvo
+ * modifiche concordate), e i valori sono quelli del tema Drupal «sardegnasentieri» (fonte di design:
+ * CLAUDE.md), con il prefisso del tema, «sase». Non vanno «migliorati»: ogni differenza dal sito
+ * attuale va concordata col cliente. Le sole aggiunte concordate sono i loghi FESR, Forestas e CAI
+ * nell'header, i loghi FESR al posto di quelli vecchi nel footer, e la voce CAMMINI del menu.
+ *
+ * I colori che il sito attuale usa anche fuori da header e footer stanno nelle Theme Options di Impreza
+ * (config/impreza.json, con gli stessi valori): qui rimandano alle loro variabili, così si cambiano in
+ * un posto solo. Gli altri sono solo di header e footer.
  */
 :root {
-	/* Quadricromia del marchio: identità visiva, non stati o significati */
-	--sar-blu: #254877;
-	--sar-verde: #566D27;
-	--sar-terra: #CA5C30;        /* solo grafica, mai per il testo */
-	--sar-oro: #E9A33F;          /* solo campiture, mai testo su bianco */
-	--sar-terra-testo: #C0572E;
-	--sar-oro-testo: #8A5A00;
-
-	/* Declinazioni: tinte chiare per campiture e fondi */
-	--blu-tenue: #DEE4EB;
-	--blu-velo: #EEF0F4;
-	--verde-tenue: #E6E9DF;
-	--verde-velo: #F1F3EE;
-	--terra-tenue: #F7E7E0;
-	--terra-velo: #FBF2EF;
-	--oro-tenue: #FCF1E2;
-	--oro-velo: #FDF8EE;
-
-	/* Stati di validazione dei sentieri */
-	--st-4: #4B6B22;             /* Percorribile */
-	--st-3: #8A5A00;             /* In verifica */
-	--st-2: #7A6A55;             /* In revisione */
-	--st-1: #9B1B1B;             /* Non percorribile */
-
-	/* Colori per tipo di contenuto */
-	--tipo-sentiero: #DE1B0D;
-	--tipo-itinerario: #58810B;
-	--tipo-cammino: #1A416F;
-	--tipo-da-vedere: #B7117F;
-	--tipo-da-sapere: #0F6E6A;
-	--tipo-news: #C2410C;
-
-	--focus: #0B63C5;
-
-	/*
-	 * Header e footer sono identici a quelli del sito attuale, sardegnasentieri.it (oc:8757, scrum del
-	 * 14/10/2026: il capitolato chiede la stessa UI del sito Drupal, salvo modifiche concordate). I
-	 * valori qui sotto sono quelli del tema Drupal «sardegnasentieri» (scss/ e CSS in produzione), con
-	 * il prefisso del tema, «sase». Non vanno «migliorati»: ogni differenza dal sito attuale va
-	 * concordata col cliente. Le sole aggiunte concordate sono il blocco istituzionale FESR, nell'header
-	 * e nel footer, e la voce CAMMINI del menu.
-	 */
-	--sase-testo: hsl(0deg 0% 30%);           /* testo, link di header e footer */
-	--sase-testo-chiaro: hsl(0deg 0% 35%);    /* contatti del footer, icona della ricerca */
-	--sase-testo-scuro: hsl(0deg 0% 20%);     /* pulsante menu, fondo della ricerca attiva */
-	--sase-testo-chiaro-su-scuro: #FFFFFF;
+	--sase-testo: var(--color-content-text);                 /* #4D4D4D: testo e link di header e footer */
+	--sase-testo-chiaro: var(--color-content-faded);         /* #595959: contatti, icona della ricerca */
+	--sase-bordo: var(--color-content-border);               /* #F0F0F0 */
+	--sase-fondo: var(--color-content-bg);                   /* #FFFFFF */
+	--sase-fondo-campo: var(--color-content-bg-alt);         /* #F5F5F5: campo e pulsante di ricerca */
+	--sase-arancio: var(--color-content-primary);            /* #F59F1A: filo del footer, pulsante menu */
+	--sase-arancio-scuro: var(--color-content-link);         /* #CA4D1C: social, lingua attiva, menu aperto */
+	--sase-arancio-hover: var(--color-content-link-hover);   /* #D63D00: social al passaggio del mouse */
+	--sase-overlay: var(--color-content-overlay);            /* pagina coperta dal menu aperto */
+	--sase-striscia-footer: var(--color-subfooter-bg);       /* #333333 */
+	--sase-testo-su-scuro: var(--color-subfooter-text);      /* #FFFFFF */
+	--sase-testo-scuro: hsl(0deg 0% 20%);                    /* pulsante menu, fondo della ricerca attiva */
 	--sase-lingua-attiva: #000000;
-	--sase-bordo: hsl(0deg 0% 94%);
-	--sase-fondo-campo: hsl(0deg 0% 96%);     /* campo e pulsante di ricerca */
-	--sase-arancio: #F59F1A;                  /* colore del marchio: filo del footer, pulsante menu */
-	--sase-arancio-scuro: hsl(17deg 76% 45%); /* social, lingua attiva, pulsante menu attivo */
-	--sase-arancio-hover: hsl(17deg 100% 42%);/* link al passaggio del mouse */
-	--sase-striscia-footer: hsl(0deg 0% 20%);
-	--sase-overlay: hsl(0deg 0% 20% / .8);    /* pagina coperta dal menu aperto */
+	--sase-focus: #0089C7;                                   /* anche nelle Theme Options, «focus_outline_color» */
+	--sase-separatore-loghi: #919292;                        /* il grigio dei separatori del blocco FESR */
 	/* Colori di sezione della barra sotto le voci del menu (is-section-* del tema Drupal). Le voci
 	   senza sezione, MAPPA INTERATTIVA e CAMMINI, usano il colore del marchio, come sul sito attuale */
 	--sase-sezione-sentieri: #1271B7;
@@ -79,27 +47,32 @@ Version: 1.2.0
 
 	--sase-font-titoli: "Montserrat", sans-serif;
 	--sase-font-testo: "Work Sans Sardegna Sentieri", sans-serif;
-	--sase-focus: #0089C7;
-	/* Il tema Drupal misura in rem con la radice a 16px, 14px sotto i 960px: header e footer usano
-	   questa unità, che segue la radice qui sotto */
-	--sase-rem: 16px;
+
+	/* Misure del tema Drupal usate in più punti */
+	--sase-larghezza-contenuto: 1294px;
+	--sase-larghezza-logo: clamp(231px, 25vw, 382px);
+	--sase-spazio-riga-logo: clamp(1rem, 3vw, 2.5rem);       /* sopra e sotto la riga del logo */
+	--sase-carattere-piccolo: clamp(.75rem, .75rem + (1vw - .2rem) * .0625, .875rem);
 }
-/* Radice a 14px sotto i 960px, come sul sito attuale: tutto ciò che è in rem, testo del sito compreso
-   (Theme Options: «1rem»), si riduce insieme */
+
+/*
+ * Base. La radice è a 14px sotto i 960px, come sul sito attuale: il tema Drupal misura in rem, e così
+ * le misure in rem di header e footer coincidono con quelle di produzione. Vale per tutto il sito,
+ * testo compreso (Theme Options: «1rem»), non solo per header e footer.
+ */
 @media (max-width: 959px) {
 	html {
 		font-size: 14px;
-	}
-	:root {
-		--sase-rem: 14px;
 	}
 }
 
 /*
  * Font del sito attuale, nel child (assets/fonts, licenza OFL nei file accanto). Sono gli stessi file del
  * tema Drupal, con gli stessi due pesi, 400 e 600: un peso intermedio richiesto dal CSS (500, 700) cade
- * su uno dei due come in produzione. Work Sans ha un nome proprio perché Impreza carica per il resto del
- * sito una Work Sans variabile, che con il peso 500 disegnerebbe un medio che il sito attuale non ha.
+ * su uno dei due come in produzione. Le Theme Options li usano per tutto il sito (famiglie scritte con
+ * la virgola, così Impreza non scarica nulla da Google). Work Sans ha un nome proprio per non mescolarsi
+ * con una Work Sans installata sul computer o caricata da un plugin, che potrebbe avere il peso 500:
+ * il sito attuale non ce l'ha.
  */
 @font-face {
 	font-family: "Montserrat";
@@ -143,8 +116,8 @@ Version: 1.2.0
  * 768px e 960px sono soglie del tema Drupal, solo del child. L'opzione «breakpoint: 900px» che si
  * legge nel JSON dei due header è ignorata, perché «custom_breakpoint» è 0.
  */
-/* Colori e font del sito vengono dalle Theme Options (config/impreza.json), allineate al tema Drupal:
-   testo #4D4D4D anche al passaggio del mouse nell'header, dove le voci si sottolineano */
+/* Colori dei testi dell'header dalle Theme Options: #4D4D4D anche al passaggio del mouse, dove le voci
+   si sottolineano */
 .l-header,
 .l-footer {
 	font-family: var(--sase-font-testo);
@@ -178,7 +151,7 @@ Version: 1.2.0
 	height: auto;
 }
 .forestas-logo-wrap {
-	width: clamp(231px, 25vw, 382px);
+	width: var(--sase-larghezza-logo);
 	max-width: 100%;
 }
 
@@ -186,12 +159,12 @@ Version: 1.2.0
 .w-socials.forestas-social .w-socials-list {
 	display: flex;
 	flex-wrap: nowrap;
-	gap: calc(var(--sase-rem) * 1);
+	gap: 1rem;
 	margin: 0;
 }
 .w-socials.forestas-social .w-socials-item {
 	padding: .2em .35em;
-	font-size: calc(var(--sase-rem) * .75);
+	font-size: .75rem;
 }
 .w-socials.forestas-social .w-socials-item-link {
 	display: flex;
@@ -199,7 +172,7 @@ Version: 1.2.0
 	justify-content: center;
 	width: 2.3em;
 	height: 2.3em;
-	font-size: calc(var(--sase-rem) * .625);
+	font-size: .625rem;
 	line-height: 1;
 	color: var(--sase-arancio-scuro);
 }
@@ -219,8 +192,7 @@ Version: 1.2.0
 	font-family: "Font Awesome 5 Brands";
 	font-weight: 400;
 }
-.no-touch .l-header .w-socials.forestas-social .w-socials-item-link:hover,
-.no-touch .l-footer .w-socials.forestas-social .w-socials-item-link:hover,
+.no-touch :is(.l-header, .l-footer) .w-socials.forestas-social .w-socials-item-link:hover,
 .w-socials.forestas-social .w-socials-item-link:focus-visible {
 	color: var(--sase-arancio-hover);
 }
@@ -249,7 +221,7 @@ Version: 1.2.0
 .forestas-salta:focus-visible {
 	outline: 3px solid var(--sase-focus);
 	outline-offset: 3px;
-	box-shadow: 0 0 0 3px #FFFFFF;
+	box-shadow: 0 0 0 3px var(--sase-fondo);
 }
 
 /* Selettore di lingua: «IT EN», la lingua attiva in nero con la barra arancio sotto */
@@ -285,18 +257,20 @@ Version: 1.2.0
 }
 
 /*
- * Loghi dell'header ([forestas_fesr]): il blocco istituzionale FESR «versione 1» intero, poi Forestas e
- * CAI con lo stesso separatore grigio del blocco. Tutto si misura sull'altezza del blocco, --loghi-h,
- * con i rapporti del file ufficiale (alto 473 unità): separatori alti il 65% e distanti 0,85 altezze dai
- * loghi (il blocco ha già 79 unità vuote a destra), bandiera UE alta l'82%. Forestas e CAI sono alti
- * quanto la bandiera, così l'emblema UE non è più piccolo degli altri loghi. Larghezza totale: 19,81
- * altezze più i due separatori di 1px.
+ * Loghi dell'header ([forestas_loghi_header]): il blocco istituzionale FESR «versione 1» intero, poi
+ * Forestas e CAI con lo stesso separatore grigio del blocco. Tutto si misura sull'altezza del blocco,
+ * --loghi-h, con i rapporti del file ufficiale (alto 473 unità): separatori alti il 65% e distanti
+ * --loghi-spazio altezze dai loghi (0,85 come nel blocco; il blocco ha già 79 unità vuote a destra),
+ * bandiera UE alta l'82%. Forestas e CAI sono alti quanto la bandiera, così l'emblema UE non è più
+ * piccolo degli altri loghi. Larghezza totale: (16,40 + 4 × --loghi-spazio) altezze più i due
+ * separatori di 1px, cioè 19,80 altezze con lo spazio del blocco.
  */
-.forestas-fesr-wrap {
+.forestas-loghi-header-wrap {
 	line-height: 0;
 }
 .forestas-loghi-header {
 	--loghi-h: 28px;
+	--loghi-spazio: .85;
 	display: flex;
 	align-items: center;
 }
@@ -305,16 +279,16 @@ Version: 1.2.0
 	height: var(--loghi-h);
 	width: auto;
 	max-width: none;
-	aspect-ratio: 1400 / 98;
+	aspect-ratio: 1100 / 77;
 }
 .forestas-loghi-header-separatore {
 	flex: 0 0 1px;
 	height: calc(var(--loghi-h) * .651);
-	margin: 0 calc(var(--loghi-h) * .85);
-	background: #919292; /* il grigio dei separatori del blocco ufficiale */
+	margin: 0 calc(var(--loghi-h) * var(--loghi-spazio));
+	background: var(--sase-separatore-loghi);
 }
 .forestas-loghi-header .forestas-fesr + .forestas-loghi-header-separatore {
-	margin-left: calc(var(--loghi-h) * (.85 - 79 / 473));
+	margin-left: calc(var(--loghi-h) * (var(--loghi-spazio) - 79 / 473));
 }
 .forestas-logo-header {
 	display: block;
@@ -358,7 +332,7 @@ Version: 1.2.0
 }
 .l-header .forestas-nav .w-nav-list.level_1 > .menu-item > .w-nav-anchor:is(:hover, :focus-visible)::after,
 .l-header .forestas-nav .w-nav-list.level_1 > .menu-item:is(.current-menu-item, .current-menu-ancestor, .current-menu-parent, .current_page_parent, .current-page-ancestor) > .w-nav-anchor::after {
-	height: calc(var(--sase-rem) * .20625);
+	height: .20625rem;
 }
 .no-touch .l-header .forestas-nav .w-nav-list.level_1 > .menu-item > .w-nav-anchor:hover,
 .l-header .forestas-nav .w-nav-list.level_1 > .menu-item:is(.current-menu-item, .current-menu-ancestor, .current-menu-parent, .current_page_parent, .current-page-ancestor) > .w-nav-anchor {
@@ -382,7 +356,7 @@ Version: 1.2.0
 		line-height: 1.4;
 	}
 	.l-header .l-subheader.at_top .l-subheader-h {
-		max-width: 1294px;
+		max-width: var(--sase-larghezza-contenuto);
 		height: 36px;
 	}
 	.l-header .l-subheader.at_top .forestas-seguici {
@@ -479,12 +453,12 @@ Version: 1.2.0
 	.l-header .l-subheader.at_middle {
 		--padding-inline: 20px;
 		height: auto;
-		padding-top: clamp(1rem, 3vw, 2.5rem);
-		padding-bottom: clamp(1rem, 3vw, 2.5rem);
+		padding-top: var(--sase-spazio-riga-logo);
+		padding-bottom: var(--sase-spazio-riga-logo);
 		line-height: 1.4;
 	}
 	.l-header .l-subheader.at_middle .l-subheader-h {
-		max-width: 1294px;
+		max-width: var(--sase-larghezza-contenuto);
 		height: auto;
 	}
 	.l-header .forestas-nav.type_desktop {
@@ -492,7 +466,7 @@ Version: 1.2.0
 	}
 	.l-header .forestas-nav {
 		/* la barra della voce scende fino al bordo inferiore della riga */
-		--sase-barra-voce: calc(-1 * clamp(1rem, 3vw, 2.5rem));
+		--sase-barra-voce: calc(-1 * var(--sase-spazio-riga-logo));
 		margin-left: auto;
 		padding-left: 20px;
 	}
@@ -504,7 +478,7 @@ Version: 1.2.0
 	.l-header .forestas-nav .w-nav-list.level_1 > .menu-item > .w-nav-anchor {
 		min-height: 0;
 		padding: 10px;
-		font-size: clamp(.75rem, .75rem + (1vw - .2rem) * .0625, .875rem);
+		font-size: var(--sase-carattere-piccolo);
 	}
 	/* Link di servizio e social aggiunti in coda al menu principale: solo nel pannello mobile */
 	.forestas-nav .forestas-solo-mobile {
@@ -518,7 +492,7 @@ Version: 1.2.0
 		border-top: 1px solid var(--sase-bordo);
 	}
 	.l-header .forestas-loghi-header {
-		--loghi-h: calc(clamp(231px, 25vw, 382px) / 10);
+		--loghi-h: calc(var(--sase-larghezza-logo) / 10);
 	}
 }
 @media (min-width: 1295px) {
@@ -528,10 +502,10 @@ Version: 1.2.0
 }
 
 /*
- * Tablet e mobile (fino a 1024px). In alto la riga del blocco FESR, poi la riga del sito attuale: logo,
+ * Tablet e mobile (fino a 1024px). In alto la riga dei loghi, poi la riga del sito attuale: logo,
  * IT EN, pulsante ricerca e pulsante menu di 45px. Come sul sito attuale l'header resta fermo in cima
  * allo schermo mentre la pagina scorre, tranne sugli schermi bassi e sui tablet in orizzontale; la riga
- * FESR invece esce dallo schermo con lo scorrimento (top negativo), così la parte che resta ferma è alta
+ * dei loghi invece esce dallo schermo con lo scorrimento (top negativo), così la parte che resta ferma è alta
  * come in produzione.
  * --forestas-sotto-header, il bordo inferiore dell'header nello schermo, lo calcola
  * assets/js/menu-mobile.js all'apertura del menu: qui solo la riserva se lo script non gira.
@@ -549,12 +523,17 @@ Version: 1.2.0
 		flex-grow: 1;
 		justify-content: center;
 	}
+	/* Loghi alti 28px finché entrano nella larghezza, tolti i margini della riga (5vmin per lato), poi
+	   più piccoli con la finestra */
+	.l-header .forestas-loghi-header {
+		--loghi-h: min(28px, calc((100vw - 10vmin - 2px) / 19.80));
+	}
 	.l-header .l-subheader.at_middle {
-		--padding-inline: calc(var(--sase-rem) * 1.25);
+		--padding-inline: 1.25rem;
 		height: auto;
-		padding-top: clamp(calc(var(--sase-rem) * 1), 3vw, calc(var(--sase-rem) * 2.5));
-		padding-bottom: clamp(calc(var(--sase-rem) * 1), 3vw, calc(var(--sase-rem) * 2.5));
-		font-size: var(--sase-rem);
+		padding-top: clamp(1rem, 3vw, 2.5rem);
+		padding-bottom: clamp(1rem, 3vw, 2.5rem);
+		font-size: 1rem;
 		line-height: 1.4;
 	}
 	.l-header .l-subheader.at_middle .l-subheader-h {
@@ -589,7 +568,7 @@ Version: 1.2.0
 		padding: 0;
 		background: var(--sase-fondo-campo);
 		color: var(--sase-testo-chiaro);
-		font-size: calc(var(--sase-rem) * 1.125);
+		font-size: 1.125rem;
 		line-height: 1;
 		transition: all .3s;
 	}
@@ -601,7 +580,7 @@ Version: 1.2.0
 	.l-header .l-subheader .w-search.forestas-cerca .w-search-open:focus-visible,
 	.l-header .l-subheader .w-search.forestas-cerca.active .w-search-open {
 		background: var(--sase-testo-scuro);
-		color: var(--sase-testo-chiaro-su-scuro);
+		color: var(--sase-testo-su-scuro);
 	}
 
 	/* Pulsante menu: riquadro arancio di 45px con l'icona e la scritta «menu», «chiudi» se aperto */
@@ -616,7 +595,7 @@ Version: 1.2.0
 		border-radius: 0;
 		background: var(--sase-arancio);
 		color: var(--sase-testo-scuro);
-		font-size: var(--sase-rem);
+		font-size: 1rem;
 		line-height: 1.4;
 		transition: all .3s;
 	}
@@ -628,7 +607,7 @@ Version: 1.2.0
 		display: block;
 		width: auto;
 		height: auto;
-		font-size: var(--sase-rem);
+		font-size: 1rem;
 		line-height: 1.4;
 	}
 	.l-header .forestas-nav .w-nav-control .w-nav-icon i {
@@ -642,13 +621,13 @@ Version: 1.2.0
 		width: 100%;
 		margin: 0;
 		text-align: center;
-		font-size: calc(var(--sase-rem) * .75);
+		font-size: .75rem;
 		line-height: 1.4;
 	}
 	/* «.l-subheader» serve a battere «.no-touch .l-subheader.at_middle a:hover» di Impreza */
 	.l-header .l-subheader .forestas-nav .w-nav-control:is(:hover, :focus-visible, [aria-expanded="true"]) {
 		background: var(--sase-arancio-scuro);
-		color: var(--sase-testo-chiaro-su-scuro);
+		color: var(--sase-testo-su-scuro);
 	}
 
 	/*
@@ -669,20 +648,20 @@ Version: 1.2.0
 		min-height: 0; /* Impreza gli dà come minimo l'altezza dello schermo intero */
 		display: flex;
 		flex-direction: column;
-		padding: calc(var(--sase-rem) * 1.25) calc(var(--sase-rem) * .625);
-		background: #FFFFFF;
+		padding: 1.25rem .625rem;
+		background: var(--sase-fondo);
 		box-shadow: none;
-		font-size: var(--sase-rem);
+		font-size: 1rem;
 		overflow-y: auto;
 		overscroll-behavior: contain;
 	}
 	.l-header .w-nav.forestas-nav.m_layout_panel .w-nav-list.level_1 > .menu-item:not(.forestas-solo-mobile) + .menu-item:not(.forestas-solo-mobile) {
-		margin-top: calc(var(--sase-rem) * .625);
+		margin-top: .625rem;
 	}
 	.l-header .w-nav.forestas-nav.m_layout_panel .w-nav-list.level_1 > .menu-item > .w-nav-anchor {
 		margin: 0;
-		padding: calc(var(--sase-rem) * .625);
-		font-size: calc(var(--sase-rem) * 1.125);
+		padding: .625rem;
+		font-size: 1.125rem;
 	}
 	.l-header .forestas-nav .w-nav-list.level_1 > .menu-item {
 		margin-bottom: 0;
@@ -693,36 +672,35 @@ Version: 1.2.0
 		gap: 1em;
 		margin-top: auto;
 		/* sul sito attuale i link stanno in un elenco con .2em sopra ogni voce */
-		padding: calc(var(--sase-rem) * .625 + .2em) 0 calc(var(--sase-rem) * .625);
+		padding: calc(.625rem + .2em) 0 .625rem;
 		border-top: 1px solid var(--sase-bordo);
 		text-transform: uppercase;
 	}
 	.forestas-pannello-servizio a {
-		padding: calc(var(--sase-rem) * .3125);
+		padding: .3125rem;
 		color: var(--sase-testo);
-		font-size: calc(var(--sase-rem) * .9375);
+		font-size: .9375rem;
 		font-weight: 500;
 		line-height: 1.4;
 	}
+	/* «Seguici su» e social in riga, piccoli; sotto i 768px riquadri di 45px sotto la scritta */
 	.forestas-pannello-social {
-		padding: calc(var(--sase-rem) * .9375);
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+		padding: .9375rem;
 		border-top: 1px solid var(--sase-bordo);
-		font-size: calc(var(--sase-rem) * .75);
+		font-size: .75rem;
 		line-height: 1.4;
 	}
 	.forestas-pannello-social .forestas-seguici {
 		display: block;
-		font-size: calc(var(--sase-rem) * .9375);
+		font-size: .9375rem;
 	}
 	.forestas-pannello-social .w-socials.forestas-social .w-socials-list {
 		flex-wrap: wrap;
 	}
-	/* Sotto i 768px i social del pannello sono riquadri di 45px con l'icona grande */
-	.forestas-pannello-social .w-socials.forestas-social .w-socials-item-link {
-		width: 45px;
-		height: 45px;
-		font-size: calc(var(--sase-rem) * 1.125);
-	}
+	
 
 	/* A menu aperto la pagina non scorre ed è coperta da un velo scuro, che chiude il menu al tocco
 	   (assets/js/menu-mobile.js). La classe w-nav-open la mette e la toglie Impreza. Il blocco sta sul
@@ -804,29 +782,28 @@ Version: 1.2.0
 		visibility: visible;
 	}
 }
-/* Sui touch screen il pulsante ricerca è di 45px come il menu */
+/* Sui touch screen il pulsante ricerca è di 45px come il menu (nel tema Drupal 2.858em, che fa 45px
+   con la radice a 14px: qui il valore, giusto anche fra 960 e 1024px) */
 @media (max-width: 1024px) and (hover: none) and (pointer: coarse) {
 	.header_hor .l-header .w-search.forestas-cerca.layout_simple .w-search-open {
-		width: 2.858em;
-		height: 2.858em;
+		width: 45px;
+		height: 45px;
 	}
 }
-/* Da 768px i social del pannello stanno su una riga accanto a «Seguici su», piccoli */
-@media (min-width: 768px) and (max-width: 1024px) {
+@media (max-width: 767px) {
 	.forestas-pannello-social {
-		display: flex;
-		align-items: center;
-		gap: calc(var(--sase-rem) * 1);
+		display: block;
 	}
 	.forestas-pannello-social .w-socials.forestas-social .w-socials-item-link {
-		width: 2.3em;
-		height: 2.3em;
-		font-size: calc(var(--sase-rem) * .625);
+		width: 45px;
+		height: 45px;
+		font-size: 1.125rem;
 	}
 }
 /* Header fermo in cima allo schermo, come sul sito attuale («--header-position: fixed» del tema
-   Drupal) e con le sue stesse condizioni: fino a 1024px e alto almeno 480px, non sui tablet in
-   orizzontale. Sotto i 600px la barra di amministrazione di WordPress non è fissa */
+   Drupal) e con le sue stesse condizioni: finestra fino a 1024px e alta almeno 480px, ma non sui
+   dispositivi con lo schermo fra 576 e 1024px tenuti in orizzontale (device-width: è lo schermo, non la
+   finestra). Sotto i 600px la barra di amministrazione di WordPress non è fissa */
 /* «.header_hor» batte «.l-header { position: relative }» di Impreza. Lo sticky funziona solo se nessun
    contenitore dell'header taglia il contenuto con «overflow: hidden», come fa Impreza su .l-canvas:
    «clip» taglia allo stesso modo senza farne un contenitore di scorrimento */
@@ -850,13 +827,20 @@ Version: 1.2.0
 		top: 0;
 	}
 }
-/* Fino a 1024px i loghi stanno nella riga in alto, alti 28px finché entrano nella larghezza: tolti i
-   margini della riga di Impreza (5vmin per lato), si restringono con la finestra */
-@media (max-width: 1024px) {
+/* Sotto i 600px i sei loghi su una riga diventano piccoli e il logo del sito, che si restringe accanto
+   a lingue, ricerca e menu, li supererebbe fra circa 430 e 500px: margini della riga di 10px e spazi
+   intorno ai separatori ridotti a 0,5 altezze (18,40 altezze in tutto) tengono la bandiera UE più
+   grande del logo a ogni larghezza (verificato da 320 a 600px) */
+@media (max-width: 600px) {
+	.l-header .l-subheader.at_top {
+		--padding-inline: 10px;
+	}
 	.l-header .forestas-loghi-header {
-		--loghi-h: min(28px, calc((100vw - 10vmin - 2px) / 19.81));
+		--loghi-spazio: .5;
+		--loghi-h: min(28px, calc((100vw - 20px - 2px) / 18.40));
 	}
 }
+
 
 /*
  * Footer, come sul sito attuale: in cima la riga dei sei loghi, poi il filo arancio di 5px, logo e
@@ -885,11 +869,11 @@ Version: 1.2.0
 	flex-wrap: wrap;
 	align-items: center;
 	justify-content: center;
-	gap: clamp(calc(var(--sase-rem) * 1.875), 10vw, calc(var(--sase-rem) * 3.125));
+	gap: clamp(1.875rem, 10vw, 3.125rem);
 	width: 100%;
-	max-width: 1294px;
+	max-width: var(--sase-larghezza-contenuto);
 	margin: 0 auto;
-	padding: calc(var(--sase-rem) * 1.875) calc(var(--sase-rem) * 1.25);
+	padding: 1.875rem 1.25rem;
 }
 /* Sul sito attuale la riga ha il clearfix di Drupal: il suo ::after vuoto è un settimo elemento della
    riga flex, che aggiunge uno spazio (caselle di 165,7px invece di 170 a 1440px) e sotto i 768px va a
@@ -931,18 +915,18 @@ Version: 1.2.0
 }
 .l-section.forestas-footer {
 	border-top: 5px solid var(--sase-arancio);
-	background: #FFFFFF;
+	background: var(--sase-fondo);
 	color: var(--sase-testo);
 }
 .forestas-footer .l-section-h {
 	width: 90%;
-	max-width: 1294px;
-	padding: calc(var(--sase-rem) * 1.875) 0;
+	max-width: var(--sase-larghezza-contenuto);
+	padding: 1.875rem 0;
 }
 .l-footer .forestas-footer-main.g-cols {
 	display: grid;
 	grid-template-columns: 1fr;
-	gap: calc(var(--sase-rem) * 1.875);
+	gap: 1.875rem;
 	margin: 0;
 }
 .l-footer .forestas-footer-main.g-cols > .wpb_column {
@@ -954,7 +938,7 @@ Version: 1.2.0
 .forestas-footer-main .wpb_column > .vc_column-inner {
 	display: grid;
 	align-content: start;
-	gap: clamp(calc(var(--sase-rem) * 1.25), 6vw, calc(var(--sase-rem) * 1.875));
+	gap: clamp(1.25rem, 6vw, 1.875rem);
 	padding: 0;
 }
 .forestas-footer-main .wpb_column > .vc_column-inner > * {
@@ -962,11 +946,11 @@ Version: 1.2.0
 }
 /* Larghezza fissa come sul sito attuale: è il logo a dare la larghezza minima alla colonna sinistra */
 .forestas-footer-logo {
-	width: clamp(231px, 25vw, 382px);
+	width: var(--sase-larghezza-logo);
 }
 .forestas-contatti {
 	color: var(--sase-testo-chiaro);
-	font-size: calc(var(--sase-rem) * .75);
+	font-size: .75rem;
 	font-weight: 500;
 	line-height: 1.3;
 }
@@ -978,22 +962,22 @@ Version: 1.2.0
 }
 .forestas-footer .forestas-social-wrap {
 	justify-content: flex-start;
-	font-size: calc(var(--sase-rem) * .75);
+	font-size: .75rem;
 }
 .forestas-footer .forestas-social-wrap .forestas-seguici {
-	/* 1rem del sito attuale: Impreza mette 1rem fisso (16px) in --hwrapper-gap, in linea */
-	margin-inline-end: var(--sase-rem);
+	/* 1rem del sito attuale: Impreza scrive in linea --hwrapper-gap: 1rem, che non si può battere da qui */
+	margin-inline-end: 1rem;
 	font-size: inherit;
 }
 /* «.w-menu.layout_hor» batte l'inline-flex di Impreza, che abbasserebbe la riga di 2-3px */
 .l-footer .w-menu.forestas-legali.layout_hor .menu {
 	display: flex;
 	flex-wrap: wrap;
-	gap: calc(var(--sase-rem) * 1.25);
+	gap: 1.25rem;
 	margin: 0;
 	padding: 0;
 	font-family: var(--sase-font-titoli);
-	font-size: clamp(.75rem, .75rem + (1vw - .2rem) * .0625, .875rem);
+	font-size: var(--sase-carattere-piccolo);
 	line-height: 1.4;
 }
 /* «.layout_hor» batte il margine fra le voci che Impreza mette in «--main-gap» */
@@ -1006,33 +990,33 @@ Version: 1.2.0
 .forestas-legali .menu-item a {
 	display: block;
 	white-space: normal; /* le voci vanno a capo come sul sito attuale quando la colonna è stretta */
-	padding: 0 calc(var(--sase-rem) * 1.25);
+	padding: 0 1.25rem;
 	color: inherit;
 }
 .l-section.forestas-footer-bar {
 	background: var(--sase-striscia-footer);
-	color: var(--sase-testo-chiaro-su-scuro);
-	font-size: clamp(.75rem, .75rem + (1vw - .2rem) * .0625, .875rem);
+	color: var(--sase-testo-su-scuro);
+	font-size: var(--sase-carattere-piccolo);
 }
 .forestas-footer-bar .l-section-h {
 	width: 90%;
-	max-width: 1294px;
-	padding: calc(var(--sase-rem) * .625) 0;
+	max-width: var(--sase-larghezza-contenuto);
+	padding: .625rem 0;
 }
 .forestas-footer-bar .wpb_text_column p {
 	margin: 0;
-	font-size: calc(var(--sase-rem) * .75);
+	font-size: .75rem;
 	line-height: 1.3;
 }
 /* Da 768px le due colonne stanno affiancate, distanti 2.5rem, e i link istituzionali su una riga */
 @media (min-width: 768px) {
 	.forestas-footer .l-section-h {
-		padding: calc(var(--sase-rem) * 3.75) 0;
+		padding: 3.75rem 0;
 	}
 	.l-footer .forestas-footer-main.g-cols {
 		display: flex;
 		justify-content: space-between;
-		gap: calc(var(--sase-rem) * 2.5);
+		gap: 2.5rem;
 	}
 	.forestas-footer .forestas-social-wrap {
 		justify-content: flex-end;
@@ -1043,18 +1027,18 @@ Version: 1.2.0
 }
 @media (max-width: 1024px) {
 	.l-footer .w-menu.forestas-legali.layout_hor .menu {
-		font-size: calc(var(--sase-rem) * .875);
+		font-size: .875rem;
 	}
 	.forestas-footer .forestas-social-wrap .forestas-seguici {
 		text-align: left;
-		font-size: calc(var(--sase-rem) * .9375);
+		font-size: .9375rem;
 	}
 	.forestas-contatti,
 	.forestas-footer-bar .wpb_text_column p {
-		font-size: calc(var(--sase-rem) * .875);
+		font-size: .875rem;
 	}
 }
-/* Sotto i 768px «Seguici su» sta sopra le icone, che diventano riquadri di 45px */
+/* Sotto i 768px «Seguici su» sta sopra le icone, che diventano riquadri di 45px (come nel pannello) */
 @media (max-width: 767px) {
 	.forestas-footer .forestas-social-wrap {
 		display: block;
@@ -1068,43 +1052,48 @@ Version: 1.2.0
 	.forestas-footer .w-socials.forestas-social .w-socials-item-link {
 		width: 45px;
 		height: 45px;
-		font-size: calc(var(--sase-rem) * 1.125);
+		font-size: 1.125rem;
 	}
 }
 /* Sui touch screen il sito attuale dà ai link del footer 0.3125rem sopra e sotto, e niente ai lati */
 @media (hover: none) and (pointer: coarse) {
 	.l-footer :is(.forestas-logo, .forestas-contatti a, .forestas-social .w-socials-item-link) {
 		display: flex;
-		padding-top: calc(var(--sase-rem) * .3125);
-		padding-bottom: calc(var(--sase-rem) * .3125);
+		padding-top: .3125rem;
+		padding-bottom: .3125rem;
 	}
 	.l-footer .forestas-legali .menu-item a {
 		display: flex;
-		padding: calc(var(--sase-rem) * .3125) 0;
+		padding: .3125rem 0;
 	}
 }
 
 /*
- * Link «Vai al contenuto» (oc:8757): fuori dallo schermo finché non riceve il focus da tastiera, poi
- * in alto a sinistra sopra l'header. Non è l'opzione nativa di Impreza («skip_to_content_btn»):
- * quella ha un'etichetta sola per tutte le lingue nelle Theme Options e mette role="button" su un link.
+ * Link «Vai al contenuto» (oc:8757): fuori dallo schermo finché non riceve il focus da tastiera, poi in
+ * alto a sinistra sopra l'header, con l'aspetto dei link di salto del sito attuale (.sase-skip-links):
+ * fondo bianco, colore dei link, peso 500, 0.625rem di spazio intorno, contorno del colore del testo.
+ * Non è l'opzione nativa di Impreza («skip_to_content_btn»): quella ha un'etichetta sola per tutte le
+ * lingue nelle Theme Options e mette role="button" su un link.
  */
 .forestas-salta {
 	position: absolute;
-	left: 8px;
+	left: 0;
 	top: -100px;
 	z-index: 1000;
-	padding: 10px 16px;
-	background: var(--sar-blu);
-	color: #FFFFFF;
-	font-weight: 600;
+	padding: .625rem;
+	background: var(--sase-fondo);
+	color: var(--sase-arancio-scuro);
+	font-weight: 500;
 	text-decoration: none;
 }
-/* Col mouse sopra, «.no-touch a:hover» di Impreza lo colorerebbe del colore dei link sul fondo blu */
+/* Col mouse sopra, «.no-touch a:hover» di Impreza gli darebbe il colore dei link al passaggio */
 .no-touch .forestas-salta:hover {
-	color: #FFFFFF;
+	color: var(--sase-arancio-scuro);
 }
 .forestas-salta:focus {
 	/* sotto la barra di amministrazione, per chi è loggato */
-	top: calc(8px + var(--wp-admin--admin-bar--height, 0px));
+	top: var(--wp-admin--admin-bar--height, 0px);
+}
+.forestas-salta:focus-visible {
+	outline-color: currentColor;
 }

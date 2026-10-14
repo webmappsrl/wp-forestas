@@ -679,6 +679,65 @@ tocco sul velo chiude il menu. Con una finestra fra 576 e 1024px più larga che 
 900×800 col mouse) l'header non è fermo, come in produzione, e la pagina risale fino all'header per
 mostrare «chiudi», come nella versione precedente.
 
+## Review del commit 5d2a098 (2026-10-14)
+
+Review da un'altra sessione sul diff `develop...HEAD`: da correggere, 2 bloccanti e diversi cleanup.
+Il ticket resta com'è (released, decisione del dev).
+
+**Bloccante 1: il tocco sul velo attivava il link sotto.** Impreza chiude il menu al `touchend`
+(`closeOnClickOutside` in `common/js/elements/menu.js`): quando arrivava il `click`, il menu risultava
+già chiuso e il listener del child, che doveva annullarlo, non interveniva mai; il velo, pseudo-elemento
+del body, era sparito e il click sintetico cadeva sul link sotto. Ora `menu-mobile.js` ascolta il
+`touchend` in fase di cattura e, solo se il bersaglio è il velo (body o html) a menu aperto, annulla il
+click sintetico; la chiusura resta a Impreza. Tolto il vecchio listener sul `click`. Provato con un link
+sotto il punto toccato, a 800 e 1024px su touch: il menu si chiude e il link non si attiva (da anonimo
+e da loggato); da loggato la barra di amministrazione resta cliccabile a menu aperto. Col mouse non
+serve: il click va all'antenato comune di mousedown e mouseup, il body.
+
+**Bloccante 2: bandiera UE più piccola del logo del sito fra circa 430 e 500px.** Sotto i 600px il
+logo del sito si restringe accanto a lingue, ricerca e menu più lentamente dei sei loghi, che
+dipendono dalla larghezza intera. Sotto i 600px la riga ha margini di 10px invece di 5vmin e gli spazi
+intorno ai separatori scendono da 0,85 a 0,5 altezze (`--loghi-spazio`): blocco alto 20px a 390px.
+Verificato ogni 5px da 320 a 1024px e a 1025, 1100, 1199, 1200, 1440 e 1920px: bandiera sempre più
+grande del logo del sito (margine minimo 1px a 1025px), Forestas e CAI mai più alti della bandiera,
+loghi sempre dentro la riga. La verifica «da 320 a 1920px» scritta prima era fatta su poche larghezze.
+
+**Cleanup fatti**
+
+- Tolte dal child le variabili del prototipo (`--sar-*`, tinte, `--st-*`, `--tipo-*`, `--focus`),
+  inutilizzate o in conflitto con le `--sase-*`.
+- Le `--sase-*` dei colori che stanno anche nelle Theme Options rimandano alle variabili di Impreza
+  (`--color-content-*`, `--color-subfooter-*`); i pulsanti in `impreza.json` tornano a riferimenti
+  (`_content_primary`, `_content_link_hover`, `_content_text`, `_content_bg`).
+- `rem` al posto di `--sase-rem`, che lo replicava: con la radice a 14px sotto i 960px coincidono. La
+  radice sta in una sezione «Base» del CSS, che dice che vale per tutto il sito.
+- Variabili per i valori ripetuti (`--sase-larghezza-logo`, `--sase-spazio-riga-logo`,
+  `--sase-carattere-piccolo`, `--sase-larghezza-contenuto`, `--sase-separatore-loghi`, `--sase-fondo`).
+- Pulsante ricerca su touch a 45px (2.858em faceva 51px fra 960 e 1024px); social del pannello: 45px
+  solo sotto i 768px, senza riscrivere i valori di base; blocco dei loghi mobile dentro il blocco
+  `@media (max-width: 1024px)` principale; una sola forma di selettore per l'hover dei social.
+- «Vai al contenuto» con l'aspetto dei link di salto del sito attuale (`.sase-skip-links`): fondo
+  bianco, colore dei link, peso 500, contorno del colore del testo.
+- Shortcode `[forestas_fesr]` rinominato `[forestas_loghi_header]` (stampa sei loghi), con la classe
+  del contenitore `forestas-loghi-header-wrap`; helper `forestas_immagine()` per tutte le `<img>` del
+  child; tolte dal footer le classi `forestas-footer-sx`/`-dx`, senza CSS.
+- Immagini alle misure utili: loghi nuovi del footer 342×178 (il doppio delle caselle da 170px), blocco
+  dell'header 1100×77, Forestas e CAI dell'header alti 64px. L'header carica 81 KB di loghi invece di
+  157. Forestas e CAI restano in due copie: il footer ha bisogno dei margini trasparenti del sito
+  attuale per avere le stesse caselle, l'header no.
+- Documenti: commenti e knowledge sul font Work Sans, sul `device-width` e sulla riserva di
+  `--forestas-sotto-header`; trappola dello sticky con le eccezioni; trappola sulle regole di Impreza
+  da battere; selettori interni di Impreza nelle «Dipendenze» di `inizializzazione-wordpress.md`;
+  contrasti delle Theme Options sotto WCAG nei Rischi dell'overview, da far sapere al cliente.
+
+**Non fatto, facoltativo:** `scroll-padding-top` fino a 1024px per lo skip link sotto l'header
+sticky. Il focus sul `<main>` resta visibile, quindi non è una violazione di 2.4.11; l'altezza
+dell'header cambia con la larghezza e un valore fisso sarebbe sbagliato a molte larghezze.
+
+Dopo le correzioni: confronto con la produzione invariato (desktop 1100, 1280, 1440; touch 390 e 768;
+mouse 800 e 1024; pannello aperto; riga dei loghi del footer), axe senza violazioni, apply ed export
+senza differenze. Version del child 1.2.1.
+
 ## Follow-up
 
 **Requisito di rilascio: prova del salvataggio dal pannello (2026-10-13).** Il dev ha salvato dal

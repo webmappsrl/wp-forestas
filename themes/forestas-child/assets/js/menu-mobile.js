@@ -4,7 +4,8 @@
  * - la scritta e il nome del pulsante seguono lo stato, «menu» o «chiudi» (WCAG 2.5.3);
  * - il pannello si apre dal bordo inferiore dell'header e la riga del pulsante torna tutta in vista,
  *   sotto la barra admin se c'è (l'header resta fermo in cima, ma non sugli schermi bassi);
- * - un tocco sul velo scuro che copre la pagina chiude il menu;
+ * - un tocco sul velo scuro che copre la pagina chiude il menu (lo fa Impreza) senza attivare il link
+ *   che sta sotto;
  * - a pannello aperto Tab e Maiusc+Tab restano fra il pulsante e i link del pannello, invece di finire
  *   sulla pagina coperta dal pannello (WCAG 2.4.3, 2.4.7). L'ascolto è in fase di cattura: Impreza
  *   chiude il pannello con Maiusc+Tab sulla prima voce, e quel tasto deve invece tornare al pulsante.
@@ -41,9 +42,10 @@
 		return barra && getComputedStyle( barra ).position === 'fixed' ? barra.getBoundingClientRect().bottom : 0;
 	}
 
-	// L'header scorre con la pagina: il pannello parte dal suo bordo inferiore così come si vede. A menu
-	// aperto la pagina non scorre, quindi se la riga del pulsante è tagliata in alto o finisce sotto la
-	// barra admin la si porta prima tutta in vista, o «chiudi» resterebbe in parte nascosto (WCAG 2.4.11)
+	// Il pannello parte dal bordo inferiore dell'header così come si vede. L'header è fermo in cima, ma
+	// non sugli schermi bassi né sui tablet in orizzontale, dove scorre con la pagina: a menu aperto la
+	// pagina non scorre, quindi se la riga del pulsante è tagliata in alto o finisce sotto la barra admin
+	// la si porta prima tutta in vista, o «chiudi» resterebbe in parte nascosto (WCAG 2.4.11)
 	function posizionaPannello() {
 		var sopra = riga.getBoundingClientRect().top - limiteAlto();
 		if ( sopra < 0 ) {
@@ -85,14 +87,17 @@
 		}, 50 );
 	} );
 
-	// Un tocco fuori dall'header, cioè sul velo scuro che copre la pagina, chiude il menu come sul sito
-	// attuale. Il velo è uno pseudo-elemento del body: il click arriva al body o all'html
-	document.addEventListener( 'click', function ( evento ) {
-		if ( aperto() && ! header.contains( evento.target ) ) {
+	// Un tocco sul velo scuro che copre la pagina chiude il menu: lo fa Impreza al touchend
+	// (closeOnClickOutside in common/js/elements/menu.js). Ma il velo, pseudo-elemento del body, sparisce
+	// subito, e il click sintetico che il browser genera dopo il touchend cadrebbe sul link sotto. Qui,
+	// in fase di cattura e prima di Impreza, si annulla quel click, solo per i tocchi sul velo (bersaglio
+	// body o html): la barra di amministrazione e il resto dell'header restano cliccabili. Col mouse non
+	// serve: il click va all'antenato comune di mousedown e mouseup, cioè al body
+	document.addEventListener( 'touchend', function ( evento ) {
+		if ( aperto() && ( evento.target === document.body || evento.target === document.documentElement ) ) {
 			evento.preventDefault();
-			pulsante.click();
 		}
-	} );
+	}, { capture: true, passive: false } );
 
 	document.addEventListener( 'keydown', function ( evento ) {
 		if ( evento.key !== 'Tab' || ! aperto() ) {

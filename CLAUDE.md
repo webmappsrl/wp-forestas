@@ -77,9 +77,16 @@ subagent.
   «chiudi» era sceso a 1,66:1 (oc:8757)
 - Header e footer sono identici a sardegnasentieri.it: un ritocco si confronta con la produzione, non
   con il prototipo «Canvas Fase 2», e ogni differenza va concordata col cliente (knowledge 8757) (oc:8757)
-- L'header è sticky fino a 1024px solo perché `.l-canvas` ha `overflow: clip` e il blocco dello
-  scorrimento a menu aperto sta sul body: un `overflow: hidden` su `.l-canvas` o su `<html>` ferma lo
-  sticky, e aprire il menu dopo uno scorrimento riporta la pagina in cima (oc:8757)
+- L'header è sticky fino a 1024px (finestra alta almeno 480px, non sui dispositivi con lo schermo fra
+  576 e 1024px in orizzontale, come sul sito attuale) solo perché `.l-canvas` ha `overflow: clip` e il
+  blocco dello scorrimento a menu aperto sta sul body: un `overflow: hidden` su `.l-canvas` o su
+  `<html>` ferma lo sticky, e aprire il menu dopo uno scorrimento riporta la pagina in cima (oc:8757)
+- Per avere le misure del sito attuale il child batte regole di Impreza che non si vedono dal
+  pannello: `--hwrapper-gap` scritto in linea sul gruppo «Seguici su» del footer (si batte col margine
+  del testo), `background: none !important` sul pulsante di ricerca (fondo e lente stanno sull'icona),
+  `text-decoration: none !important` sui social, layout verticale responsive dei menu aggiuntivi
+  (`responsive_width="0px"` nello shortcode del footer). Toccando quegli elementi si controlla il
+  risultato nel browser, non solo nel pannello (oc:8757)
 - Nelle Theme Options le famiglie dei font sono scritte con la virgola (`"Montserrat", sans-serif`)
   perché Impreza non le scarichi da Google: i font sono nel child. Non sono fra le scelte del pannello,
   e salvare la tipografia dalle Theme Options può sostituirle; «Store Google Fonts locally» resta

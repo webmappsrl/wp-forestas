@@ -34,6 +34,22 @@ function forestas_versione(): string {
 }
 
 /*
+ * <img> di un file del child (assets/img), con dimensioni esplicite e testo alternativo (oc:8757). Le
+ * immagini stanno nel child e non negli uploads, che non sono versionati: su un sito ricreato da zero
+ * ci sono comunque.
+ */
+function forestas_immagine( string $file, int $larghezza, int $altezza, string $alt, string $attributi = '' ): string {
+	return sprintf(
+		'<img src="%s" alt="%s" width="%d" height="%d"%s>',
+		esc_url( forestas_asset_url( 'assets/img/' . $file ) ),
+		esc_attr( $alt ),
+		$larghezza,
+		$altezza,
+		$attributi
+	);
+}
+
+/*
  * Logo del sito, usato da header e footer di Impreza (oc:8757). Il file sta nel child e non negli
  * uploads, che non sono versionati: su un sito ricreato da zero il logo c'è comunque. Il link porta
  * alla home nella lingua corrente di WPML.
@@ -42,9 +58,9 @@ add_shortcode(
 	'forestas_logo',
 	function () {
 		return sprintf(
-			'<a class="forestas-logo" href="%s"><img src="%s" alt="Sardegna Sentieri" width="1155" height="90"></a>',
+			'<a class="forestas-logo" href="%s">%s</a>',
 			esc_url( apply_filters( 'wpml_home_url', home_url( '/' ) ) ),
-			esc_url( forestas_asset_url( 'assets/img/logo.png' ) )
+			forestas_immagine( 'logo.png', 1155, 90, 'Sardegna Sentieri' )
 		);
 	}
 );
@@ -89,39 +105,26 @@ add_shortcode(
  * Loghi dell'header, gli stessi sei del footer (oc:8757). In testa il blocco istituzionale del PR FESR
  * Sardegna 2021-2027 (Coesione Italia, emblema UE con «Cofinanziato dall'Unione europea», Repubblica,
  * Regione), richiesto dal cliente: è il file ufficiale di sardegnaprogrammazione.it «versione 1» (loghi
- * su una riga), ridotto a 1400px di larghezza, intero, perché ordine e proporzioni dei loghi non vanno
+ * su una riga), ridotto a 1100px di larghezza, intero, perché ordine e proporzioni dei loghi non vanno
  * alterati (Linee guida beneficiari PR FESR Sardegna, «Blocco istituzionale»). Dopo il blocco, con lo
  * stesso separatore grigio, Forestas e CAI, alti quanto la bandiera UE: l'emblema non è mai più piccolo
  * degli altri loghi. Nel footer gli stessi loghi stanno separati, in [forestas_loghi_footer].
  */
 add_shortcode(
-	'forestas_fesr',
+	'forestas_loghi_header',
 	function () {
-		$immagine = fn( string $file, int $larghezza, int $altezza, string $classe, string $alt ): string => sprintf(
-			'<img class="%s" src="%s" alt="%s" width="%d" height="%d">',
-			esc_attr( $classe ),
-			esc_url( forestas_asset_url( 'assets/img/' . $file ) ),
-			esc_attr( $alt ),
-			$larghezza,
-			$altezza
-		);
 		$separatore = '<span class="forestas-loghi-header-separatore" aria-hidden="true"></span>';
+		$alt_blocco = forestas_testo(
+			'Coesione Italia 21-27 Sardegna, cofinanziato dall\'Unione europea, Repubblica Italiana, Regione Autonoma della Sardegna',
+			'Coesione Italia 21-27 Sardegna, co-funded by the European Union, Italian Republic, Autonomous Region of Sardinia'
+		);
 
 		return '<div class="forestas-loghi-header">'
-			. $immagine(
-				'blocco-istituzionale-fesr.png',
-				1400,
-				98,
-				'forestas-fesr',
-				forestas_testo(
-					'Coesione Italia 21-27 Sardegna, cofinanziato dall\'Unione europea, Repubblica Italiana, Regione Autonoma della Sardegna',
-					'Coesione Italia 21-27 Sardegna, co-funded by the European Union, Italian Republic, Autonomous Region of Sardinia'
-				)
-			)
+			. forestas_immagine( 'blocco-istituzionale-fesr.png', 1100, 77, $alt_blocco, ' class="forestas-fesr"' )
 			. $separatore
-			. $immagine( 'loghi-header/forestas-sardegna-foreste.png', 272, 176, 'forestas-logo-header', 'Forestas - Sardegna Foreste' )
+			. forestas_immagine( 'loghi-header/forestas-sardegna-foreste.png', 99, 64, 'Forestas - Sardegna Foreste', ' class="forestas-logo-header"' )
 			. $separatore
-			. $immagine( 'loghi-header/cai-club-alpino-italiano.png', 220, 178, 'forestas-logo-header', forestas_testo( 'CAI - Club Alpino Italiano', 'CAI - Italian Alpine Club' ) )
+			. forestas_immagine( 'loghi-header/cai-club-alpino-italiano.png', 79, 64, forestas_testo( 'CAI - Club Alpino Italiano', 'CAI - Italian Alpine Club' ), ' class="forestas-logo-header"' )
 			. '</div>';
 	}
 );
@@ -131,29 +134,27 @@ add_shortcode(
  * primi quattro sono quelli del blocco istituzionale PR FESR Sardegna 2021-2027, ritagliati dal file
  * ufficiale «versione 2» con la stessa scala e la stessa fascia verticale, così le proporzioni fra i
  * loghi restano quelle del blocco; gli ultimi due, Forestas e CAI, sono i file del sito attuale. Tutti
- * nel child (assets/img/loghi-footer), in PNG trasparenti nel formato dei loghi del sito attuale.
+ * nel child (assets/img/loghi-footer), in PNG trasparenti nel formato dei loghi del sito attuale. Forestas
+ * e CAI sono anche in assets/img/loghi-header, senza i margini trasparenti: nell'header stanno accanto al
+ * blocco, qui servono i margini per avere le caselle del sito attuale.
  */
 add_shortcode(
 	'forestas_loghi_footer',
 	function () {
 		$loghi = [
-			[ 'coesione-italia-sardegna.png', 684, 356, 'Coesione Italia 21-27 Sardegna', 'Coesione Italia 21-27 Sardegna' ],
-			[ 'cofinanziato-unione-europea.png', 684, 356, 'Cofinanziato dall\'Unione europea', 'Co-funded by the European Union' ],
-			[ 'repubblica-italiana.png', 684, 356, 'Repubblica Italiana', 'Italian Republic' ],
-			[ 'regione-sardegna.png', 684, 356, 'Regione Autonoma della Sardegna', 'Autonomous Region of Sardinia' ],
+			[ 'coesione-italia-sardegna.png', 342, 178, 'Coesione Italia 21-27 Sardegna', 'Coesione Italia 21-27 Sardegna' ],
+			[ 'cofinanziato-unione-europea.png', 342, 178, 'Cofinanziato dall\'Unione europea', 'Co-funded by the European Union' ],
+			[ 'repubblica-italiana.png', 342, 178, 'Repubblica Italiana', 'Italian Republic' ],
+			[ 'regione-sardegna.png', 342, 178, 'Regione Autonoma della Sardegna', 'Autonomous Region of Sardinia' ],
 			[ 'forestas-sardegna-foreste.png', 308, 176, 'Forestas - Sardegna Foreste', 'Forestas - Sardegna Foreste' ],
 			[ 'cai-club-alpino-italiano.png', 342, 178, 'CAI - Club Alpino Italiano', 'CAI - Italian Alpine Club' ],
 		];
 
 		$html = '';
 		foreach ( $loghi as [ $file, $larghezza, $altezza, $italiano, $inglese ] ) {
-			$html .= sprintf(
-				'<div class="forestas-logo-ente"><img src="%s" alt="%s" width="%d" height="%d" loading="lazy"></div>',
-				esc_url( forestas_asset_url( 'assets/img/loghi-footer/' . $file ) ),
-				esc_attr( forestas_testo( $italiano, $inglese ) ),
-				$larghezza,
-				$altezza
-			);
+			$html .= '<div class="forestas-logo-ente">'
+				. forestas_immagine( 'loghi-footer/' . $file, $larghezza, $altezza, forestas_testo( $italiano, $inglese ), ' loading="lazy"' )
+				. '</div>';
 		}
 
 		return '<div class="forestas-loghi-footer">' . $html . '</div>';

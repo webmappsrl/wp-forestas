@@ -25,13 +25,15 @@ produzione: ogni differenza va concordata col cliente (capitolato, scrum del 14/
   possono salvare in locale senza registrare WPML (oc:8757, `notes.md`).
 - **Shortcode del child** (`functions.php`), usati dentro header e footer:
   `[forestas_logo]`, `[forestas_anno]`, `[forestas_lingue]` (IT EN da WPML, codice breve),
-  `[forestas_fesr]` (i sei loghi dell'header: blocco istituzionale FESR «versione 1» intero, poi
-  Forestas e CAI), `[forestas_loghi_footer]` (i sei loghi del footer). Le immagini stanno
+  `[forestas_loghi_header]` (i sei loghi dell'header: blocco istituzionale FESR «versione 1»
+  intero, poi Forestas e CAI), `[forestas_loghi_footer]` (i sei loghi del footer). Le immagini stanno
   in `themes/forestas-child/assets/img/`, non negli uploads.
 - **Font:** Montserrat e Work Sans del sito attuale, in `themes/forestas-child/assets/fonts/` con
-  le licenze OFL, solo 400 e 600 come in produzione. Work Sans si chiama «Work Sans Sardegna
-  Sentieri», per non mescolarsi con una Work Sans caricata da Impreza. Sotto i 960px la radice è a
-  14px, come sul sito attuale (`html { font-size }` nel child), e `--sase-rem` la segue.
+  le licenze OFL, solo 400 e 600 come in produzione, usati anche dalle Theme Options per tutto il
+  sito. Work Sans si chiama «Work Sans Sardegna Sentieri», per non mescolarsi con una Work Sans
+  installata sul computer o caricata da un plugin, che potrebbe avere il peso 500. Sotto i 960px la
+  radice è a 14px, come sul sito attuale (sezione «Base» di `style.css`): vale per tutto il sito, e
+  le misure in rem di header e footer coincidono con quelle di produzione.
 - **Desktop (da 1025px):** tre righe, contenuto largo al massimo 1294px. Servizio (36px più 5px sopra
   e sotto), logo e menu (fra 1 e 2,5rem sopra e sotto), sei loghi centrati (44px). Al passaggio del
   mouse, al focus e sulla voce attiva compare sotto la voce una barra di 3,3px sul bordo della riga,
@@ -39,10 +41,13 @@ produzione: ogni differenza va concordata col cliente (capitolato, scrum del 14/
 - **Tablet e mobile (fino a 1024px):** riga dei loghi in alto, poi la riga del sito attuale (logo, IT EN,
   ricerca, menu). L'header resta fermo in cima con le condizioni del sito attuale: `position: sticky`
   con `top` negativo quanto la riga FESR, che quindi esce dallo schermo; non sugli schermi alti meno
-  di 480px né sulle finestre fra 576 e 1024px più larghe che alte. Lo sticky funziona solo perché
+  di 480px né sui dispositivi con lo schermo fra 576 e 1024px tenuti in orizzontale (`device-width`:
+  conta lo schermo, non la finestra). Lo sticky funziona solo perché
   `.l-canvas` ha `overflow: clip` invece dell'`hidden` di Impreza. Il menu è un pannello che entra da
   destra (`mobile_layout="panel"`), largo quanto il contenuto, alto dal bordo inferiore dell'header al
-  fondo dello schermo, con un velo scuro sulla pagina che chiude il menu al tocco. Quel
+  fondo dello schermo, con un velo scuro sulla pagina. Un tocco sul velo chiude il menu: lo fa
+  Impreza al `touchend`, e `menu-mobile.js` annulla in fase di cattura il click che il browser
+  genererebbe subito dopo, che cadrebbe sul link sotto il velo appena sparito. Quel
   bordo lo calcola `menu-mobile.js` all'apertura (`--forestas-sotto-header`): dipende da quanto la
   pagina è scesa e dalla barra di amministrazione, fissa in cima da 601px (46px fino a 782px, 32px
   oltre) e che scorre con la pagina sotto i 600px: il solo CSS non può conoscerlo; in coda alle voci un filtro
@@ -82,10 +87,12 @@ Vincoli:
 
 - l'emblema UE del blocco FESR non può essere più piccolo degli altri loghi (Linee guida beneficiari
   PR FESR Sardegna): nell'header Forestas e CAI sono alti quanto la bandiera (82% del blocco, misure
-  in `--loghi-h` di `style.css`); nell'header desktop il blocco è alto un decimo della larghezza del
-  logo, che
-  cambia con la finestra; verificato da 320 a 1920px in header e footer. Chi ingrandisce il logo deve
-  ricontrollare;
+  in `--loghi-h` di `style.css`), e la bandiera non è più piccola nemmeno del logo del sito. Sul
+  desktop il blocco è alto un decimo della larghezza del logo, che cambia con la finestra; fino a
+  1024px è alto quanto entra nella riga, e sotto i 600px, dove il logo del sito si restringe accanto a
+  lingue, ricerca e menu, i margini della riga e gli spazi fra i loghi si riducono per tenere la
+  bandiera più grande. Verificato ogni 5px da 320 a 1024px e a 1025, 1100, 1199, 1200, 1440 e 1920px
+  nell'header, da 320 a 1920px nel footer. Chi cambia logo, loghi o spazi deve rimisurare;
 - le famiglie dei font nelle Theme Options sono scritte con la virgola (`"Montserrat", sans-serif`):
   Impreza salta questi nomi quando raccoglie i Google Fonts, così valgono i font del child. Non sono
   fra le scelte del pannello: salvare la tipografia dalle Theme Options può sostituirle;
@@ -97,7 +104,8 @@ Vincoli:
 - **rilascio e rollback toccano sempre insieme child e `config/`:** il child arriva con il pull,
   header e footer solo con l'apply. Con il solo child il sito mostra header e footer demo con il CSS
   nuovo; con la sola configurazione (o tornando indietro solo sul child) mostra gli shortcode
-  `[forestas_logo]`, `[forestas_fesr]`, `[forestas_lingue]`, `[forestas_anno]` come testo. Il
+  `[forestas_logo]`, `[forestas_loghi_header]`, `[forestas_loghi_footer]`, `[forestas_lingue]`,
+  `[forestas_anno]` come testo. Il
   rollback, a passi:
   1. riporta il sito alla configurazione precedente con `bin/wordpress-config.sh apply --da
      <backup> --conferma` (README, «Configurazione versionata»). Il backup è il **primo** fatto nel
@@ -133,7 +141,8 @@ Vincoli:
 - **Identici al sito attuale** (oc:8757): il capitolato chiede la stessa UI del sito Drupal, salvo
   modifiche concordate; il cliente non distingue fra Drupal e WordPress.
 - **Font nel child e non da Google** (oc:8757): gli stessi file del sito attuale danno la stessa resa;
-  una Work Sans variabile avrebbe disegnato un peso 500 che in produzione non c'è.
+  la Work Sans variabile di Google, che Impreza caricava, avrebbe disegnato un peso 500 che in
+  produzione non c'è.
 - **Menu letti e scritti su tutte le lingue** (oc:8757): con i filtri di WPML attivi, che si accendono
   completando il primo passo del wizard («lingua dei contenuti esistenti»), la lingua corrente di
   WP-CLI è quella predefinita: `get_terms()` non vede i menu tradotti e `get_term()` converte l'id di
@@ -175,8 +184,8 @@ Vincoli:
   aprire il menu dopo uno scorrimento faceva tornare la pagina in cima.
 - **Altezza dell'header mobile scritta a mano (96px) nel CSS** (oc:8757, superata): andava
   aggiornata a ogni cambio delle righe nell'Header Builder. Ora il bordo dell'header lo calcola
-  `menu-mobile.js` (`--forestas-sotto-header`); `--header-sticky-height` serve solo da riserva nel
-  CSS se lo script non gira.
+  `menu-mobile.js` (`--forestas-sotto-header`); nel CSS resta solo una riserva fissa, la riga dei
+  loghi più 92px, se lo script non gira.
 - **Social e «Seguici su» letti per id (`socials:1`, `html:1`)** (oc:8757, superata): ricreando
   l'elemento dal pannello l'id cambia e la riga sparisce senza errori.
 - **Esc gestito anche dallo script del child** (oc:8757, superata): lo fa già Impreza.
