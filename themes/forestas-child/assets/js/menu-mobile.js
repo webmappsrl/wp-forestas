@@ -2,8 +2,9 @@
  * Menu mobile dell'header (oc:8757). Impreza apre e chiude il pannello cliccando «.w-nav-control», e
  * con Esc lo chiude e riporta il focus sul pulsante (common/js/elements/menu.js). Qui si aggiunge:
  * - la scritta e il nome del pulsante seguono lo stato, «menu» o «chiudi» (WCAG 2.5.3);
- * - il pannello si apre dal bordo inferiore dell'header, che scorre con la pagina, e la riga del
- *   pulsante torna tutta in vista, sotto la barra admin se c'è;
+ * - il pannello si apre dal bordo inferiore dell'header e la riga del pulsante torna tutta in vista,
+ *   sotto la barra admin se c'è (l'header resta fermo in cima, ma non sugli schermi bassi);
+ * - un tocco sul velo scuro che copre la pagina chiude il menu;
  * - a pannello aperto Tab e Maiusc+Tab restano fra il pulsante e i link del pannello, invece di finire
  *   sulla pagina coperta dal pannello (WCAG 2.4.3, 2.4.7). L'ascolto è in fase di cattura: Impreza
  *   chiude il pannello con Maiusc+Tab sulla prima voce, e quel tasto deve invece tornare al pulsante.
@@ -82,6 +83,15 @@
 				posizionaPannello();
 			}
 		}, 50 );
+	} );
+
+	// Un tocco fuori dall'header, cioè sul velo scuro che copre la pagina, chiude il menu come sul sito
+	// attuale. Il velo è uno pseudo-elemento del body: il click arriva al body o all'html
+	document.addEventListener( 'click', function ( evento ) {
+		if ( aperto() && ! header.contains( evento.target ) ) {
+			evento.preventDefault();
+			pulsante.click();
+		}
 	} );
 
 	document.addEventListener( 'keydown', function ( evento ) {

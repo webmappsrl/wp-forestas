@@ -19,6 +19,14 @@ subagent.
 
 ## Regole del repo
 
+- **Fonte di design: il sito attuale, sardegnasentieri.it (Drupal).** Il capitolato chiede la stessa
+  UI, salvo modifiche concordate col cliente: per ogni lavoro su aspetto e comportamento del sito
+  (header, footer, pagine, colori, tipografia, Theme Options) il riferimento è il frontend Drupal,
+  non un prototipo. La copia del suo repository sta sul server UAT, `/root/sardegnasentieri.zip`
+  (`scp uat.forestas:/root/sardegnasentieri.zip .`, MD5 `23215ab201b6d7bf994378222c523a69`; si
+  estrae con `unzip sardegnasentieri.zip -x '__MACOSX/*'`). Il tema è in
+  `docroot/themes/custom/sardegnasentieri`: `scss/` per misure e colori, `js/` per i comportamenti,
+  `fonts/`. I valori si confrontano anche con il sito in produzione, misurando nel browser (oc:8757).
 - Documentazione, commenti e messaggi di commit in italiano; i termini tecnici restano in inglese.
 - `compose.yml` non deve mai far fallire il parsing del compose di `forestas`: niente
   `${VAR:?…}`, `env_file` con `required: false`. Le variabili mancanti le segnala lo script.
@@ -67,6 +75,15 @@ subagent.
   a:hover` di Impreza, che dà a ogni link e pulsante della riga centrale il blu dei link: serve
   `.l-subheader` nel selettore. Succede solo col mouse, quindi su un telefono non si vede; il pulsante
   «chiudi» era sceso a 1,66:1 (oc:8757)
+- Header e footer sono identici a sardegnasentieri.it: un ritocco si confronta con la produzione, non
+  con il prototipo «Canvas Fase 2», e ogni differenza va concordata col cliente (knowledge 8757) (oc:8757)
+- L'header è sticky fino a 1024px solo perché `.l-canvas` ha `overflow: clip` e il blocco dello
+  scorrimento a menu aperto sta sul body: un `overflow: hidden` su `.l-canvas` o su `<html>` ferma lo
+  sticky, e aprire il menu dopo uno scorrimento riporta la pagina in cima (oc:8757)
+- Nelle Theme Options le famiglie dei font sono scritte con la virgola (`"Montserrat", sans-serif`)
+  perché Impreza non le scarichi da Google: i font sono nel child. Non sono fra le scelte del pannello,
+  e salvare la tipografia dalle Theme Options può sostituirle; «Store Google Fonts locally» resta
+  spento, se no l'apply segnala sempre una differenza (oc:8757)
 - L'apply automatico vale solo nei 3 giorni dopo l'installazione (`WPF_APPLY_FINESTRA`) e aspetta,
   senza consumare tentativi, che tema e plugin di `config/versioni.json` siano installati: dopo, un
   sito cambiato dal pannello non viene più sovrascritto senza anteprima (oc:8717)
@@ -109,4 +126,4 @@ subagent.
 | Argomento | Cosa copre | Pagina |
 |---|---|---|
 | Inizializzazione di WordPress | perché lo script lavora a passi, perché il core non sta nell'immagine, cosa succede senza GitHub o senza Impreza | [docs/knowledge/inizializzazione-wordpress.md](docs/knowledge/inizializzazione-wordpress.md) |
-| Header e footer del sito | oggetti di Impreza scritti in codice e copiati per lingua, shortcode del child, menu mobile, blocco FESR, accessibilità | [docs/knowledge/8757-header-e-footer-di-wordpress-forestas-secondo-il-mockup.md](docs/knowledge/8757-header-e-footer-di-wordpress-forestas-secondo-il-mockup.md) |
+| Header e footer del sito | identici al sito attuale, oggetti di Impreza scritti in codice e copiati per lingua, shortcode e font del child, menu mobile, blocco FESR, accessibilità | [docs/knowledge/8757-header-e-footer-di-wordpress-forestas-secondo-il-mockup.md](docs/knowledge/8757-header-e-footer-di-wordpress-forestas-secondo-il-mockup.md) |
