@@ -299,3 +299,50 @@ EN se WPML non li risolve da sé.
   destinazione, logo senza «BETA», layout mobile definitivo).
 - [x] **Passo 5: commit (istruzione per l'utente)**
   `git commit -m "docs(oc:8757): trappola sugli oggetti dei builder e note del lavoro"`
+
+---
+
+### Task 8: Header e footer identici al sito attuale, Theme Options dal tema Drupal
+
+Dopo lo scrum del 14/10/2026 (overview, «Cosa cambia»), branch
+`feature/oc-8757-header-e-footer-identici-al-sito-attuale` da `develop`. Il vincolo «colori solo da
+`--sar-*`/`--tipo-*`» qui sopra non vale più: quelle variabili sono state tolte dal child, e per header
+e footer valgono le variabili `--sase-*`, con i valori del tema Drupal o i colori delle Theme Options.
+
+**File:**
+- Modifica: `config/post.json` (header e footer IT/EN), `config/impreza.json`
+- Modifica: `themes/forestas-child/style.css`, `functions.php`, `assets/js/menu-mobile.js`,
+  `assets/img/blocco-istituzionale-fesr.png` (ridotto a 1100×77)
+- Crea: `themes/forestas-child/assets/fonts/` (font e licenze OFL), `assets/img/cerca.svg`,
+  `assets/img/loghi-header/`, `assets/img/loghi-footer/`
+- Cancella: `themes/forestas-child/assets/img/blocco-istituzionale-fesr-2.png`
+- Modifica: `README.md`, `docs/knowledge/inizializzazione-wordpress.md`
+- Modifica: `CLAUDE.md`, `docs/knowledge/8757-…`, `overview.md`, `notes.md`
+
+- [x] **Passo 1: misure del sito attuale** — CSS di produzione e SCSS del tema Drupal (copia su UAT):
+  posizione, misure, font e colori di ogni elemento di header, footer e pannello alle larghezze
+  dell'overview, menu chiuso e aperto.
+- [x] **Passo 2: struttura** in `config/post.json`: celle dell'header come in produzione (servizio a
+  sinistra, IT EN e ricerca a destra; su tablet e mobile FESR da solo in alto, IT EN, ricerca e menu
+  nella riga del logo), icona del menu a icona personalizzata, footer a due colonne con i cinque social.
+- [x] **Passo 3: stili** in `style.css`, poi confronto elemento per elemento con la produzione fino a
+  nessuna differenza oltre mezzo pixel, salvo FESR e CAMMINI.
+- [x] **Passo 4: Theme Options** in `config/impreza.json`: colori, tipografia, pulsanti, focus.
+  Run: `bin/wordpress-config.sh apply --conferma && bin/wordpress-config.sh export && bin/wordpress-config.sh apply`
+  Atteso: l'ultimo apply dice «nessuna differenza».
+- [x] **Passo 5: verifiche** — confronto delle misure, axe a 1440 e 390px con pannello chiuso e aperto,
+  bandiera UE più grande del logo vicino da 320 a 1920px.
+- [x] **Passo 6: documentazione** — overview, notes, knowledge, trappole nel `CLAUDE.md`, regola sulla
+  fonte di design (frontend Drupal, copia su UAT) nel `CLAUDE.md`.
+- [x] **Passo 7: riga dei loghi del footer** — i quattro loghi del blocco istituzionale ritagliati dal
+  file ufficiale «versione 2» con scala comune, più Forestas e CAI del sito attuale, in
+  `assets/img/loghi-footer/`; shortcode `[forestas_loghi_footer]`; disposizione confrontata con la
+  produzione a 390, 768, 800, 1100 e 1440px.
+- [x] **Passo 8: loghi dell'header** — `[forestas_fesr]` (poi `[forestas_loghi_header]`, passo 9) stampa il blocco «versione 1» intero, poi
+  Forestas e CAI con il separatore del blocco, alti quanto la bandiera; verificati da 320 a 1920px
+  su poche larghezze (la review ha trovato la fascia 430-500px fuori regola: rifatto ogni 5px nel
+  passo 9).
+- [x] **Passo 9: correzioni della review di 5d2a098** — tocco sul velo, bandiera UE sotto i 600px,
+  cleanup (notes, «Review del commit 5d2a098»); confronti con la produzione e axe ripetuti.
+- [ ] **Passo 10: commit (istruzione per l'utente)** — dopo `git diff config/`:
+  `git commit -m "feat(oc:8757): header e footer identici al sito attuale, Theme Options dal tema Drupal"`
