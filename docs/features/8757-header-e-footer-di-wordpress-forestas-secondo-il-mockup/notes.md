@@ -838,6 +838,18 @@ header e footer, IT ed EN (404 sotto `/en/`), 1440px intero e compatto, 390px ch
 e alt inglesi; da loggato: riga compatta sotto la barra a 1025 e 1280px, pannello sotto l'header e
 «chiudi» in vista a 390 e 700px dopo uno scorrimento, barra di CAMMINI blu al passaggio del mouse.
 
+**Rilascio su UAT (2026-10-19)**, eseguito da Claude via SSH dopo il merge del dev (`wp-forestas` PR
+#9 e #10, `forestas` PR #28): `forestas` su `f25d9ad`, `wp-forestas` su `2504e61`, child alla Version
+1.3.1. `scripts/wordpress-up.sh`: immagine dalla cache, container non ricreati. `apply` in anteprima:
+8 differenze, solo quelle attese (header e footer IT ed EN, `main-menu` e `servizio-menu` IT ed EN);
+`apply --conferma`, poi un secondo apply: «nessuna differenza». **Backup per il rollback:
+`wp-forestas/backup/2026-10-19-124348`.** Verifiche da anonimo: CSS e script della riga compatta
+serviti alla 1.3.1; menu con PUNTI DI INTERESSE su una riga a 1025 e 1280px; nessun logo nell'header
+(solo il logo del sito), sette nel footer; «Open Data» e «Preferenze cookie»; riga compatta di 47px a
+1280px dopo lo scorrimento; pagina inglese (404 sotto `/en/`) con testi inglesi; axe senza violazioni
+su header e footer a 1280, 1025 e 390px e in inglese. Nel log del container solo l'avviso già noto
+«Undefined array key 0» della 404 inglese (rilascio del 2026-10-13).
+
 ## Follow-up
 
 **Requisito di rilascio: prova del salvataggio dal pannello (2026-10-13).** Il dev ha salvato dal
