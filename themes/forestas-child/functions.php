@@ -60,7 +60,7 @@ add_shortcode(
 		return sprintf(
 			'<a class="forestas-logo" href="%s">%s</a>',
 			esc_url( apply_filters( 'wpml_home_url', home_url( '/' ) ) ),
-			forestas_immagine( 'logo.png', 1155, 90, 'Sardegna Sentieri' )
+			forestas_immagine( 'logo.png', 1442, 120, 'Sardegna Sentieri' )
 		);
 	}
 );
@@ -102,41 +102,12 @@ add_shortcode(
 );
 
 /*
- * Loghi dell'header, gli stessi sei del footer (oc:8757). In testa il blocco istituzionale del PR FESR
- * Sardegna 2021-2027 (Coesione Italia, emblema UE con «Cofinanziato dall'Unione europea», Repubblica,
- * Regione), richiesto dal cliente: è il file ufficiale di sardegnaprogrammazione.it «versione 1» (loghi
- * su una riga), ridotto a 1100px di larghezza, intero, perché ordine e proporzioni dei loghi non vanno
- * alterati (Linee guida beneficiari PR FESR Sardegna, «Blocco istituzionale»). Dopo il blocco, con lo
- * stesso separatore grigio, Forestas e CAI, alti quanto la bandiera UE: l'emblema non è mai più piccolo
- * degli altri loghi. Nel footer gli stessi loghi stanno separati, in [forestas_loghi_footer].
- */
-add_shortcode(
-	'forestas_loghi_header',
-	function () {
-		$separatore = '<span class="forestas-loghi-header-separatore" aria-hidden="true"></span>';
-		$alt_blocco = forestas_testo(
-			'Coesione Italia 21-27 Sardegna, cofinanziato dall\'Unione europea, Repubblica Italiana, Regione Autonoma della Sardegna',
-			'Coesione Italia 21-27 Sardegna, co-funded by the European Union, Italian Republic, Autonomous Region of Sardinia'
-		);
-
-		return '<div class="forestas-loghi-header">'
-			. forestas_immagine( 'blocco-istituzionale-fesr.png', 1100, 77, $alt_blocco, ' class="forestas-fesr"' )
-			. $separatore
-			. forestas_immagine( 'loghi-header/forestas-sardegna-foreste.png', 99, 64, 'Forestas - Sardegna Foreste', ' class="forestas-logo-header"' )
-			. $separatore
-			. forestas_immagine( 'loghi-header/cai-club-alpino-italiano.png', 79, 64, forestas_testo( 'CAI - Club Alpino Italiano', 'CAI - Italian Alpine Club' ), ' class="forestas-logo-header"' )
-			. '</div>';
-	}
-);
-
-/*
- * Riga dei loghi in cima al footer, come sul sito attuale (oc:8757): sei loghi in caselle uguali. I
- * primi quattro sono quelli del blocco istituzionale PR FESR Sardegna 2021-2027, ritagliati dal file
- * ufficiale «versione 2» con la stessa scala e la stessa fascia verticale, così le proporzioni fra i
- * loghi restano quelle del blocco; gli ultimi due, Forestas e CAI, sono i file del sito attuale. Tutti
- * nel child (assets/img/loghi-footer), in PNG trasparenti nel formato dei loghi del sito attuale. Forestas
- * e CAI sono anche in assets/img/loghi-header, senza i margini trasparenti: nell'header stanno accanto al
- * blocco, qui servono i margini per avere le caselle del sito attuale.
+ * Riga dei loghi in cima al footer, come sul sito attuale (oc:8757), con i sette loghi del wireframe
+ * oc:8783: i quattro del blocco istituzionale PR FESR Sardegna 2021-2027, ritagliati dal file ufficiale
+ * «versione 2» con la stessa scala e la stessa fascia verticale, così le proporzioni fra i loghi restano
+ * quelle del blocco; poi i tre enti della rete: Forestas Sentieristica, CAI e Sardegna Sentieri per
+ * tutti. Tutti nel child (assets/img/loghi-footer), in PNG trasparenti larghi 342px. L'header non ha
+ * più loghi: nel wireframe stanno solo qui, in attesa della conferma della referente UE.
  */
 add_shortcode(
 	'forestas_loghi_footer',
@@ -146,8 +117,15 @@ add_shortcode(
 			[ 'cofinanziato-unione-europea.png', 342, 178, 'Cofinanziato dall\'Unione europea', 'Co-funded by the European Union' ],
 			[ 'repubblica-italiana.png', 342, 178, 'Repubblica Italiana', 'Italian Republic' ],
 			[ 'regione-sardegna.png', 342, 178, 'Regione Autonoma della Sardegna', 'Autonomous Region of Sardinia' ],
-			[ 'forestas-sardegna-foreste.png', 308, 176, 'Forestas - Sardegna Foreste', 'Forestas - Sardegna Foreste' ],
+			[
+				'forestas-sentieristica.png',
+				342,
+				141,
+				'Forestas, Sentieristica — Agenzia forestale regionale per lo sviluppo del territorio e dell\'ambiente della Sardegna',
+				'Forestas, Trails — Regional forestry agency for the development of the land and environment of Sardinia',
+			],
 			[ 'cai-club-alpino-italiano.png', 342, 178, 'CAI - Club Alpino Italiano', 'CAI - Italian Alpine Club' ],
+			[ 'sardegna-sentieri-per-tutti.png', 342, 170, 'Sardegna Sentieri per tutti — natura accessibile, per ognuno', 'Sardegna Sentieri per tutti — accessible nature, for everyone' ],
 		];
 
 		$html = '';
@@ -162,6 +140,18 @@ add_shortcode(
 );
 
 /*
+ * Link «Preferenze cookie» nella striscia del copyright, a destra (wireframe oc:8783). Riapre le scelte
+ * sui cookie: per ora porta a «#», perché il gestore dei cookie non è ancora scelto. Quando ci sarà, qui
+ * va il suo link o la sua classe (con iubenda, «iubenda-cs-preferences-link»).
+ */
+add_shortcode(
+	'forestas_preferenze_cookie',
+	function () {
+		return '<a class="forestas-preferenze-cookie" href="#">' . esc_html( forestas_testo( 'Preferenze cookie', 'Cookie preferences' ) ) . '</a>';
+	}
+);
+
+/*
  * Voce aggiunta in coda al menu principale per il pannello mobile, nascosta su desktop (oc:8757).
  */
 function forestas_voce_pannello( string $classe, string $contenuto ): string {
@@ -170,8 +160,9 @@ function forestas_voce_pannello( string $classe, string $contenuto ): string {
 
 /*
  * Riga dei link di servizio per il pannello del menu mobile: le voci di «servizio-menu» nella lingua
- * corrente (oc:8757), con target, rel e title impostati nel menu. Il menu di servizio è piatto: le
- * sottovoci, se un giorno ci fossero, compaiono in fila con le altre.
+ * corrente (oc:8757), con target, rel, title e classi impostati nel menu (la classe dà l'icona a Open
+ * Data). Il menu di servizio è piatto: le sottovoci, se un giorno ci fossero, compaiono in fila con le
+ * altre.
  */
 function forestas_pannello_servizio(): string {
 	$originale = wp_get_nav_menu_object( 'servizio-menu' );
@@ -189,6 +180,7 @@ function forestas_pannello_servizio(): string {
 				'target' => $voce->target,
 				'rel'    => $voce->xfn,
 				'title'  => $voce->attr_title,
+				'class'  => trim( implode( ' ', (array) $voce->classes ) ),
 			]
 		);
 		$html = '';
@@ -286,8 +278,8 @@ add_action(
  * vecchio, quindi qui prende la Version del child. Priorità massima perché lo stile è registrato da
  * UpSolution Core sullo stesso hook.
  *
- * menu-mobile.js: cosa fa è nel suo commento di testa. La scritta «menu» viene dall'Header Builder;
- * quella a menu aperto («chiudi» / «close») arriva da qui, con wp_localize_script.
+ * menu-mobile.js e header-compatto.js: cosa fanno è nel loro commento di testa. La scritta «menu» viene
+ * dall'Header Builder; quella a menu aperto («chiudi» / «close») arriva da qui, con wp_localize_script.
  */
 add_action(
 	'wp_enqueue_scripts',
@@ -305,6 +297,14 @@ add_action(
 			[ 'in_footer' => true, 'strategy' => 'defer' ]
 		);
 		wp_localize_script( 'forestas-menu-mobile', 'forestasMenu', [ 'chiudi' => forestas_testo( 'chiudi', 'close' ) ] );
+
+		wp_enqueue_script(
+			'forestas-header-compatto',
+			get_stylesheet_directory_uri() . '/assets/js/header-compatto.js',
+			[],
+			forestas_versione(),
+			[ 'in_footer' => true, 'strategy' => 'defer' ]
+		);
 	},
 	PHP_INT_MAX
 );

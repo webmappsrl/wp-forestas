@@ -5,7 +5,7 @@ Template: Impreza
 Author: Webmapp
 Author URI: https://webmapp.it/
 Description: Child theme di Impreza per Sardegna Sentieri (Forestas). Versionato nel repo wp-forestas e montato dal compose: si modifica nel repo, non dal pannello.
-Version: 1.2.1
+Version: 1.3.1
 */
 
 
@@ -14,8 +14,11 @@ Version: 1.2.1
  * sardegnasentieri.it (scrum del 14/10/2026: il capitolato chiede la stessa UI del sito Drupal, salvo
  * modifiche concordate), e i valori sono quelli del tema Drupal «sardegnasentieri» (fonte di design:
  * CLAUDE.md), con il prefisso del tema, «sase». Non vanno «migliorati»: ogni differenza dal sito
- * attuale va concordata col cliente. Le sole aggiunte concordate sono i loghi FESR, Forestas e CAI
- * nell'header, i loghi FESR al posto di quelli vecchi nel footer, e la voce CAMMINI del menu.
+ * attuale va concordata col cliente. Le differenze concordate sono quelle del wireframe oc:8783
+ * (call del 16/10/2026): logo senza «Beta», voce CAMMINI, «DA VEDERE» che diventa «PUNTI DI INTERESSE»,
+ * barre del menu nei colori delle entità del committente, «Open Data» fra i link di servizio, riga
+ * compatta che resta in alto su desktop, sette loghi solo nel footer (nell'header non ce ne sono più)
+ * e «Preferenze cookie» nella striscia del copyright.
  *
  * I colori che il sito attuale usa anche fuori da header e footer stanno nelle Theme Options di Impreza
  * (config/impreza.json, con gli stessi valori): qui rimandano alle loro variabili, così si cambiano in
@@ -36,14 +39,17 @@ Version: 1.2.1
 	--sase-testo-scuro: hsl(0deg 0% 20%);                    /* pulsante menu, fondo della ricerca attiva */
 	--sase-lingua-attiva: #000000;
 	--sase-focus: #0089C7;                                   /* anche nelle Theme Options, «focus_outline_color» */
-	--sase-separatore-loghi: #919292;                        /* il grigio dei separatori del blocco FESR */
-	/* Colori di sezione della barra sotto le voci del menu (is-section-* del tema Drupal). Le voci
-	   senza sezione, MAPPA INTERATTIVA e CAMMINI, usano il colore del marchio, come sul sito attuale */
-	--sase-sezione-sentieri: #1271B7;
-	--sase-sezione-itinerari: #608D0D;
-	--sase-sezione-da-vedere: #B7127F;
-	--sase-sezione-da-sapere: #EA1F1F;
-	--sase-sezione-news: #F67745;
+	/* Colori della barra sotto le voci del menu: i colori delle entità trasmessi dal committente il
+	   22/09/2026, come nel wireframe oc:8783, al posto di quelli di sezione del tema Drupal. Tutti almeno
+	   3:1 sul bianco (WCAG 1.4.11); News è #C2410C, non il #F67745 del sito attuale (2,75:1). MAPPA
+	   INTERATTIVA ha il colore del marchio, anche la voce senza classe */
+	--sase-sezione-sentieri: #DE1B0D;
+	--sase-sezione-itinerari: #58810B;
+	--sase-sezione-cammini: #1A416F;
+	--sase-sezione-punti-di-interesse: #B7127F;
+	--sase-sezione-da-sapere: #0F6E6A;
+	--sase-sezione-mappa: var(--sase-arancio);
+	--sase-sezione-news: #C2410C;
 
 	--sase-font-titoli: "Montserrat", sans-serif;
 	--sase-font-testo: "Work Sans Sardegna Sentieri", sans-serif;
@@ -139,7 +145,7 @@ Version: 1.2.1
 	margin-inline: 0;
 }
 
-/* Logo del sito: largo come sul sito attuale, l'altezza la dà il PNG (1155×90) */
+/* Logo del sito: largo come sul sito attuale, l'altezza la dà il PNG (1442×120, senza «Beta») */
 .forestas-logo {
 	display: block;
 	line-height: 0;
@@ -210,6 +216,22 @@ Version: 1.2.1
 	white-space: nowrap;
 }
 
+/* «Open Data», ultima voce dei link di servizio (wireframe oc:8783), con l'icona provvisoria di un
+   database alta 13px, da sostituire con quella ufficiale dei dati aperti. L'icona è una maschera, così
+   prende il colore del testo; è decorativa, il nome del link è il testo */
+/* L'icona sta in linea col testo, non in un flex: il link resta sulla linea di base delle altre voci */
+:is(.forestas-servizio .forestas-open-data > a, .forestas-pannello-servizio a.forestas-open-data)::before {
+	content: "";
+	display: inline-block;
+	width: 13px;
+	height: 13px;
+	margin-right: 4px;
+	vertical-align: -2px; /* al centro delle maiuscole */
+	background: currentColor;
+	-webkit-mask: url("assets/img/open-data.svg") center / contain no-repeat;
+	mask: url("assets/img/open-data.svg") center / contain no-repeat;
+}
+
 /* Link testuali di header e footer: il colore non cambia, al passaggio del mouse si sottolineano */
 .no-touch :is(.forestas-servizio, .forestas-legali, .forestas-pannello-servizio, .forestas-contatti, .forestas-lingue) a:hover {
 	color: inherit;
@@ -256,53 +278,14 @@ Version: 1.2.1
 	background: var(--sase-arancio-scuro);
 }
 
-/*
- * Loghi dell'header ([forestas_loghi_header]): il blocco istituzionale FESR «versione 1» intero, poi
- * Forestas e CAI con lo stesso separatore grigio del blocco. Tutto si misura sull'altezza del blocco,
- * --loghi-h, con i rapporti del file ufficiale (alto 473 unità): separatori alti il 65% e distanti
- * --loghi-spazio altezze dai loghi (0,85 come nel blocco; il blocco ha già 79 unità vuote a destra),
- * bandiera UE alta l'82%. Forestas e CAI sono alti quanto la bandiera, così l'emblema UE non è più
- * piccolo degli altri loghi. Larghezza totale: (16,40 + 4 × --loghi-spazio) altezze più i due
- * separatori di 1px, cioè 19,80 altezze con lo spazio del blocco.
- */
-.forestas-loghi-header-wrap {
-	line-height: 0;
-}
-.forestas-loghi-header {
-	--loghi-h: 28px;
-	--loghi-spazio: .85;
-	display: flex;
-	align-items: center;
-}
-.forestas-loghi-header .forestas-fesr {
-	display: block;
-	height: var(--loghi-h);
-	width: auto;
-	max-width: none;
-	aspect-ratio: 1100 / 77;
-}
-.forestas-loghi-header-separatore {
-	flex: 0 0 1px;
-	height: calc(var(--loghi-h) * .651);
-	margin: 0 calc(var(--loghi-h) * var(--loghi-spazio));
-	background: var(--sase-separatore-loghi);
-}
-.forestas-loghi-header .forestas-fesr + .forestas-loghi-header-separatore {
-	margin-left: calc(var(--loghi-h) * (var(--loghi-spazio) - 79 / 473));
-}
-.forestas-logo-header {
-	display: block;
-	height: calc(var(--loghi-h) * .82);
-	width: auto;
-	max-width: none;
-}
-
 /* Menu principale: barra colorata sotto la voce al passaggio, al focus e sulla voce attiva */
-.forestas-nav .tipo-sentiero    { --sase-sezione: var(--sase-sezione-sentieri); }
-.forestas-nav .tipo-itinerario  { --sase-sezione: var(--sase-sezione-itinerari); }
-.forestas-nav .tipo-da-vedere   { --sase-sezione: var(--sase-sezione-da-vedere); }
-.forestas-nav .tipo-da-sapere   { --sase-sezione: var(--sase-sezione-da-sapere); }
-.forestas-nav .tipo-news        { --sase-sezione: var(--sase-sezione-news); }
+.forestas-nav .tipo-sentiero            { --sase-sezione: var(--sase-sezione-sentieri); }
+.forestas-nav .tipo-itinerario          { --sase-sezione: var(--sase-sezione-itinerari); }
+.forestas-nav .tipo-cammino             { --sase-sezione: var(--sase-sezione-cammini); }
+.forestas-nav .tipo-punti-di-interesse  { --sase-sezione: var(--sase-sezione-punti-di-interesse); }
+.forestas-nav .tipo-da-sapere           { --sase-sezione: var(--sase-sezione-da-sapere); }
+.forestas-nav .tipo-mappa               { --sase-sezione: var(--sase-sezione-mappa); }
+.forestas-nav .tipo-news                { --sase-sezione: var(--sase-sezione-news); }
 .l-header .forestas-nav .w-nav-list.level_1 > .menu-item:not(.forestas-solo-mobile) {
 	padding-top: .2em;
 	font-family: var(--sase-font-titoli);
@@ -343,7 +326,7 @@ Version: 1.2.1
 /*
  * Desktop e laptop (da 1025px), come sul sito attuale: riga di servizio alta 36px più 5px sopra e
  * sotto, riga del logo con 1rem-2.5rem sopra e sotto, contenuto largo al massimo 1294px con 20px ai
- * lati. Più la riga del blocco FESR, che il sito attuale non ha.
+ * lati.
  */
 @media (min-width: 1025px) {
 	.l-header .l-subheader.at_top {
@@ -462,7 +445,8 @@ Version: 1.2.1
 		height: auto;
 	}
 	.l-header .forestas-nav.type_desktop {
-		--menu-items-gap: 10px; /* Impreza lo usa come padding laterale delle voci */
+		/* Impreza lo usa come padding laterale delle voci: 10px, da 6px sotto i 1180px (più in basso) */
+		--menu-items-gap: clamp(6px, 6px + (100vw - 1025px) * 4 / 155, 10px);
 	}
 	.l-header .forestas-nav {
 		/* la barra della voce scende fino al bordo inferiore della riga */
@@ -470,10 +454,14 @@ Version: 1.2.1
 		margin-left: auto;
 		padding-left: 20px;
 	}
+	/* Spazi del sito attuale: 15px fra le voci e 10px di padding. Con «PUNTI DI INTERESSE» al posto di
+	   «DA VEDERE» il menu non entra più accanto al logo fino a circa 1160px: da 1025px spazi e padding
+	   partono da 6px e crescono con la finestra fino ai valori del sito attuale a 1180px, con margine per
+	   la barra di scorrimento che su Windows toglie 17px (come il wireframe oc:8783, 6 e 7px a 1130px) */
 	.l-header .forestas-nav .w-nav-list.level_1 {
 		display: flex;
 		align-items: center;
-		gap: clamp(.625rem, 5vw, .9375rem);
+		gap: clamp(6px, 6px + (100vw - 1025px) * 9 / 155, .9375rem);
 	}
 	.l-header .forestas-nav .w-nav-list.level_1 > .menu-item > .w-nav-anchor {
 		min-height: 0;
@@ -484,49 +472,106 @@ Version: 1.2.1
 	.forestas-nav .forestas-solo-mobile {
 		display: none;
 	}
-
-	/* Terza riga: i loghi, separati dal menu da una riga sottile. La bandiera UE (l'82% dell'altezza del
-	   blocco) non può essere più piccola del logo del sito, alto 90/1155 della sua larghezza: il blocco
-	   è alto un decimo della larghezza del logo, da 25,6 a 38,2px */
-	.l-header .l-subheader.at_bottom {
-		border-top: 1px solid var(--sase-bordo);
-	}
-	.l-header .forestas-loghi-header {
-		--loghi-h: calc(var(--sase-larghezza-logo) / 10);
-	}
 }
+/* Da 1295px il carattere del menu cresce di colpo, come sul sito attuale: fino a circa 1340px lo spazio
+   fra le voci riparte da 9px, per lo stesso motivo */
 @media (min-width: 1295px) {
+	.l-header .forestas-nav .w-nav-list.level_1 {
+		gap: clamp(9px, 9px + (100vw - 1295px) / 8, .9375rem);
+	}
 	.l-header .forestas-nav .w-nav-list.level_1 > .menu-item > .w-nav-anchor {
 		font-size: clamp(.875rem, .875rem + (1vw - .2rem) * .125, 1rem);
 	}
 }
 
 /*
- * Tablet e mobile (fino a 1024px). In alto la riga dei loghi, poi la riga del sito attuale: logo,
- * IT EN, pulsante ricerca e pulsante menu di 45px. Come sul sito attuale l'header resta fermo in cima
- * allo schermo mentre la pagina scorre, tranne sugli schermi bassi e sui tablet in orizzontale; la riga
- * dei loghi invece esce dallo schermo con lo scorrimento (top negativo), così la parte che resta ferma è alta
- * come in produzione.
+ * Riga compatta su desktop (wireframe oc:8783, Rubens 19/10): scorrendo, quando l'header intero è uscito
+ * dallo schermo, resta fisso in alto ridotto a una riga alta 47px, come la riga dei social, con il logo
+ * largo 170px e il menu a 12px; la voce attiva è più scura con la barra di 2px sotto il testo. La classe
+ * la mette assets/js/header-compatto.js, che dà anche --forestas-altezza-header, lo spazio che l'header
+ * lascia in cima alla pagina diventando fisso. Stessa media query dello script: con la finestra bassa
+ * (zoom alto) non resta fisso (WCAG 1.4.10). scroll-padding-top riserva in cima lo spazio della riga, così
+ * l'elemento che riceve il focus non finisce sotto (WCAG 2.4.11).
+ */
+@media (min-width: 1025px) and (min-height: 501px) {
+	html {
+		scroll-padding-top: calc(47px + var(--wp-admin--admin-bar--height, 0px));
+	}
+	.forestas-header-compatto .l-canvas {
+		padding-top: var(--forestas-altezza-header, 0px);
+	}
+	.forestas-header-compatto .header_hor .l-header {
+		position: fixed;
+		top: var(--wp-admin--admin-bar--height, 0px);
+		right: 0;
+		left: 0;
+		border-bottom-color: #E5E5E5;
+		box-shadow: 0 4px 12px rgba(0, 0, 0, .18);
+		animation: forestas-compare .2s ease;
+	}
+	.forestas-header-compatto .l-header .l-subheader.at_top {
+		display: none;
+	}
+	.forestas-header-compatto .l-header .l-subheader.at_middle {
+		height: 46px; /* più il bordo dell'header, 47px */
+		padding-top: 0;
+		padding-bottom: 0;
+	}
+	.forestas-header-compatto .l-header .l-subheader.at_middle .l-subheader-h {
+		height: 100%;
+		align-items: stretch;
+	}
+	.forestas-header-compatto .l-header .forestas-logo-wrap {
+		width: 170px;
+	}
+	/* Voci alte quanto la riga, così l'area cliccabile è tutta la riga; la barra sta in fondo al testo,
+	   alto 1.4em al centro della voce */
+	.forestas-header-compatto .l-header .forestas-nav {
+		align-self: stretch;
+		--sase-barra-voce: calc((100% - 1.4em) / 2);
+	}
+	.forestas-header-compatto .l-header .forestas-nav .w-nav-list.level_1 {
+		height: 100%;
+		gap: 16px;
+	}
+	.forestas-header-compatto .l-header .forestas-nav .w-nav-list.level_1 > .menu-item:not(.forestas-solo-mobile) {
+		height: 100%;
+		padding-top: 0;
+	}
+	.forestas-header-compatto .l-header .forestas-nav .w-nav-list.level_1 > .menu-item > .w-nav-anchor {
+		height: 100%;
+		padding: 0;
+		font-size: 12px;
+	}
+	.forestas-header-compatto .l-header .forestas-nav .w-nav-list.level_1 > .menu-item > .w-nav-anchor:is(:hover, :focus-visible)::after,
+	.forestas-header-compatto .l-header .forestas-nav .w-nav-list.level_1 > .menu-item:is(.current-menu-item, .current-menu-ancestor, .current-menu-parent, .current_page_parent, .current-page-ancestor) > .w-nav-anchor::after {
+		height: 2px;
+	}
+	.forestas-header-compatto .l-header .forestas-nav .w-nav-list.level_1 > .menu-item:is(.current-menu-item, .current-menu-ancestor, .current-menu-parent, .current_page_parent, .current-page-ancestor) > .w-nav-anchor {
+		color: #1A1A1A;
+	}
+}
+@keyframes forestas-compare {
+	from {
+		opacity: 0;
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	.forestas-header-compatto .header_hor .l-header {
+		animation: none;
+	}
+}
+
+/*
+ * Tablet e mobile (fino a 1024px). La riga del sito attuale: logo, IT EN, pulsante ricerca e pulsante
+ * menu di 45px. Come sul sito attuale l'header resta fermo in cima allo schermo mentre la pagina scorre,
+ * tranne sugli schermi bassi e sui tablet in orizzontale.
  * --forestas-sotto-header, il bordo inferiore dell'header nello schermo, lo calcola
  * assets/js/menu-mobile.js all'apertura del menu: qui solo la riserva se lo script non gira.
  */
 @media (max-width: 1024px) {
 	:root {
-		--forestas-riga-fesr: 36px; /* bordo compreso */
-		--forestas-sotto-header: calc(var(--forestas-riga-fesr) + 92px + var(--wp-admin--admin-bar--height, 0px));
-	}
-	.l-header .l-subheader.at_top {
-		height: 36px;
-		border-bottom: 1px solid var(--sase-bordo);
-	}
-	.l-header .l-subheader.at_top .l-subheader-cell.at_center {
-		flex-grow: 1;
-		justify-content: center;
-	}
-	/* Loghi alti 28px finché entrano nella larghezza, tolti i margini della riga (5vmin per lato), poi
-	   più piccoli con la finestra */
-	.l-header .forestas-loghi-header {
-		--loghi-h: min(28px, calc((100vw - 10vmin - 2px) / 19.80));
+		--forestas-sotto-header: calc(92px + var(--wp-admin--admin-bar--height, 0px));
 	}
 	.l-header .l-subheader.at_middle {
 		--padding-inline: 1.25rem;
@@ -813,12 +858,12 @@ Version: 1.2.1
 	}
 	.header_hor .l-header {
 		position: sticky;
-		top: calc(var(--wp-admin--admin-bar--height, 0px) - var(--forestas-riga-fesr));
+		top: var(--wp-admin--admin-bar--height, 0px);
 	}
 }
 @media (max-width: 600px) and (min-height: 480px) {
 	.header_hor .l-header {
-		top: calc(-1 * var(--forestas-riga-fesr));
+		top: 0;
 	}
 }
 @media (min-device-width: 576px) and (max-device-width: 1024px) and (orientation: landscape) {
@@ -827,29 +872,15 @@ Version: 1.2.1
 		top: 0;
 	}
 }
-/* Sotto i 600px i sei loghi su una riga diventano piccoli e il logo del sito, che si restringe accanto
-   a lingue, ricerca e menu, li supererebbe fra circa 430 e 500px: margini della riga di 10px e spazi
-   intorno ai separatori ridotti a 0,5 altezze (18,40 altezze in tutto) tengono la bandiera UE più
-   grande del logo a ogni larghezza (verificato da 320 a 600px) */
-@media (max-width: 600px) {
-	.l-header .l-subheader.at_top {
-		--padding-inline: 10px;
-	}
-	.l-header .forestas-loghi-header {
-		--loghi-spazio: .5;
-		--loghi-h: min(28px, calc((100vw - 20px - 2px) / 18.40));
-	}
-}
-
 
 /*
- * Footer, come sul sito attuale: in cima la riga dei sei loghi, poi il filo arancio di 5px, logo e
+ * Footer, come sul sito attuale: in cima la riga dei sette loghi, poi il filo arancio di 5px, logo e
  * contatti a sinistra, social e link istituzionali a destra, e la striscia scura con il copyright.
  * Contenuto largo il 90%, al massimo 1294px.
  */
 
-/* Riga dei loghi ([forestas_loghi_footer]): caselle larghe un quarto della riga, al massimo 170px; da
-   768px tutte su una riga, distribuite, sotto su più righe centrate. La riga dei loghi del sito attuale
+/* Riga dei loghi ([forestas_loghi_footer]): caselle larghe al massimo 170px; da 768px tutte su una
+   riga, distribuite, sotto in due righe (più in basso). La riga dei loghi del sito attuale
    ha 1.875rem sopra e sotto e 1.25rem ai lati, che spariscono quando la finestra supera 1294px più
    i due margini */
 .l-section.forestas-footer-loghi {
@@ -875,9 +906,9 @@ Version: 1.2.1
 	margin: 0 auto;
 	padding: 1.875rem 1.25rem;
 }
-/* Sul sito attuale la riga ha il clearfix di Drupal: il suo ::after vuoto è un settimo elemento della
-   riga flex, che aggiunge uno spazio (caselle di 165,7px invece di 170 a 1440px) e sotto i 768px va a
-   capo da solo in una terza riga. Qui lo stesso elemento, per avere la stessa disposizione */
+/* Sul sito attuale la riga ha il clearfix di Drupal: il suo ::after vuoto è un elemento in più della
+   riga flex, che aggiunge uno spazio fra le caselle. Qui lo stesso elemento, per avere la stessa
+   disposizione (anche nel wireframe oc:8783) */
 .forestas-loghi-footer::after {
 	content: "";
 	display: table;
@@ -900,6 +931,27 @@ Version: 1.2.1
 	}
 	.forestas-logo-ente {
 		flex: 1;
+	}
+}
+/* Sotto i 768px due righe, come nel wireframe oc:8783 (Rubens 19/10, opzione B): i quattro finanziatori,
+   più piccoli, e i tre enti della rete, così nessun logo resta da solo. Griglia di 12 colonne: tre per
+   ogni finanziatore, quattro per ogni ente. Il clearfix qui sarebbe una cella in più, e si toglie */
+@media (max-width: 767px) {
+	.forestas-loghi-footer {
+		display: grid;
+		grid-template-columns: repeat(12, minmax(0, 1fr));
+		gap: 18px 12px;
+	}
+	.forestas-loghi-footer::after {
+		content: none;
+	}
+	.forestas-logo-ente {
+		grid-column: span 3;
+		width: auto;
+		max-width: none;
+	}
+	.forestas-logo-ente:nth-child(n+5) {
+		grid-column: span 4;
 	}
 }
 @media (min-width: 1334px) {
@@ -1001,12 +1053,41 @@ Version: 1.2.1
 .forestas-footer-bar .l-section-h {
 	width: 90%;
 	max-width: var(--sase-larghezza-contenuto);
-	padding: .625rem 0;
+	/* Sotto, spazio per i pulsanti fissi nell'angolo dello schermo (oggi il «torna su» di Impreza, in
+	   futuro widget di accessibilità e gestore dei cookie), come nel wireframe oc:8783: in fondo alla
+	   pagina si appoggiano lì e non coprono «Preferenze cookie» (WCAG 2.4.11) */
+	padding: .625rem 0 calc(.625rem + 88px);
+}
+@media (max-width: 600px) {
+	.forestas-footer-bar .l-section-h {
+		padding-bottom: calc(.625rem + 80px);
+	}
 }
 .forestas-footer-bar .wpb_text_column p {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: .625rem 1.25rem;
 	margin: 0;
 	font-size: .75rem;
 	line-height: 1.3;
+}
+/* «Preferenze cookie» a destra del copyright, come nel wireframe oc:8783: bianco su #333 (12,6:1),
+   sottolineato come link, contorno bianco al focus perché l'azzurro del sito non si vede sul fondo scuro */
+.forestas-preferenze-cookie {
+	margin-left: auto;
+	color: var(--sase-testo-su-scuro);
+	text-decoration: underline;
+	text-underline-offset: 2px;
+}
+.no-touch .forestas-footer-bar .forestas-preferenze-cookie:hover {
+	color: var(--sase-testo-su-scuro);
+	text-decoration-thickness: 2px;
+}
+.l-footer .forestas-footer-bar .forestas-preferenze-cookie:focus-visible {
+	outline: 3px solid var(--sase-testo-su-scuro);
+	outline-offset: 2px;
+	box-shadow: none;
 }
 /* Da 768px le due colonne stanno affiancate, distanti 2.5rem, e i link istituzionali su una riga */
 @media (min-width: 768px) {
