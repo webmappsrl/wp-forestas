@@ -75,8 +75,14 @@ subagent.
   a:hover` di Impreza, che dà a ogni link e pulsante della riga centrale il blu dei link: serve
   `.l-subheader` nel selettore. Succede solo col mouse, quindi su un telefono non si vede; il pulsante
   «chiudi» era sceso a 1,66:1 (oc:8757)
-- Header e footer sono identici a sardegnasentieri.it: un ritocco si confronta con la produzione, non
-  con il prototipo «Canvas Fase 2», e ogni differenza va concordata col cliente (knowledge 8757) (oc:8757)
+- Header e footer sono identici a sardegnasentieri.it, salvo le differenze concordate nel wireframe di
+  oc:8783 (elenco nella knowledge 8757): un ritocco si confronta con la produzione e con quel
+  wireframe, non con il prototipo «Canvas Fase 2», e ogni altra differenza va concordata col cliente
+  (oc:8757)
+- Su desktop la riga compatta che resta in alto scorrendo è del child (`header-compatto.js`), non lo
+  sticky di Impreza: accendere `sticky` nelle opzioni dell'header riserverebbe in cima lo spazio
+  calcolato dalle altezze delle opzioni, non quello vero, e il contenuto salterebbe. Una voce del menu
+  principale più lunga va rimisurata da 1025px: deve stare su una riga accanto al logo (oc:8757)
 - L'header è sticky fino a 1024px (finestra alta almeno 480px, non sui dispositivi con lo schermo fra
   576 e 1024px in orizzontale, come sul sito attuale) solo perché `.l-canvas` ha `overflow: clip` e il
   blocco dello scorrimento a menu aperto sta sul body: un `overflow: hidden` su `.l-canvas` o su
@@ -133,4 +139,4 @@ subagent.
 | Argomento | Cosa copre | Pagina |
 |---|---|---|
 | Inizializzazione di WordPress | perché lo script lavora a passi, perché il core non sta nell'immagine, cosa succede senza GitHub o senza Impreza | [docs/knowledge/inizializzazione-wordpress.md](docs/knowledge/inizializzazione-wordpress.md) |
-| Header e footer del sito | identici al sito attuale, oggetti di Impreza scritti in codice e copiati per lingua, shortcode e font del child, menu mobile, blocco FESR, accessibilità | [docs/knowledge/8757-header-e-footer-di-wordpress-forestas-secondo-il-mockup.md](docs/knowledge/8757-header-e-footer-di-wordpress-forestas-secondo-il-mockup.md) |
+| Header e footer del sito | identici al sito attuale, oggetti di Impreza scritti in codice e copiati per lingua, shortcode e font del child, menu mobile, riga compatta su desktop, loghi del footer, accessibilità | [docs/knowledge/8757-header-e-footer-di-wordpress-forestas-secondo-il-mockup.md](docs/knowledge/8757-header-e-footer-di-wordpress-forestas-secondo-il-mockup.md) |

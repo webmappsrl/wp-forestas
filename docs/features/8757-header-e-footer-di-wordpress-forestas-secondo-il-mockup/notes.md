@@ -745,6 +745,99 @@ Dopo le correzioni: confronto con la produzione invariato (desktop 1100, 1280, 1
 mouse 800 e 1024; pannello aperto; riga dei loghi del footer), axe senza violazioni, apply ed export
 senza differenze. Version del child 1.2.1.
 
+**Rilascio su UAT (2026-10-14)**, eseguito da Claude via SSH dopo il merge del dev (`wp-forestas` PR
+#7 e #8, `forestas` PR #27): `forestas` su `b35015d`, `wp-forestas` su `2155bf5`, child alla Version
+1.2.1. `scripts/wordpress-up.sh`: immagine invariata (tutto in cache), container non ricreati, come
+atteso (il child è montato dal repo, `init-wordpress.sh` non è cambiato). `apply` in anteprima: 56
+differenze, solo quelle attese (header e footer IT ed EN, 52 opzioni di colori, tipografia, pulsanti,
+focus e Google Fonts); `apply --conferma`, poi un secondo apply: «nessuna differenza». **Backup per il
+rollback: `wp-forestas/backup/2026-10-14-125045`.** Verifiche, da anonimo:
+
+- confronto con la produzione alle stesse larghezze del locale (desktop 1100, 1280, 1440; touch 390 e
+  768; mouse 800 e 1024; pannello aperto a 390 e 768): risultati identici al locale, nessuna
+  differenza oltre quelle volute (riga dei loghi, voce CAMMINI);
+- riga dei loghi del footer uguale alla produzione a 390, 768, 800, 1100 e 1440px;
+- bandiera UE dell'header mai più piccola del logo del sito, ogni 5px da 320 a 1024px e sei larghezze
+  desktop;
+- axe senza violazioni a 1440 e 390px, pannello chiuso e aperto;
+- tocco sul velo a 800 e 1024px su touch con un link sotto: menu chiuso, link non attivato;
+- CSS e JS del child serviti alla Version 1.2.1, nessun Google Font caricato;
+- pagina inglese (404 sotto `/en/`): sei loghi nell'header e nel footer, testi inglesi.
+
+Nel log del container compare solo l'avviso già noto «Undefined array key 0» (`class-wp-query.php`)
+della 404 inglese con la manutenzione attiva: nei log, non in pagina (vedi il rilascio del
+2026-10-13). Da loggato non provato su UAT: le credenziali di UAT non si usano dal locale; in locale
+il caso è stato provato a 390, 700 e 800px.
+
+## Header e footer secondo il wireframe oc:8783 (2026-10-19)
+
+Richiesta del dev: header e footer come nel wireframe di oc:8783 (artifact claude.ai, call del
+16/10/2026 e commenti di Saba, Schirru e Rubens fino al 19/10), stesso ticket, branch
+`feature/oc-8757-header-e-footer-dal-wireframe` da `develop`. Fonte: HTML e CSS delle classi `wp-*` e
+`ss-*` del wireframe, le sue immagini e le note della tavola 1 e del piedipagina. Le misure del
+wireframe sono riscalate sulla tavola larga circa 1130px: valgono le differenze, non i valori in px,
+e il resto resta come il sito attuale.
+
+**Cambiato**
+
+- Header senza loghi: nel wireframe «i loghi dei finanziatori stanno solo nel piedipagina», tolti da
+  tutte le tavole in attesa della conferma della referente UE. Via la riga `html:4` dagli header IT
+  ed EN (`bottom_show` 0 su desktop, `top_show` 0 su tablet e mobile), lo shortcode
+  `[forestas_loghi_header]`, il blocco «versione 1» e `assets/img/loghi-header/`. Su tablet e mobile
+  l'header sticky ha ora `top` pari alla barra di amministrazione (0 sotto i 600px), non più negativo.
+- Logo senza «Beta», 1442×120 (prima 1155×90): stessa larghezza, 2px più alto a 382px.
+- Menu: «DA VEDERE» diventa «PUNTI DI INTERESSE» («POINTS OF INTEREST»), classe
+  `tipo-punti-di-interesse`; barre nei colori delle entità del wireframe (sentieri `#DE1B0D`,
+  itinerari `#58810B`, cammini `#1A416F`, punti di interesse `#B7127F`, da sapere `#0F6E6A`, mappa
+  `#F59F1A`, news `#C2410C`, che il wireframe usa al posto di `#F67745` per il contrasto).
+- «Open Data» ultima voce di `servizio-menu` (IT ed EN, `#`), con l'icona provvisoria del wireframe
+  (database, 13px) come maschera CSS da `assets/img/open-data.svg`, e nel pannello mobile: il pannello
+  ora copia le classi delle voci di servizio. L'icona è un `::before` in linea col testo (`inline-block`,
+  `vertical-align: -2px`): nella prima prova il link era un `inline-flex` e il suo testo stava 2-3px più
+  in alto delle altre voci, perché la linea di base di un flex la dà il primo elemento, l'icona vuota
+  (segnalato dal dev). Ora il testo di OPEN DATA è alla stessa altezza delle altre voci, al decimo di
+  pixel, nella riga di servizio e nel pannello. Version del child 1.3.1.
+- Footer: sette loghi, il nuovo Forestas Sentieristica e Sardegna Sentieri per tutti (ridotti a 342px
+  di larghezza come gli altri), alt del wireframe e traduzione inglese. Sotto i 768px griglia di 12
+  colonne, quattro finanziatori più tre enti («Rubens 19/10, opzione B»); il `::after` del clearfix
+  lì si toglie, se no sarebbe una cella in più.
+- «Preferenze cookie» / «Cookie preferences» a destra del copyright (`[forestas_preferenze_cookie]`),
+  con i valori del wireframe (bianco sottolineato, contorno bianco al focus).
+- Riga compatta su desktop (`header-compatto.js`, valori «Rubens 19/10»: 47px, logo 170px, menu 12px,
+  gap 16px, attiva `#1A1A1A` con barra di 2px, bordo `#E5E5E5`, ombra).
+
+**Decisioni**
+
+- **Riga compatta: l'header stesso diventa fisso, non una seconda barra come nel wireframe.** Il
+  wireframe ha una barra separata (`.hd-stick`) con un secondo menu; in WordPress avrebbe voluto dire
+  due `nav` con gli stessi link. Lo sticky di Impreza non va bene: riserva lo spazio dalle altezze
+  delle opzioni, e il contenuto salterebbe. Lo script misura l'header intero e lo stesso spazio
+  diventa padding di `.l-canvas`. Media query del wireframe: niente riga con la finestra alta 500px o
+  meno. Contenuto largo al massimo 1294px con 20px ai lati, come l'header intero, invece dei 22px
+  della tavola, così il logo resta allineato.
+- **Menu su una riga**: con «PUNTI DI INTERESSE» le voci uscivano dalla riga fra 1025 e 1145px (89px a
+  1025) e fra 1295 e 1310px (13px), dove il carattere cresce. Il wireframe lo risolve con gap 6px e
+  padding 7px; qui gap e padding partono da 6px a 1025px e crescono fino ai valori del sito attuale a
+  1180px, e il gap riparte da 9px a 1295px fino a 15px a circa 1340px. Margine minimo misurato 20px,
+  più dei 17px che una barra di scorrimento di Windows toglie. Il padding laterale è
+  `--menu-items-gap`: la regola di Impreza che lo usa batte un `padding` scritto sulle voci.
+- **Spazio sotto la striscia del copyright** (88px, 80 sotto i 600px, come nel wireframe): senza, in
+  fondo alla pagina il «torna su» di Impreza copriva «Preferenze cookie» (390px: link a 371px, pulsante
+  da 330px, stessa altezza). Il wireframe lo prevede per widget di accessibilità e cookie.
+- **Non fatto, fuori da header e footer o ancora da decidere**: gestore dei cookie e widget di
+  accessibilità (nel wireframe sono esempi); «Preferenze cookie» e «Open Data» portano a `#`. Le
+  misure del corpo del footer del wireframe (larghezza `calc(100% - 40px)`, gap 16px, link senza a
+  capo) sono la tavola riscalata: resta il sito attuale.
+
+**Verifiche** (locale, anonimo salvo dove indicato): apply ed export senza differenze; menu su una
+riga ogni 15px da 1025 a 1440px; riga compatta a 1025, 1280 e 1440px, voci alte quanto la riga,
+contenuto fermo nel passaggio (`.l-main` a 166px prima e dopo), tornando su l'header torna intero,
+spenta a 1280×480; mobile 390, 700, 800px, pannello con Open Data e icona; footer a 390, 700, 800 e
+1280px; «torna su» e «Preferenze cookie» non si sovrappongono a 390 e 1280px; axe senza violazioni su
+header e footer, IT ed EN (404 sotto `/en/`), 1440px intero e compatto, 390px chiuso e aperto; testi
+e alt inglesi; da loggato: riga compatta sotto la barra a 1025 e 1280px, pannello sotto l'header e
+«chiudi» in vista a 390 e 700px dopo uno scorrimento, barra di CAMMINI blu al passaggio del mouse.
+
 ## Follow-up
 
 **Requisito di rilascio: prova del salvataggio dal pannello (2026-10-13).** Il dev ha salvato dal
