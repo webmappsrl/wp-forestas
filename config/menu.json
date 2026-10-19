@@ -145,7 +145,7 @@
                 {
                     "attr_title": "",
                     "classi": [
-                        "tipo-da-vedere"
+                        "tipo-punti-di-interesse"
                     ],
                     "descrizione": "",
                     "destinazione": {
@@ -156,7 +156,7 @@
                     "meta": [],
                     "originale": null,
                     "target": "",
-                    "titolo": "DA VEDERE",
+                    "titolo": "PUNTI DI INTERESSE",
                     "xfn": ""
                 },
                 {
@@ -277,6 +277,23 @@
                     "originale": null,
                     "target": "",
                     "titolo": "App",
+                    "xfn": ""
+                },
+                {
+                    "attr_title": "",
+                    "classi": [
+                        "forestas-open-data"
+                    ],
+                    "descrizione": "",
+                    "destinazione": {
+                        "tipo": "custom",
+                        "url": "#"
+                    },
+                    "genitore": null,
+                    "meta": [],
+                    "originale": null,
+                    "target": "",
+                    "titolo": "Open Data",
                     "xfn": ""
                 }
             ]
@@ -426,7 +443,7 @@
                 {
                     "attr_title": "",
                     "classi": [
-                        "tipo-da-vedere"
+                        "tipo-punti-di-interesse"
                     ],
                     "descrizione": "",
                     "destinazione": {
@@ -437,7 +454,7 @@
                     "meta": [],
                     "originale": 3,
                     "target": "",
-                    "titolo": "SIGHTS",
+                    "titolo": "POINTS OF INTEREST",
                     "xfn": ""
                 },
                 {
@@ -558,6 +575,23 @@
                     "originale": 3,
                     "target": "",
                     "titolo": "App",
+                    "xfn": ""
+                },
+                {
+                    "attr_title": "",
+                    "classi": [
+                        "forestas-open-data"
+                    ],
+                    "descrizione": "",
+                    "destinazione": {
+                        "tipo": "custom",
+                        "url": "#"
+                    },
+                    "genitore": null,
+                    "meta": [],
+                    "originale": 4,
+                    "target": "",
+                    "titolo": "Open Data",
                     "xfn": ""
                 }
             ]

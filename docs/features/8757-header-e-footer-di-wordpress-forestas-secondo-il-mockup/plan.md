@@ -344,5 +344,39 @@ e footer valgono le variabili `--sase-*`, con i valori del tema Drupal o i color
   passo 9).
 - [x] **Passo 9: correzioni della review di 5d2a098** — tocco sul velo, bandiera UE sotto i 600px,
   cleanup (notes, «Review del commit 5d2a098»); confronti con la produzione e axe ripetuti.
-- [ ] **Passo 10: commit (istruzione per l'utente)** — dopo `git diff config/`:
+- [x] **Passo 10: commit (istruzione per l'utente)** — dopo `git diff config/`:
   `git commit -m "feat(oc:8757): header e footer identici al sito attuale, Theme Options dal tema Drupal"`
+
+---
+
+### Task 9: Header e footer secondo il wireframe oc:8783
+
+Dopo la call del 16/10/2026 e i commenti fino al 19/10 sul wireframe di oc:8783 (overview, «Cosa
+cambia»), branch `feature/oc-8757-header-e-footer-dal-wireframe` da `develop`.
+
+**File:**
+- Modifica: `config/menu.json` (PUNTI DI INTERESSE, Open Data, IT ed EN), `config/post.json` (header
+  senza la riga dei loghi, footer con «Preferenze cookie», IT ed EN)
+- Modifica: `themes/forestas-child/style.css` (Version 1.3.1), `functions.php`,
+  `assets/img/logo.png` (1442×120)
+- Crea: `assets/js/header-compatto.js`, `assets/img/open-data.svg`,
+  `assets/img/loghi-footer/forestas-sentieristica.png`, `sardegna-sentieri-per-tutti.png`
+- Cancella: `assets/img/blocco-istituzionale-fesr.png`, `assets/img/loghi-header/`,
+  `assets/img/loghi-footer/forestas-sardegna-foreste.png`
+- Modifica: `CLAUDE.md`, `docs/knowledge/8757-…`, `overview.md`, `notes.md`
+
+- [x] **Passo 1: confronto col wireframe** — HTML, CSS, immagini e note della tavola 1 e del
+  piedipagina; immagini confrontate per hash con quelle del child (nuovi solo logo, Forestas
+  Sentieristica, Sardegna Sentieri per tutti).
+- [x] **Passo 2: configurazione** — menu e header/footer in `config/`.
+  Run: `bin/wordpress-config.sh apply --conferma && bin/wordpress-config.sh export && bin/wordpress-config.sh apply`
+  Atteso: l'ultimo apply dice «nessuna differenza».
+- [x] **Passo 3: child** — shortcode, loghi, colori del menu, icona Open Data, griglia dei loghi del
+  footer, «Preferenze cookie», riga compatta.
+- [x] **Passo 4: verifiche** — menu su una riga ogni 15px da 1025 a 1440px; riga compatta a 1025,
+  1280, 1440px, nessuno spostamento del contenuto, spenta con la finestra alta 480px; mobile a 390,
+  700 e 800px con il pannello aperto; footer a 390 e 1280px con il «torna su»; axe IT ed EN a 1440 e
+  390px; da loggato a 390, 700, 1025 e 1280px.
+- [x] **Passo 5: documentazione** — overview, notes, knowledge, `CLAUDE.md`.
+- [ ] **Passo 6: commit (istruzione per l'utente)** — dopo `git diff config/`:
+  `git commit -m "feat(oc:8757): header e footer secondo il wireframe oc:8783"`

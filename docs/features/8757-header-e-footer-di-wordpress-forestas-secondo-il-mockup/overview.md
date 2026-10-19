@@ -6,10 +6,15 @@
 
 Il sito WordPress di Sardegna Sentieri ha header e footer **identici a quelli del sito attuale**,
 sardegnasentieri.it (Drupal), al posto di quelli demo di Impreza, in italiano e in inglese. Le sole
-differenze dal sito attuale sono le aggiunte concordate col cliente: nell'header una riga con sei
-loghi (blocco istituzionale FESR, Forestas e CAI), nel footer i quattro loghi del blocco al posto dei
-primi quattro della riga dei loghi, e la voce CAMMINI del menu. Anche le Theme
-Options di Impreza su colori e tipografia sono allineate al tema Drupal.
+differenze dal sito attuale sono quelle concordate col cliente e disegnate nel wireframe di oc:8783
+(call del 16/10/2026, commenti fino al 19/10): logo senza «Beta»; voce CAMMINI e «DA VEDERE» che
+diventa «PUNTI DI INTERESSE»; barre del menu nei colori delle entità trasmessi dal committente;
+«Open Data» in fondo ai link di servizio; su desktop una riga compatta con logo e menu che resta in
+alto scorrendo; nel footer sette loghi (i quattro del blocco istituzionale FESR 2021-2027 e i tre
+enti della rete: Forestas Sentieristica, CAI, Sardegna Sentieri per tutti) e «Preferenze cookie»
+nella striscia del copyright. Nell'header non ci sono loghi: nel wireframe sono stati tolti da tutte
+le tavole, in attesa della conferma della referente UE. Anche le Theme Options di Impreza su colori e
+tipografia sono allineate al tema Drupal.
 
 Nella prima versione header e footer seguivano il prototipo «Canvas Fase 2»; allo scrum del
 14/10/2026 è emerso che il capitolato chiede la stessa UI del sito Drupal, salvo modifiche concordate,
@@ -31,56 +36,59 @@ builder, quindi una modifica fatta lì va persa al primo apply.
 **Header, desktop e laptop (da 1025px)** — contenuto largo al massimo 1294px, con 20px ai lati:
 
 - riga di servizio (36px più 5px sopra e sotto): a sinistra «Seguici su» con sei icone social e i
-  link CONTATTI, SEGNALAZIONI, FAQ, APP; a destra IT EN e il campo «Cerca nel sito» (144×36px, grigio,
-  con la lente del sito attuale);
+  link CONTATTI, SEGNALAZIONI, FAQ, APP, OPEN DATA (con l'icona provvisoria di un database); a destra
+  IT EN e il campo «Cerca nel sito» (144×36px, grigio, con la lente del sito attuale);
 - riga principale (1rem-2.5rem sopra e sotto): logo a sinistra, largo un quarto della finestra fra
-  231 e 382px; menu principale a destra in Montserrat maiuscolo (SENTIERI, ITINERARI, CAMMINI, DA
-  VEDERE, DA SAPERE, MAPPA INTERATTIVA, NEWS). Le voci restano grigie; al passaggio del mouse, al focus
-  e sulla voce attiva compare una barra di 3,3px sul bordo inferiore della riga, nel colore della
-  sezione del sito attuale (arancio del marchio per MAPPA INTERATTIVA e CAMMINI, che non hanno una
-  sezione);
-- terza riga (44px), che il sito attuale non ha: i sei loghi del footer, centrati. Il blocco
-  istituzionale FESR «versione 1» intero, poi Forestas e CAI con lo stesso separatore grigio del
-  blocco e alti quanto la bandiera UE.
+  231 e 382px; menu principale a destra in Montserrat maiuscolo (SENTIERI, ITINERARI, CAMMINI, PUNTI
+  DI INTERESSE, DA SAPERE, MAPPA INTERATTIVA, NEWS). Le voci restano grigie; al passaggio del mouse, al
+  focus e sulla voce attiva compare una barra di 3,3px sul bordo inferiore della riga, nel colore
+  dell'entità (sentieri `#DE1B0D`, itinerari `#58810B`, cammini `#1A416F`, punti di interesse
+  `#B7127F`, da sapere `#0F6E6A`, mappa `#F59F1A`, news `#C2410C`). Fra 1025 e circa 1180px, e fra
+  1295 e 1340px dove il carattere cresce, spazi e padding delle voci si riducono con la finestra
+  perché «PUNTI DI INTERESSE» ci stia.
 
-**Header, tablet e mobile (fino a 1024px)**: in alto la riga dei sei loghi, poi la riga del sito
-attuale: logo, IT EN, pulsante ricerca (riquadro grigio con la lente, scuro al passaggio e quando è
+**Riga compatta su desktop** (da 1025px, finestra alta più di 500px): scorrendo, quando l'header
+intero è uscito dallo schermo, resta fisso in alto ridotto a una riga alta 47px con il logo largo
+170px e il menu a 12px (voce attiva più scura, barra di 2px sotto il testo), con un'ombra sotto;
+tornando su, l'header torna intero. Il contenuto non si sposta, e `scroll-padding-top` riserva in
+cima lo spazio della riga, così l'elemento che riceve il focus non ci finisce sotto (WCAG 2.4.11).
+Con la finestra bassa (zoom alto) la riga non resta fissa (WCAG 1.4.10).
+
+**Header, tablet e mobile (fino a 1024px)**: la riga del sito attuale: logo, IT EN, pulsante ricerca (riquadro grigio con la lente, scuro al passaggio e quando è
 aperto) e pulsante menu (riquadro arancio di 45px con la scritta «menu», che a menu aperto diventa
 «chiudi» su fondo arancio scuro). Come sul sito attuale l'header resta fermo in cima allo schermo
 mentre la pagina scorre (non sugli schermi alti meno di 480px né sui dispositivi con lo schermo fra
-576 e 1024px tenuti in orizzontale); la riga dei loghi esce dallo schermo con lo scorrimento, così la parte ferma è alta come in produzione. Il menu è
-un pannello che entra da destra sotto l'header, largo quanto il suo contenuto (tutta la larghezza sui
+576 e 1024px tenuti in orizzontale). Il menu è un pannello che entra da destra sotto l'header, largo quanto il suo contenuto (tutta la larghezza sui
 telefoni) e alto fino al fondo dello schermo: voci principali, poi in fondo i link di servizio e
 «Seguici su» con i social. Il resto della pagina è coperto da un velo scuro, e non scorre: un tocco
 sul velo chiude il menu senza attivare il link che sta sotto.
 
-**Footer**: in cima la riga dei sei loghi del sito attuale, con la stessa disposizione (caselle
-uguali larghe fino a 170px, su una riga da 768px, su due righe centrate sotto). I primi quattro
-(POR FESR 2014-2020, Intense, Interreg Marittimo, Regione Sardegna) sono sostituiti dai quattro loghi
-attuali del blocco istituzionale PR FESR 2021-2027 (Coesione Italia 21-27 Sardegna, «Cofinanziato
-dall'Unione europea», Repubblica Italiana, Regione Autonoma della Sardegna), separati uno per uno; gli
-ultimi due, Forestas e CAI, restano quelli del sito attuale. Poi
+**Footer**: in cima la riga dei loghi del sito attuale, con sette loghi: i quattro del blocco
+istituzionale PR FESR 2021-2027 (Coesione Italia 21-27 Sardegna, «Cofinanziato dall'Unione europea»,
+Repubblica Italiana, Regione Autonoma della Sardegna), separati uno per uno, al posto dei quattro
+vecchi del sito attuale; poi il nuovo logo di Forestas Sentieristica, CAI e «Sardegna Sentieri per
+tutti». Caselle larghe fino a 170px, su una riga da 768px; sotto, due righe su una griglia di 12
+colonne: i quattro finanziatori, più piccoli, e i tre enti della rete. Poi
 il filo arancio di 5px; a sinistra logo e «Contattaci» con `tavolo.tecnico.res@forestas.it`, a destra
 «Seguici su» con cinque social (Facebook, Telegram, WhatsApp, Instagram, YouTube, come sul sito
 attuale) e i link istituzionali AREA RISERVATA, NOTE LEGALI, PRIVACY, CREDITI, DICHIARAZIONE DI
 ACCESSIBILITÀ; in fondo la striscia grigio scuro con «© <anno corrente> Regione Autonoma della
-Sardegna». Sotto i 768px le colonne si impilano.
+Sardegna» e, a destra, il link «Preferenze cookie», con sotto lo spazio per i pulsanti fissi
+nell'angolo dello schermo. Sotto i 768px le colonne si impilano.
 
 **Font**: Montserrat (menu, titoli, «Seguici su», link istituzionali) e Work Sans, con gli stessi file
 e gli stessi due pesi (400 e 600) del sito attuale, nel child (`assets/fonts/`, licenza OFL).
 
-**Logo**: il PNG ufficiale (1155×90, trasparente) sta nel child in `assets/img/logo.png`, non negli
+**Logo**: il PNG del wireframe (1442×120, trasparente, senza «Beta») sta nel child in `assets/img/logo.png`, non negli
 uploads. Lo stampa uno shortcode `[forestas_logo]` registrato nel `functions.php` del child, usato
 sia nell'header sia nel footer.
 
 **Blocco istituzionale FESR** (Coesione Italia 21-27 Sardegna, emblema UE «Cofinanziato dall'Unione
 europea», Repubblica Italiana, Regione Autonoma della Sardegna): i file ufficiali di
-sardegnaprogrammazione.it. Nell'header la «versione 1» (loghi su una riga), ridotta a 1100px di
-larghezza e versionata nel child, intera, seguita da Forestas e CAI: lo shortcode `[forestas_loghi_header]`
-stampa i sei loghi. Nel footer i quattro
-loghi separati, ritagliati dalla «versione 2» (testi sotto i loghi) con la stessa scala e la stessa
-fascia verticale, così le proporzioni fra i loghi restano quelle del file ufficiale; li stampa,
-insieme a Forestas e CAI, lo shortcode `[forestas_loghi_footer]`.
+sardegnaprogrammazione.it. Nel footer i quattro loghi separati, ritagliati dalla «versione 2» (testi
+sotto i loghi) con la stessa scala e la stessa fascia verticale, così le proporzioni fra i loghi
+restano quelle del file ufficiale; li stampa, insieme ai tre enti della rete, lo shortcode
+`[forestas_loghi_footer]`.
 
 ## Perché
 
@@ -93,6 +101,8 @@ Il portale è cofinanziato dal PR FESR Sardegna 2021-2027: il cliente ha chiesto
 regole di visibilità dei loghi UE. Le linee guida (Kit di strumenti per la visibilità dell'UE § 6.1;
 Linee guida beneficiari PR FESR Sardegna, «Blocco istituzionale») chiedono l'emblema UE «in maniera
 prominente» e mai più piccolo degli altri loghi; esporlo senza dover scorrere è una buona prassi.
+Nel wireframe oc:8783 i loghi dei finanziatori stanno solo nel footer, perché nell'intestazione erano
+un doppione che appesantiva la pagina; la scelta aspetta la conferma della referente UE.
 
 Costruirli in codice ma come oggetti di Impreza tiene insieme due esigenze: restano versionati e
 sopravvivono alla ricreazione del sito (regola del repo: la configurazione si cambia in locale e sta
@@ -105,13 +115,15 @@ in `config/`), e chi lavora sul sito li ritrova dove Impreza li mette.
 - [ ] Header e footer sono identici a quelli di sardegnasentieri.it: posizioni, dimensioni, font,
       colori e stati (passaggio del mouse, focus, voce attiva, menu aperto) coincidono con il sito in
       produzione a 1100, 1280 e 1440px, a 800 e 1024px col mouse, a 390 e 768px su touch, a menu
-      chiuso e aperto. Le sole differenze sono il blocco FESR e la voce CAMMINI
-- [ ] L'header «Header» (`us_header`) ha il layout desktop descritto sopra, più la terza riga con il
-      blocco FESR
+      chiuso e aperto. Le sole differenze sono quelle del wireframe oc:8783 elencate in «Cosa cambia»
+- [ ] L'header «Header» (`us_header`) ha il layout desktop descritto sopra, su due righe, senza loghi
+- [ ] Su desktop la riga compatta descritta sopra: compare quando l'header intero esce dallo
+      schermo, il contenuto non si sposta, non c'è con la finestra alta 500px o meno
+- [ ] Il menu principale sta su una riga accanto al logo a ogni larghezza da 1025px, con almeno 17px
+      di margine per la barra di scorrimento di Windows
 - [ ] L'header ha i layout tablet e mobile descritti sopra; l'hamburger compare fino a 1024px
       (`mobile_width` del menu 1025px); fino a 1024px l'header resta fermo in cima allo schermo con le
-      condizioni del sito attuale (alto almeno 480px, non sui tablet in orizzontale) e la riga FESR
-      esce dallo schermo con lo scorrimento
+      condizioni del sito attuale (alto almeno 480px, non sui tablet in orizzontale)
 - [ ] Il footer «Footer» (`us_page_block`) ha la struttura descritta sopra e sostituisce interamente
       il contenuto demo
 - [ ] Con i filtri di WPML attivi (primo passo del wizard completato, come su UAT) l'apply crea e
@@ -136,20 +148,26 @@ in `config/`), e chi lavora sul sito li ritrova dove Impreza li mette.
 
 **Menu e link**
 
-- [ ] Il menu `main-menu` in `config/menu.json` contiene sette voci: le sei del sito attuale più CAMMINI, tutte con URL `#`
+- [ ] Il menu `main-menu` in `config/menu.json` contiene sette voci: le sei del sito attuale più
+      CAMMINI, con «PUNTI DI INTERESSE» («POINTS OF INTEREST») al posto di «DA VEDERE», tutte con URL `#`
       (le pagine di destinazione non esistono ancora); le voci demo (Home, Chi siamo, Blog, Contatti)
       spariscono — alla home si arriva dal logo
 - [ ] Ogni voce del menu principale porta una classe CSS del suo tipo (`tipo-sentiero`,
-      `tipo-itinerario`, `tipo-cammino`, `tipo-da-vedere`, `tipo-da-sapere`, `tipo-mappa`,
-      `tipo-news`); il child dà alla barra della voce il colore della sezione del sito attuale
-      (`--sase-sezione-*`: sentieri `#1271B7`, itinerari `#608D0D`, da vedere `#B7127F`, da sapere
-      `#EA1F1F`, news `#F67745`). MAPPA INTERATTIVA e CAMMINI non hanno una sezione e usano l'arancio
-      del marchio `#F59F1A`, come le voci senza sezione del sito attuale
+      `tipo-itinerario`, `tipo-cammino`, `tipo-punti-di-interesse`, `tipo-da-sapere`, `tipo-mappa`,
+      `tipo-news`); il child dà alla barra della voce il colore dell'entità del wireframe
+      (`--sase-sezione-*`, valori in «Cosa cambia»), almeno 3:1 sul bianco (WCAG 1.4.11)
 - [ ] Lo stile della voce attiva si prova in locale collegando temporaneamente una voce a una pagina
       esistente; il collegamento di prova non va esportato
-- [ ] I link di servizio (Contatti, Segnalazioni, FAQ, App) e quelli istituzionali del footer sono due
+- [ ] I link di servizio (Contatti, Segnalazioni, FAQ, App, Open Data) e quelli istituzionali del footer sono due
       menu versionati in `config/menu.json` (`servizio-menu` e `footer-menu`), con voci a `#`. Il
       footer non usa più `main-menu`
+- [ ] «Open Data» è l'ultima voce di `servizio-menu` (anche in inglese), con la classe
+      `forestas-open-data` che dà l'icona provvisoria, nella riga di servizio e nel pannello mobile;
+      l'icona è decorativa e prende il colore del testo
+- [ ] Nella striscia del copyright, a destra, il link «Preferenze cookie» / «Cookie preferences»
+      (shortcode `[forestas_preferenze_cookie]`), oggi a `#`; sotto la striscia lo spazio per i
+      pulsanti fissi nell'angolo (88px, 80px sotto i 600px), così in fondo alla pagina il «torna su»
+      di Impreza non copre il link
 - [ ] Il menu mobile è un pannello che entra ed esce da destra (`mobile_layout="panel"`), sotto
       l'header, largo quanto il suo contenuto (al massimo tutta la larghezza) e alto dal bordo
       dell'header al fondo dello schermo, con le misure del sito attuale; se il contenuto non ci sta,
@@ -185,24 +203,15 @@ in `config/`), e chi lavora sul sito li ritrova dove Impreza li mette.
 
 **Blocco istituzionale FESR**
 
-- [ ] Il file ufficiale «versione 1», i quattro loghi ritagliati dalla «versione 2» e Forestas e CAI
-      sono nel child (`assets/img/`, `assets/img/loghi-header/`, `assets/img/loghi-footer/`), non
-      negli uploads, senza alterare l'ordine dei loghi né le proporzioni fra loro; testo alternativo
-      che nomina i quattro enti del blocco, e quello di ogni altro logo
-- [ ] Header: sei loghi come nel footer. Il blocco «versione 1» intero, poi Forestas e CAI, ciascuno
-      preceduto dal separatore grigio del blocco (alto il 65% del blocco, a 0,85 altezze dai loghi) e
-      alto quanto la bandiera UE (82% del blocco), così l'emblema non è più piccolo degli altri loghi
-- [ ] Header desktop: terza riga sotto il menu, centrata, blocco alto un decimo della larghezza del
-      logo (da 25,6 a 38,2px)
-- [ ] Header tablet e mobile: da soli nella riga in alto, centrati, blocco alto 28px finché la riga
-      ci sta, poi più piccolo con la larghezza; sotto i 600px margini della riga di 10px e spazi fra
-      i loghi ridotti (blocco alto 20px a 390px e 16,2px a 320px, cioè bandiera di 16,4 e 13,3px)
+- [ ] I quattro loghi ritagliati dalla «versione 2» e i tre enti della rete sono nel child
+      (`assets/img/loghi-footer/`, PNG larghi 342px), non negli uploads, senza alterare l'ordine dei
+      loghi né le proporzioni fra loro; ogni logo ha il suo testo alternativo, in italiano e in
+      inglese
+- [ ] Nell'header non ci sono loghi, a nessuna larghezza
 - [ ] Footer: i quattro loghi sono i primi quattro della riga dei loghi, nell'ordine del blocco
-      ufficiale, seguiti da Forestas e CAI; la riga ha la disposizione del sito attuale a ogni
-      larghezza (verificata a 390, 768, 800, 1100 e 1440px), sopra il filo arancio e separata dal
-      contenuto da una riga sottile
-- [ ] In ogni posizione la bandiera UE non è più piccola del logo del sito che le sta vicino,
-      verificato da 320 a 1920px in header e footer
+      ufficiale, seguiti da Forestas Sentieristica, CAI e Sardegna Sentieri per tutti; da 768px su una
+      riga, sotto in due righe (quattro più tre); sopra il filo arancio e separata dal contenuto da
+      una riga sottile
 
 **Inglese**
 
@@ -309,8 +318,10 @@ in `config/`), e chi lavora sul sito li ritrova dove Impreza li mette.
 - **Apply fermato dalle versioni**: se `config/versioni.json` non corrisponde alle versioni installate,
   l'apply si ferma e header e footer restano quelli demo. Mitigazione: si controlla l'esito
   dell'apply.
-- **Sette voci di menu invece di sei**: CAMMINI allarga il menu rispetto al sito attuale. Verificato:
-  a 1025px le voci stanno ancora su una riga, con le misure fluide del sito attuale.
+- **Sette voci di menu invece di sei, e più lunghe**: CAMMINI e «PUNTI DI INTERESSE» allargano il menu
+  rispetto al sito attuale, che fra 1025 e 1160px e fra 1295 e 1325px non entrerebbe più accanto al
+  logo. Mitigazione: in quelle fasce spazi e padding delle voci si riducono con la finestra (da 6px,
+  come nel wireframe); verificato ogni 15px da 1025 a 1440px, almeno 20px di margine.
 - **Uguale al sito attuale prima dei ritocchi di accessibilità**: la prima versione aveva colori più
   scuri e target più grandi del sito attuale. Ora valgono i valori di produzione; i contrasti restano
   sopra 4,5:1 (link e pulsante «chiudi» 4,58:1) e axe non segnala violazioni.
@@ -321,17 +332,18 @@ in `config/`), e chi lavora sul sito li ritrova dove Impreza li mette.
   design system in tutti gli elementi di Impreza che li usano (pulsanti, campi, contenuti demo). Le
   variabili del prototipo nel child (`--sar-*`, `--tipo-*` e le altre), che vi rimandavano o non
   erano più usate, sono state tolte.
-- **Emblema UE nella riga dei loghi del footer**: con le caselle uguali del sito attuale la bandiera
-  UE resta più grande del logo del sito (verificato da 320 a 1920px), ma è più piccola dei loghi di
-  Forestas e CAI che le stanno accanto, alti quanto la casella. Le linee guida chiedono l'emblema
-  «mai più piccolo degli altri loghi»: va confermato col cliente.
+- **Emblema UE solo nel footer**: senza i loghi nell'header l'emblema non si vede senza scorrere, e
+  nella riga del footer è più piccolo dei loghi degli enti che gli stanno accanto. Le linee guida
+  chiedono l'emblema «in maniera prominente» e «mai più piccolo degli altri loghi»: è la scelta del
+  wireframe, in attesa della conferma della referente UE.
+- **Riga compatta fatta dal child, non dallo sticky di Impreza**: lo sticky di Impreza calcola lo
+  spazio in cima dalle altezze delle opzioni dell'header, mentre le righe del child sono alte quanto
+  il loro contenuto. Lo script `header-compatto.js` misura l'header vero e lascia in cima lo stesso
+  spazio; se non gira, l'header resta intero e scorre con la pagina come oggi.
+- **«Preferenze cookie» porta a `#`**: il gestore dei cookie non è ancora scelto. Quando ci sarà, il
+  link va collegato (con iubenda basta la classe `iubenda-cs-preferences-link`).
 - **`overflow: clip` su `.l-canvas`** fino a 1024px, al posto dell'`hidden` di Impreza, per lo
   sticky: taglia il contenuto allo stesso modo ma non è un contenitore di scorrimento.
-- **Dimensione dell'emblema UE** — le linee guida vietano che sia più piccolo degli altri loghi.
-  Mitigazione nell'header: Forestas e CAI alti quanto la bandiera, blocco alto un decimo del logo
-  del sito su desktop, spazi ridotti sotto i 600px, dove il logo del sito si restringe e la bandiera
-  sarebbe stata più piccola fra circa 430 e 500px (trovato in review). Verificato ogni 5px da 320 a
-  1024px. Nel footer resta il punto da confermare col cliente, qui sotto.
 - **Contrasti delle Theme Options, fedeli al sito attuale ma sotto le soglie WCAG** fuori da header e
   footer (trovati in review): testo `#4D4D4D` sull'arancio del pulsante «Contorno» al passaggio
   3,97:1; link `#CA4D1C` sul fondo alternativo `#F5F5F5` 4,20:1, al passaggio `#D63D00` 4,26:1;
@@ -360,6 +372,11 @@ in `config/`), e chi lavora sul sito li ritrova dove Impreza li mette.
 - La pagina con descrizione, obiettivi e finanziamento del progetto che le linee guida FESR chiedono
   sul sito: è contenuto, non header o footer.
 - Il blocco FESR e i loghi UE nell'app.
+- Il gestore dei cookie (banner e preferenze) e il widget di accessibilità fissi nell'angolo dello
+  schermo, che il wireframe mostra come esempi: qui c'è solo il link «Preferenze cookie» e lo spazio
+  sotto la striscia del copyright.
+- La pagina «Open Data» e l'icona ufficiale dei dati aperti: la voce porta a `#` e l'icona è
+  provvisoria.
 
 ## Moduli toccati
 
@@ -374,31 +391,31 @@ Tutto nel submodule `wp-forestas`, tranne l'howto di UAT in `forestas` (in fondo
 
 - `config/post.json` — `us_header-header` (header IT), `us_page_block-footer` (footer IT) e le
   traduzioni `-en-us`
-- `config/menu.json` — `main-menu` con le sette voci, `servizio-menu`, `footer-menu`, e le traduzioni
-  EN
+- `config/menu.json` — `main-menu` con le sette voci, `servizio-menu` con «Open Data», `footer-menu`,
+  e le traduzioni EN
 - `config/wpml.json` — `languages_order`, ed eventuali impostazioni del selettore di lingua
 - `config/impreza.json` — colori, tipografia, pulsanti e focus dal tema Drupal;
   `store_gfonts_locally` spento
 - `themes/forestas-child/assets/fonts/` — nuovo: Montserrat e Work Sans del sito attuale (400 e 600,
   woff2) con le due licenze OFL
 - `themes/forestas-child/assets/img/cerca.svg` — nuovo: la lente del campo di ricerca del sito attuale
-- `themes/forestas-child/assets/img/logo.png` — nuovo
-- `themes/forestas-child/assets/img/blocco-istituzionale-fesr.png` — nuovo; il
-  `blocco-istituzionale-fesr-2.png` della prima versione è tolto
-- `themes/forestas-child/assets/img/loghi-header/` — nuovo: Forestas e CAI senza margini, per la riga
-  dell'header
-- `themes/forestas-child/assets/img/loghi-footer/` — nuovo: i sei loghi del footer (quattro ritagliati
-  dal file ufficiale «versione 2», Forestas e CAI dal sito attuale)
+- `themes/forestas-child/assets/img/logo.png` — nuovo, senza «Beta» (1442×120)
+- `themes/forestas-child/assets/img/open-data.svg` — nuovo: l'icona provvisoria di Open Data
+- `themes/forestas-child/assets/img/loghi-footer/` — nuovo: i sette loghi del footer (quattro
+  ritagliati dal file ufficiale «versione 2», CAI dal sito attuale, Forestas Sentieristica e Sardegna
+  Sentieri per tutti dal wireframe oc:8783)
 - `themes/forestas-child/functions.php` — shortcode `[forestas_logo]`, `[forestas_anno]`,
-  `[forestas_lingue]`, `[forestas_loghi_header]`, `[forestas_loghi_footer]`, helper
+  `[forestas_lingue]`, `[forestas_loghi_footer]`, `[forestas_preferenze_cookie]`, helper
   `forestas_immagine()`; filtro che aggiunge servizio e social al pannello mobile
   (`forestas_pannello_servizio()`, `forestas_pannello_social()`, `forestas_voce_pannello()`); link
-  «Vai al contenuto»; caricamento di CSS e `menu-mobile.js` con la Version del child; funzioni
+  «Vai al contenuto»; caricamento di CSS, `menu-mobile.js` e `header-compatto.js` con la Version del
+  child; classi delle voci di servizio nel pannello (icona di Open Data); funzioni
   `forestas_testo()`, `forestas_versione()`, `forestas_asset_url()`
 - `themes/forestas-child/functions.php` (filtro del pannello) — menu della pagina e `main-menu`
   confrontati nella lingua predefinita, per i filtri di WPML attivi
 - `themes/forestas-child/assets/js/menu-mobile.js` — nuovo: scritta e nome del pulsante, focus nel
   pannello, posizione del pannello sotto l'header, tocco sul velo che non attiva il link sotto
+- `themes/forestas-child/assets/js/header-compatto.js` — nuovo: riga compatta su desktop
 - `themes/forestas-child/style.css` — font, variabili `--sase-*` del sito attuale, stili di header,
   pannello mobile e footer, radice a 14px sotto i 960px, `Version` alzata
 - `docker/scripts/config/comune.php` — `us_og_image`, `_us_page_block_ids` e
