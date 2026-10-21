@@ -272,14 +272,15 @@ bin/wordpress-config.sh pagine --contenuti-mancanti --conferma   # ritenta solo 
   anche `DRUPAL_DB_HOST=host.docker.internal` e `DRUPAL_DB_PORT=3307`.
 - **Log:** ogni esecuzione scrive `log/pagine-<data-ora>.log` (escluso da git; si tengono gli ultimi
   60) con una riga per evento: `PAGINA`, `MEDIA`, `LINK`, `MENU`, `MANCANTE`, `AVVISO`, `ERRORE`,
-  `RIASSUNTO`. A schermo compare il riassunto.
+  `RIASSUNTO`. A schermo compaiono le righe che chiedono un intervento (`ERRORE`, `MANCANTE`, `MENU`,
+  ogni `AVVISO`, gli avvisi ed errori di WordPress), il riassunto e i conteggi.
 - **Ciò che non riesce** (un'immagine che non si scarica, un template assente…) resta in un elenco
   sul sito, con causa e date, e `--contenuti-mancanti` ritenta solo quegli elementi. Il comando esce
   con codice 1 se manca qualcosa che non si sistema da sé (pagina, traduzione, template), anche in
   anteprima se manca un template (`AVVISO … non riuscirebbe`: l'anteprima non scrive, e una pagina o
   una traduzione che non si salvano si scoprono solo al `--conferma`); se mancano solo media, che si ritentano al giro
-  dopo, esce con 0 e un avviso. Un codice più alto è un errore di PHP o di WP-CLI: il comando mostra le
-  ultime righe del log.
+  dopo, esce con 0 e un avviso. Un errore di PHP o di WP-CLI (un fatal, un `WP_ADMIN_USER` che non c'è)
+  esce anche lui con 1, ma senza righe del comando: allora il comando mostra le ultime righe del log.
 - **Si ferma senza scrivere** se la copia Drupal non è integra (tabelle mancanti o vuote, un nodo del
   perimetro assente) o se più di 2 pagine andrebbero in bozza nello stesso giro (una pagina conta una
   volta sola, in qualunque numero di lingue): è il segno di una

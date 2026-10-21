@@ -65,7 +65,8 @@ Impreza 9.4 + UpSolution Core, WPML; copia Drupal MySQL 8 in sola lettura (utent
 3. **Slug inglese uguale all'italiano** (`da-vedere`): la pagina inglese non deve diventare
    `da-vedere-2` (Task 1).
 4. **Media non scaricabile** (URL inesistente): la pagina tiene il media precedente, l'elemento va in
-   `wpf_sync_mancanti`, le altre pagine proseguono, codice d'uscita ≠ 0 (Task 5).
+   `wpf_sync_mancanti`, le altre pagine proseguono, uscita 0 con un AVVISO (decisione del dev del 20/10:
+   un media si ritenta al giro dopo; Task 5).
 5. **`DRUPAL_SYNC` assente** dal `.env`: comportamento `off` (Task 7).
 
 ---
@@ -79,7 +80,7 @@ Impreza 9.4 + UpSolution Core, WPML; copia Drupal MySQL 8 in sola lettura (utent
 
 **Interfacce:**
 - Produce: `config/pagine.json` con forma
-  `{"pagine": [{"chiave": "privacy", "nid": 88, "template": "testo", "slug": {"it": "privacy"}, "menu": ["footer-menu:PRIVACY"]}, …]}`.
+  `{"pagine": [{"chiave": "privacy", "nid": 88, "template": "testo", "slug": {"it": "privacy", "en": "privacy"}}, …]}`.
   `template` ∈ `testata | testo | mappa`; `nid` è `null` per Cammini, che ha `"testata_da": "itinerari"`
   e `"titolo": {"it": "Cammini", "en": "Walks"}`; `slug` ha la chiave `en` solo dove l'inglese esiste.
   Come è oggi (21/10): tutte le pagine hanno `slug.en` (le traduzioni mancanti su Drupal sono nostre,
@@ -170,6 +171,10 @@ Impreza 9.4 + UpSolution Core, WPML; copia Drupal MySQL 8 in sola lettura (utent
   stati `publish` e `draft`, dentro `wpf_wpml_tutte_le_lingue()`.
 - `wpf_pagina_scrivi( array $voce, string $lingua, array $dati, bool $prova ): array` — crea o aggiorna,
   restituisce `['esito' => 'creata|aggiornata|bozza|invariata', 'campi' => string[], 'mancanti' => array[]]`.
+  Come è oggi: `wpf_pagina_scrivi( $voce, $lingua, $dati, ?int $id_it, array $template, bool $prova, ?array $solo )`
+  (italiano a cui collegare la traduzione, template per chiave, elementi di `--contenuti-mancanti`);
+  restituisce anche `id` e `media`; esiti `creata|aggiornata|invariata|non creata|non aggiornata`, la
+  bozza è il suffisso «— in bozza» della riga `PAGINA`; i mancanti hanno in più `dettaglio`.
 - `wpf_mancanti_leggi(): array`, `wpf_mancanti_salva( array $elenco ): void` — opzione `wpf_sync_mancanti`;
   ogni elemento `['cosa', 'pagina', 'lingua', 'causa', 'primo', 'ultimo']`.
 - Righe di output per il log, una per evento, prefisso fisso: `PAGINA`, `MEDIA`, `LINK`, `MENU`,
@@ -207,7 +212,8 @@ Impreza 9.4 + UpSolution Core, WPML; copia Drupal MySQL 8 in sola lettura (utent
 
 - [x] **Passo 1:** collega immagine in evidenza, allegati e galleria ai media importati. Un `WP_Error`
   lascia il valore precedente del campo, aggiunge `['cosa' => 'allegato|immagine|galleria', …]` ai
-  mancanti e scrive `MEDIA … non scaricato: <causa>`.
+  mancanti e scrive `MEDIA … non scaricato: <causa>`. Come è oggi: il file non scaricato esce come riga
+  `MANCANTE <cosa> <pagina>/<lingua> fid …: <causa>`, non come riga `MEDIA`.
 - [x] **Passo 2 (verifica):** con un `uri` alterato nel database di prova per l'immagine di Privacy:
   Privacy mantiene la `_thumbnail_id` precedente, `wp option get wpf_sync_mancanti --format=json` contiene
   l'elemento con la causa 404, le altre pagine `invariata`, uscita 0 con un AVVISO (un media mancante
@@ -237,7 +243,8 @@ Impreza 9.4 + UpSolution Core, WPML; copia Drupal MySQL 8 in sola lettura (utent
 - [x] **Passo 1:** scrivi la funzione e chiamala in `wpf_pagina_scrivi` prima di confrontare il body.
 - [x] **Passo 2 (verifica):** dopo un `--conferma`, nel `post_content` di App
   `https://www.sardegnasentieri.it/index.php/pagina-base/privacy` è diventato `/privacy/`; i quattro link
-  ai «da sapere» e `/form/segnalazione` sono invariati e compaiono come `LINK … in attesa` nell'output.
+  ai «da sapere» e `/form/segnalazione` sono invariati e compaiono come `LINK … in attesa` nell'output
+  (come è oggi: il form, che non è un nodo, compare come `LINK … verso Drupal`).
   In Crediti EN `/en/node/1491` è `in attesa`.
 - [x] **Commit (utente):** `feat(oc:8758): riscrittura dei link interni`
 
@@ -254,8 +261,8 @@ Impreza 9.4 + UpSolution Core, WPML; copia Drupal MySQL 8 in sola lettura (utent
   in un file, non `tee` in pipe: con `pipefail` l'exit dello script va conservato), poi
   cancellazione dei log oltre i 60 più recenti. A schermo: le righe `RIASSUNTO`, `ERRORE`, `MANCANTE` e il
   percorso del log; il comando suggerito per i mancanti se ce ne sono. Come è oggi: a schermo, scelte con
-  `grep`, anche `MENU` e gli `AVVISO` che chiedono un intervento, i conteggi, e per un'uscita oltre 1 la
-  coda del log.
+  `grep`, anche `MENU`, ogni `AVVISO` e le righe `Warning:`/`Error:` di WP-CLI, i conteggi, e per
+  un'uscita non 0 senza righe del comando la coda del log.
 - Codice d'uscita = quello dello script.
 
 - [x] **Passo 1:** scrivi il comando.
@@ -273,8 +280,9 @@ Impreza 9.4 + UpSolution Core, WPML; copia Drupal MySQL 8 in sola lettura (utent
 - Modifica: `config/post.json` (tre `us_content_template`, IT ed EN se il resto della configurazione lo fa
   per gli oggetti builder), `themes/forestas-child/style.css` (o il file di stili del child), shortcode del
   child, `Version` del child. Realizzati: `[forestas_testata]` (titolo, sottotitolo dal Riassunto,
-  immagine, credits, percorso), `[forestas_pagina_testo]` (testo, poi `[forestas_allegati]` e
-  `[forestas_galleria]`), `[forestas_mappa]`, in `inc/pagine-statiche.php`
+  immagine, credits, percorso), `[forestas_pagina_testo]` (testo, poi allegati e galleria con le funzioni
+  `forestas_allegati()` e `forestas_galleria()`, che non sono shortcode: nessun template li usa da soli),
+  `[forestas_mappa]`, in `inc/pagine-statiche.php`
 
 **Interfacce:**
 - Consuma: `post_excerpt` (il meta `wpf_sottotitolo` previsto non esiste: il sottotitolo sta nel

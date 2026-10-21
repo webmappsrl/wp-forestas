@@ -117,10 +117,10 @@ if ( count( $in_bozza ) > WPF_PAGINE_SOGLIA_BOZZE ) {
 	$ferma( 'copia Drupal sospetta: ' . count( $in_bozza ) . ' pagine da mettere in bozza nello stesso giro (' . implode( ', ', array_merge( ...array_values( $in_bozza ) ) ) . '), più di ' . WPF_PAGINE_SOGLIA_BOZZE . ': nulla scritto' );
 }
 
-// Template di Impreza per chiave
+// Template di Impreza per chiave, quelli che config/pagine.json usa
 $template = [];
-foreach ( [ 'testata', 'testo', 'mappa' ] as $t ) {
-	$p              = wpf_post_per_chiave( "template-pagina-{$t}" );
+foreach ( array_unique( array_column( $voci, 'template' ) ) as $t ) {
+	$p              = wpf_post_per_chiave( WPF_PREFISSO_TEMPLATE . $t );
 	$template[ $t ] = $p && $p->post_type === 'us_content_template' ? $p->ID : 0;
 }
 
@@ -243,22 +243,21 @@ if ( ! $prova ) {
 foreach ( $mancanti as $m ) {
 	$riga( 'MANCANTE', "{$m['cosa']} {$m['pagina']}/{$m['lingua']}" . ( $m['dettaglio'] !== '' ? " {$m['dettaglio']}" : '' ) . ": {$m['causa']} (dal {$m['primo']})" );
 }
-$elenco = $mancanti;
 $riga(
 	'RIASSUNTO',
 	( $prova ? 'anteprima, nulla scritto — ' : '' ) . implode( ', ', array_map( fn( $e, $n ) => "{$e}: {$n}", array_keys( $conteggi ), $conteggi ) )
-	. '; mancanti: ' . count( $elenco )
+	. '; mancanti: ' . count( $mancanti )
 );
 // Codice d'uscita: 1 solo se manca qualcosa che non si sistema da sé (una pagina non salvata, una
 // traduzione non collegata, un template assente). Un media non scaricato (sito Drupal lento) lascia le
 // pagine a posto e si ritenta al giro dopo: avviso nel log e uscita 0, così un cron o una catena di
 // import non si ferma per questo (decisione del dev, oc:8758)
-$gravi = array_filter( array_merge( $elenco, $previsti ), fn( $m ) => ! in_array( $m['cosa'], [ 'immagine', 'allegato', 'galleria' ], true ) );
+$gravi = array_filter( array_merge( $mancanti, $previsti ), fn( $m ) => ! isset( WPF_PAGINA_MEDIA[ $m['cosa'] ] ) );
 if ( $gravi ) {
 	WP_CLI::halt( 1 );
 }
-if ( $elenco ) {
-	$riga( 'AVVISO', count( $elenco ) . ' media non scaricati: le pagine sono aggiornate, si ritentano al prossimo giro o con --contenuti-mancanti' );
+if ( $mancanti ) {
+	$riga( 'AVVISO', count( $mancanti ) . ' media non scaricati: le pagine sono aggiornate, si ritentano al prossimo giro o con --contenuti-mancanti' );
 }
 // Con la sincronizzazione spenta anche l'anteprima esce con 1: chi la lancia (o un cron) sa che non
 // scriverebbe, anche se le differenze sono quelle di sempre

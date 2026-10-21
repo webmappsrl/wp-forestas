@@ -27,10 +27,10 @@
 	function avvia(galleria) {
 		var $galleria = $(galleria);
 		var slickTradotto = $.extend({}, impostazioniSlick, {
-			prevArrow: pulsante('slick-prev', $galleria.attr('data-precedente') || 'Previous'),
-			nextArrow: pulsante('slick-next', $galleria.attr('data-successivo') || 'Next')
+			prevArrow: pulsante('slick-prev', $galleria.attr('data-precedente')),
+			nextArrow: pulsante('slick-next', $galleria.attr('data-successivo'))
 		});
-		var chiudi = $galleria.attr('data-chiudi') || 'Close';
+		var chiudi = $galleria.attr('data-chiudi');
 		var $voci = $(selettore, galleria);
 
 		function avviaSlick(modale) {

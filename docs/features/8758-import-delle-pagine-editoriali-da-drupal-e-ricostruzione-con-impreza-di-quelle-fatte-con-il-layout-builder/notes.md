@@ -419,7 +419,7 @@ Drupal di UAT il 20/10; gli invii sono stati contati, non letti, perché conteng
 - Nessuno dei due form usati manda email (nessun gestore di invio configurato): gli invii restano
   solo nell'amministrazione di Drupal.
 - In WordPress le voci SEGNALAZIONI / REPORT AN ISSUE portano oggi a `#`; il link al form nella pagina
-  App resta verso Drupal ed è «in attesa» nel log della sincronizzazione.
+  App resta verso Drupal ed è segnato «verso Drupal» nel log della sincronizzazione (non è un nodo).
 - Da decidere: plugin di form o form scritto per il sito; dove finiscono gli invii e chi li legge; se e
   come portare in WordPress gli invii esistenti (dati personali); come si mostrano le valutazioni
   nella scheda del sentiero, che arriva dal plugin wp-geohub o dai ticket del catasto.
@@ -560,4 +560,56 @@ Lasciati così, con il motivo:
   lato client per due righe.
 - Elenco dei mancanti legato alle chiavi di `config/pagine.json` e lingue it/en: vanno rivisti quando
   oc:8759 e oc:8760 estenderanno questo motore (knowledge, «Perché così»).
+
+## Terza review del 21/10
+
+Review con 5 finder sul branch (commit `7ed55b4`), poi correzioni nello stesso branch.
+
+- **Errori di PHP o WP-CLI senza causa a schermo** (bloccante): la coda del log si mostrava solo con
+  un'uscita oltre 1, ma WP-CLI esce con 1 anche per un fatal o un `WP_ADMIN_USER` che non c'è. Ora si
+  mostra con ogni uscita diversa da 0 che nel log non ha righe `ERRORE`, `MANCANTE` o `AVVISO` del
+  comando, e dopo un errore non si suggerisce nessun comando. Verificato con una copia dello script
+  nello scratchpad e un utente inesistente: a schermo la riga `Error: Invalid user …`.
+- A schermo ogni `AVVISO` (tutti chiedono un intervento, compreso quello sugli hook dei link di WPML) e
+  le righe `Warning:`/`Error:` di WP-CLI, invece di un filtro sul testo dei messaggi; i log tenuti (60)
+  scritti in un posto solo.
+- L'init toglie all'avvio anche il blocco delle pagine (`wpf_sblocca` su `WPF_OPZIONE_PAGINE_IN_CORSO`,
+  passata in `costanti.php` con `WPF_PAGINE_SCADENZA`): un container ricreato a metà giro bloccava le
+  pagine per 2 ore. Vale dopo `scripts/wordpress-up.sh`, che ricostruisce l'immagine con l'init nuovo.
+- Anteprima di `applica`: le voci di menu senza menu contano come differenza.
+- Export: un'opzione delle Theme Options che punta a una pagina sincronizzata non si esporta più con l'id
+  di questo sito (l'apply avrebbe scritto quell'id altrove): resta il valore di ogni sito, come per
+  `sito.json`.
+- Media già nella libreria: alt, autore, credits (immagini) e titolo (documenti) che cambiano su Drupal
+  si vedono nell'anteprima («da riallineare») e nel log («riallineati a Drupal»), con
+  `wpf_media_allinea`. Verificato cambiando a mano i credits dell'immagine della FAQ: l'anteprima lo
+  mostra, il `--conferma` li riporta a quelli di Drupal.
+- L'avviso nella scheda dell'immagine compare solo per le immagini che una pagina sincronizzata usa
+  ancora, le sole che la sincronizzazione riallinea.
+- Script: tipi di media e meta in `WPF_PAGINA_MEDIA`, prefisso dei template in `WPF_PREFISSO_TEMPLATE` e
+  template letti da `config/pagine.json`, regola «`und` vale italiano» in `wpf_drupal_lingua`, alias e
+  condizioni ridondanti tolti.
+- Child 1.4.29: allegati e galleria funzioni di `[forestas_pagina_testo]`, non più shortcode; filo
+  sopra i titoli definito una volta; rientro e filo di percorso e pulsanti, blu del pulsante e colori
+  del tema in variabili; controllo di `DRUPAL_SYNC` in una funzione; etichette inglesi di ripiego del JS
+  tolte. Valori calcolati verificati nel browser (percorso, filo di testata, intestazione e galleria,
+  pulsante Condividi chiuso e aperto) e pagine IT ed EN con allegati e galleria.
+- Docs: plan (esempio di `pagine.json`, uscita per i media, firma di `wpf_pagina_scrivi`, riga
+  `MANCANTE` per i media, link al form «verso Drupal»), overview (6 pagine sotto `/pagina-base/`, 8
+  indirizzi), notes, knowledge, README e howto del cron.
+
+Lasciati così, con il motivo:
+- `$sezioni` di `forestas_sezione_pagina` scrive anche le corrispondenze uguali (`sentieri` →
+  `sentieri`): è l'elenco delle pagine che hanno una sezione, e un'eccezione per `da-vedere` sarebbe più
+  difficile da leggere.
+- Gli id `mapExpander`/`mapShrinker` e le classi `is-map-*` della mappa sono quelli del blocco Drupal
+  (`block--mappa-interattiva.html.twig`), da cui vengono anche le formule di `mappa.js`; una pagina ha una
+  mappa sola.
+- Titolo e sottotitolo da Drupal non passano per un filtro: sono testo semplice su Drupal, il child li
+  stampa con `esc_html` e oggi nessuno contiene markup; da rivedere se un import futuro scrive titoli
+  ricchi.
+- Trovato in verifica e non toccato (viene dall'export di oc:8717): un `esporta` dopo la ricreazione del
+  sito scrive `post.json` con lo stesso contenuto ma i post in un altro ordine, perché li ordina per data
+  e i tre template hanno date a un secondo di distanza. `git diff config/` mostra uno spostamento di righe
+  che non cambia nulla.
 

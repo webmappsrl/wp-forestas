@@ -19,8 +19,9 @@ contano le scelte e i vincoli.
   legame «file caricato in questa pagina» ammette una sola pagina per file e nessun ordine, e la
   galleria nativa sta dentro il testo, che Drupal riscrive. Nell'editor il riquadro «Allegati e
   galleria» del child li gestisce con la libreria media. Finché la sincronizzazione è attiva le modifiche fatte lì
-  vengono riscritte, e così testo alternativo, autore e credits di un'immagine che viene da Drupal: la
-  scheda dell'immagine lo dice sotto i campi.
+  vengono riscritte, e così testo alternativo, autore e credits delle immagini che una pagina sincronizzata
+  usa ancora (e il titolo dei suoi PDF): la scheda dell'immagine lo dice sotto i campi, e il log lo
+  segnala con una riga `MEDIA …, credits riallineati a Drupal`.
 - **Autore e credits delle immagini in due campi dell'immagine** (`wpf_autore`, `wpf_credits`), come i
   due campi dei media di Drupal; la testata li mostra dietro «Credits foto». Non nella Didascalia, che
   WordPress mostra da sé sotto le immagini nel testo e nelle gallerie. Gli altri import usano gli
@@ -46,8 +47,9 @@ contano le scelte e i vincoli.
   cambia (impronta «sorgente»); la Mappa inglese è di sola interfaccia (`titolo.en`). Nelle pagine
   inglesi i link portano alla versione inglese, se c'è, e la home è `/en/`.
 - **Un solo scrittore:** `esporta` e `applica` di `bin/wordpress-config.sh` saltano le pagine con
-  `_wpf_pagina`, anche se un'opzione punta a loro: in quel caso l'export avvisa che l'opzione non arriva
-  agli altri siti con l'id giusto e va reimpostata a mano (oggi nessuna opzione lo fa; con oc:8759 la
+  `_wpf_pagina`, anche se un'opzione punta a loro: in quel caso nemmeno l'opzione si esporta (resta fuori
+  da `sito.json` e dalle Theme Options), l'apply lascia il valore di ogni sito e l'export avvisa che lì va
+  impostata dal pannello dopo il comando pagine (oggi nessuna opzione lo fa; con oc:8759 la
   pagina degli articoli potrebbe essere News). I menu invece li scrive solo l'apply: le voci del
   perimetro in `config/menu.json` hanno `tipo: pagina` e il percorso, cioè lo slug, che va cambiato lì
   insieme a `config/pagine.json`.
@@ -103,7 +105,8 @@ contano le scelte e i vincoli.
 - **Un blocco per comando** (oc:8758): `wpf_blocca( $opzione, $scadenza )` in `comune.php`, usato
   dall'apply (40 minuti) e dalle pagine (`WPF_PAGINE_SCADENZA`, 2 ore: con il sito Drupal lento ogni
   file può costare un minuto, e un blocco tolto mentre la prima esecuzione scrive ancora lascerebbe
-  partire la seconda, con allegati doppi).
+  partire la seconda, con allegati doppi). L'init toglie all'avvio del container i blocchi di tutti e
+  due presi prima dell'avvio: i comandi girano nel container e muoiono con lui.
 - **Indirizzi senza `/pagina-base/`** (oc:8758): su Drupal è il nome predefinito del tipo `page` nel
   pattern automatico di pathauto, non una scelta. Al lancio servono i 301 dai vecchi indirizzi
   (`/pagina-base/app-sardegna-sentieri` è indicizzata da Google) e la sitemap.

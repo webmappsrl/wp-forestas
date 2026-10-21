@@ -215,12 +215,15 @@ if [ ! -f "${WP_PATH}/.htaccess" ] && [ -n "$($WP option get permalink_structure
         || log "AVVISO: impossibile creare .htaccess, riprovo al prossimo avvio"
 fi
 
-# 4c. Blocco dell'apply rimasto da un apply interrotto: gli apply girano dentro il container e muoiono
-#     con lui, quindi un blocco preso prima di questo avvio non appartiene a nessuno. Senza, un blocco
-#     rimasto da un «docker stop» farebbe fallire l'apply automatico finché non scade
-#     (WPF_APPLY_SCADENZA). Un apply lanciato dall'host durante l'avvio ha un blocco più recente e resta.
+# 4c. Blocchi rimasti da un apply o da una sincronizzazione delle pagine interrotti: girano dentro il
+#     container e muoiono con lui, quindi un blocco preso prima di questo avvio non appartiene a nessuno.
+#     Senza, un blocco rimasto da un «docker stop» farebbe fallire l'apply automatico o le pagine finché
+#     non scade (WPF_APPLY_SCADENZA, WPF_PAGINE_SCADENZA). Un comando lanciato dall'host durante l'avvio
+#     ha un blocco più recente e resta.
 $WP eval "require '${CONFIG_LIB}/comune.php'; wpf_sblocca_apply( ${AVVIO} );" \
     || log "AVVISO: impossibile togliere il blocco dell'apply"
+$WP eval "require '${CONFIG_LIB}/comune.php'; if ( function_exists( 'wpf_sblocca' ) ) { wpf_sblocca( WPF_OPZIONE_PAGINE_IN_CORSO, ${AVVIO} ); }" \
+    || log "AVVISO: impossibile togliere il blocco delle pagine"
 
 # 5. Lingua
 if ! $WP language core is-installed it_IT; then

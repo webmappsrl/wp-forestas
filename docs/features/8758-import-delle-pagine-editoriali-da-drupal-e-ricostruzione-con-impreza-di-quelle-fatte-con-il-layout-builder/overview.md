@@ -72,7 +72,7 @@ dall'elenco ciò che è andato a buon fine. Un media che non si scarica non nasc
 allegati della pagina, e non toglie l'immagine in evidenza che c'era.
 
 **Indirizzi.** Le pagine che su Drupal hanno un alias scritto a mano lo mantengono (`/contatti`,
-`/sentieri`, `/itinerari`, `/da-vedere`, `/da-sapere`, `/news`, `/mappa-interattiva`). Le 8 che su
+`/sentieri`, `/itinerari`, `/da-vedere`, `/da-sapere`, `/news`, `/mappa-interattiva`). Le 6 che su
 Drupal stanno sotto `/pagina-base/…` (pattern automatico di pathauto, «Pagina base» è il nome
 predefinito del tipo `page`) hanno indirizzi puliti: `/faq`, `/privacy`, `/note-legali`,
 `/crediti`, `/app`, `/dichiarazione-di-accessibilita` e gli equivalenti inglesi. Cammini ha un
@@ -221,7 +221,8 @@ script, senza lavoro a mano dal pannello, perché un cambio di server non richie
   troverà più i file. Il problema riguarda tutti gli import (news, da sapere…) e va affrontato con
   quelli prima del lancio (copia dei file accanto alla copia del database, o import spento con
   WordPress che diventa la fonte); qui si registra come follow-up.
-- **Indirizzi cambiati.** Le 8 pagine `/pagina-base/…` cambiano indirizzo; APP
+- **Indirizzi cambiati.** Le 6 pagine `/pagina-base/…` (8 indirizzi, con le versioni inglesi di Note
+  legali e Crediti) cambiano indirizzo; APP
   (`/pagina-base/app-sardegna-sentieri`) è indicizzata da Google e compare fra i link sotto la Home.
   Al lancio servono i redirect 301 dai vecchi indirizzi e la sitemap di WordPress, che oggi è spenta
   da `blog_public = 0`. Registrato come follow-up obbligatorio prima del lancio.

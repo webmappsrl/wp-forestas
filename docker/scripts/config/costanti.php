@@ -18,6 +18,11 @@ const WPF_OPZIONE_APPLY_IN_CORSO = 'wp_forestas_apply_in_corso';
 // Dopo quanti secondi un apply «in corso» si considera interrotto e il blocco si può togliere. Deve
 // superare il tempo massimo dell'apply automatico, che init-wordpress.sh ricava da qui
 const WPF_APPLY_SCADENZA = 2400;
+// Blocco della sincronizzazione delle pagine da Drupal (oc:8758), tolto anche lui dall'init all'avvio. La
+// scadenza è più lunga di quella dell'apply: con il sito Drupal lento ogni file può costare WPF_MEDIA_ATTESA
+// secondi, e un blocco tolto mentre la prima esecuzione scrive ancora lascerebbe partire la seconda
+const WPF_OPZIONE_PAGINE_IN_CORSO = 'wp_forestas_pagine_in_corso';
+const WPF_PAGINE_SCADENZA         = 7200;
 // Plugin commerciali la cui attivazione automatica è fallita: l'init la ritenta (vedi il passo 7c)
 const WPF_OPZIONE_DA_ATTIVARE = 'wp_forestas_plugin_da_attivare';
 // Data dell'installazione fatta dall'init (passo 4): l'apply automatico vale solo nei giorni subito dopo

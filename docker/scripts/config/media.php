@@ -14,16 +14,35 @@ const WPF_META_CREDITS = 'wpf_credits';
 // Attesa massima del download di un file, in secondi
 const WPF_MEDIA_ATTESA = 60;
 
-/** Allinea autore e credits di un allegato a quelli del media Drupal (un campo vuoto si cancella). */
-function wpf_media_credits( int $id, array $file ): void {
-	foreach ( [ WPF_META_AUTORE => 'autore', WPF_META_CREDITS => 'credits' ] as $meta => $campo ) {
-		$valore = (string) ( $file[ $campo ] ?? '' );
-		if ( $valore === '' ) {
-			delete_post_meta( $id, $meta );
-		} elseif ( get_post_meta( $id, $meta, true ) !== $valore ) {
-			update_post_meta( $id, $meta, $valore );
+/**
+ * Allinea a Drupal i dati di un allegato che possono cambiare senza che cambi il file: per un'immagine
+ * testo alternativo, autore e credits (un campo vuoto si cancella), per un documento il titolo, che è il
+ * testo del link. Restituisce i campi diversi; in prova non scrive.
+ */
+function wpf_media_allinea( int $id, array $file, bool $prova ): array {
+	$cambiati = [];
+	if ( wp_attachment_is_image( $id ) ) {
+		$meta = [ '_wp_attachment_image_alt' => [ 'alt', $file['alt'] ] ];
+		foreach ( [ WPF_META_AUTORE => 'autore', WPF_META_CREDITS => 'credits' ] as $chiave => $campo ) {
+			$meta[ $chiave ] = [ $campo, (string) ( $file[ $campo ] ?? '' ) ];
+		}
+		foreach ( $meta as $chiave => [ $campo, $valore ] ) {
+			if ( (string) get_post_meta( $id, $chiave, true ) === $valore ) {
+				continue;
+			}
+			$cambiati[] = $campo;
+			if ( ! $prova ) {
+				// L'alt vuoto resta scritto (un'immagine decorativa), autore e credits vuoti si cancellano
+				$valore === '' && $chiave !== '_wp_attachment_image_alt' ? delete_post_meta( $id, $chiave ) : update_post_meta( $id, $chiave, $valore );
+			}
+		}
+	} elseif ( get_post_field( 'post_title', $id ) !== $file['titolo'] ) {
+		$cambiati[] = 'titolo';
+		if ( ! $prova ) {
+			wp_update_post( [ 'ID' => $id, 'post_title' => wp_slash( $file['titolo'] ) ] );
 		}
 	}
+	return $cambiati;
 }
 
 /** L'allegato già importato per un fid di Drupal, o 0. */
@@ -51,20 +70,9 @@ function wpf_media_importa( array $file, bool $prova ) {
 	if ( isset( $falliti[ $file['fid'] ] ) ) {
 		return $falliti[ $file['fid'] ];
 	}
+	// Un file già importato si riusa: i suoi dati li allinea wpf_media_allinea
 	$id = wpf_media_per_fid( (int) $file['fid'] );
 	if ( $id ) {
-		// Alt, credits e descrizione possono cambiare su Drupal senza che cambi il file
-		if ( $prova ) {
-			return $id;
-		}
-		if ( wp_attachment_is_image( $id ) ) {
-			if ( get_post_meta( $id, '_wp_attachment_image_alt', true ) !== $file['alt'] ) {
-				update_post_meta( $id, '_wp_attachment_image_alt', $file['alt'] );
-			}
-			wpf_media_credits( $id, $file );
-		} elseif ( isset( $file['titolo'] ) && get_post_field( 'post_title', $id ) !== $file['titolo'] ) {
-			wp_update_post( [ 'ID' => $id, 'post_title' => wp_slash( $file['titolo'] ) ] );
-		}
 		return $id;
 	}
 	if ( $prova ) {
@@ -85,7 +93,7 @@ function wpf_media_importa( array $file, bool $prova ) {
 	// mostrano come link, non come immagini)
 	add_filter( 'fallback_intermediate_image_sizes', '__return_empty_array' );
 	// Titolo dell'allegato: per i documenti il testo del link che mostra Drupal (descrizione o nome del file)
-	$titolo = ( ! str_starts_with( (string) ( $file['mime'] ?? '' ), 'image/' ) && ! empty( $file['titolo'] ) ) ? $file['titolo'] : pathinfo( $file['nome'], PATHINFO_FILENAME );
+	$titolo = ! str_starts_with( (string) ( $file['mime'] ?? '' ), 'image/' ) ? $file['titolo'] : pathinfo( $file['nome'], PATHINFO_FILENAME );
 	$id     = media_handle_sideload( [ 'name' => $file['nome'], 'tmp_name' => $tmp ], 0, $titolo );
 	remove_filter( 'fallback_intermediate_image_sizes', '__return_empty_array' );
 	if ( is_wp_error( $id ) ) {
@@ -93,9 +101,6 @@ function wpf_media_importa( array $file, bool $prova ) {
 		return $falliti[ $file['fid'] ] = new WP_Error( 'wpf_media_registra', "{$file['nome']}: " . $id->get_error_message() );
 	}
 	update_post_meta( $id, WPF_META_FID, (string) $file['fid'] );
-	if ( wp_attachment_is_image( $id ) ) {
-		wpf_media_credits( $id, $file );
-		update_post_meta( $id, '_wp_attachment_image_alt', $file['alt'] );
-	}
+	wpf_media_allinea( $id, $file, false );
 	return $id;
 }

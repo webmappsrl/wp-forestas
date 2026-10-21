@@ -5,7 +5,7 @@ Template: Impreza
 Author: Webmapp
 Author URI: https://webmapp.it/
 Description: Child theme di Impreza per Sardegna Sentieri (Forestas). Versionato nel repo wp-forestas e montato dal compose: si modifica nel repo, non dal pannello.
-Version: 1.4.28
+Version: 1.4.29
 */
 
 
@@ -64,6 +64,9 @@ Version: 1.4.28
 	--sase-filo-larghezza: 57px;                             /* filo sopra i titoli (sase-heading-has-decoration) */
 	--sase-filo-altezza: 7px;
 	--sase-filo-spazio: 1.875rem;                            /* filo + spazio fino al titolo */
+	--sase-rientro-contenuto: max(22px, calc((100% - var(--sase-larghezza-contenuto)) / 2)); /* percorso e pulsanti allineati al logo */
+	--sase-filo-percorso: #EEEBE5;                           /* sotto percorso e pulsanti (artifact) */
+	--sase-blu-pulsante: #16497B;                            /* pulsante premuto o aperto (tema Drupal) */
 	/* Caratteri del tema Drupal che ricorrono: titoli della testata, delle sezioni e degli allegati, testo */
 	--sase-titolo-grande: clamp(2.5rem, 2.5rem + (1vw - 0.2rem) * 0.938, 3.438rem);
 	--sase-titolo-medio: clamp(1.5rem, 0.5rem + (1vw - 0.2rem) * 0.5, 2rem);
@@ -1351,12 +1354,17 @@ Version: 1.4.28
 	.l-main .forestas-credits__testo { transition: none; }
 }
 
-/* Barretta del tema Drupal (sase-heading-has-decoration): 57×7px sopra il titolo */
-.forestas-testata-filo {
+/* Barretta del tema Drupal (sase-heading-has-decoration): 57×7px sopra il titolo della testata,
+   dell'intestazione e della galleria; cambia solo il colore */
+.forestas-testata-filo,
+.forestas-intestazione::before,
+.forestas-galleria-titolo::before {
 	display: block;
 	width: var(--sase-filo-larghezza);
 	height: var(--sase-filo-altezza);
-	margin-bottom: calc(var(--sase-filo-spazio) - var(--sase-filo-altezza));                    /* barra + spazio = 1,875rem, come su Drupal */
+}
+.forestas-testata-filo {
+	margin-bottom: calc(var(--sase-filo-spazio) - var(--sase-filo-altezza)); /* barra + spazio = 1,875rem, come su Drupal */
 	background: var(--forestas-sezione);
 }
 .l-main .forestas-testata-titolo {
@@ -1402,9 +1410,6 @@ Version: 1.4.28
 }
 .forestas-intestazione::before {
 	content: "";
-	display: block;
-	width: var(--sase-filo-larghezza);
-	height: var(--sase-filo-altezza);
 	margin-top: calc(-1 * var(--sase-filo-spazio));
 	background-color: var(--forestas-sezione);
 }
@@ -1427,8 +1432,8 @@ Version: 1.4.28
 	flex-wrap: wrap;
 	align-items: center;
 	gap: 8px;
-	padding: 11px max(22px, calc((100% - var(--sase-larghezza-contenuto)) / 2));
-	border-bottom: 1px solid #EEEBE5;
+	padding: 11px var(--sase-rientro-contenuto);
+	border-bottom: 1px solid var(--sase-filo-percorso);
 	color: #767676;
 	font-size: 12.5px;
 	line-height: 1.4;
@@ -1451,16 +1456,16 @@ Version: 1.4.28
 	flex-wrap: wrap;
 	align-items: center;
 	gap: 8px;
-	padding: 13px max(22px, calc((100% - var(--sase-larghezza-contenuto)) / 2));
-	border-bottom: 1px solid #EEEBE5;
+	padding: 13px var(--sase-rientro-contenuto);
+	border-bottom: 1px solid var(--sase-filo-percorso);
 }
 .forestas-condividi {
 	position: relative;
 	display: inline-flex;
 }
 .forestas-condividi .forestas-pulsante[aria-expanded="true"] {
-	border-color: #16497B;
-	background-color: #16497B;
+	border-color: var(--sase-blu-pulsante);
+	background-color: var(--sase-blu-pulsante);
 	color: #FFFFFF;
 }
 /* Pannello: collegamenti scritti, niente script né cookie di terzi */
@@ -1482,7 +1487,7 @@ Version: 1.4.28
 .forestas-condividi__titolo {
 	display: block;
 	margin: 0 0 6px 4px;
-	color: #4D4D4D;
+	color: var(--sase-testo);
 	font-family: var(--sase-font-testo);
 	font-size: 12px;
 	font-weight: 600;
@@ -1716,9 +1721,6 @@ Version: 1.4.28
 }
 .forestas-galleria-titolo::before {
 	content: "";
-	display: block;
-	width: var(--sase-filo-larghezza);
-	height: var(--sase-filo-altezza);
 	margin-top: calc(-1 * var(--sase-filo-spazio));
 	background-color: var(--sase-arancio);
 }
@@ -1858,7 +1860,7 @@ Version: 1.4.28
 	border-width: 1px 2px 2px 1px;
 	border-radius: 0.25em;
 	background-color: #FFFFFF;
-	color: hsl(0deg, 0%, 30%);
+	color: var(--sase-testo);
 	font-family: var(--sase-font-testo);
 	font-size: 1rem;
 	font-weight: 600;
@@ -1871,13 +1873,13 @@ Version: 1.4.28
 }
 .l-main .forestas-pulsante:hover,
 .l-main .forestas-pulsante:focus {
-	border-color: #F59F1A;
-	background-color: #F59F1A;
-	color: hsl(0deg, 0%, 30%);
+	border-color: var(--sase-arancio);
+	background-color: var(--sase-arancio);
+	color: var(--sase-testo);
 }
 .l-main .forestas-pulsante:active {
-	border-color: #16497B;
-	background-color: #16497B;
+	border-color: var(--sase-blu-pulsante);
+	background-color: var(--sase-blu-pulsante);
 	color: #FFFFFF;
 }
 /* Fuoco del tema Drupal (global/_base.scss, --system-focus-outline-color): azzurro con un anello bianco */

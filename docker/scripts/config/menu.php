@@ -227,7 +227,7 @@ function wpf_menu_applica( array $menu, bool $prova, callable $diff, callable $r
 			$ok        = wpf_menu_ricrea_voci( $termine, $m, $voci_cfg, $risolvi, $voci_orig ) && $ok;
 		}
 	}
-	wpf_menu_togli_orfane( $prova );
+	wpf_menu_togli_orfane( $prova, $diff );
 	return $ok;
 }
 
@@ -236,10 +236,10 @@ function wpf_menu_applica( array $menu, bool $prova, callable $diff, callable $r
  * italiano cancella le sue voci vecchie, e WPML stacca dai menu inglesi le loro traduzioni: il menu
  * inglese, trovato vuoto, viene ricreato subito dopo, ma le voci staccate resterebbero nel database, una
  * serie in più a ogni cambio del menu italiano. Le bozze senza menu sono del pannello (menu non ancora
- * salvati) e restano. In anteprima si contano quelle che ci sono già, senza cancellarle: quelle che
- * l'apply stesso staccherebbe si vedono solo dopo.
+ * salvati) e restano. In anteprima quelle che ci sono già sono una differenza (con $diff), senza
+ * cancellarle: quelle che l'apply stesso staccherebbe si vedono solo dopo.
  */
-function wpf_menu_togli_orfane( bool $prova = false ): void {
+function wpf_menu_togli_orfane( bool $prova = false, ?callable $diff = null ): void {
 	global $wpdb;
 	$orfane = $wpdb->get_col(
 		"SELECT p.ID FROM {$wpdb->posts} p
@@ -249,8 +249,8 @@ function wpf_menu_togli_orfane( bool $prova = false ): void {
 		 GROUP BY p.ID HAVING COUNT(t.term_taxonomy_id) = 0"
 	);
 	if ( $prova ) {
-		if ( $orfane ) {
-			WP_CLI::log( 'menu: ' . count( $orfane ) . ' voci senza menu, che con --conferma si cancellano' );
+		if ( $orfane && $diff ) {
+			$diff( 'menu: voci senza menu', count( $orfane ), 'cancellate' );
 		}
 		return;
 	}

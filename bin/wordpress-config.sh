@@ -16,8 +16,11 @@ CURL_ATTESA=60
 
 fail() { echo "ERRORE: $*" >&2; exit 1; }
 
+# Log di bin/wordpress-config.sh pagine da tenere in log/
+LOG_PAGINE_TENUTI=60
+
 uso() {
-    cat <<'TESTO'
+    cat <<TESTO
 Configurazione del WordPress di Forestas, dall'host.
 
   bin/wordpress-config.sh esporta [--in DIR]       configurazione del sito → config/ (o DIR)
@@ -38,7 +41,7 @@ Opzioni di applica:
 Opzioni di pagine:
   --contenuti-mancanti   ritenta solo gli elementi non riusciti nelle esecuzioni precedenti
   --conferma             scrive (altrimenti solo anteprima)
-Ogni esecuzione scrive un log in log/pagine-<data-ora>.log (si tengono gli ultimi 60).
+Ogni esecuzione scrive un log in log/pagine-<data-ora>.log (si tengono gli ultimi ${LOG_PAGINE_TENUTI}).
 
 Con più WordPress avviati che montano questo child: WPF_CONTAINER=<nome>.
 I nomi vecchi «export» e «apply» funzionano ancora, con un avviso.
@@ -191,21 +194,25 @@ case "$comando" in
         # riassunto: niente pipe con tee, il codice d'uscita dello script deve restare quello vero
         esito=0
         esegui_script pagine.php ${pagine_env[@]+"${pagine_env[@]}"} > "$log" 2>&1 || esito=$?
-        # Degli avvisi si mostrano quelli che chiedono un intervento: media non scaricati, traduzioni nostre
-        # da rivedere o non più usate (config/traduzioni/), sincronizzazione spenta (DRUPAL_SYNC), ciò che
-        # in anteprima non riuscirebbe (un template assente)
-        grep -E '^(RIASSUNTO|ERRORE|MANCANTE|MENU) |^AVVISO .*(media non scaricati|config/traduzioni/|DRUPAL_SYNC|non riuscirebbe)' "$log" || true
+        # A schermo le righe che chiedono un intervento: ogni AVVISO di pagine.php ne chiede uno, e gli
+        # avvisi e gli errori di WP-CLI (Warning:, Error:) vengono da WordPress o da un plugin
+        grep -E '^(RIASSUNTO|ERRORE|MANCANTE|MENU|AVVISO) |^(Warning|Error): ' "$log" || true
         conta() { grep -c "^$1 " "$log" || true; }
         echo "pagine: $(conta PAGINA) · media: $(conta MEDIA) · link: $(conta LINK) · avvisi: $(conta AVVISO)"
         echo "log completo: ${log}"
-        # Un errore di PHP o di WP-CLI non ha le righe del comando: se ne mostra la coda del log
-        if [ "$esito" -gt 1 ]; then
+        # Un errore di PHP o di WP-CLI (un fatal, un WP_ADMIN_USER che non c'è) esce con 1 come il comando,
+        # ma senza le sue righe ERRORE, MANCANTE o AVVISO: se ne mostra la coda del log
+        imprevisto=false
+        if [ "$esito" -ne 0 ] && ! grep -qE '^(ERRORE|MANCANTE|AVVISO) ' "$log"; then
+            imprevisto=true
             echo "Uscita ${esito}: errore imprevisto, ultime righe del log:"
             tail -n 5 "$log"
         fi
         spenta=false
         grep -qE '^(AVVISO|ERRORE) .*DRUPAL_SYNC' "$log" && spenta=true
-        if $spenta; then
+        if $imprevisto; then
+            : # prima va capito l'errore: nessun comando da suggerire
+        elif $spenta; then
             echo "Per scrivere serve DRUPAL_SYNC=on nel .env di wp-forestas (poi scripts/wordpress-up.sh di forestas)"
         else
             if grep -q '^MANCANTE ' "$log"; then
@@ -213,8 +220,8 @@ case "$comando" in
             fi
             $conferma || echo "Per scrivere: $0 pagine --conferma"
         fi
-        # Si tengono gli ultimi 60 log
-        vecchi=$(ls -1t "${REPO}"/log/pagine-*.log 2>/dev/null | tail -n +61 || true)
+        # Si tengono gli ultimi LOG_PAGINE_TENUTI log
+        vecchi=$(ls -1t "${REPO}"/log/pagine-*.log 2>/dev/null | tail -n +$((LOG_PAGINE_TENUTI + 1)) || true)
         [ -n "$vecchi" ] && echo "$vecchi" | while read -r f; do rm -f "$f"; done
         exit "$esito"
         ;;

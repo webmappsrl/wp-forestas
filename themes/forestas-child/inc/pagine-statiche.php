@@ -250,12 +250,12 @@ add_shortcode(
 		$testo    = (string) get_post_field( 'post_content', $id );
 		$html     = md5( $testo ) === get_post_meta( $id, FORESTAS_META_TESTO_DRUPAL, true ) ? $testo : apply_filters( 'the_content', $testo );
 		$in_corso = false;
-		return '<div class="forestas-pagina-testo">' . $html . do_shortcode( '[forestas_allegati][forestas_galleria]' ) . '</div>';
+		return '<div class="forestas-pagina-testo">' . $html . forestas_allegati( $id ) . forestas_galleria( $id ) . '</div>';
 	}
 );
 
 /*
- * Dimensione di un file scritta come la scrive Drupal (format_size): byte, KB o MB con al più due
+ * Dimensione di un file scritta come la scrive Drupal (format_size): byte, KB, MB o GB con al più due
  * decimali e il punto, «86.74 KB».
  */
 function forestas_dimensione_file( int $byte ): string {
@@ -274,36 +274,29 @@ function forestas_dimensione_file( int $byte ): string {
 /*
  * Allegati, come nel tema Drupal (field--field-allegati-media e file-link): titolo «Allegati», poi per ogni
  * file il testo del link (la descrizione del documento su Drupal, o il nome del file) e, sotto, l'icona
- * del file nel colore del marchio con formato e dimensione.
+ * del file nel colore del marchio con formato e dimensione. Li mostra [forestas_pagina_testo] sotto il testo.
  */
-add_shortcode(
-	'forestas_allegati',
-	function () {
-		$ids = forestas_meta_ids( (int) get_the_ID(), FORESTAS_META_ALLEGATI );
-		if ( ! $ids ) {
-			return '';
+function forestas_allegati( int $pagina ): string {
+	$voci = '';
+	foreach ( forestas_meta_ids( $pagina, FORESTAS_META_ALLEGATI ) as $id ) {
+		$file = get_attached_file( $id );
+		if ( ! $file ) {
+			continue;
 		}
-		$voci = '';
-		foreach ( $ids as $id ) {
-			$file = get_attached_file( $id );
-			if ( ! $file ) {
-				continue;
-			}
-			$voci .= sprintf(
-				'<li><a class="forestas-file" href="%s" download><span class="forestas-file__descrizione">%s</span><span class="forestas-file__info"><i class="far fa-file forestas-file__icona" aria-hidden="true"></i> %s - %s</span></a></li>',
-				esc_url( wp_get_attachment_url( $id ) ),
-				esc_html( get_the_title( $id ) ),
-				esc_html( strtoupper( pathinfo( $file, PATHINFO_EXTENSION ) ) ),
-				esc_html( is_readable( $file ) ? forestas_dimensione_file( (int) filesize( $file ) ) : '' )
-			);
-		}
-		return $voci === '' ? '' : sprintf(
-			'<section class="forestas-allegati"><h2 class="forestas-allegati-titolo">%s</h2><ul>%s</ul></section>',
-			esc_html( forestas_testo( 'Allegati', 'Attachments' ) ),
-			$voci
+		$voci .= sprintf(
+			'<li><a class="forestas-file" href="%s" download><span class="forestas-file__descrizione">%s</span><span class="forestas-file__info"><i class="far fa-file forestas-file__icona" aria-hidden="true"></i> %s - %s</span></a></li>',
+			esc_url( wp_get_attachment_url( $id ) ),
+			esc_html( get_the_title( $id ) ),
+			esc_html( strtoupper( pathinfo( $file, PATHINFO_EXTENSION ) ) ),
+			esc_html( is_readable( $file ) ? forestas_dimensione_file( (int) filesize( $file ) ) : '' )
 		);
 	}
-);
+	return $voci === '' ? '' : sprintf(
+		'<section class="forestas-allegati"><h2 class="forestas-allegati-titolo">%s</h2><ul>%s</ul></section>',
+		esc_html( forestas_testo( 'Allegati', 'Attachments' ) ),
+		$voci
+	);
+}
 
 /*
  * Galleria, come nel tema Drupal (field--field-galleria-media e field--field-block-with-title-base): titolo
@@ -311,46 +304,44 @@ add_shortcode(
  * da tablet); al passaggio del mouse la lente di Blazy. Il clic apre la lightbox di Drupal
  * (slick_lightbox) sull'immagine intera, con la didascalia configurata nel formatter della galleria:
  * testo alternativo, poi autore e credits dell'immagine. Link e didascalia nascosta hanno le classi e gli
- * attributi di blazy.html.twig, che lo script del modulo legge (assets/js/galleria-lightbox.js).
+ * attributi di blazy.html.twig, che lo script del modulo legge (assets/js/galleria-lightbox.js). La mostra
+ * [forestas_pagina_testo] sotto gli allegati.
  */
-add_shortcode(
-	'forestas_galleria',
-	function () {
-		$voci      = '';
-		$posizione = 0;
-		// Un'immagine tolta dalla libreria resta nel meta finché la pagina non si risalva: si salta
-		foreach ( forestas_meta_ids( (int) get_the_ID(), FORESTAS_META_GALLERIA ) as $id ) {
-			$miniatura = wp_get_attachment_image( $id, 'medium', false, [ 'loading' => 'lazy' ] );
-			if ( $miniatura === '' ) {
-				continue;
-			}
-			$voci .= sprintf(
-				'<li><a href="%1$s" class="blazy__slick-lightbox" data-slick-lightbox-trigger data-b-delta="%2$d">%3$s<span class="forestas-galleria__lente" aria-hidden="true"></span></a>'
-				. '<div class="visually-hidden"><p>%4$s</p><em class="auth">%5$s</em><em class="cred">%6$s</em></div></li>',
-				// Il file originale, come su Drupal (box_style vuoto), non la copia ridotta «-scaled» di WordPress
-				esc_url( (string) ( wp_get_original_image_url( $id ) ?: wp_get_attachment_image_url( $id, 'full' ) ) ),
-				$posizione++,
-				$miniatura,
-				esc_html( (string) get_post_meta( $id, '_wp_attachment_image_alt', true ) ),
-				esc_html( (string) get_post_meta( $id, FORESTAS_META_AUTORE, true ) ),
-				esc_html( (string) get_post_meta( $id, FORESTAS_META_CREDITS, true ) )
-			);
+function forestas_galleria( int $pagina ): string {
+	$voci      = '';
+	$posizione = 0;
+	// Un'immagine tolta dalla libreria resta nel meta finché la pagina non si risalva: si salta
+	foreach ( forestas_meta_ids( $pagina, FORESTAS_META_GALLERIA ) as $id ) {
+		$miniatura = wp_get_attachment_image( $id, 'medium', false, [ 'loading' => 'lazy' ] );
+		if ( $miniatura === '' ) {
+			continue;
 		}
-		if ( $voci === '' ) {
-			return '';
-		}
-		forestas_galleria_lightbox();
-		// Etichette per i pulsanti della lightbox, che la libreria ha solo in inglese (assets/js/galleria-lightbox.js)
-		return sprintf(
-			'<section class="forestas-galleria"><h2 class="forestas-galleria-titolo">%1$s</h2><ul data-slick-lightbox-gallery data-precedente="%2$s" data-successivo="%3$s" data-chiudi="%4$s">%5$s</ul></section>',
-			esc_html( forestas_testo( 'Galleria fotografica', 'Photogallery' ) ),
-			esc_attr( forestas_testo( 'Precedente', 'Previous' ) ),
-			esc_attr( forestas_testo( 'Successiva', 'Next' ) ),
-			esc_attr( forestas_testo( 'Chiudi', 'Close' ) ),
-			$voci
+		$voci .= sprintf(
+			'<li><a href="%1$s" class="blazy__slick-lightbox" data-slick-lightbox-trigger data-b-delta="%2$d">%3$s<span class="forestas-galleria__lente" aria-hidden="true"></span></a>'
+			. '<div class="visually-hidden"><p>%4$s</p><em class="auth">%5$s</em><em class="cred">%6$s</em></div></li>',
+			// Il file originale, come su Drupal (box_style vuoto), non la copia ridotta «-scaled» di WordPress
+			esc_url( (string) ( wp_get_original_image_url( $id ) ?: wp_get_attachment_image_url( $id, 'full' ) ) ),
+			$posizione++,
+			$miniatura,
+			esc_html( (string) get_post_meta( $id, '_wp_attachment_image_alt', true ) ),
+			esc_html( (string) get_post_meta( $id, FORESTAS_META_AUTORE, true ) ),
+			esc_html( (string) get_post_meta( $id, FORESTAS_META_CREDITS, true ) )
 		);
 	}
-);
+	if ( $voci === '' ) {
+		return '';
+	}
+	forestas_galleria_lightbox();
+	// Etichette per i pulsanti della lightbox, che la libreria ha solo in inglese (assets/js/galleria-lightbox.js)
+	return sprintf(
+		'<section class="forestas-galleria"><h2 class="forestas-galleria-titolo">%1$s</h2><ul data-slick-lightbox-gallery data-precedente="%2$s" data-successivo="%3$s" data-chiudi="%4$s">%5$s</ul></section>',
+		esc_html( forestas_testo( 'Galleria fotografica', 'Photogallery' ) ),
+		esc_attr( forestas_testo( 'Precedente', 'Previous' ) ),
+		esc_attr( forestas_testo( 'Successiva', 'Next' ) ),
+		esc_attr( forestas_testo( 'Chiudi', 'Close' ) ),
+		$voci
+	);
+}
 
 /*
  * File della lightbox, solo nelle pagine con una galleria: i CSS dei moduli Slick hanno regole globali

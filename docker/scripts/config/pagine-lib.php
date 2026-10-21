@@ -15,9 +15,9 @@ require_once __DIR__ . '/drupal.php';
 require_once __DIR__ . '/media.php';
 require_once __DIR__ . '/link.php';
 
-const WPF_META_LINGUA      = '_wpf_lingua';
-const WPF_META_NID         = '_drupal_nid';
-const WPF_META_LANGCODE    = '_drupal_langcode';
+const WPF_META_LINGUA   = '_wpf_lingua';
+const WPF_META_NID      = '_drupal_nid';
+const WPF_META_LANGCODE = '_drupal_langcode';
 // Impronta (md5) del testo scritto dalla sincronizzazione: finché il testo della pagina è quello, il child
 // lo mostra così com'è, senza i filtri di the_content (inc/pagine-statiche.php)
 const WPF_META_TESTO_DRUPAL = '_wpf_testo_drupal';
@@ -26,8 +26,17 @@ const WPF_META_TESTO_DRUPAL = '_wpf_testo_drupal';
 const WPF_META_TESTATA = '_wpf_testata';
 // Colore tematico di Drupal (is-sapere, is-pathway…): il child ne ricava il colore del filo della testata
 const WPF_META_COLORE = '_wpf_colore';
-const WPF_META_PAGINA_ALLEGATI    = 'wpf_allegati';
-const WPF_META_PAGINA_GALLERIA    = 'wpf_galleria';
+const WPF_META_PAGINA_ALLEGATI = 'wpf_allegati';
+const WPF_META_PAGINA_GALLERIA = 'wpf_galleria';
+// Media di una pagina: elemento dei mancanti («cosa») => meta in cui si salva. Un media non scaricato non
+// alza il codice d'uscita (si ritenta al giro dopo)
+const WPF_PAGINA_MEDIA = [
+	'immagine' => '_thumbnail_id',
+	'allegato' => WPF_META_PAGINA_ALLEGATI,
+	'galleria' => WPF_META_PAGINA_GALLERIA,
+];
+// Chiave in config/post.json del template di Impreza di una pagina: prefisso + «template» di config/pagine.json
+const WPF_PREFISSO_TEMPLATE = 'template-pagina-';
 // Elementi non riusciti, da ritentare con --contenuti-mancanti
 const WPF_OPZIONE_MANCANTI = 'wpf_sync_mancanti';
 // Più pagine di così da mettere in bozza nello stesso giro: copia Drupal sospetta, ci si ferma
@@ -177,14 +186,18 @@ function wpf_mancante_chiave( string $cosa, string $pagina, string $lingua, stri
  *                 'scaricati' => string[], 'riusati' => int, 'errori' => [ nome => causa ] ]
  */
 function wpf_pagina_media( array $file, bool $prova ): array {
-	$ids       = [];
-	$scaricare = [];
-	$scaricati = [];
-	$riusati   = 0;
-	$errori    = [];
+	$ids        = [];
+	$scaricare  = [];
+	$scaricati  = [];
+	$riusati    = 0;
+	$aggiornati = []; // file già importati di cui Drupal ha cambiato alt, autore, credits o titolo
+	$errori     = [];
 	foreach ( $file as $f ) {
 		$presente = wpf_media_per_fid( (int) $f['fid'] ) > 0;
 		$id       = wpf_media_importa( $f, $prova );
+		if ( $presente && ! is_wp_error( $id ) && ( $cambiati = wpf_media_allinea( $id, $f, $prova ) ) ) {
+			$aggiornati[ $f['nome'] ] = $cambiati;
+		}
 		if ( is_wp_error( $id ) ) {
 			$errori[ "fid {$f['fid']} {$f['nome']}" ] = $id->get_error_message();
 		} elseif ( $id === 0 ) {
@@ -198,7 +211,7 @@ function wpf_pagina_media( array $file, bool $prova ): array {
 			}
 		}
 	}
-	return [ 'ids' => $scaricare ? null : $ids, 'scaricare' => $scaricare, 'scaricati' => $scaricati, 'riusati' => $riusati, 'errori' => $errori ];
+	return [ 'ids' => $scaricare ? null : $ids, 'scaricare' => $scaricare, 'scaricati' => $scaricati, 'riusati' => $riusati, 'aggiornati' => $aggiornati, 'errori' => $errori ];
 }
 
 /**
@@ -256,10 +269,10 @@ function wpf_pagina_scrivi( array $voce, string $lingua, array $dati, ?int $id_i
 	];
 	// Meta: null = cancellare, valore = scrivere; i campi media si aggiungono sotto
 	$meta = [
-		WPF_META_PAGINA      => $chiave,
-		WPF_META_LINGUA      => $lingua,
-		WPF_META_NID         => $voce['nid'] ? (string) $voce['nid'] : null,
-		WPF_META_LANGCODE    => $voce['nid'] ? $lingua : null,
+		WPF_META_PAGINA       => $chiave,
+		WPF_META_LINGUA       => $lingua,
+		WPF_META_NID          => $voce['nid'] ? (string) $voce['nid'] : null,
+		WPF_META_LANGCODE     => $voce['nid'] ? $lingua : null,
 		WPF_META_TESTO_DRUPAL => md5( $dati['body'] ),
 		WPF_META_TESTATA      => ( $dati['testata'] ?? 'hero' ) === 'titolo' ? 'titolo' : null,
 		WPF_META_COLORE       => ( $dati['colore'] ?? '' ) !== '' ? $dati['colore'] : null,
@@ -268,15 +281,16 @@ function wpf_pagina_scrivi( array $voce, string $lingua, array $dati, ?int $id_i
 	if ( $id_template ) {
 		$meta['us_content_id'] = (string) $id_template;
 	} elseif ( $fa( 'template' ) ) {
-		$mancanti['template'][ $voce['template'] ] = "template «template-pagina-{$voce['template']}» non presente sul sito (config/post.json)";
+		$mancanti['template'][ $voce['template'] ] = 'template «' . WPF_PREFISSO_TEMPLATE . "{$voce['template']}» non presente sul sito (config/post.json)";
 	}
 
-	$campi_media = [
-		'immagine' => [ '_thumbnail_id', $dati['immagine'] ? [ $dati['immagine'] ] : [] ],
-		'allegato' => [ WPF_META_PAGINA_ALLEGATI, $dati['allegati'] ],
-		'galleria' => [ WPF_META_PAGINA_GALLERIA, $dati['galleria'] ],
+	$file_media = [
+		'immagine' => $dati['immagine'] ? [ $dati['immagine'] ] : [],
+		'allegato' => $dati['allegati'],
+		'galleria' => $dati['galleria'],
 	];
-	foreach ( $campi_media as $cosa => [ $chiave_meta, $file ] ) {
+	foreach ( WPF_PAGINA_MEDIA as $cosa => $chiave_meta ) {
+		$file = $file_media[ $cosa ];
 		if ( ! $fa( $cosa ) ) {
 			continue;
 		}
@@ -289,6 +303,9 @@ function wpf_pagina_scrivi( array $voce, string $lingua, array $dati, ?int $id_i
 		}
 		if ( $r['riusati'] ) {
 			$media[] = "{$cosa}: {$r['riusati']} già nella libreria, riusati";
+		}
+		foreach ( $r['aggiornati'] as $nome => $cambiati ) {
+			$media[] = "{$cosa}: {$nome}, " . implode( ', ', $cambiati ) . ( $prova ? ' da riallineare' : ' riallineati' ) . ' a Drupal';
 		}
 		foreach ( $r['errori'] as $nome => $causa ) {
 			$mancanti[ $cosa ][ $nome ] = $causa;
@@ -306,7 +323,7 @@ function wpf_pagina_scrivi( array $voce, string $lingua, array $dati, ?int $id_i
 	if ( ! $tutto ) {
 		// Con --contenuti-mancanti si riscrivono solo i meta degli elementi elencati
 		$voluti = [];
-		$meta   = array_intersect_key( $meta, array_flip( [ '_thumbnail_id', WPF_META_PAGINA_ALLEGATI, WPF_META_PAGINA_GALLERIA, 'us_content_id' ] ) );
+		$meta   = array_intersect_key( $meta, array_flip( [ ...array_values( WPF_PAGINA_MEDIA ), 'us_content_id' ] ) );
 	}
 
 	$campi = array_merge( wpf_pagina_differenze( $post, $voluti, $meta ), $campi );
@@ -349,7 +366,7 @@ function wpf_pagina_scrivi( array $voce, string $lingua, array $dati, ?int $id_i
 			update_post_meta( $id, $chiave_meta, $valore );
 		}
 	}
-	if ( $tutto || $fa( 'traduzione' ) ) {
+	if ( $fa( 'traduzione' ) ) {
 		// Lingua e gruppo di traduzione; lo slug si riscrive dopo, perché WPML ammetta nella traduzione
 		// lo stesso slug dell'originale (sapendo la lingua non lo considera un doppione)
 		wpf_wpml_collega( $id, 'post_page', $lingua_wpml, $lingua === 'it' ? null : $id_it );

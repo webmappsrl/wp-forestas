@@ -68,7 +68,8 @@ ferma senza scrivere, ma il giro va perso.
 
 - `cd` nella cartella del repo e `PATH` esplicito: il cron parte con un ambiente ridotto, e il comando
   usa `docker`.
-- Il file indicato nella riga raccoglie solo il riassunto di ogni giro; il dettaglio è in
+- Il file indicato nella riga raccoglie solo il riassunto di ogni giro (con le righe che chiedono un
+  intervento: `ERRORE`, `MANCANTE`, `MENU`, ogni `AVVISO`); il dettaglio è in
   `wp-forestas/log/pagine-<data-ora>.log` (si tengono gli ultimi 60).
 
 ## 4. Leggere l'esito
@@ -88,7 +89,7 @@ un eventuale script che lanci più import in fila.
 | 1, `ERRORE … DRUPAL_SYNC` (con `--conferma`) o `AVVISO … DRUPAL_SYNC … solo anteprima` (senza) | interruttore spento: nulla scritto | punto 1 |
 | 1, `ERRORE … un'altra sincronizzazione` | due esecuzioni sovrapposte: la seconda esce | nessuna, se è un caso isolato |
 | 1, `AVVISO … non riuscirebbe` (in anteprima) | il `--conferma` lascerebbe un template fra i mancanti (l'anteprima non scrive, quindi può prevedere solo questo: una pagina o una traduzione che non si salvano si scoprono al `--conferma`) | `applica --conferma`, che scrive i template, poi di nuovo `pagine` |
-| più di 1, `Uscita N: errore imprevisto` con la coda del log | errore di PHP o di WP-CLI, non del comando (per esempio una funzione di WPML cambiata dopo un aggiornamento) | leggere il log completo; il comando non ha finito il giro |
+| diverso da 0, `Uscita N: errore imprevisto` con la coda del log (di solito una riga `Error: …`) | errore di PHP o di WP-CLI, non del comando (per esempio una funzione di WPML cambiata dopo un aggiornamento) | leggere il log completo; il comando non ha finito il giro |
 
 Le righe `LINK … in attesa` non sono errori: sono link verso contenuti non ancora importati, che si
 sistemano da soli quando arrivano. Nemmeno le righe `LINK … verso Drupal`: sono link a pagine di Drupal

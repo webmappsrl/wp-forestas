@@ -88,6 +88,11 @@ function wpf_drupal_controlla( mysqli $db, array $nid ): void {
 	}
 }
 
+/** Lingua di Drupal come la usa il sito: «und» (lingua non specificata) vale come italiano. */
+function wpf_drupal_lingua( string $langcode ): string {
+	return $langcode === 'und' ? 'it' : $langcode;
+}
+
 /** Lingue di Drupal da cercare per una lingua: «und» (lingua non specificata) vale come italiano. */
 function wpf_drupal_lingue( string $lingua ): array {
 	return $lingua === 'it' ? [ 'it', 'und' ] : [ $lingua ];
@@ -165,7 +170,7 @@ function wpf_drupal_pagina( mysqli $db, int $nid, string $lingua ): ?array {
 		return null;
 	}
 	$r         = $righe[0];
-	$originale = $r['originale'] === 'und' ? 'it' : $r['originale'];
+	$originale = wpf_drupal_lingua( $r['originale'] );
 	$campo     = fn( string $nome, string $colonna ) => wpf_drupal_campo( $db, $nome, $colonna, $nid, $lingua, $originale );
 	$file      = fn( array $mid ) => array_values( array_filter( array_map( fn( $m ) => wpf_drupal_file_media( $db, (int) $m ), $mid ) ) );
 	// Il body è traducibile: si prende solo nella lingua chiesta, senza ripiegare sull'originale
@@ -259,7 +264,7 @@ function wpf_drupal_alias( mysqli $db ): array {
 		if ( ! preg_match( '#^/node/(\d+)$#', $r['path'], $m ) ) {
 			continue;
 		}
-		$lingua                                       = $r['langcode'] === 'und' ? 'it' : $r['langcode'];
+		$lingua = wpf_drupal_lingua( $r['langcode'] );
 		$alias[ $lingua === 'it' ? $r['alias'] : "/{$lingua}{$r['alias']}" ] = [ 'nid' => (int) $m[1], 'lingua' => $lingua ];
 	}
 	return $alias;

@@ -32,6 +32,30 @@ add_filter(
 	2
 );
 
+/*
+ * Vero finché la sincronizzazione da Drupal scrive davvero: DRUPAL_SYNC arriva dal .env di wp-forestas
+ * nell'ambiente del container, e Apache lo vede (verificato con getenv). Lo stesso controllo è in
+ * docker/scripts/config/pagine.php.
+ */
+function forestas_sincronizzazione_accesa(): bool {
+	return getenv( 'DRUPAL_SYNC' ) === 'on';
+}
+
+/** Immagini in evidenza e della galleria delle pagine sincronizzate: quelle che la sincronizzazione riallinea. */
+function forestas_immagini_sincronizzate(): array {
+	static $ids = null;
+	if ( $ids === null ) {
+		$ids = [];
+		$pagine = get_posts( [ 'post_type' => 'page', 'post_status' => 'any', 'numberposts' => -1, 'fields' => 'ids', 'meta_key' => FORESTAS_META_PAGINA, 'suppress_filters' => true ] );
+		foreach ( $pagine as $pagina ) {
+			$ids[] = (int) get_post_thumbnail_id( $pagina );
+			array_push( $ids, ...forestas_meta_ids( $pagina, FORESTAS_META_GALLERIA ) );
+		}
+		$ids = array_values( array_unique( array_filter( $ids ) ) );
+	}
+	return $ids;
+}
+
 /** Una voce dell'elenco del riquadro: miniatura o icona, nome, pulsante per toglierla. */
 function forestas_riquadro_voce( int $id, string $nome_campo ): string {
 	$anteprima = wp_attachment_is_image( $id )
@@ -49,9 +73,7 @@ function forestas_riquadro_voce( int $id, string $nome_campo ): string {
 
 function forestas_riquadro_pagina( WP_Post $post ): void {
 	wp_nonce_field( FORESTAS_RIQUADRO_NONCE, FORESTAS_RIQUADRO_NONCE );
-	// L'avviso serve solo finché la sincronizzazione scrive davvero: DRUPAL_SYNC arriva dal .env di
-	// wp-forestas nell'ambiente del container, e Apache lo vede (verificato con getenv)
-	if ( get_post_meta( $post->ID, FORESTAS_META_PAGINA, true ) !== '' && getenv( 'DRUPAL_SYNC' ) === 'on' ) {
+	if ( get_post_meta( $post->ID, FORESTAS_META_PAGINA, true ) !== '' && forestas_sincronizzazione_accesa() ) {
 		echo '<p class="notice notice-warning inline" style="padding:8px 12px">Questa pagina è ancora collegata al vecchio sito: testo, riassunto, allegati e galleria vengono aggiornati da lì in automatico, e le modifiche fatte qui si perdono.</p>';
 	}
 	foreach ( [
@@ -109,8 +131,9 @@ add_action(
 /*
  * Campi «Autore» e «Credits» nella scheda di un'immagine della libreria media, come i campi omonimi dei
  * media di Drupal: la testata li mostra dietro il pulsante «Credits foto» (oc:8758). Su un'immagine che
- * viene da Drupal (_drupal_fid) e con la sincronizzazione accesa, un avviso dice che testo alternativo,
- * autore e credits si riallineano a Drupal a ogni giro (wpf_media_importa).
+ * una pagina sincronizzata usa ancora e con la sincronizzazione accesa, un avviso dice che testo
+ * alternativo, autore e credits si riallineano a Drupal a ogni giro (wpf_media_importa li riallinea solo
+ * per i file delle pagine del perimetro).
  */
 const FORESTAS_CAMPI_CREDITS = [
 	FORESTAS_META_AUTORE  => 'Autore',
@@ -123,7 +146,7 @@ add_filter(
 		if ( ! wp_attachment_is_image( $allegato->ID ) ) {
 			return $campi;
 		}
-		$da_drupal = get_post_meta( $allegato->ID, '_drupal_fid', true ) !== '' && getenv( 'DRUPAL_SYNC' ) === 'on';
+		$da_drupal = forestas_sincronizzazione_accesa() && in_array( $allegato->ID, forestas_immagini_sincronizzate(), true );
 		foreach ( FORESTAS_CAMPI_CREDITS as $chiave => $etichetta ) {
 			$campi[ $chiave ] = [
 				'label' => $etichetta,
@@ -160,6 +183,6 @@ add_filter(
 add_action(
 	'admin_enqueue_scripts',
 	function () {
-		wp_add_inline_style( 'common', '.compat-attachment-fields{width:100%}.compat-field-wpf_autore input.text,.compat-field-wpf_credits input.text{width:100%;min-width:30em}' );
+		wp_add_inline_style( 'common', '.compat-attachment-fields{width:100%}.compat-field-' . FORESTAS_META_AUTORE . ' input.text,.compat-field-' . FORESTAS_META_CREDITS . ' input.text{width:100%;min-width:30em}' );
 	}
 );

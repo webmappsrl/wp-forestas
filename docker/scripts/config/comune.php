@@ -327,13 +327,11 @@ function wpf_sblocca_apply( ?int $prima_di = null ): void {
 	wpf_sblocca( WPF_OPZIONE_APPLY_IN_CORSO, $prima_di );
 }
 
-// Blocco della sincronizzazione delle pagine da Drupal (oc:8758): due esecuzioni insieme (un lancio a mano
-// e un cron) creerebbero pagine e allegati doppi. La scadenza è più lunga di quella dell'apply: con il sito
-// Drupal lento ogni file può costare WPF_MEDIA_ATTESA secondi, e un blocco tolto mentre la prima esecuzione
-// scrive ancora lascerebbe partire la seconda
-const WPF_OPZIONE_PAGINE_IN_CORSO = 'wp_forestas_pagine_in_corso';
-const WPF_PAGINE_SCADENZA         = 7200;
-
+/*
+ * Impedisce due sincronizzazioni delle pagine da Drupal insieme (un lancio a mano e un cron), che
+ * creerebbero pagine e allegati doppi (oc:8758). Come per l'apply, l'init toglie all'avvio i blocchi presi
+ * prima dell'avvio: anche la sincronizzazione gira dentro il container.
+ */
 function wpf_blocca_pagine(): bool {
 	return wpf_blocca( WPF_OPZIONE_PAGINE_IN_CORSO, WPF_PAGINE_SCADENZA );
 }
