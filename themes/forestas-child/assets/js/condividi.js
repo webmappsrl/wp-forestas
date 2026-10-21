@@ -35,13 +35,13 @@
 		});
 	}
 
-	document.querySelectorAll('.forestas-condividi').forEach(function (box) {
-		var pulsante = box.querySelector('.forestas-condividi__pulsante');
-		var pannello = box.querySelector('.forestas-condividi__pannello');
-		var esito = box.querySelector('.forestas-condividi__esito');
-		var copiaLink = box.querySelector('.forestas-condividi__copia');
-		var url = box.getAttribute('data-url');
-		var titolo = box.getAttribute('data-titolo');
+	document.querySelectorAll('.forestas-condividi').forEach(function (condividi) {
+		var pulsante = condividi.querySelector('.forestas-condividi__pulsante');
+		var pannello = condividi.querySelector('.forestas-condividi__pannello');
+		var esito = condividi.querySelector('.forestas-condividi__esito');
+		var copiaLink = condividi.querySelector('.forestas-condividi__copia');
+		var url = condividi.getAttribute('data-url');
+		var titolo = condividi.getAttribute('data-titolo');
 
 		function imposta(aperto, rientra) {
 			pulsante.setAttribute('aria-expanded', aperto ? 'true' : 'false');
@@ -75,7 +75,7 @@
 			}
 		});
 		document.addEventListener('click', function (e) {
-			if (!pannello.hidden && !box.contains(e.target)) {
+			if (!pannello.hidden && !condividi.contains(e.target)) {
 				imposta(false, false);
 			}
 		});

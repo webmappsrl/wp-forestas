@@ -113,7 +113,7 @@ Vincolo: `wp-geohub` non ha tag né release; si scarica a un commit fisso (`GEOH
   come su un sito vuoto e il passo 4 tratterebbe un sito esistente come nuovo, con l'apply automatico.
   Il controllo è una query vera con le credenziali del `.env`: `mariadb-admin ping` risponde sì anche
   con utente o password sbagliati.
-- **Le pagine esistenti si aggiornano solo con `apply --pagine`** (oc:8717): la Home è in `config/`
+- **Le pagine esistenti si aggiornano solo con `applica --pagine`** (oc:8717): la Home è in `config/`
   perché un sito ricreato deve averla, ma è anche contenuto della redazione; un apply fatto per un
   colore non deve riportarla alla versione del repo.
 - **Voci di menu lette dal database, non da `wp_get_nav_menu_items()`** (oc:8717): da WP-CLI il suo

@@ -63,7 +63,7 @@ try {
 					// Traduzione nostra: dati della pagina italiana, titolo, sottotitolo e testo tradotti
 					$it = $dati[ $chiave ]['it'] ?? wpf_drupal_pagina( $db, (int) $voce['nid'], 'it' );
 					if ( $it ) {
-						$d = array_merge( $it, [ 'titolo' => $trad['titolo'], 'sottotitolo' => (string) ( $trad['sottotitolo'] ?? '' ), 'body' => $trad['body'], 'formato' => 'filtered_html', 'tradotta' => true ] );
+						$d = array_merge( $it, [ 'titolo' => $trad['titolo'], 'sottotitolo' => (string) ( $trad['sottotitolo'] ?? '' ), 'body' => $trad['body'], 'formato' => 'filtered_html' ] );
 						$impronta = wpf_traduzione_impronta( $it );
 						if ( ( $trad['sorgente'] ?? '' ) !== $impronta ) {
 							$avvisi[] = "{$chiave}/{$lingua}: il testo italiano su Drupal è cambiato dopo la traduzione, {$posto} va rivista (poi «sorgente»: {$impronta})";
@@ -139,25 +139,30 @@ $trova = function ( int $nid, string $lingua ) use ( $percorsi ) {
 	return $id ? wpf_link_relativo( $id ) : ( $percorsi[ "{$nid}|{$lingua}" ] ?? null );
 };
 
-// Elementi da trattare con --contenuti-mancanti: [ chiave ][ lingua ] => [ cosa ]
+// Elementi dell'elenco dei mancanti. Uno di una pagina o di una lingua tolta da config/pagine.json non
+// si ritenterebbe mai e terrebbe l'uscita a 1 per sempre: si toglie, anche dall'anteprima
 $mancanti_prima = wpf_mancanti_leggi();
-$solo           = [];
-foreach ( $mancanti_prima as $m ) {
+$mancanti       = array_filter( $mancanti_prima, fn( $m ) => isset( $voci[ $m['pagina'] ]['slug'][ $m['lingua'] ] ) );
+// Elementi da trattare con --contenuti-mancanti: [ chiave ][ lingua ] => [ cosa ]
+$solo = [];
+foreach ( $mancanti as $m ) {
 	$solo[ $m['pagina'] ][ $m['lingua'] ][] = $m['cosa'];
 }
 if ( $solo_mancanti && ! $solo ) {
 	$riga( 'RIASSUNTO', 'nessun contenuto mancante da ritentare' );
+	if ( ! $sync ) {
+		WP_CLI::halt( 1 ); // come a fine giro: con la sincronizzazione spenta non si scriverebbe
+	}
 	return;
 }
 
-// Un mancante di una pagina o di una lingua tolta da config/pagine.json non si ritenterebbe mai e
-// terrebbe l'uscita a 1 per sempre: si toglie
-$mancanti = array_filter( $mancanti_prima, fn( $m ) => isset( $voci[ $m['pagina'] ]['slug'][ $m['lingua'] ] ) );
 $conteggi = [];
 $ora      = gmdate( 'c' );
+// Mancanti che questo giro produrrebbe, in anteprima: contano per il codice d'uscita come col --conferma
+$previsti = [];
 foreach ( $voci as $chiave => $voce ) {
 	$id_it = null;
-	foreach ( [ 'it', 'en' ] as $lingua ) {
+	foreach ( array_keys( WPF_LINGUE_WPML ) as $lingua ) {
 		if ( ! isset( $dati[ $chiave ][ $lingua ] ) ) {
 			continue;
 		}
@@ -167,8 +172,12 @@ foreach ( $voci as $chiave => $voce ) {
 		}
 		$d = $dati[ $chiave ][ $lingua ];
 		// In una pagina inglese un link porta alla versione inglese, se c'è (su Drupal molte pagine
-		// inglesi non esistevano e il testo linka l'italiano), e la home è quella della lingua
-		$trova_qui = $lingua === 'it' ? $trova : fn( int $nid, string $l ) => $trova( $nid, $lingua ) ?? $trova( $nid, $l );
+		// inglesi non esistevano e il testo linka l'italiano), e la home è quella della lingua. Un link
+		// alla versione inglese di un contenuto che in WordPress è solo italiano porta all'italiano, come
+		// su Drupal, che a /en/node/N senza traduzione mostra il contenuto italiano
+		$trova_qui = $lingua === 'it'
+			? fn( int $nid, string $l ) => $trova( $nid, $l ) ?? ( $l !== 'it' ? $trova( $nid, 'it' ) : null )
+			: fn( int $nid, string $l ) => $trova( $nid, $lingua ) ?? $trova( $nid, $l ) ?? $trova( $nid, 'it' );
 		$l         = wpf_link_riscrivi( wpf_pagina_pulisci( $d['body'], $d['formato'] ), $alias, $trova_qui, $lingua );
 		$d['body'] = $l['html'];
 		$r = wpf_pagina_scrivi( $voce, $lingua, $d, $id_it, $template, $prova, $solo_mancanti ? $solo[ $chiave ][ $lingua ] : null );
@@ -188,7 +197,7 @@ foreach ( $voci as $chiave => $voce ) {
 			$riga( 'LINK', "{$nome}: in attesa {$m} (contenuto non ancora in WordPress, resta verso Drupal)" );
 		}
 		foreach ( array_unique( $l['non_contenuti'] ) as $m ) {
-			$riga( 'LINK', "{$nome}: verso Drupal {$m} (non è un contenuto di Drupal: resta così finché quella pagina non esiste in WordPress, poi va corretto a mano o con una regola in link.php)" );
+			$riga( 'LINK', "{$nome}: verso Drupal {$m} (né /node/N né l'alias di un nodo di Drupal: un modulo come i form, un file o un vecchio indirizzo; resta verso Drupal finché non si corregge a mano o con una regola in link.php)" );
 		}
 		if ( ! $d['status'] && $r['id'] ) {
 			foreach ( wpf_pagina_voci_menu( $r['id'] ) as $v ) {
@@ -199,6 +208,7 @@ foreach ( $voci as $chiave => $voce ) {
 			foreach ( $r['mancanti'] as $cosa => $elementi ) {
 				foreach ( $elementi as $dettaglio => $causa ) {
 					$riga( 'AVVISO', "{$nome}: {$cosa}" . ( $dettaglio !== '' ? " {$dettaglio}" : '' ) . " non riuscirebbe: {$causa}" );
+					$previsti[] = [ 'cosa' => $cosa ];
 				}
 			}
 			continue;
@@ -226,18 +236,14 @@ foreach ( $voci as $chiave => $voce ) {
 	}
 }
 
-if ( $prova ) {
-	// In anteprima l'elenco non cambia: si mostrano gli elementi che risultano mancanti adesso
-	foreach ( $mancanti_prima as $m ) {
-		$riga( 'MANCANTE', "{$m['cosa']} {$m['pagina']}/{$m['lingua']}" . ( $m['dettaglio'] !== '' ? " {$m['dettaglio']}" : '' ) . ": {$m['causa']} (dal {$m['primo']})" );
-	}
-} else {
+// In anteprima l'elenco non cambia: si mostrano gli elementi che risultano mancanti adesso
+if ( ! $prova ) {
 	wpf_mancanti_salva( $mancanti );
-	foreach ( $mancanti as $m ) {
-		$riga( 'MANCANTE', "{$m['cosa']} {$m['pagina']}/{$m['lingua']}" . ( $m['dettaglio'] !== '' ? " {$m['dettaglio']}" : '' ) . ": {$m['causa']} (dal {$m['primo']})" );
-	}
 }
-$elenco = $prova ? $mancanti_prima : $mancanti;
+foreach ( $mancanti as $m ) {
+	$riga( 'MANCANTE', "{$m['cosa']} {$m['pagina']}/{$m['lingua']}" . ( $m['dettaglio'] !== '' ? " {$m['dettaglio']}" : '' ) . ": {$m['causa']} (dal {$m['primo']})" );
+}
+$elenco = $mancanti;
 $riga(
 	'RIASSUNTO',
 	( $prova ? 'anteprima, nulla scritto — ' : '' ) . implode( ', ', array_map( fn( $e, $n ) => "{$e}: {$n}", array_keys( $conteggi ), $conteggi ) )
@@ -247,7 +253,7 @@ $riga(
 // traduzione non collegata, un template assente). Un media non scaricato (sito Drupal lento) lascia le
 // pagine a posto e si ritenta al giro dopo: avviso nel log e uscita 0, così un cron o una catena di
 // import non si ferma per questo (decisione del dev, oc:8758)
-$gravi = array_filter( $elenco, fn( $m ) => ! in_array( $m['cosa'], [ 'immagine', 'allegato', 'galleria' ], true ) );
+$gravi = array_filter( array_merge( $elenco, $previsti ), fn( $m ) => ! in_array( $m['cosa'], [ 'immagine', 'allegato', 'galleria' ], true ) );
 if ( $gravi ) {
 	WP_CLI::halt( 1 );
 }

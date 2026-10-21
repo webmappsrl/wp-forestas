@@ -151,7 +151,7 @@ subagent.
   e la traduzione va rifatta prima di aggiornare `sorgente`; se Drupal aggiunge la sua traduzione,
   vince quella (oc:8758)
 - La sincronizzazione non va lanciata durante il reload giornaliero della copia Drupal su UAT (alle
-  10:00, crontab di `root`, pochi minuti): il controllo di integrità la ferma senza scrivere, ma il giro
+  10:00, crontab di `root`, circa un quarto d'ora: il 20/10 è finito alle 10:14): il controllo di integrità la ferma senza scrivere, ma il giro
   va perso; il cron va messo lontano da quell'ora (`docs/howto/cron-sincronizzazione-pagine.md`) (oc:8758)
 
 ## Conoscenza

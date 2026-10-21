@@ -82,6 +82,9 @@ Impreza 9.4 + UpSolution Core, WPML; copia Drupal MySQL 8 in sola lettura (utent
   `{"pagine": [{"chiave": "privacy", "nid": 88, "template": "testo", "slug": {"it": "privacy"}, "menu": ["footer-menu:PRIVACY"]}, …]}`.
   `template` ∈ `testata | testo | mappa`; `nid` è `null` per Cammini, che ha `"testata_da": "itinerari"`
   e `"titolo": {"it": "Cammini", "en": "Walks"}`; `slug` ha la chiave `en` solo dove l'inglese esiste.
+  Come è oggi (21/10): tutte le pagine hanno `slug.en` (le traduzioni mancanti su Drupal sono nostre,
+  in `config/traduzioni/en/`), e il campo `menu` non c'è più: nessuno lo leggeva, le voci stanno in
+  `config/menu.json`.
 
 - [x] **Passo 1:** compila le 14 voci. Slug italiani: `contatti`, `faq`, `app`, `note-legali`, `privacy`,
   `crediti`, `dichiarazione-di-accessibilita`, `sentieri`, `itinerari`, `cammini`, `da-vedere`,
@@ -112,7 +115,9 @@ Impreza 9.4 + UpSolution Core, WPML; copia Drupal MySQL 8 in sola lettura (utent
   non c'è in `node_field_data`.
 - `wpf_drupal_pagina( mysqli $db, int $nid, string $lingua ): ?array` — `null` se la traduzione non
   esiste; altrimenti `['titolo', 'status' (bool), 'sottotitolo', 'body', 'formato', 'immagine' => ?file,
-  'allegati' => file[], 'galleria' => file[]]`, dove `file = ['fid', 'uri', 'nome', 'alt', 'mime', 'byte']`.
+  'allegati' => file[], 'galleria' => file[]]`, dove `file = ['fid', 'uri', 'nome', 'alt', 'mime', 'byte']`
+  (oggi: `['fid', 'uri', 'nome', 'alt', 'titolo', 'autore', 'credits', 'mime']`; `byte` tolto perché la
+  dimensione la calcola il child dal file; la pagina ha in più `testata` e `colore`).
   Per la lingua `it` accetta anche `langcode = 'und'`. Immagini e allegati dai campi `_media` (catena
   media → `media__field_media_image|document` → `file_managed`), mai dai campi legacy.
 - `wpf_drupal_alias( mysqli $db ): array` — `['/percorso' => ['nid' => int, 'lingua' => string]]` da
@@ -153,7 +158,9 @@ Impreza 9.4 + UpSolution Core, WPML; copia Drupal MySQL 8 in sola lettura (utent
 **File:**
 - Crea: `docker/scripts/config/pagine.php` (eseguito con `wp eval-file`), `docker/scripts/config/pagine-lib.php`
 - Modifica: `docker/scripts/config/comune.php` (lock: `wpf_blocca_pagine(): bool`, `wpf_sblocca_pagine(): void`
-  sullo schema di `wpf_blocca_apply`, con `WPF_APPLY_SCADENZA` come scadenza)
+  sullo schema di `wpf_blocca_apply`, con `WPF_APPLY_SCADENZA` come scadenza). Dopo la seconda review
+  del 21/10 il blocco è uno solo, `wpf_blocca( $opzione, $scadenza )`, usato da apply e pagine; le
+  pagine hanno `WPF_PAGINE_SCADENZA` (2 ore) e `wpf_sblocca_pagine` non esiste più.
 
 **Interfacce:**
 - Consuma: Task 1 (`config/pagine.json`), Task 2, Task 3, `wpf_wpml_collega`, `wpf_wpml_tutte_le_lingue`,
@@ -244,9 +251,11 @@ Impreza 9.4 + UpSolution Core, WPML; copia Drupal MySQL 8 in sola lettura (utent
   `WPF_PROVA=1`; con `--contenuti-mancanti` passa `WPF_SOLO_MANCANTI=1`. `DRUPAL_SYNC` arriva al
   container dal `.env` (env_file del compose).
 - Log: output di `esegui_script pagine.php …` scritto anche in `log/pagine-<data-ora>.log` (redirezione
-  in un file e poi `cat`, non `tee` in pipe: con `pipefail` l'exit dello script va conservato), poi
+  in un file, non `tee` in pipe: con `pipefail` l'exit dello script va conservato), poi
   cancellazione dei log oltre i 60 più recenti. A schermo: le righe `RIASSUNTO`, `ERRORE`, `MANCANTE` e il
-  percorso del log; il comando suggerito per i mancanti se ce ne sono.
+  percorso del log; il comando suggerito per i mancanti se ce ne sono. Come è oggi: a schermo, scelte con
+  `grep`, anche `MENU` e gli `AVVISO` che chiedono un intervento, i conteggi, e per un'uscita oltre 1 la
+  coda del log.
 - Codice d'uscita = quello dello script.
 
 - [x] **Passo 1:** scrivi il comando.
@@ -305,7 +314,7 @@ Impreza 9.4 + UpSolution Core, WPML; copia Drupal MySQL 8 in sola lettura (utent
 
 **Interfacce:**
 - Consuma: destinazione `{"tipo": "pagina", "post_type": "page", "percorso": …, "url": …}` già gestita da
-  `wpf_menu_args_destinazione` (`menu.php:319`).
+  `wpf_menu_args_destinazione` (`menu.php`).
 
 - [x] **Passo 1:** escludi le pagine nei due file.
 - [x] **Passo 2:** collega dal pannello in locale le voci del perimetro alle pagine (menu IT ed EN; le

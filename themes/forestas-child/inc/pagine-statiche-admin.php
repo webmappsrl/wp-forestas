@@ -43,7 +43,7 @@ function forestas_riquadro_voce( int $id, string $nome_campo ): string {
 		$anteprima,
 		esc_html( get_the_title( $id ) ?: basename( (string) get_attached_file( $id ) ) ),
 		esc_attr( $nome_campo ),
-		esc_html( 'Togli' )
+		'Togli'
 	);
 }
 
@@ -55,8 +55,8 @@ function forestas_riquadro_pagina( WP_Post $post ): void {
 		echo '<p class="notice notice-warning inline" style="padding:8px 12px">Questa pagina è ancora collegata al vecchio sito: testo, riassunto, allegati e galleria vengono aggiornati da lì in automatico, e le modifiche fatte qui si perdono.</p>';
 	}
 	foreach ( [
-		'wpf_allegati' => [ 'Allegati', 'Aggiungi dalla libreria media', '', 'Documenti mostrati sotto il testo, con formato e dimensione. Si riordinano trascinandoli.' ],
-		'wpf_galleria' => [ 'Galleria', 'Aggiungi immagini', 'image', 'Immagini mostrate in griglia sotto il testo. Si riordinano trascinandole.' ],
+		FORESTAS_META_ALLEGATI => [ 'Allegati', 'Aggiungi dalla libreria media', '', 'Documenti mostrati sotto il testo, con formato e dimensione. Si riordinano trascinandoli.' ],
+		FORESTAS_META_GALLERIA => [ 'Galleria', 'Aggiungi immagini', 'image', 'Immagini mostrate in griglia sotto il testo. Si riordinano trascinandole.' ],
 	] as $campo => [ $titolo, $pulsante, $tipo, $aiuto ] ) {
 		$voci = implode( '', array_map( fn( $id ) => forestas_riquadro_voce( $id, $campo ), forestas_meta_ids( $post->ID, $campo ) ) );
 		printf(
@@ -80,7 +80,7 @@ add_action(
 			|| ! current_user_can( 'edit_post', $id ) ) {
 			return;
 		}
-		foreach ( [ 'wpf_allegati', 'wpf_galleria' ] as $campo ) {
+		foreach ( [ FORESTAS_META_ALLEGATI, FORESTAS_META_GALLERIA ] as $campo ) {
 			if ( empty( $_POST[ "{$campo}_presente" ] ) ) {
 				continue; // riquadro non inviato (per esempio salvataggio rapido): il campo non si tocca
 			}
@@ -108,11 +108,13 @@ add_action(
 
 /*
  * Campi «Autore» e «Credits» nella scheda di un'immagine della libreria media, come i campi omonimi dei
- * media di Drupal: la testata li mostra dietro il pulsante «Credits foto» (oc:8758).
+ * media di Drupal: la testata li mostra dietro il pulsante «Credits foto» (oc:8758). Su un'immagine che
+ * viene da Drupal (_drupal_fid) e con la sincronizzazione accesa, un avviso dice che testo alternativo,
+ * autore e credits si riallineano a Drupal a ogni giro (wpf_media_importa).
  */
 const FORESTAS_CAMPI_CREDITS = [
-	'wpf_autore'  => 'Autore',
-	'wpf_credits' => 'Credits',
+	FORESTAS_META_AUTORE  => 'Autore',
+	FORESTAS_META_CREDITS => 'Credits',
 ];
 
 add_filter(
@@ -121,12 +123,16 @@ add_filter(
 		if ( ! wp_attachment_is_image( $allegato->ID ) ) {
 			return $campi;
 		}
+		$da_drupal = get_post_meta( $allegato->ID, '_drupal_fid', true ) !== '' && getenv( 'DRUPAL_SYNC' ) === 'on';
 		foreach ( FORESTAS_CAMPI_CREDITS as $chiave => $etichetta ) {
 			$campi[ $chiave ] = [
 				'label' => $etichetta,
 				'input' => 'text',
 				'value' => (string) get_post_meta( $allegato->ID, $chiave, true ),
 			];
+		}
+		if ( $da_drupal ) {
+			$campi[ FORESTAS_META_CREDITS ]['helps'] = 'Immagine del vecchio sito: testo alternativo, autore e credits vengono aggiornati da lì in automatico, e le modifiche fatte qui si perdono.';
 		}
 		return $campi;
 	},

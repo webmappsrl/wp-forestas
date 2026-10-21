@@ -5,7 +5,8 @@
 Uso del comando, opzioni, log e variabili: [README](../../README.md#pagine-statiche-da-drupal). Qui
 contano le scelte e i vincoli.
 
-- **Perimetro fisso:** le 14 pagine di `config/pagine.json`, quelle raggiungibili dai menu. Lo script
+- **Perimetro fisso:** le 14 pagine di `config/pagine.json`, quelle raggiungibili dai menu (Contatti
+  è nel perimetro anche se la voce CONTATTI porta a `/enti`, come su Drupal). Lo script
   non cerca pagine nuove su Drupal. La homepage, gli elenchi sotto le testate (View di Drupal) e le
   pagine fuori dai menu (Eventi, Attività e comunicazioni, le 4 non pubblicate) non ne fanno parte.
 - **Chiave:** una pagina si riconosce da `_wpf_pagina` (la chiave del perimetro) e `_wpf_lingua`,
@@ -18,7 +19,8 @@ contano le scelte e i vincoli.
   legame «file caricato in questa pagina» ammette una sola pagina per file e nessun ordine, e la
   galleria nativa sta dentro il testo, che Drupal riscrive. Nell'editor il riquadro «Allegati e
   galleria» del child li gestisce con la libreria media. Finché la sincronizzazione è attiva le modifiche fatte lì
-  vengono riscritte.
+  vengono riscritte, e così testo alternativo, autore e credits di un'immagine che viene da Drupal: la
+  scheda dell'immagine lo dice sotto i campi.
 - **Autore e credits delle immagini in due campi dell'immagine** (`wpf_autore`, `wpf_credits`), come i
   due campi dei media di Drupal; la testata li mostra dietro «Credits foto». Non nella Didascalia, che
   WordPress mostra da sé sotto le immagini nel testo e nelle gallerie. Gli altri import usano gli
@@ -29,7 +31,10 @@ contano le scelte e i vincoli.
   child non li tocca mai.
 - **Il testo è quello che mostra Drupal.** Un body in `filtered_html` passa all'import per lo stesso
   filtro di Drupal (tag e attributi ammessi, letti da `filter.format.filtered_html`, con `wp_kses`; URL
-  nel testo resi link con `make_clickable`). Il child lo mostra così com'è finché coincide con
+  nel testo resi link solo fuori dai link già presenti, con `wpf_pagina_link_dagli_indirizzi`: un
+  `make_clickable` sull'HTML intero crea link annidati). Gli altri formati (`full_html`, oggi solo la
+  Mappa) passano per `wp_kses_post`: lo script scrive come amministratore e `wp_insert_post` non
+  filtrerebbe script né attributi `on*`. Il child lo mostra così com'è finché coincide con
   l'impronta `_wpf_testo_drupal` scritta dallo script; un testo modificato in WordPress passa invece
   per `the_content`. Lo stile del testo ricalca le regole compilate di `sase-page-body` (solo figli
   diretti senza classe, spazio sul margine superiore del secondo elemento) e il reset del tema Drupal,
@@ -41,8 +46,14 @@ contano le scelte e i vincoli.
   cambia (impronta «sorgente»); la Mappa inglese è di sola interfaccia (`titolo.en`). Nelle pagine
   inglesi i link portano alla versione inglese, se c'è, e la home è `/en/`.
 - **Un solo scrittore:** `esporta` e `applica` di `bin/wordpress-config.sh` saltano le pagine con
-  `_wpf_pagina`, anche se un'opzione punta a loro. I menu invece li scrive solo l'apply: le voci del
-  perimetro in `config/menu.json` hanno `tipo: pagina` e il percorso.
+  `_wpf_pagina`, anche se un'opzione punta a loro: in quel caso l'export avvisa che l'opzione non arriva
+  agli altri siti con l'id giusto e va reimpostata a mano (oggi nessuna opzione lo fa; con oc:8759 la
+  pagina degli articoli potrebbe essere News). I menu invece li scrive solo l'apply: le voci del
+  perimetro in `config/menu.json` hanno `tipo: pagina` e il percorso, cioè lo slug, che va cambiato lì
+  insieme a `config/pagine.json`.
+- **Meta in comune fra script e child:** gli script li hanno come costanti `WPF_META_*`, il child come
+  `FORESTAS_META_*` (`inc/pagine-statiche.php`), perché il tema non carica gli script. Rinominare un
+  meta da una parte sola non dà errori: la pagina perde colore, testata o allegati.
 - **Testata:** altezze, misure e impaginazione dal tema Drupal (`_hero.scss`: 66% della finestra,
   500–600px su desktop, testo in basso e centrato); sfumatura dal basso delle tavole del catasto
   dell'artifact «Canvas Fase 2» (`.sh-scrim`); la barretta ha il colore dell'entità della voce di menu
@@ -86,7 +97,13 @@ contano le scelte e i vincoli.
   e carica le tabelle una per volta (`forestas/scripts/drupal-dump-reload.sh`); in quei minuti, senza
   controlli, tutte le pagine andrebbero in bozza o si salverebbero testi vuoti.
 - **Elenco dei mancanti sul sito, non nel log** (oc:8758): i log ruotano, e un file di testo non è un
-  elenco affidabile da cui ripartire.
+  elenco affidabile da cui ripartire. L'opzione (`wpf_sync_mancanti`) è delle pagine: a ogni giro si
+  tolgono le voci che non sono chiavi di `config/pagine.json`. Un altro import (oc:8759, oc:8760) che
+  volesse un elenco così deve averne uno suo, o dare alle voci la parte di provenienza.
+- **Un blocco per comando** (oc:8758): `wpf_blocca( $opzione, $scadenza )` in `comune.php`, usato
+  dall'apply (40 minuti) e dalle pagine (`WPF_PAGINE_SCADENZA`, 2 ore: con il sito Drupal lento ogni
+  file può costare un minuto, e un blocco tolto mentre la prima esecuzione scrive ancora lascerebbe
+  partire la seconda, con allegati doppi).
 - **Indirizzi senza `/pagina-base/`** (oc:8758): su Drupal è il nome predefinito del tipo `page` nel
   pattern automatico di pathauto, non una scelta. Al lancio servono i 301 dai vecchi indirizzi
   (`/pagina-base/app-sardegna-sentieri` è indicizzata da Google) e la sitemap.
@@ -115,7 +132,9 @@ contano le scelte e i vincoli.
 ## Come ci siamo arrivati
 
 - **Sottotitolo in un campo personalizzato** (oc:8758, superata): `wpf_sottotitolo`; sostituito dal
-  Riassunto nativo, che WordPress, WPML e Impreza già conoscono. Lo script cancella il vecchio meta.
+  Riassunto nativo, che WordPress, WPML e Impreza già conoscono. Una versione intermedia dello script
+  cancellava il vecchio meta, poi tolta: in locale non ne resta nessuno; su un sito che avesse girato
+  quella prima versione si cancella con `wp post meta delete`.
 
 - **Svuotare e ripopolare ogni giorno** (scrum 06/10, superata): avrebbe dato id e indirizzi nuovi a
   ogni giro, rompendo menu e collegamenti; vedi «Aggiornare invece di svuotare».

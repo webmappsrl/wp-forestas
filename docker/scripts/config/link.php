@@ -6,7 +6,9 @@
  * sapere», importato da un altro ticket), il link resta verso Drupal ed è «in attesa»: una
  * sincronizzazione successiva lo sistema da sola. Un link a una pagina di Drupal che non è un contenuto
  * (un modulo come /form/segnalazione, un file) resta verso Drupal e non si sistema da solo: va rifatto
- * quando quella pagina esisterà in WordPress.
+ * quando quella pagina esisterà in WordPress. Lo stesso vale per un vecchio indirizzo di un nodo che su
+ * Drupal funziona solo grazie a un redirect (tabella redirect, che non si legge): oggi nei testi non ce
+ * ne sono.
  */
 
 // Link al sito Drupal, con o senza www e index.php/: gruppo 1 il percorso, gruppo 2 query e ancora

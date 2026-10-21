@@ -192,18 +192,26 @@ case "$comando" in
         esito=0
         esegui_script pagine.php ${pagine_env[@]+"${pagine_env[@]}"} > "$log" 2>&1 || esito=$?
         # Degli avvisi si mostrano quelli che chiedono un intervento: media non scaricati, traduzioni nostre
-        # da rivedere o non più usate (config/traduzioni/), sincronizzazione spenta (DRUPAL_SYNC)
-        grep -E '^(RIASSUNTO|ERRORE|MANCANTE|MENU) |^AVVISO .*(media non scaricati|config/traduzioni/|DRUPAL_SYNC)' "$log" || true
+        # da rivedere o non più usate (config/traduzioni/), sincronizzazione spenta (DRUPAL_SYNC), ciò che
+        # in anteprima non riuscirebbe (un template assente)
+        grep -E '^(RIASSUNTO|ERRORE|MANCANTE|MENU) |^AVVISO .*(media non scaricati|config/traduzioni/|DRUPAL_SYNC|non riuscirebbe)' "$log" || true
         conta() { grep -c "^$1 " "$log" || true; }
         echo "pagine: $(conta PAGINA) · media: $(conta MEDIA) · link: $(conta LINK) · avvisi: $(conta AVVISO)"
         echo "log completo: ${log}"
-        if grep -q '^MANCANTE ' "$log"; then
-            echo "Per ritentare solo ciò che manca: $0 pagine --contenuti-mancanti --conferma"
+        # Un errore di PHP o di WP-CLI non ha le righe del comando: se ne mostra la coda del log
+        if [ "$esito" -gt 1 ]; then
+            echo "Uscita ${esito}: errore imprevisto, ultime righe del log:"
+            tail -n 5 "$log"
         fi
-        if grep -q '^AVVISO .*DRUPAL_SYNC' "$log"; then
+        spenta=false
+        grep -qE '^(AVVISO|ERRORE) .*DRUPAL_SYNC' "$log" && spenta=true
+        if $spenta; then
             echo "Per scrivere serve DRUPAL_SYNC=on nel .env di wp-forestas (poi scripts/wordpress-up.sh di forestas)"
-        elif ! $conferma; then
-            echo "Per scrivere: $0 pagine --conferma"
+        else
+            if grep -q '^MANCANTE ' "$log"; then
+                echo "Per ritentare solo ciò che manca: $0 pagine --contenuti-mancanti --conferma"
+            fi
+            $conferma || echo "Per scrivere: $0 pagine --conferma"
         fi
         # Si tengono gli ultimi 60 log
         vecchi=$(ls -1t "${REPO}"/log/pagine-*.log 2>/dev/null | tail -n +61 || true)

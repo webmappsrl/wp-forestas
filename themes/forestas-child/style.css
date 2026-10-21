@@ -5,7 +5,7 @@ Template: Impreza
 Author: Webmapp
 Author URI: https://webmapp.it/
 Description: Child theme di Impreza per Sardegna Sentieri (Forestas). Versionato nel repo wp-forestas e montato dal compose: si modifica nel repo, non dal pannello.
-Version: 1.4.27
+Version: 1.4.28
 */
 
 
@@ -50,6 +50,7 @@ Version: 1.4.27
 	--sase-sezione-da-sapere: #0F6E6A;
 	--sase-sezione-mappa: var(--sase-arancio);
 	--sase-sezione-news: #C2410C;
+	--sase-terra: #CA5C30;                                    /* terra del marchio SARDEGNA: pagine senza sezione */
 
 	--sase-font-titoli: "Montserrat", sans-serif;
 	--sase-font-testo: "Work Sans Sardegna Sentieri", sans-serif;
@@ -62,6 +63,13 @@ Version: 1.4.27
 	--sase-spazio-sezione: clamp(1.875rem, 4vw, 2.5rem);    /* margine di sezione e regione delle pagine */
 	--sase-filo-larghezza: 57px;                             /* filo sopra i titoli (sase-heading-has-decoration) */
 	--sase-filo-altezza: 7px;
+	--sase-filo-spazio: 1.875rem;                            /* filo + spazio fino al titolo */
+	/* Caratteri del tema Drupal che ricorrono: titoli della testata, delle sezioni e degli allegati, testo */
+	--sase-titolo-grande: clamp(2.5rem, 2.5rem + (1vw - 0.2rem) * 0.938, 3.438rem);
+	--sase-titolo-medio: clamp(1.5rem, 0.5rem + (1vw - 0.2rem) * 0.5, 2rem);
+	--sase-titolo-piccolo: clamp(1.125rem, 1.125rem + (1vw - 0.2rem) * 0.375, 1.5rem);
+	--sase-testo-grande: clamp(1rem, 0.98rem + 0.35vw, 1.125rem);
+	--sase-testo-pagina: clamp(0.875rem, 0.9375rem + (1vw - 0.2rem) * 0.1875, 1.125rem);
 }
 
 /*
@@ -1191,7 +1199,7 @@ Version: 1.4.27
  * barretta nel colore della sezione (tavola 8); su richiesta del dev (oc:8758). Testo, allegati e
  * galleria: tema Drupal (sase-page-body, field--field-allegati-media), che l'artifact non ridisegna.
  */
-.forestas-sezione-base { --forestas-sezione: #CA5C30; }          /* terra del marchio SARDEGNA */
+.forestas-sezione-base { --forestas-sezione: var(--sase-terra); }
 .forestas-sezione-sentieri { --forestas-sezione: var(--sase-sezione-sentieri); }
 .forestas-sezione-itinerari { --forestas-sezione: var(--sase-sezione-itinerari); }
 .forestas-sezione-cammini { --forestas-sezione: var(--sase-sezione-cammini); }
@@ -1348,7 +1356,7 @@ Version: 1.4.27
 	display: block;
 	width: var(--sase-filo-larghezza);
 	height: var(--sase-filo-altezza);
-	margin-bottom: calc(1.875rem - var(--sase-filo-altezza));                    /* barra + spazio = 1,875rem, come su Drupal */
+	margin-bottom: calc(var(--sase-filo-spazio) - var(--sase-filo-altezza));                    /* barra + spazio = 1,875rem, come su Drupal */
 	background: var(--forestas-sezione);
 }
 .l-main .forestas-testata-titolo {
@@ -1367,16 +1375,16 @@ Version: 1.4.27
 	margin-bottom: 0;
 }
 @media (min-width: 768px) {
-	.l-main .forestas-testata-titolo { font-size: clamp(2.5rem, 2.5rem + (1vw - 0.2rem) * 0.938, 3.438rem); }
+	.l-main .forestas-testata-titolo { font-size: var(--sase-titolo-grande); }
 }
 .forestas-testata-sottotitolo {
 	margin: 0;
 	color: #FFFFFF;
-	font-size: clamp(0.875rem, 0.9375rem + (1vw - 0.2rem) * 0.1875, 1.125rem); /* .sase-hero__subtitle */
+	font-size: var(--sase-testo-pagina); /* .sase-hero__subtitle */
 	line-height: 1.6;
 }
 @media (min-width: 768px) {
-	.forestas-testata-sottotitolo { font-size: clamp(1rem, 0.98rem + 0.35vw, 1.125rem); }
+	.forestas-testata-sottotitolo { font-size: var(--sase-testo-grande); }
 }
 /* Sola intestazione (News, che su Drupal ha un layout proprio senza testata): blocco sase-container con
    sase-heading-has-decoration, titolo sase-h1 scuro e filo centrato nel colore della sezione, come le
@@ -1389,7 +1397,7 @@ Version: 1.4.27
 	width: 90%;
 	max-width: var(--sase-larghezza-contenuto);
 	margin: 0 auto;
-	padding: calc(var(--sase-spazio-sezione) + 1.875rem) 0 var(--sase-spazio-sezione);
+	padding: calc(var(--sase-spazio-sezione) + var(--sase-filo-spazio)) 0 var(--sase-spazio-sezione);
 	text-align: center;
 }
 .forestas-intestazione::before {
@@ -1397,7 +1405,7 @@ Version: 1.4.27
 	display: block;
 	width: var(--sase-filo-larghezza);
 	height: var(--sase-filo-altezza);
-	margin-top: -1.875rem;
+	margin-top: calc(-1 * var(--sase-filo-spazio));
 	background-color: var(--forestas-sezione);
 }
 .forestas-intestazione + .forestas-percorso {
@@ -1408,7 +1416,7 @@ Version: 1.4.27
 	padding: 0;                                             /* Impreza dà 24px sopra a ogni h1 */
 	color: var(--sase-testo);
 	font-family: var(--sase-font-titoli);
-	font-size: clamp(2.5rem, 2.5rem + (1vw - 0.2rem) * 0.938, 3.438rem);
+	font-size: var(--sase-titolo-grande);
 	font-weight: 600;
 	line-height: 1.2;
 }
@@ -1608,12 +1616,12 @@ Version: 1.4.27
 	font-family: var(--sase-font-titoli);
 	font-weight: 600;
 }
-.forestas-pagina-testo > h2:not([class]) { font-size: clamp(1.5rem, 0.5rem + (1vw - 0.2rem) * 0.5, 2rem); line-height: 1.2; }
+.forestas-pagina-testo > h2:not([class]) { font-size: var(--sase-titolo-medio); line-height: 1.2; }
 .forestas-pagina-testo > h3:not([class]) { font-size: clamp(1.375rem, 1.08rem + 0.9vw, 1.75rem); line-height: 1.3; }
-.forestas-pagina-testo > h4:not([class]) { font-size: clamp(1.125rem, 1.125rem + (1vw - 0.2rem) * 0.375, 1.5rem); line-height: 1.4; }
-.forestas-pagina-testo > :is(h5, h6):not([class]) { font-size: clamp(1rem, 0.98rem + 0.35vw, 1.125rem); line-height: 1.4; }
+.forestas-pagina-testo > h4:not([class]) { font-size: var(--sase-titolo-piccolo); line-height: 1.4; }
+.forestas-pagina-testo > :is(h5, h6):not([class]) { font-size: var(--sase-testo-grande); line-height: 1.4; }
 .forestas-pagina-testo > :is(p, ul, ol):not([class]) {
-	font-size: clamp(0.875rem, 0.9375rem + (1vw - 0.2rem) * 0.1875, 1.125rem);
+	font-size: var(--sase-testo-pagina);
 	font-weight: 400;
 	line-height: 1.6;
 }
@@ -1645,7 +1653,7 @@ Version: 1.4.27
 	margin: 0 0 1.25rem;                                    /* sase-section-inner-vertical-spaced-padding-4 */
 	color: var(--sase-testo);
 	font-family: var(--sase-font-titoli);
-	font-size: clamp(1.125rem, 1.125rem + (1vw - 0.2rem) * 0.375, 1.5rem);
+	font-size: var(--sase-titolo-piccolo);
 	font-weight: 600;
 	line-height: 1.4;
 }
@@ -1675,7 +1683,7 @@ Version: 1.4.27
 }
 .forestas-file__descrizione {
 	display: block;
-	font-size: clamp(1rem, 0.98rem + 0.35vw, 1.125rem);
+	font-size: var(--sase-testo-grande);
 	font-weight: 600;
 	line-height: 1.6;
 }
@@ -1699,10 +1707,10 @@ Version: 1.4.27
 	display: grid;
 	justify-items: start;
 	margin: 0;
-	padding: 1.875rem 0 0;
+	padding: var(--sase-filo-spazio) 0 0;
 	color: var(--sase-testo);
 	font-family: var(--sase-font-titoli);
-	font-size: clamp(1.5rem, 0.5rem + (1vw - 0.2rem) * 0.5, 2rem);
+	font-size: var(--sase-titolo-medio);
 	font-weight: 600;
 	line-height: 1.2;
 }
@@ -1711,7 +1719,7 @@ Version: 1.4.27
 	display: block;
 	width: var(--sase-filo-larghezza);
 	height: var(--sase-filo-altezza);
-	margin-top: -1.875rem;
+	margin-top: calc(-1 * var(--sase-filo-spazio));
 	background-color: var(--sase-arancio);
 }
 /* Griglia: sase-grid (0,9375rem fra le immagini), 3 colonne su telefono e 4 da 768px */

@@ -25,15 +25,15 @@
 	}
 
 	function avvia(galleria) {
-		var $container = $(galleria);
+		var $galleria = $(galleria);
 		var slickTradotto = $.extend({}, impostazioniSlick, {
-			prevArrow: pulsante('slick-prev', $container.attr('data-precedente') || 'Previous'),
-			nextArrow: pulsante('slick-next', $container.attr('data-successivo') || 'Next')
+			prevArrow: pulsante('slick-prev', $galleria.attr('data-precedente') || 'Previous'),
+			nextArrow: pulsante('slick-next', $galleria.attr('data-successivo') || 'Next')
 		});
-		var chiudi = $container.attr('data-chiudi') || 'Close';
+		var chiudi = $galleria.attr('data-chiudi') || 'Close';
 		var $voci = $(selettore, galleria);
 
-		function initSlick(modale) {
+		function avviaSlick(modale) {
 			var $slick = $(base, modale);
 			var $slide = $slick.children();
 
@@ -66,7 +66,7 @@
 			src: function (voce) {
 				return $(voce).attr('href');
 			},
-			slick: initSlick,
+			slick: avviaSlick,
 			// Pulsante di chiusura della libreria, con un nome (senza, uno screen reader legge solo «pulsante»)
 			layouts: { closeButton: $('<button type="button" class="slick-lightbox-close">').attr('aria-label', chiudi).prop('outerHTML') }
 		};
@@ -80,8 +80,8 @@
 		 * alla chiusura il fuoco torna alla miniatura da cui si è partiti.
 		 */
 		function accessibile() {
-			var $modale = $($container[0].slickLightbox.$modalElement);
-			var nome = $container.closest('.forestas-galleria').find('h2').first().text();
+			var $modale = $($galleria[0].slickLightbox.$modalElement);
+			var nome = $galleria.closest('.forestas-galleria').find('h2').first().text();
 			$modale.attr({ role: 'dialog', 'aria-modal': 'true', 'aria-label': nome });
 			$modale.find('.slick-lightbox-slick-img').each(function () {
 				var indice = parseInt($(this).closest('.slick-slide').attr('data-slick-index'), 10) || 0;
@@ -113,14 +113,14 @@
 			origine = e.currentTarget;
 			var posizione = parseInt($(e.currentTarget).attr('data-b-delta'), 10) || 0;
 			setTimeout(function () {
-				var box = $container[0].slickLightbox;
-				if (box && box.slick) {
-					box.slick.slick('slickGoTo', posizione, true);
+				var lightbox = $galleria[0].slickLightbox;
+				if (lightbox && lightbox.slick) {
+					lightbox.slick.slick('slickGoTo', posizione, true);
 				}
 			});
 		}
 
-		$container.slickLightbox(opzioni).on({
+		$galleria.slickLightbox(opzioni).on({
 			'shown.slickLightbox': accessibile,
 			'hide.slickLightbox': function () {
 				if (origine) {
@@ -129,15 +129,15 @@
 			},
 			'show.slickLightbox': function () {
 				// Chiude con un clic fuori dall'immagine (closeOnBackdropClick è spento dal modulo)
-				$($container[0].slickLightbox.$modalElement).on('click.slbox', base + '-item', function (e) {
+				$($galleria[0].slickLightbox.$modalElement).on('click.slbox', base + '-item', function (e) {
 					if (e.target === this) {
 						$('.slick-lightbox-close').click();
 					}
 				});
 			}
 		});
-		$container.off('click.slboxlink').on('click.slboxlink', selettore, apri);
-		$container.addClass('slick-lightbox-gallery--on');
+		$galleria.off('click.slboxlink').on('click.slboxlink', selettore, apri);
+		$galleria.addClass('slick-lightbox-gallery--on');
 	}
 
 	$(function () {

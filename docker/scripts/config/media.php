@@ -11,6 +11,8 @@ const WPF_META_FID = '_drupal_fid';
 // modifica nella scheda dell'immagine della libreria media (child, inc/pagine-statiche-admin.php)
 const WPF_META_AUTORE  = 'wpf_autore';
 const WPF_META_CREDITS = 'wpf_credits';
+// Attesa massima del download di un file, in secondi
+const WPF_MEDIA_ATTESA = 60;
 
 /** Allinea autore e credits di un allegato a quelli del media Drupal (un campo vuoto si cancella). */
 function wpf_media_credits( int $id, array $file ): void {
@@ -23,8 +25,6 @@ function wpf_media_credits( int $id, array $file ): void {
 		}
 	}
 }
-// Attesa massima del download di un file, in secondi
-const WPF_MEDIA_ATTESA = 60;
 
 /** L'allegato già importato per un fid di Drupal, o 0. */
 function wpf_media_per_fid( int $fid ): int {
@@ -53,15 +53,17 @@ function wpf_media_importa( array $file, bool $prova ) {
 	}
 	$id = wpf_media_per_fid( (int) $file['fid'] );
 	if ( $id ) {
-		// Alt e descrizione possono cambiare su Drupal senza che cambi il file
-		if ( ! $prova && wp_attachment_is_image( $id ) && get_post_meta( $id, '_wp_attachment_image_alt', true ) !== $file['alt'] ) {
-			update_post_meta( $id, '_wp_attachment_image_alt', $file['alt'] );
+		// Alt, credits e descrizione possono cambiare su Drupal senza che cambi il file
+		if ( $prova ) {
+			return $id;
 		}
-		if ( ! $prova && ! wp_attachment_is_image( $id ) && isset( $file['titolo'] ) && get_post_field( 'post_title', $id ) !== $file['titolo'] ) {
-			wp_update_post( [ 'ID' => $id, 'post_title' => wp_slash( $file['titolo'] ) ] );
-		}
-		if ( ! $prova && wp_attachment_is_image( $id ) ) {
+		if ( wp_attachment_is_image( $id ) ) {
+			if ( get_post_meta( $id, '_wp_attachment_image_alt', true ) !== $file['alt'] ) {
+				update_post_meta( $id, '_wp_attachment_image_alt', $file['alt'] );
+			}
 			wpf_media_credits( $id, $file );
+		} elseif ( isset( $file['titolo'] ) && get_post_field( 'post_title', $id ) !== $file['titolo'] ) {
+			wp_update_post( [ 'ID' => $id, 'post_title' => wp_slash( $file['titolo'] ) ] );
 		}
 		return $id;
 	}

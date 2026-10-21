@@ -107,13 +107,16 @@ function wpf_pagina_link_dagli_indirizzi( string $html ): string {
 /**
  * Pulizia del body di Drupal. Un body in «filtered_html» diventa quello che Drupal mostra: solo i tag e gli
  * attributi ammessi (filter_html) e gli indirizzi scritti nel testo trasformati in link (filter_url). Negli
- * altri formati (la mappa è in «full_html») si tolgono solo gli stili in linea e gli attributi data-entity-*.
+ * altri formati (la mappa è in «full_html», e il suo testo non si mostra) si tolgono gli stili in linea e
+ * gli attributi data-entity-*, poi passa il filtro dei contenuti di WordPress (wp_kses_post): niente
+ * script, iframe o attributi on* da un testo che su Drupal la redazione poteva scrivere senza filtri. Lo
+ * script gira come amministratore, e senza questo passo wp_insert_post non filtrerebbe nulla.
  */
 function wpf_pagina_pulisci( string $html, string $formato = '' ): string {
 	if ( $formato === 'filtered_html' ) {
 		$html = wpf_pagina_link_dagli_indirizzi( wp_kses( $html, WPF_DRUPAL_FILTERED_HTML ) );
 	} else {
-		$html = preg_replace( '#\s(?:style|data-entity-[a-z-]+)\s*=\s*(["\']).*?\1#is', '', $html );
+		$html = wp_kses_post( preg_replace( '#\s(?:style|data-entity-[a-z-]+)\s*=\s*(["\']).*?\1#is', '', $html ) );
 	}
 	return trim( str_replace( "\r\n", "\n", $html ) );
 }
@@ -291,8 +294,9 @@ function wpf_pagina_scrivi( array $voce, string $lingua, array $dati, ?int $id_i
 			$mancanti[ $cosa ][ $nome ] = $causa;
 		}
 		if ( $cosa === 'immagine' && $r['errori'] ) {
-			// L'immagine in evidenza non scaricata: resta quella che c'era
-		} elseif ( $r['ids'] !== null ) {
+			continue; // l'immagine in evidenza non scaricata: resta quella che c'era
+		}
+		if ( $r['ids'] !== null ) {
 			$meta[ $chiave_meta ] = $cosa === 'immagine' ? ( $r['ids'] ? (string) $r['ids'][0] : null ) : ( $r['ids'] ?: null );
 		} elseif ( $r['scaricare'] ) {
 			$campi[] = $chiave_meta; // in anteprima: cambierà quando il file sarà scaricato
@@ -302,12 +306,15 @@ function wpf_pagina_scrivi( array $voce, string $lingua, array $dati, ?int $id_i
 	if ( ! $tutto ) {
 		// Con --contenuti-mancanti si riscrivono solo i meta degli elementi elencati
 		$voluti = [];
-		$meta   = array_intersect_key( $meta, array_flip( array_filter( [ '_thumbnail_id', WPF_META_PAGINA_ALLEGATI, WPF_META_PAGINA_GALLERIA, 'us_content_id' ], fn( $k ) => array_key_exists( $k, $meta ) ) ) );
+		$meta   = array_intersect_key( $meta, array_flip( [ '_thumbnail_id', WPF_META_PAGINA_ALLEGATI, WPF_META_PAGINA_GALLERIA, 'us_content_id' ] ) );
 	}
 
 	$campi = array_merge( wpf_pagina_differenze( $post, $voluti, $meta ), $campi );
-	// Con --contenuti-mancanti una traduzione non collegata si ricollega anche se il resto non cambia
-	if ( ! $tutto && $fa( 'traduzione' ) && $lingua !== 'it' ) {
+	// Una traduzione non collegata all'italiano si ricollega anche se il resto non cambia: con
+	// --contenuti-mancanti sempre, in un giro normale se il gruppo di WPML non è quello dell'italiano
+	// (una pagina inglese creata quando l'italiana non c'era resterebbe staccata per sempre)
+	if ( $lingua !== 'it' && $post && $fa( 'traduzione' )
+		&& ( ! $tutto || ( $id_it && (int) apply_filters( 'wpml_element_trid', null, $post->ID, 'post_page' ) !== (int) apply_filters( 'wpml_element_trid', null, $id_it, 'post_page' ) ) ) ) {
 		$campi[] = 'traduzione';
 	}
 	$campi = array_values( array_unique( $campi ) );

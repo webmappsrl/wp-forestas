@@ -21,12 +21,19 @@ if ( ! defined( 'ABSPATH' ) ) {
 add_action( 'init', fn() => add_post_type_support( 'page', 'excerpt' ) );
 
 /*
- * Chiave della pagina del perimetro (config/pagine.json), scritta dalla sincronizzazione: è WPF_META_PAGINA
- * degli script di docker/scripts/config/, che il tema non carica.
+ * Meta scritti dalla sincronizzazione (docker/scripts/config/, che il tema non carica: lì sono le costanti
+ * WPF_META_*). Rinominandone uno negli script va rinominato anche qui.
  */
-const FORESTAS_META_PAGINA = '_wpf_pagina';
+const FORESTAS_META_PAGINA       = '_wpf_pagina';        // chiave della pagina in config/pagine.json
+const FORESTAS_META_TESTATA      = '_wpf_testata';       // «titolo»: sola intestazione, senza hero
+const FORESTAS_META_COLORE       = '_wpf_colore';        // colore tematico di Drupal
+const FORESTAS_META_TESTO_DRUPAL = '_wpf_testo_drupal';  // impronta del testo scritto dalla sincronizzazione
+const FORESTAS_META_ALLEGATI     = 'wpf_allegati';
+const FORESTAS_META_GALLERIA     = 'wpf_galleria';
+const FORESTAS_META_AUTORE       = 'wpf_autore';         // dell'immagine
+const FORESTAS_META_CREDITS      = 'wpf_credits';        // dell'immagine
 
-/** Id degli allegati salvati in un meta come elenco (wpf_allegati, wpf_galleria), nell'ordine scritto. */
+/** Id degli allegati salvati in un meta come elenco (allegati, galleria), nell'ordine scritto. */
 function forestas_meta_ids( int $id, string $chiave ): array {
 	return array_values( array_filter( array_map( 'intval', (array) get_post_meta( $id, $chiave, true ) ) ) );
 }
@@ -39,12 +46,12 @@ function forestas_meta_ids( int $id, string $chiave ): array {
  */
 function forestas_sezione_pagina( int $id ): string {
 	$sezioni = [
-		'sentieri'          => 'sentieri',
-		'itinerari'         => 'itinerari',
-		'cammini'           => 'cammini',
-		'da-vedere'         => 'punti-di-interesse',
-		'da-sapere'         => 'da-sapere',
-		'news'              => 'news',
+		'sentieri'  => 'sentieri',
+		'itinerari' => 'itinerari',
+		'cammini'   => 'cammini',
+		'da-vedere' => 'punti-di-interesse',
+		'da-sapere' => 'da-sapere',
+		'news'      => 'news',
 	];
 	$colori = [
 		'is-pathway'     => 'sentieri',
@@ -54,7 +61,7 @@ function forestas_sezione_pagina( int $id ): string {
 		'is-news'        => 'news',
 	];
 	return $sezioni[ (string) get_post_meta( $id, FORESTAS_META_PAGINA, true ) ]
-		?? $colori[ (string) get_post_meta( $id, '_wpf_colore', true ) ]
+		?? $colori[ (string) get_post_meta( $id, FORESTAS_META_COLORE, true ) ]
 		?? 'base';
 }
 
@@ -159,7 +166,7 @@ add_shortcode(
 		 * scuro con il filo sopra (sase-container sase-heading-has-decoration, h1.sase-h1), poi il percorso,
 		 * come in tutte le pagine.
 		 */
-		if ( get_post_meta( $id, '_wpf_testata', true ) === 'titolo' ) {
+		if ( get_post_meta( $id, FORESTAS_META_TESTATA, true ) === 'titolo' ) {
 			return sprintf(
 				'<div class="forestas-intestazione forestas-sezione-%1$s"><h1 class="forestas-intestazione-titolo">%2$s</h1></div>',
 				esc_attr( forestas_sezione_pagina( $id ) ),
@@ -173,10 +180,12 @@ add_shortcode(
 		// Il Riassunto scritto, non quello che WordPress ricava dal testo quando il campo è vuoto
 		$sottotitolo = trim( (string) get_post_field( 'post_excerpt', $id ) );
 		return sprintf(
-			'<div class="forestas-testata forestas-sezione-%1$s%2$s">%3$s' . forestas_credits_immagine( $id_immagine ) . '<div class="forestas-testata-testo"><span class="forestas-testata-filo" aria-hidden="true"></span><h1 class="forestas-testata-titolo">%4$s</h1>%5$s</div></div>',
+			'<div class="forestas-testata forestas-sezione-%1$s%2$s">%3$s%4$s<div class="forestas-testata-testo"><span class="forestas-testata-filo" aria-hidden="true"></span><h1 class="forestas-testata-titolo">%5$s</h1>%6$s</div></div>',
 			esc_attr( forestas_sezione_pagina( $id ) ),
 			$immagine ? '' : ' forestas-testata-senza-immagine',
 			$immagine,
+			// Argomento, non pezzo del formato: un «%» nei credits scritti dalla redazione romperebbe sprintf
+			forestas_credits_immagine( $id_immagine ),
 			esc_html( get_the_title( $id ) ),
 			$sottotitolo !== '' ? '<p class="forestas-testata-sottotitolo">' . esc_html( $sottotitolo ) . '</p>' : ''
 		) . forestas_percorso( $id );
@@ -189,18 +198,21 @@ add_shortcode(
  * all'apertura. Niente pulsante se l'immagine non ha né autore né credits.
  */
 function forestas_credits_immagine( int $immagine ): string {
+	if ( ! $immagine ) {
+		return '';
+	}
 	// Come field--media--field-autore e field--media--field-credits: etichetta in grassetto, poi il valore
 	$campi = [
-		'author'  => [ forestas_testo( 'Autore foto', 'Photo author' ), (string) get_post_meta( $immagine, 'wpf_autore', true ) ],
-		'credits' => [ forestas_testo( 'Credits immagine', 'Image credits' ), (string) get_post_meta( $immagine, 'wpf_credits', true ) ],
+		[ forestas_testo( 'Autore foto', 'Photo author' ), (string) get_post_meta( $immagine, FORESTAS_META_AUTORE, true ) ],
+		[ forestas_testo( 'Credits immagine', 'Image credits' ), (string) get_post_meta( $immagine, FORESTAS_META_CREDITS, true ) ],
 	];
 	$parti = '';
-	foreach ( $campi as $classe => [ $etichetta, $valore ] ) {
+	foreach ( $campi as [ $etichetta, $valore ] ) {
 		if ( $valore !== '' ) {
-			$parti .= sprintf( ' <span class="forestas-credits__%s"><strong>%s</strong> %s</span>', $classe, esc_html( $etichetta ), esc_html( $valore ) );
+			$parti .= ' <span><strong>' . esc_html( $etichetta ) . '</strong> ' . esc_html( $valore ) . '</span>';
 		}
 	}
-	if ( ! $immagine || $parti === '' ) {
+	if ( $parti === '' ) {
 		return '';
 	}
 	wp_enqueue_script( 'forestas-credits', get_stylesheet_directory_uri() . '/assets/js/credits-foto.js', [], forestas_versione(), [ 'in_footer' => true, 'strategy' => 'defer' ] );
@@ -236,7 +248,7 @@ add_shortcode(
 		}
 		$in_corso = true;
 		$testo    = (string) get_post_field( 'post_content', $id );
-		$html     = md5( $testo ) === get_post_meta( $id, '_wpf_testo_drupal', true ) ? $testo : apply_filters( 'the_content', $testo );
+		$html     = md5( $testo ) === get_post_meta( $id, FORESTAS_META_TESTO_DRUPAL, true ) ? $testo : apply_filters( 'the_content', $testo );
 		$in_corso = false;
 		return '<div class="forestas-pagina-testo">' . $html . do_shortcode( '[forestas_allegati][forestas_galleria]' ) . '</div>';
 	}
@@ -250,13 +262,13 @@ function forestas_dimensione_file( int $byte ): string {
 	if ( $byte < 1024 ) {
 		return $byte . ' bytes';
 	}
-	foreach ( [ 'KB', 'MB', 'GB' ] as $unita ) {
+	foreach ( [ 'KB', 'MB' ] as $unita ) {
 		$byte /= 1024;
-		if ( $byte < 1024 || 'GB' === $unita ) {
+		if ( $byte < 1024 ) {
 			return round( $byte, 2 ) . ' ' . $unita;
 		}
 	}
-	return '';
+	return round( $byte / 1024, 2 ) . ' GB';
 }
 
 /*
@@ -267,7 +279,7 @@ function forestas_dimensione_file( int $byte ): string {
 add_shortcode(
 	'forestas_allegati',
 	function () {
-		$ids = forestas_meta_ids( (int) get_the_ID(), 'wpf_allegati' );
+		$ids = forestas_meta_ids( (int) get_the_ID(), FORESTAS_META_ALLEGATI );
 		if ( ! $ids ) {
 			return '';
 		}
@@ -307,7 +319,7 @@ add_shortcode(
 		$voci      = '';
 		$posizione = 0;
 		// Un'immagine tolta dalla libreria resta nel meta finché la pagina non si risalva: si salta
-		foreach ( forestas_meta_ids( (int) get_the_ID(), 'wpf_galleria' ) as $id ) {
+		foreach ( forestas_meta_ids( (int) get_the_ID(), FORESTAS_META_GALLERIA ) as $id ) {
 			$miniatura = wp_get_attachment_image( $id, 'medium', false, [ 'loading' => 'lazy' ] );
 			if ( $miniatura === '' ) {
 				continue;
@@ -320,8 +332,8 @@ add_shortcode(
 				$posizione++,
 				$miniatura,
 				esc_html( (string) get_post_meta( $id, '_wp_attachment_image_alt', true ) ),
-				esc_html( (string) get_post_meta( $id, 'wpf_autore', true ) ),
-				esc_html( (string) get_post_meta( $id, 'wpf_credits', true ) )
+				esc_html( (string) get_post_meta( $id, FORESTAS_META_AUTORE, true ) ),
+				esc_html( (string) get_post_meta( $id, FORESTAS_META_CREDITS, true ) )
 			);
 		}
 		if ( $voci === '' ) {
@@ -361,14 +373,17 @@ function forestas_galleria_lightbox(): void {
 }
 
 /*
- * Mappa interattiva come su Drupal (oc:8758): il percorso, il titolo della pagina nascosto alla vista, poi
- * il blocco «mappa_interattiva» del tema (block--mappa-interattiva.html.twig): titolo nascosto, barra con
- * i pulsanti per allargare la mappa a tutto schermo e tornare indietro, iframe dell'app. L'indirizzo è
- * quello scritto nel blocco (MappaInterattivaBlock), non l'iframe del testo, che su Drupal non si mostra.
- * Il cambio di mappa con ?id= (sentiero, itinerario o punto di interesse) arriverà con le loro pagine.
+ * Indirizzo della mappa: quello scritto nel blocco di Drupal (MappaInterattivaBlock), non l'iframe del
+ * testo della pagina, che su Drupal non si mostra. Il cambio di mappa con ?id= (sentiero, itinerario o
+ * punto di interesse) arriverà con le loro pagine.
  */
 const FORESTAS_MAPPA_URL = 'https://32.app.webmapp.it/#/map';
 
+/*
+ * Mappa interattiva come su Drupal (oc:8758): il percorso, il titolo della pagina nascosto alla vista, poi
+ * il blocco «mappa_interattiva» del tema (block--mappa-interattiva.html.twig): titolo nascosto, barra con
+ * i pulsanti per allargare la mappa a tutto schermo e tornare indietro, iframe dell'app.
+ */
 add_shortcode(
 	'forestas_mappa',
 	function () {
@@ -385,7 +400,7 @@ add_shortcode(
 			. '<button type="button" id="mapExpander" class="forestas-pulsante forestas-pulsante--icona is-map-expander"><span>%4$s</span><i aria-hidden="true" class="far fa-expand-arrows forestas-pulsante__icona"></i></button>'
 			. '<button type="button" id="mapShrinker" class="forestas-pulsante forestas-pulsante--icona is-map-shrinker"><span>%5$s</span><i aria-hidden="true" class="far fa-compress-arrows-alt forestas-pulsante__icona"></i></button>'
 			. '</div>'
-			. '<div><iframe id="trailMap" src="%6$s" name="MapIframe" scrolling="no" frameborder="0" marginheight="0px" marginwidth="0px" height="100%%" width="100%%" allowfullscreen="" title="%7$s"></iframe></div>'
+			. '<div><iframe src="%6$s" scrolling="no" frameborder="0" marginheight="0px" marginwidth="0px" height="100%%" width="100%%" allowfullscreen="" title="%7$s"></iframe></div>'
 			. '</div>',
 			forestas_percorso( $id ),
 			esc_html( $titolo ),

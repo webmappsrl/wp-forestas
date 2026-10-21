@@ -270,91 +270,72 @@ function wpf_scrivi_htaccess(): bool {
 }
 
 /**
- * Impedisce due apply nello stesso momento. Il blocco è una riga di wp_options inserita con
- * INSERT IGNORE: il database la accetta una volta sola, quindi solo il primo apply la ottiene
- * (add_option non basta: scrive con ON DUPLICATE KEY UPDATE e si fida della cache). Un blocco più
- * vecchio di WPF_APPLY_SCADENZA viene da un apply interrotto e si toglie; l'init toglie all'avvio del
- * container i blocchi presi prima dell'avvio (vedi wpf_sblocca_apply), perché un apply gira dentro il
- * container e muore con lui.
+ * Blocco contro due esecuzioni contemporanee dello stesso comando. È una riga di wp_options ($opzione)
+ * inserita con INSERT IGNORE: il database la accetta una volta sola, quindi solo la prima esecuzione la
+ * ottiene (add_option non basta: scrive con ON DUPLICATE KEY UPDATE e si fida della cache). Un blocco più
+ * vecchio di $scadenza secondi viene da un'esecuzione interrotta e si toglie; a fine esecuzione si toglie
+ * da sé.
+ */
+function wpf_blocca( string $opzione, int $scadenza ): bool {
+	global $wpdb;
+	wpf_sblocca( $opzione, time() - $scadenza );
+	$preso = $wpdb->query(
+		$wpdb->prepare(
+			"INSERT IGNORE INTO {$wpdb->options} (option_name, option_value, autoload) VALUES (%s, %s, 'off')",
+			$opzione,
+			(string) time()
+		)
+	);
+	if ( $preso !== 1 ) {
+		return false;
+	}
+	register_shutdown_function( 'wpf_sblocca', $opzione );
+	return true;
+}
+
+/** Toglie il blocco $opzione (vedi wpf_blocca); con $prima_di solo uno preso prima di quell'istante. */
+function wpf_sblocca( string $opzione, ?int $prima_di = null ): void {
+	global $wpdb;
+	if ( $prima_di === null ) {
+		$wpdb->delete( $wpdb->options, [ 'option_name' => $opzione ] );
+	} else {
+		$wpdb->query(
+			$wpdb->prepare(
+				"DELETE FROM {$wpdb->options} WHERE option_name = %s AND CAST(option_value AS UNSIGNED) < %d",
+				$opzione,
+				$prima_di
+			)
+		);
+	}
+	wp_cache_delete( $opzione, 'options' );
+}
+
+/**
+ * Impedisce due apply nello stesso momento (wpf_blocca). L'init toglie all'avvio del container i blocchi
+ * presi prima dell'avvio (vedi wpf_sblocca_apply), perché un apply gira dentro il container e muore con lui.
  */
 function wpf_blocca_apply(): bool {
-	global $wpdb;
-	wpf_sblocca_apply( time() - WPF_APPLY_SCADENZA );
-	$preso = $wpdb->query(
-		$wpdb->prepare(
-			"INSERT IGNORE INTO {$wpdb->options} (option_name, option_value, autoload) VALUES (%s, %s, 'off')",
-			WPF_OPZIONE_APPLY_IN_CORSO,
-			(string) time()
-		)
-	);
-	if ( $preso !== 1 ) {
-		return false;
-	}
-	register_shutdown_function( 'wpf_sblocca_apply' );
-	return true;
+	return wpf_blocca( WPF_OPZIONE_APPLY_IN_CORSO, WPF_APPLY_SCADENZA );
 }
 
 /**
- * Toglie il blocco dell'apply (vedi wpf_blocca_apply). Con $prima_di toglie solo un blocco preso prima
- * di quell'istante: l'init passa l'ora del proprio avvio, così non toglie il blocco di un apply lanciato
- * dall'host mentre l'init sta ancora girando.
+ * Toglie il blocco dell'apply. Con $prima_di toglie solo un blocco preso prima di quell'istante: l'init
+ * passa l'ora del proprio avvio, così non toglie il blocco di un apply lanciato dall'host mentre l'init sta
+ * ancora girando.
  */
 function wpf_sblocca_apply( ?int $prima_di = null ): void {
-	global $wpdb;
-	if ( $prima_di === null ) {
-		$wpdb->delete( $wpdb->options, [ 'option_name' => WPF_OPZIONE_APPLY_IN_CORSO ] );
-	} else {
-		$wpdb->query(
-			$wpdb->prepare(
-				"DELETE FROM {$wpdb->options} WHERE option_name = %s AND CAST(option_value AS UNSIGNED) < %d",
-				WPF_OPZIONE_APPLY_IN_CORSO,
-				$prima_di
-			)
-		);
-	}
-	wp_cache_delete( WPF_OPZIONE_APPLY_IN_CORSO, 'options' );
+	wpf_sblocca( WPF_OPZIONE_APPLY_IN_CORSO, $prima_di );
 }
 
-// Blocco della sincronizzazione delle pagine da Drupal (oc:8758): stesso schema di quello dell'apply
+// Blocco della sincronizzazione delle pagine da Drupal (oc:8758): due esecuzioni insieme (un lancio a mano
+// e un cron) creerebbero pagine e allegati doppi. La scadenza è più lunga di quella dell'apply: con il sito
+// Drupal lento ogni file può costare WPF_MEDIA_ATTESA secondi, e un blocco tolto mentre la prima esecuzione
+// scrive ancora lascerebbe partire la seconda
 const WPF_OPZIONE_PAGINE_IN_CORSO = 'wp_forestas_pagine_in_corso';
+const WPF_PAGINE_SCADENZA         = 7200;
 
-/**
- * Impedisce due sincronizzazioni delle pagine nello stesso momento (un lancio a mano e un cron), che
- * creerebbero pagine doppie. Funziona come wpf_blocca_apply: una riga inserita con INSERT IGNORE, tolta
- * a fine esecuzione o dopo WPF_APPLY_SCADENZA se l'esecuzione si è interrotta.
- */
 function wpf_blocca_pagine(): bool {
-	global $wpdb;
-	wpf_sblocca_pagine( time() - WPF_APPLY_SCADENZA );
-	$preso = $wpdb->query(
-		$wpdb->prepare(
-			"INSERT IGNORE INTO {$wpdb->options} (option_name, option_value, autoload) VALUES (%s, %s, 'off')",
-			WPF_OPZIONE_PAGINE_IN_CORSO,
-			(string) time()
-		)
-	);
-	if ( $preso !== 1 ) {
-		return false;
-	}
-	register_shutdown_function( 'wpf_sblocca_pagine' );
-	return true;
-}
-
-/** Toglie il blocco della sincronizzazione delle pagine; con $prima_di solo uno preso prima di allora. */
-function wpf_sblocca_pagine( ?int $prima_di = null ): void {
-	global $wpdb;
-	if ( $prima_di === null ) {
-		$wpdb->delete( $wpdb->options, [ 'option_name' => WPF_OPZIONE_PAGINE_IN_CORSO ] );
-	} else {
-		$wpdb->query(
-			$wpdb->prepare(
-				"DELETE FROM {$wpdb->options} WHERE option_name = %s AND CAST(option_value AS UNSIGNED) < %d",
-				WPF_OPZIONE_PAGINE_IN_CORSO,
-				$prima_di
-			)
-		);
-	}
-	wp_cache_delete( WPF_OPZIONE_PAGINE_IN_CORSO, 'options' );
+	return wpf_blocca( WPF_OPZIONE_PAGINE_IN_CORSO, WPF_PAGINE_SCADENZA );
 }
 
 /** Ordina le chiavi degli array associativi, per file con differenze stabili fra un export e l'altro. */

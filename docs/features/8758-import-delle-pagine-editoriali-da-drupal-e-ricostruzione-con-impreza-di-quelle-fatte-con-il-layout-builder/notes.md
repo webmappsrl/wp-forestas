@@ -268,7 +268,8 @@ evidenza, che è una sola, resta quella che c'era.
   variabili, perché la redazione non è tecnica.
 - **Sottotitolo nel Riassunto nativo** (richiesta del dev, 20/10): WordPress non ha un sottotitolo per
   le pagine, ma ha il Riassunto (`post_excerpt`), spento sulle pagine e acceso dal child. Lo script ci
-  scrive la «Descrizione testata» di Drupal e cancella il vecchio meta `wpf_sottotitolo`; la testata
+  scrive la «Descrizione testata» di Drupal e cancella il vecchio meta `wpf_sottotitolo` (cancellazione
+  tolta dopo, nella review del 21/10: non ne restava nessuno); la testata
   legge il Riassunto scritto (non quello ricavato dal testo). Verificato: 21 pagine aggiornate, 0 meta
   vecchi rimasti, anteprima successiva «invariata». Gli altri campi passati in rassegna: allegati e
   galleria restano personalizzati (un file ha una sola pagina «madre» e nessun ordine; la galleria
@@ -320,7 +321,7 @@ porta a `/enti`, l'elenco degli enti, e non alla pagina «Contatti» (nid 1). Si
 Drupal: in `config/menu.json` Contatti porta a `/enti/` e Contact a `/en/enti/`. In WordPress
 l'elenco degli enti non esiste ancora, quindi oggi la voce porta a una pagina che non c'è: arriverà
 con i contenuti degli enti (shard, modello `Ente`). La pagina «Contatti» resta nel perimetro e si
-sincronizza, ma nessuna voce di menu ci porta (`menu: []` in `config/pagine.json`). Se servirà, il
+sincronizza, ma nessuna voce di menu ci porta (nessuna voce verso `contatti` in `config/menu.json`). Se servirà, il
 collegamento si cambierà.
 
 ## Sequenza consigliata per popolare i contenuti: da riportare nel tag `wp-forestas`
@@ -488,7 +489,7 @@ Drupal di UAT il 20/10; gli invii sono stati contati, non letti, perché conteng
   «Condividi» dell'artifact); un ridisegno di testo, allegati e galleria secondo l'artifact, che oggi non
   li ridisegna, va concordato col cliente e fatto con un ticket a sé.
 
-## Review del 21/10
+## Prima review del 21/10
 
 Review con 5 finder sul branch (commit `ab192a1`), poi correzioni nello stesso branch.
 
@@ -517,3 +518,46 @@ Review con 5 finder sul branch (commit `ab192a1`), poi correzioni nello stesso b
 - I tre template di Impreza esistono solo in italiano e le pagine inglesi usano quelli (`us_content_id`
   verso il template italiano): il testo dei template è solo shortcode, le etichette le traduce il child.
   Se un template avrà testo fisso, servirà la sua copia inglese.
+
+## Seconda review del 21/10
+
+Review con 5 finder sul branch (commit `635916b`), poi correzioni nello stesso branch.
+
+- **Credits della testata nel formato di `sprintf`** (bloccante): l'HTML di autore e credits era
+  concatenato nella stringa di formato; un «%» scritto dalla redazione («50%») dava `ValueError` e la
+  pagina in errore. Ora è un argomento. Verificato: credits «Sconto 50% e 100% Forestas» sull'immagine
+  della FAQ, pagina 200 con il testo intero, poi valore ripristinato.
+- Collegamento WPML: in un giro normale una pagina inglese «invariata» ma staccata dall'italiano (gruppo
+  di WPML diverso) ora si ricollega; prima solo `--contenuti-mancanti` lo faceva, e il mancante
+  `traduzione` spariva dall'elenco senza ricollegare.
+- Codice d'uscita: l'anteprima esce con 1 anche per un template assente (`… non riuscirebbe`, ora anche
+  a schermo: è l'unico mancante che l'anteprima, senza scrivere, può prevedere); i mancanti fuori perimetro si scartano anche in anteprima; `--contenuti-mancanti`
+  con la sincronizzazione spenta esce con 1. `bin/wordpress-config.sh` mostra la coda del log per un
+  errore di PHP o WP-CLI (uscita oltre 1) e non suggerisce `--contenuti-mancanti` a sincronizzazione spenta.
+- Link: da una pagina un link alla versione inglese di un contenuto che in WordPress è solo italiano porta
+  all'italiano, come su Drupal; il messaggio «verso Drupal» nomina anche file e vecchi indirizzi. I
+  redirect di Drupal non si leggono: nei testi di oggi non ce ne sono.
+- Testo in `full_html` (la Mappa) filtrato con `wp_kses_post`: lo script scrive come amministratore. La
+  Mappa italiana è stata riscritta una volta (perde l'iframe del testo, che non si mostra).
+- Blocco: una sola funzione `wpf_blocca( $opzione, $scadenza )` per apply e pagine; pagine a 2 ore.
+- `applica` in anteprima conta le voci di menu senza menu che il `--conferma` cancellerebbe.
+- L'export avvisa che un'opzione che punta a una pagina sincronizzata non arriva agli altri siti.
+- Libreria media: su un'immagine che viene da Drupal, a sincronizzazione accesa, un avviso sotto
+  «Credits» dice che alt, autore e credits si riallineano a Drupal.
+- `config/pagine.json`: tolto il campo `menu`, che nessuno leggeva; la nota dice che lo slug va cambiato
+  anche in `config/menu.json`.
+- Child 1.4.28: costanti `FORESTAS_META_*` per tutti i meta della sincronizzazione; caratteri ricorrenti,
+  spazio del filo e colore di base come variabili; nomi in italiano nel JS; tolti `id`/`name` dell'iframe
+  e le classi dei credits non lette. Valori calcolati verificati nel browser (titolo 55px a 1440, filo
+  23px, testo 18px, base `#CA5C30`), lightbox, Condividi, credits e mappa con Esc funzionanti; anteprima
+  «invariata: 28» dopo il giro che ha riscritto la Mappa.
+
+Lasciati così, con il motivo:
+- `--sase-sezione` (menu) e `--forestas-sezione` (pagine) restano due nomi: la prima la imposta la voce
+  di menu, la seconda il contenitore della pagina, e possono valere colori diversi sulla stessa pagina.
+- Le variabili della mappa (`--map-ratio`…) restano come nel tema Drupal da cui vengono le formule.
+- Il markup di una voce del riquadro admin resta sia in PHP sia in JS: unificarlo vorrebbe un template
+  lato client per due righe.
+- Elenco dei mancanti legato alle chiavi di `config/pagine.json` e lingue it/en: vanno rivisti quando
+  oc:8759 e oc:8760 estenderanno questo motore (knowledge, «Perché così»).
+

@@ -64,8 +64,8 @@ perimetro trovate) e si ferma senza toccare nulla se un nid del perimetro non c'
 pagine dovrebbero andare in bozza nello stesso giro: è il segno di una copia in ricarica o
 troncata. Un lock impedisce due esecuzioni insieme.
 
-**Ciò che manca si ritenta.** Ogni elemento non riuscito (pagina, traduzione, testo, testata,
-allegato, galleria, collegamento WPML, template) finisce in un elenco salvato su WordPress con
+**Ciò che manca si ritenta.** Ogni elemento non riuscito (pagina, traduzione e il suo collegamento
+WPML, immagine della testata, allegato, galleria, template) finisce in un elenco salvato su WordPress con
 pagina, lingua, causa e date del primo e dell'ultimo tentativo. L'opzione `--contenuti-mancanti`
 rilegge da Drupal e riscrive solo quegli elementi; l'esecuzione normale riscrive tutto e toglie
 dall'elenco ciò che è andato a buon fine. Un media che non si scarica non nasconde gli altri
@@ -126,7 +126,8 @@ script, senza lavoro a mano dal pannello, perché un cambio di server non richie
       in caso di errore o se manca una pagina, una traduzione o un template; se mancano solo media
       esce con 0 e un avviso (si ritentano al giro dopo); nessuna domanda interattiva.
 - [x] Interruttore `DRUPAL_SYNC=on|off` nel `wp-forestas/.env`, predefinito `off`: con `off` il
-      comando mostra l'anteprima ma non scrive, ed esce con un messaggio chiaro e codice ≠ 0.
+      comando mostra l'anteprima ma non scrive, ed esce con un messaggio chiaro e codice ≠ 0
+      (con `--conferma` si ferma subito con un `ERRORE`, senza anteprima).
 - [x] Controllo di integrità della copia prima di scrivere: tabelle lette presenti e non vuote;
       nid del perimetro non trovato → stop con errore (non bozza); più di 2 pagine da mettere in
       bozza nello stesso giro → stop con errore, nulla scritto.
@@ -190,9 +191,12 @@ script, senza lavoro a mano dal pannello, perché un cambio di server non richie
 - [x] [UX] Testo della testata leggibile sopra l'immagine (contrasto almeno 4,5:1, con velo scuro o
       fondo come su Drupal), anche con immagini chiare.
 - [x] [UX] Le ancore interne della FAQ (35) portano alla domanda senza che l'header fisso la copra
-      (`scroll-margin-top` pari all'altezza dell'header compatto e di quello mobile).
+      (`scroll-margin-top` pari all'altezza dell'header compatto e di quello mobile). Predisposto: oggi
+      le ancore non hanno destinazione già su Drupal (il filtro del testo ha tolto `id` e `name`), e
+      funzionano quando il cliente corregge il testo su Drupal (notes.md, «Sequenza», punto 10).
 - [x] [UX] L'iframe della Mappa interattiva ha un `title` descrittivo; pulsanti per lo schermo intero
-      usabili da tastiera (Esc lo chiude). Niente link alternativo: su Drupal non c'è e le pagine
+      usabili da tastiera (Esc lo chiude, finché il fuoco è nella pagina: dentro l'iframe dell'app, che
+      sta su un altro dominio, i tasti vanno all'app, come su Drupal). Niente link alternativo: su Drupal non c'è e le pagine
       seguono Drupal 1 a 1 (decisione del dev, 20/10).
 - [x] [UX] Allegati PDF con nome, formato e dimensione nel testo del link; immagini della galleria
       con alt; immagini sotto la piega con `loading="lazy"` e dimensioni dichiarate, per evitare
@@ -262,15 +266,22 @@ Tutto in `wp-forestas` (il codice è specifico di Forestas; `wm-package` non è 
 `forestas` cambia solo il puntatore del submodule, dopo il merge.
 
 - `wp-forestas/docker/scripts/config/` — nuovo script delle pagine (lettura Drupal, pagine, media,
-  link, WPML), eseguito con `wp eval-file`; eventuali funzioni comuni in `comune.php` / `wpml.php`.
-- `wp-forestas/bin/` — comando sull'host (nuovo comando di `wordpress-config.sh` o script a parte),
-  con lock e log.
+  link, WPML), eseguito con `wp eval-file`; funzioni comuni in `comune.php` (blocco) e `wpml.php`;
+  `menu.php` (voci di lingua diversa dalla pagina come link, pulizia delle voci senza menu: cambia
+  l'apply di tutti i menu, header e footer compresi).
+- `wp-forestas/bin/` — comando `pagine` di `wordpress-config.sh`, con lock e log; i comandi
+  `export`/`apply` rinominati `esporta`/`applica` (i vecchi nomi restano come alias, con un avviso),
+  anche nei messaggi di `docker/scripts/init-wordpress.sh`.
 - `wp-forestas/docker/scripts/config/export.php`, `apply.php` (o `post.php`) — esclusione delle
   pagine con `_wpf_pagina`.
 - `wp-forestas/.gitignore` — cartella dei log.
 - `wp-forestas/config/` — elenco delle pagine del perimetro (nuovo file), template di contenuto in
-  `post.json`, collegamenti in `menu.json`.
+  `post.json`, collegamenti in `menu.json`, traduzioni nostre in `traduzioni/en/`, nome del sito
+  «Sardegna Sentieri» in `sito.json`.
 - `wp-forestas/themes/forestas-child/` — stili dei template e, se servono, shortcode per sottotitolo,
   allegati o galleria.
 - `wp-forestas/compose.yml`, `.env-example` — `extra_hosts` e variabili `DRUPAL_DB_*`.
-- `wp-forestas/README.md`, `wp-forestas/CLAUDE.md`, `wp-forestas/docs/knowledge/`.
+- `wp-forestas/README.md`, `wp-forestas/CLAUDE.md`, `wp-forestas/docs/knowledge/`, `wp-forestas/docs/howto/`
+  (cron della sincronizzazione, ricreare WordPress da zero).
+- `forestas/docs/howto/messa-in-opera-wordpress-uat.md` (repo padre): passo delle pagine nella messa in
+  opera su UAT.

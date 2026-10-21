@@ -21,8 +21,8 @@ provarlo.
 | `docker/themes/` | qui va messo `impreza.zip` (escluso da git) |
 | `docker/plugins/` | zip dei plugin commerciali (esclusi da git); l'elenco è in `commerciali.txt`, versionato |
 | `config/` | configurazione versionata del sito: Theme Options, header, footer, Home, menu, WPML |
-| `docker/scripts/config/` | export, apply, ritratto e licenza Impreza, eseguiti con `wp eval-file`; montati dal compose (non copiati nell'immagine). `costanti.php` contiene i nomi e i percorsi che legge l'init |
-| `bin/wordpress-config.sh` | comando sull'host per export, apply, ritratto e zip |
+| `docker/scripts/config/` | esporta, applica, sincronizzazione delle pagine da Drupal (`pagine.php`, `drupal.php`, `link.php`, `media.php`), ritratto e licenza Impreza, eseguiti con `wp eval-file`; montati dal compose (non copiati nell'immagine). `costanti.php` contiene i nomi e i percorsi che legge l'init |
+| `bin/wordpress-config.sh` | comando sull'host per esporta, applica, pagine, ritratto e zip |
 | `backup/` | backup creati da `applica --conferma` (esclusi da git) |
 | `themes/forestas-child/` | child theme di Impreza, montato in `wp-content/themes/forestas-child` |
 | `docker/uat/` | virtual host di riferimento per l'Apache dell'host di UAT |
@@ -160,7 +160,7 @@ Il comando trova da solo il container che monta il child da questa cartella; se 
   `localhost`, `esporta`, controlli `git diff config/`, commit, push, puntatore del submodule in
   `forestas`, pull su UAT, poi `applica` (che mostra le differenze) e `applica --conferma`. Se qualcosa si
   cambia comunque dal pannello di UAT, l'export lì va fatto fuori dal repo
-  (`export --in /tmp/config`) e portato in locale: altrimenti il successivo `applica --conferma` riporta
+  (`esporta --in /tmp/config`) e portato in locale: altrimenti il successivo `applica --conferma` riporta
   header, footer, menu e Theme Options a quelli del repo e la modifica si perde (resta solo nel backup
   dell'apply).
 - **Nessun segreto nei file**: le opzioni con `key`, `secret`, `token`, `password` o `pass` fra le
@@ -211,7 +211,7 @@ Il comando trova da solo il container che monta il child da questa cartella; se 
   contro 9.5), non applica: si guardano le differenze e si lancia a mano. Se manca Impreza o un plugin
   dell'elenco aspetta che arrivi lo zip, entro i 3 giorni dall'installazione in cui vale.
 - Il backup di `applica --conferma` è un export in sola lettura in `backup/<data-ora>/`, senza segreti;
-  si rimette con `apply --da backup/<data-ora> --conferma`. Impreza conserva anche un suo backup delle
+  si rimette con `applica --da backup/<data-ora> --conferma`. Impreza conserva anche un suo backup delle
   Theme Options, ripristinabile dal pannello. Un apply che riesce solo in parte termina con errore e
   dice quali passi mancano.
 - Due apply sullo stesso sito non partono insieme (per esempio quello automatico dell'avvio e uno
@@ -259,8 +259,9 @@ bin/wordpress-config.sh pagine --conferma               # scrive
 bin/wordpress-config.sh pagine --contenuti-mancanti --conferma   # ritenta solo ciò che non è riuscito
 ```
 
-- **Scrive solo con `DRUPAL_SYNC=on`** nel `wp-forestas/.env`; con `off` (il default) mostra solo
-  l'anteprima ed esce con codice 1, così un cron si accorge che non scriverebbe. Al passaggio in produzione va messo a `off`: da lì la fonte è WordPress.
+- **Scrive solo con `DRUPAL_SYNC=on`** nel `wp-forestas/.env`; con `off` (il default) l'anteprima
+  funziona ma esce con codice 1, così un cron si accorge che non scriverebbe, e `--conferma` si ferma
+  subito con un `ERRORE`, senza anteprima. Al passaggio in produzione va messo a `off`: da lì la fonte è WordPress.
 - **Drupal vince sempre:** a ogni esecuzione le pagine riprendono i dati di Drupal. Una pagina
   spubblicata su Drupal va in bozza e torna pubblicata, con lo stesso indirizzo, se su Drupal torna.
 - **Dove legge Drupal:** per default `mysql-sardegnasentieri-dump:3306`, il container della copia
@@ -274,8 +275,11 @@ bin/wordpress-config.sh pagine --contenuti-mancanti --conferma   # ritenta solo 
   `RIASSUNTO`. A schermo compare il riassunto.
 - **Ciò che non riesce** (un'immagine che non si scarica, un template assente…) resta in un elenco
   sul sito, con causa e date, e `--contenuti-mancanti` ritenta solo quegli elementi. Il comando esce
-  con codice 1 se manca qualcosa che non si sistema da sé (pagina, traduzione, template); se mancano
-  solo media, che si ritentano al giro dopo, esce con 0 e un avviso.
+  con codice 1 se manca qualcosa che non si sistema da sé (pagina, traduzione, template), anche in
+  anteprima se manca un template (`AVVISO … non riuscirebbe`: l'anteprima non scrive, e una pagina o
+  una traduzione che non si salvano si scoprono solo al `--conferma`); se mancano solo media, che si ritentano al giro
+  dopo, esce con 0 e un avviso. Un codice più alto è un errore di PHP o di WP-CLI: il comando mostra le
+  ultime righe del log.
 - **Si ferma senza scrivere** se la copia Drupal non è integra (tabelle mancanti o vuote, un nodo del
   perimetro assente) o se più di 2 pagine andrebbero in bozza nello stesso giro (una pagina conta una
   volta sola, in qualunque numero di lingue): è il segno di una
@@ -306,7 +310,9 @@ bin/wordpress-config.sh pagine --contenuti-mancanti --conferma   # ritenta solo 
    (l'utente in sola lettura della copia) e `DRUPAL_SYNC=on`, poi `scripts/wordpress-up.sh`, perché il
    container legge il `.env` solo all'avvio. `bin/wordpress-config.sh pagine` per l'anteprima, poi
    `pagine --conferma`, lontano dal reload della copia delle 10:00. Va dopo `applica --conferma`, che
-   scrive i template di Impreza delle pagine: senza, le pagine restano fra i mancanti.
+   scrive i template di Impreza delle pagine: senza, le pagine restano fra i mancanti. Poi un altro
+   `applica --conferma`: le voci di menu verso pagine che al primo apply non c'erano sono rimaste link
+   per indirizzo, e solo un apply le collega alle pagine.
 
 ## Indicizzazione
 

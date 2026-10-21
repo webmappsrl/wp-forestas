@@ -43,14 +43,17 @@ docker exec wordpress-<APP_NAME> printenv DRUPAL_SYNC     # on
 Dalla cartella `wp-forestas` sull'host:
 
 ```bash
-bin/wordpress-config.sh pagine              # anteprima: pagine da creare, media da scaricare, link
-bin/wordpress-config.sh pagine --conferma   # crea le pagine e scarica i media
+bin/wordpress-config.sh applica --conferma    # template delle pagine (e il resto di config/), con backup
+bin/wordpress-config.sh pagine                # anteprima: pagine da creare, media da scaricare, link
+bin/wordpress-config.sh pagine --conferma     # crea le pagine e scarica i media
 bin/wordpress-config.sh applica               # anteprima: le voci di menu da collegare alle pagine
-bin/wordpress-config.sh applica --conferma    # collega i menu (con backup in backup/)
+bin/wordpress-config.sh applica --conferma    # collega i menu alle pagine appena create
 ```
 
-L'apply serve solo la prima volta, o quando cambia `config/`: le voci di menu le scrive l'apply, non
-il comando delle pagine. Una seconda anteprima deve dire «invariata» per tutte le pagine e
+Le pagine hanno bisogno dei template di Impreza, che scrive l'apply; le voci di menu le scrive l'apply,
+non il comando delle pagine, e una voce verso una pagina che ancora non c'è resta un link per indirizzo
+finché un apply successivo non la collega: per questo l'apply va prima e dopo. Serve solo la prima
+volta, o quando cambia `config/`. Una seconda anteprima deve dire «invariata» per tutte le pagine e
 «nessuna differenza» per l'apply.
 
 ## 3. La riga del crontab
@@ -84,10 +87,13 @@ un eventuale script che lanci più import in fila.
 | 1, `ERRORE copia Drupal non integra` | la copia era in ricarica o è troncata: nulla scritto | controllare l'orario del cron e il log del sync della copia |
 | 1, `ERRORE … DRUPAL_SYNC` (con `--conferma`) o `AVVISO … DRUPAL_SYNC … solo anteprima` (senza) | interruttore spento: nulla scritto | punto 1 |
 | 1, `ERRORE … un'altra sincronizzazione` | due esecuzioni sovrapposte: la seconda esce | nessuna, se è un caso isolato |
+| 1, `AVVISO … non riuscirebbe` (in anteprima) | il `--conferma` lascerebbe un template fra i mancanti (l'anteprima non scrive, quindi può prevedere solo questo: una pagina o una traduzione che non si salvano si scoprono al `--conferma`) | `applica --conferma`, che scrive i template, poi di nuovo `pagine` |
+| più di 1, `Uscita N: errore imprevisto` con la coda del log | errore di PHP o di WP-CLI, non del comando (per esempio una funzione di WPML cambiata dopo un aggiornamento) | leggere il log completo; il comando non ha finito il giro |
 
 Le righe `LINK … in attesa` non sono errori: sono link verso contenuti non ancora importati, che si
 sistemano da soli quando arrivano. Nemmeno le righe `LINK … verso Drupal`: sono link a pagine di Drupal
-che non sono contenuti (il form `/form/segnalazione`), che restano verso Drupal finché una regola in
+che non sono contenuti (il form `/form/segnalazione`, un file, un vecchio indirizzo servito da un
+redirect di Drupal), che restano verso Drupal finché una regola in
 `docker/scripts/config/link.php` non dà loro un indirizzo WordPress.
 
 ## 5. Al lancio in produzione

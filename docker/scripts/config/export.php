@@ -74,9 +74,10 @@ foreach ( array_unique( $originali ) as $id ) {
 		continue;
 	}
 	// Le pagine statiche sincronizzate da Drupal le scrive solo bin/wordpress-config.sh pagine (oc:8758):
-	// anche se un'opzione punta a loro non entrano in post.json, che è un repo pubblico
+	// anche se un'opzione punta a loro non entrano in post.json. L'opzione resta senza riferimento (null in
+	// sito.json, l'id di questo sito nelle Theme Options): oggi nessuna lo fa, e l'avviso lo dice
 	if ( get_post_meta( $id, WPF_META_PAGINA, true ) !== '' ) {
-		$avvisi[] = "un'opzione punta alla pagina sincronizzata da Drupal «" . get_post_meta( $id, WPF_META_PAGINA, true ) . "» (id {$id}): non esportata, la scrive il comando pagine";
+		$avvisi[] = "un'opzione punta alla pagina sincronizzata da Drupal «" . get_post_meta( $id, WPF_META_PAGINA, true ) . "» (id {$id}): la pagina non si esporta (la scrive il comando pagine) e l'opzione non arriva agli altri siti con l'id giusto: va reimpostata a mano dopo il comando pagine";
 		continue;
 	}
 	$tipo_wpml = 'post_' . $post->post_type;

@@ -17,7 +17,8 @@ const WPF_DRUPAL_TABELLE = [
 	'node__layout_builder__layout', 'media__field_media_image', 'media__field_media_document',
 	'media__field_autore', 'media__field_credits',
 ];
-// I file public:// di Drupal, scaricati dal sito
+// I file public:// di Drupal, scaricati dal sito. L'indirizzo può cambiare (copia dei file allo spegnimento
+// di Drupal) senza che cambi il sito a cui puntano i link dei testi, che è WPF_LINK_DRUPAL in link.php
 const WPF_DRUPAL_FILES = 'https://www.sardegnasentieri.it/sites/default/files/';
 
 /**
@@ -92,6 +93,11 @@ function wpf_drupal_lingue( string $lingua ): array {
 	return $lingua === 'it' ? [ 'it', 'und' ] : [ $lingua ];
 }
 
+/** «langcode IN (?, …)» per le lingue di wpf_drupal_lingue, da usare con i suoi valori come parametri. */
+function wpf_drupal_in_lingua( string $colonna, string $lingua ): string {
+	return "{$colonna} IN (" . implode( ',', array_fill( 0, count( wpf_drupal_lingue( $lingua ) ), '?' ) ) . ')';
+}
+
 /**
  * Valori di un campo del nodo nella lingua chiesta. I campi non traducibili (immagini, allegati) hanno
  * righe solo nella lingua originale del nodo: per una traduzione senza righe proprie valgono quelle.
@@ -114,7 +120,7 @@ function wpf_drupal_campo( mysqli $db, string $campo, string $colonna, int $nid,
 function wpf_drupal_file_media( mysqli $db, int $mid ): ?array {
 	$righe = wpf_drupal_righe(
 		$db,
-		"SELECT f.fid, f.uri, f.filename, f.filemime, f.filesize, i.field_media_image_alt AS alt, d.field_media_document_description AS descrizione, m.name,
+		"SELECT f.fid, f.uri, f.filename, f.filemime, i.field_media_image_alt AS alt, d.field_media_document_description AS descrizione,
 		        au.field_autore_value AS autore, cr.field_credits_value AS credits
 		 FROM media_field_data m
 		 LEFT JOIN media__field_media_image i ON i.entity_id = m.mid AND i.deleted = 0 AND i.langcode = m.langcode
@@ -130,18 +136,16 @@ function wpf_drupal_file_media( mysqli $db, int $mid ): ?array {
 	}
 	$r = $righe[0];
 	return [
-		'fid'  => (int) $r['fid'],
-		'uri'  => $r['uri'],
-		'nome' => $r['filename'],
-		'alt'  => (string) ( $r['alt'] ?? '' ),
+		'fid'     => (int) $r['fid'],
+		'uri'     => $r['uri'],
+		'nome'    => $r['filename'],
+		'alt'     => (string) ( $r['alt'] ?? '' ),
 		// Su Drupal il link di un documento mostra la descrizione, o il nome del file se manca
-		'titolo' => trim( (string) ( $r['descrizione'] ?? '' ) ) !== '' ? trim( (string) $r['descrizione'] ) : $r['filename'],
+		'titolo'  => trim( (string) ( $r['descrizione'] ?? '' ) ) !== '' ? trim( (string) $r['descrizione'] ) : $r['filename'],
 		// Campi «Autore» e «Credits» del media immagine, mostrati nella testata dietro «Credits foto»
 		'autore'  => trim( (string) ( $r['autore'] ?? '' ) ),
 		'credits' => trim( (string) ( $r['credits'] ?? '' ) ),
-		'mime' => $r['filemime'],
-		'byte' => (int) $r['filesize'],
-		'mid'  => $mid,
+		'mime'    => $r['filemime'],
 	];
 }
 
@@ -154,7 +158,7 @@ function wpf_drupal_pagina( mysqli $db, int $nid, string $lingua ): ?array {
 		$db,
 		'SELECT f.title, f.status, f.langcode, n.langcode AS originale
 		 FROM node_field_data f JOIN node n ON n.nid = f.nid
-		 WHERE f.nid = ? AND f.langcode IN (' . implode( ',', array_fill( 0, count( wpf_drupal_lingue( $lingua ) ), '?' ) ) . ') LIMIT 1',
+		 WHERE f.nid = ? AND ' . wpf_drupal_in_lingua( 'f.langcode', $lingua ) . ' LIMIT 1',
 		array_merge( [ $nid ], wpf_drupal_lingue( $lingua ) )
 	);
 	if ( ! $righe ) {
@@ -167,14 +171,14 @@ function wpf_drupal_pagina( mysqli $db, int $nid, string $lingua ): ?array {
 	// Il body è traducibile: si prende solo nella lingua chiesta, senza ripiegare sull'originale
 	$body      = wpf_drupal_righe(
 		$db,
-		'SELECT body_value, body_format FROM node__body WHERE entity_id = ? AND deleted = 0 AND langcode IN (' . implode( ',', array_fill( 0, count( wpf_drupal_lingue( $lingua ) ), '?' ) ) . ') LIMIT 1',
+		'SELECT body_value, body_format FROM node__body WHERE entity_id = ? AND deleted = 0 AND ' . wpf_drupal_in_lingua( 'langcode', $lingua ) . ' LIMIT 1',
 		array_merge( [ $nid ], wpf_drupal_lingue( $lingua ) )
 	);
 	$immagine = $file( array_slice( $campo( 'field_immagine_principale_media', 'target_id' ), 0, 1 ) );
 	return [
 		'titolo'      => $r['title'],
 		'status'      => (bool) $r['status'],
-		'sottotitolo' => (string) ( wpf_drupal_campo_testo( $db, $nid, $lingua ) ?? '' ),
+		'sottotitolo' => (string) ( wpf_drupal_sottotitolo( $db, $nid, $lingua ) ?? '' ),
 		'testata'     => wpf_drupal_testata( $db, $nid ),
 		'colore'      => wpf_drupal_colore( $db, $nid ),
 		'body'        => (string) ( $body[0]['body_value'] ?? '' ),
@@ -235,10 +239,10 @@ function wpf_drupal_colore( mysqli $db, int $nid ): string {
 }
 
 /** Sottotitolo della testata: traducibile, quindi solo nella lingua chiesta. */
-function wpf_drupal_campo_testo( mysqli $db, int $nid, string $lingua ): ?string {
+function wpf_drupal_sottotitolo( mysqli $db, int $nid, string $lingua ): ?string {
 	$righe = wpf_drupal_righe(
 		$db,
-		'SELECT field_descrizione_testata_pagina_value AS v FROM node__field_descrizione_testata_pagina WHERE entity_id = ? AND deleted = 0 AND langcode IN (' . implode( ',', array_fill( 0, count( wpf_drupal_lingue( $lingua ) ), '?' ) ) . ') LIMIT 1',
+		'SELECT field_descrizione_testata_pagina_value AS v FROM node__field_descrizione_testata_pagina WHERE entity_id = ? AND deleted = 0 AND ' . wpf_drupal_in_lingua( 'langcode', $lingua ) . ' LIMIT 1',
 		array_merge( [ $nid ], wpf_drupal_lingue( $lingua ) )
 	);
 	return $righe[0]['v'] ?? null;
@@ -263,8 +267,8 @@ function wpf_drupal_alias( mysqli $db ): array {
 
 /** URL da cui scaricare un file public:// di Drupal, o null per un altro schema. */
 function wpf_drupal_url_file( string $uri ): ?string {
-	if ( strpos( $uri, 'public://' ) !== 0 ) {
+	if ( ! str_starts_with( $uri, 'public://' ) ) {
 		return null;
 	}
-	return WPF_DRUPAL_FILES . implode( '/', array_map( 'rawurlencode', explode( '/', substr( $uri, 9 ) ) ) );
+	return WPF_DRUPAL_FILES . implode( '/', array_map( 'rawurlencode', explode( '/', substr( $uri, strlen( 'public://' ) ) ) ) );
 }
