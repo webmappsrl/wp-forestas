@@ -6,7 +6,7 @@ Header e footer sono oggetti nativi di Impreza scritti in codice: l'header è il
 «Header» (Templates → Headers), il footer è il blocco riutilizzabile `us_page_block` «Footer»
 (Templates → Reusable Blocks), ciascuno con la sua traduzione inglese WPML. Il contenuto sta in
 `config/post.json`, i tre menu (`main-menu`, `servizio-menu`, `footer-menu` e i loro `-en`) in
-`config/menu.json`, e arrivano nel sito con `bin/wordpress-config.sh apply` (README, «Configurazione
+`config/menu.json`, e arrivano nel sito con `bin/wordpress-config.sh applica` (README, «Configurazione
 versionata»). Ciò che Impreza non sa fare sta nel child theme.
 
 Header e footer sono **identici a quelli di sardegnasentieri.it** (tema Drupal «sardegnasentieri»,
@@ -22,7 +22,7 @@ produzione: ogni differenza va concordata col cliente (capitolato, scrum del 14/
 - **Header JSON dentro JSON:** `post_content` dell'header è il JSON dell'Header Builder, salvato come
   stringa in `config/post.json`. Gli elementi `html` hanno il contenuto in `base64(rawurlencode(…))`
   (`us-core/templates/elements/html.php`). Per cambiare l'header conviene farlo dal pannello in
-  locale e poi `export`, invece di scrivere a mano nel JSON. Su questi header e footer, scritti in
+  locale e poi `esporta`, invece di scrivere a mano nel JSON. Su questi header e footer, scritti in
   codice, il giro è stato provato sulle copie IT: il pannello non cambia nessun valore, aggiunge solo
   i campi vuoti del suo modulo (header) e trasforma i `<br>` in a capo (footer). Le copie EN non si
   possono salvare in locale senza registrare WPML (oc:8757, `notes.md`).
@@ -126,9 +126,9 @@ Vincoli:
   `[forestas_logo]`, `[forestas_loghi_footer]`, `[forestas_preferenze_cookie]`, `[forestas_lingue]`,
   `[forestas_anno]` come testo. Il
   rollback, a passi:
-  1. riporta il sito alla configurazione precedente con `bin/wordpress-config.sh apply --da
+  1. riporta il sito alla configurazione precedente con `bin/wordpress-config.sh applica --da
      <backup> --conferma` (README, «Configurazione versionata»). Il backup è il **primo** fatto nel
-     rilascio, quello creato dal primo apply di oc:8757: ogni `apply --conferma` ne crea uno nuovo,
+     rilascio, quello creato dal primo apply di oc:8757: ogni `applica --conferma` ne crea uno nuovo,
      e i successivi contengono già header e footer nuovi. Il percorso di `--da` si legge rispetto
      alla cartella da cui si lancia lo script, mentre i backup stanno in `wp-forestas/backup/`: da
      `forestas`, come nella procedura per UAT, si scrive `--da wp-forestas/backup/<data-ora>`;
@@ -174,7 +174,7 @@ Vincoli:
   i testi con WPML String Translation dentro il JSON dell'Header Builder: non provato. Rischio
   accettato: un URL social sta in quattro posti (header e footer, IT ed EN), e `mobile_width` o
   un'altra opzione dell'header va cambiata in due. Chi cambia uno dei due header cambia anche l'altro,
-  poi `export` e `git diff config/` mostrano se le copie sono allineate.
+  poi `esporta` e `git diff config/` mostrano se le copie sono allineate.
 - **Prefissi** (oc:8757): `forestas_` per funzioni e shortcode del child, `wpf_` per gli script di
   configurazione in `docker/scripts/config/`.
 - **Loghi FESR solo nel footer** (oc:8757, wireframe oc:8783): richiesti dal cliente per le regole di

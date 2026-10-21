@@ -337,7 +337,7 @@ fi
 #     (opzione OPZIONE_DA_FARE, scritta al passo 4), al massimo APPLY_TENTATIVI volte e solo entro
 #     APPLY_FINESTRA dall'installazione: dopo, il sito può essere stato cambiato dal pannello e un apply
 #     senza anteprima né backup lo sovrascriverebbe. Su un sito esistente, e dopo, solo con
-#     bin/wordpress-config.sh apply.
+#     bin/wordpress-config.sh applica.
 tentativi=$($WP option get "$OPZIONE_DA_FARE" 2>/dev/null || true)
 # Un valore non numerico (opzione cambiata a mano) farebbe fallire il confronto e uscire lo script
 if [ -n "$tentativi" ] && [[ ! "$tentativi" =~ ^[0-9]+$ ]]; then
@@ -361,9 +361,9 @@ if [ -n "$tentativi" ] && ! $config_presente; then
     # su un sito ormai cambiato dal pannello
     smetti_apply_automatico "config/ vuota all'installazione: niente apply automatico, quando ci sarà si applica a mano"
 elif [ -n "$tentativi" ] && [ $((AVVIO - installato)) -gt "$APPLY_FINESTRA" ]; then
-    smetti_apply_automatico "AVVISO: sono passati più di $((APPLY_FINESTRA / 86400)) giorni dall'installazione: niente più apply automatico, lancialo a mano con bin/wordpress-config.sh apply"
+    smetti_apply_automatico "AVVISO: sono passati più di $((APPLY_FINESTRA / 86400)) giorni dall'installazione: niente più apply automatico, lancialo a mano con bin/wordpress-config.sh applica"
 elif [ -n "$tentativi" ] && [ "$tentativi" -ge "$APPLY_TENTATIVI" ]; then
-    smetti_apply_automatico "AVVISO: configurazione non applicata dopo ${APPLY_TENTATIVI} tentativi: lanciala a mano con bin/wordpress-config.sh apply"
+    smetti_apply_automatico "AVVISO: configurazione non applicata dopo ${APPLY_TENTATIVI} tentativi: lanciala a mano con bin/wordpress-config.sh applica"
 elif [ -n "$tentativi" ]; then
     $WP option update "$OPZIONE_DA_FARE" $((tentativi + 1)) >/dev/null || true
     log "applico la configurazione di config/ (tentativo $((tentativi + 1)) di ${APPLY_TENTATIVI})"
@@ -385,12 +385,12 @@ elif [ -n "$tentativi" ]; then
         *) log "AVVISO: configurazione non applicata del tutto, riprovo al prossimo avvio" ;;
     esac
 elif $config_presente && [ -z "$($WP option get "$OPZIONE_FATTO" 2>/dev/null || true)" ]; then
-    log "config/ non applicata a questo sito: non si applica da sola, vedi bin/wordpress-config.sh apply"
+    log "config/ non applicata a questo sito: non si applica da sola, vedi bin/wordpress-config.sh applica"
 fi
 # Google Fonts salvati sul sito ma non aggiornati (download non riuscito, per esempio senza rete verso
 # Google): il sito usa i font di ripiego finché un apply o le Theme Options non li scaricano
 if $WP eval 'exit( function_exists( "us_get_local_google_fonts_state" ) && us_get_option( "store_gfonts_locally" ) && ! us_get_local_google_fonts_state()["is_current"] ? 0 : 1 );' 2>/dev/null; then
-    log "AVVISO: Google Fonts del sito non aggiornati: rilancia bin/wordpress-config.sh apply --conferma quando la rete raggiunge Google"
+    log "AVVISO: Google Fonts del sito non aggiornati: rilancia bin/wordpress-config.sh applica --conferma quando la rete raggiunge Google"
 fi
 
 # 9. Permessi: Apache gira come www-data, e anche il core deve essere suo, altrimenti WordPress

@@ -1,0 +1,80 @@
+/**
+ * @file
+ */
+
+/** Dots has bottom -25px, so hidden from viewport, override. */
+.slick-lightbox .slick-dots {
+  bottom: 0;
+}
+
+/** Lightbox has dark background. Dots are dark, override. */
+.slick-lightbox .slick-dots li button::before,
+.slick-lightbox .slick-dots li.slick-active button::before {
+  color: #fff;
+}
+
+.slick-lightbox .slick-slide {
+  outline: 0;
+}
+
+.blazy__slick-lightbox {
+  cursor: crosshair;
+}
+
+.slick-lightbox-close {
+  z-index: 98;
+  width: 42px;
+  height: 42px;
+  line-height: 22px;
+}
+
+.slick-lightbox-slick-caption {
+  display: block;
+}
+
+/** Video has desired dimensions, prevents the library from squeezing. */
+.slick-lightbox .slick-slide--video .slick-lightbox-slick-item-inner {
+  max-width: 100%;
+  max-height: none !important;
+}
+
+/** @todo remove post Slick release. */
+.slick-lightbox .slick-arrow {
+  z-index: 98;
+}
+
+.slick-lightbox video {
+  max-width: 100%;
+  max-height: 100%;
+  margin: auto;
+}
+
+.slick-lightbox .slick-slide img {
+  width: auto;
+  margin: auto;
+  transition: all 0.4s ease;
+}
+
+.slick-lightbox .slick-slide .media-wrapper--box {
+  max-height: inherit;
+  transition: all 0.4s ease;
+}
+
+/* For some reasons, overlay is changed to white from dark. */
+.slick-lightbox .slick-track:hover,
+.slick-lightbox .slick-list:hover {
+  background: none !important;
+}
+
+/* Theme compat fixes. Adjust it accordingly, like everything else. */
+.slick-lightbox .slick-lightbox-slick-caption h2 {
+  font-size: 20px;
+  font-size: 1.25rem;
+  line-height: 1.25rem;
+}
+
+.slick-lightbox .slick-lightbox-slick-caption h2,
+.slick-lightbox .slick-lightbox-slick-caption p {
+  margin: 0;
+  color: #fff;
+}

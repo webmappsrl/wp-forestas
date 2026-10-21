@@ -312,6 +312,48 @@ function wpf_sblocca_apply( ?int $prima_di = null ): void {
 	wp_cache_delete( WPF_OPZIONE_APPLY_IN_CORSO, 'options' );
 }
 
+// Blocco della sincronizzazione delle pagine da Drupal (oc:8758): stesso schema di quello dell'apply
+const WPF_OPZIONE_PAGINE_IN_CORSO = 'wp_forestas_pagine_in_corso';
+
+/**
+ * Impedisce due sincronizzazioni delle pagine nello stesso momento (un lancio a mano e un cron), che
+ * creerebbero pagine doppie. Funziona come wpf_blocca_apply: una riga inserita con INSERT IGNORE, tolta
+ * a fine esecuzione o dopo WPF_APPLY_SCADENZA se l'esecuzione si è interrotta.
+ */
+function wpf_blocca_pagine(): bool {
+	global $wpdb;
+	wpf_sblocca_pagine( time() - WPF_APPLY_SCADENZA );
+	$preso = $wpdb->query(
+		$wpdb->prepare(
+			"INSERT IGNORE INTO {$wpdb->options} (option_name, option_value, autoload) VALUES (%s, %s, 'off')",
+			WPF_OPZIONE_PAGINE_IN_CORSO,
+			(string) time()
+		)
+	);
+	if ( $preso !== 1 ) {
+		return false;
+	}
+	register_shutdown_function( 'wpf_sblocca_pagine' );
+	return true;
+}
+
+/** Toglie il blocco della sincronizzazione delle pagine; con $prima_di solo uno preso prima di allora. */
+function wpf_sblocca_pagine( ?int $prima_di = null ): void {
+	global $wpdb;
+	if ( $prima_di === null ) {
+		$wpdb->delete( $wpdb->options, [ 'option_name' => WPF_OPZIONE_PAGINE_IN_CORSO ] );
+	} else {
+		$wpdb->query(
+			$wpdb->prepare(
+				"DELETE FROM {$wpdb->options} WHERE option_name = %s AND CAST(option_value AS UNSIGNED) < %d",
+				WPF_OPZIONE_PAGINE_IN_CORSO,
+				$prima_di
+			)
+		);
+	}
+	wp_cache_delete( WPF_OPZIONE_PAGINE_IN_CORSO, 'options' );
+}
+
 /** Ordina le chiavi degli array associativi, per file con differenze stabili fra un export e l'altro. */
 function wpf_ordina( $dati ) {
 	if ( ! is_array( $dati ) ) {

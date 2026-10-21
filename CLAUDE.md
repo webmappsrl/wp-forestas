@@ -34,6 +34,10 @@ subagent.
   un'installazione esistente: in produzione i dati di WordPress saranno permanenti.
 - Dopo un merge su `develop`/`main`, in `forestas` il puntatore del submodule si aggiorna con
   l'hash letto da `git rev-parse`, mai scritto a mano.
+- **La sequenza dal reset al sito completo è in `docs/howto/ricreare-wordpress-da-zero.md`:** ogni
+  lavoro che cambia installazione, `config/`, `bin/wordpress-config.sh` o la sincronizzazione da
+  Drupal aggiorna quella pagina nello stesso lavoro (passi, avvisi attesi, problemi incontrati), e ne
+  aggiorna la data dell'ultima verifica se ha rifatto il ciclo (oc:8758).
 
 ## Trappole
 

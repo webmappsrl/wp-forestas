@@ -1,0 +1,7 @@
+{
+    "_nota": "Traduzione inglese nostra di una pagina che Drupal ha solo in italiano (oc:8758): la usa bin/wordpress-config.sh pagine finché Drupal non ha una sua traduzione. «sorgente» è l'impronta del testo italiano tradotto: se cambia su Drupal, il log avvisa che la traduzione va rivista.",
+    "titolo": "Privacy",
+    "sottotitolo": "This page contains general notes and specific statements and information about the components of the SARDEGNA Sentieri website and app, as well as reassurance that no personal location data is used \"server side\" in any map component (only, where applicable, on the user's mobile devices and only locally). No location data is collected by the servers or transmitted outside the mobile device in use.",
+    "sorgente": "c1e662fd85f417d5003bedf936a9eb09",
+    "da_verificare": "Testo legale tradotto da noi: da far verificare al cliente. Nella sezione b) la frase italiana è sgrammaticata («ed \"disponibili in vari formati\" tutti i dati regionali sulla stessa R.E.S.») ed è stata interpretata; «responsabile del trattamento» è reso con «data processor»."
+}

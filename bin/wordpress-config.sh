@@ -2,8 +2,8 @@
 # Configurazione del WordPress di Forestas, dall'host (oc:8717). Uso: vedi uso() qui sotto.
 #
 # Il container è quello avviato che monta il child theme da questa cartella; con più WordPress che la
-# montano si sceglie con WPF_CONTAINER=<nome>. La configurazione si fa in locale: su UAT un export va
-# fatto con --in, fuori dal repo, per non lasciare file fuori da git nel checkout del server.
+# montano si sceglie con WPF_CONTAINER=<nome>. La configurazione si fa in locale: su UAT un'esportazione
+# va fatta con --in, fuori dal repo, per non lasciare file fuori da git nel checkout del server.
 set -euo pipefail
 
 REPO=$(cd "$(dirname "$0")/.." && pwd -P)
@@ -20,18 +20,28 @@ uso() {
     cat <<'TESTO'
 Configurazione del WordPress di Forestas, dall'host.
 
-  bin/wordpress-config.sh export [--in DIR]        configurazione del sito → config/ (o DIR)
-  bin/wordpress-config.sh apply [OPZIONI]          mostra cosa cambierebbe, senza scrivere
-  bin/wordpress-config.sh apply [OPZIONI] --conferma
+  bin/wordpress-config.sh esporta [--in DIR]       configurazione del sito → config/ (o DIR)
+  bin/wordpress-config.sh applica [OPZIONI]        mostra cosa cambierebbe, senza scrivere
+  bin/wordpress-config.sh applica [OPZIONI] --conferma
                                                    salva un backup in backup/<data-ora>/ e applica
+  bin/wordpress-config.sh pagine [--contenuti-mancanti] [--conferma]
+                                                   sincronizza le pagine statiche dalla copia di Drupal
+                                                   (config/pagine.json): senza --conferma mostra le
+                                                   differenze; scrive solo con DRUPAL_SYNC=on nel .env
   bin/wordpress-config.sh ritratto                 stato del sito, da confrontare prima e dopo un reset
   bin/wordpress-config.sh zip                      zip di Impreza e dei plugin commerciali installati
 
-Opzioni di apply:
+Opzioni di applica:
   --da DIR     applica DIR invece di config/ (per esempio un backup)
   --pagine     aggiorna anche le pagine che esistono già, come la Home (di solito sono della redazione)
 
+Opzioni di pagine:
+  --contenuti-mancanti   ritenta solo gli elementi non riusciti nelle esecuzioni precedenti
+  --conferma             scrive (altrimenti solo anteprima)
+Ogni esecuzione scrive un log in log/pagine-<data-ora>.log (si tengono gli ultimi 60).
+
 Con più WordPress avviati che montano questo child: WPF_CONTAINER=<nome>.
+I nomi vecchi «export» e «apply» funzionano ancora, con un avviso.
 TESTO
 }
 
@@ -55,8 +65,15 @@ trova_container() {
     echo "${trovati# }"
 }
 
-case "${1:-}" in
-    export|apply|ritratto|zip) ;;
+# Comandi in italiano, come le opzioni (oc:8758): i nomi inglesi di oc:8717 restano accettati con un
+# avviso, per i cron e le abitudini già in uso
+comando="${1:-}"
+case "$comando" in
+    export) echo "AVVISO: «export» è il nome vecchio, usa «esporta»" >&2; comando=esporta ;;
+    apply) echo "AVVISO: «apply» è il nome vecchio, usa «applica»" >&2; comando=applica ;;
+esac
+case "$comando" in
+    esporta|applica|pagine|ritratto|zip) ;;
     *)
         uso
         exit 1
@@ -91,14 +108,16 @@ export_in() {
     [ "${2:-}" = "sola-lettura" ] && extra=("WPF_SOLA_LETTURA=1")
     if ! esegui_script export.php "WPF_EXPORT_DIR=${tmp}" ${extra[@]+"${extra[@]}"}; then
         docker exec "$C" rm -rf "$tmp"
-        fail "export non riuscito: vedi i messaggi sopra, nessun file scritto in ${dest}"
+        fail "esportazione non riuscita: vedi i messaggi sopra, nessun file scritto in ${dest}"
     fi
     # Si sostituiscono solo i file prodotti: un export con WPML spento non cancella wpml.json
     prodotti=$(docker exec "$C" sh -c "cd ${tmp} && ls *.json")
     for f in "$dest"/*.json; do
         [ -f "$f" ] || continue
+        # Il perimetro delle pagine statiche si scrive a mano, non lo produce l'export (oc:8758)
+        [ "$(basename "$f")" = "pagine.json" ] && continue
         if [[ $'\n'"$prodotti"$'\n' != *$'\n'"$(basename "$f")"$'\n'* ]]; then
-            echo "AVVISO: $(basename "$f") non prodotto dall'export (vedi gli avvisi sopra), lasciato com'è in ${dest}"
+            echo "AVVISO: $(basename "$f") non prodotto dall'esportazione (vedi gli avvisi sopra), lasciato com'è in ${dest}"
         fi
     done
     for f in $prodotti; do rm -f "${dest}/${f}"; done
@@ -108,8 +127,8 @@ export_in() {
     echo "configurazione esportata in ${dest}"
 }
 
-case "${1:-}" in
-    export)
+case "$comando" in
+    esporta)
         if [ "${2:-}" = "--in" ]; then
             [ -n "${3:-}" ] || fail "--in vuole una cartella"
             export_in "$3"
@@ -118,7 +137,7 @@ case "${1:-}" in
             echo "Controlla le differenze con «git diff config/» prima del commit."
         fi
         ;;
-    apply)
+    applica)
         shift
         sorgente="" conferma=false pagine=false
         while [ $# -gt 0 ]; do
@@ -152,8 +171,40 @@ case "${1:-}" in
         else
             echo "Differenze fra ${cartella} e il sito ${URL} (nulla viene scritto):"
             esegui_script apply.php WPF_PROVA=1 ${apply_env[@]+"${apply_env[@]}"}
-            echo "Per applicarle: $0 apply${sorgente:+ --da $sorgente}$($pagine && echo ' --pagine') --conferma"
+            echo "Per applicarle: $0 applica${sorgente:+ --da $sorgente}$($pagine && echo ' --pagine') --conferma"
         fi
+        ;;
+    pagine)
+        shift
+        pagine_env=() conferma=false
+        while [ $# -gt 0 ]; do
+            case "$1" in
+                --contenuti-mancanti) pagine_env+=("WPF_SOLO_MANCANTI=1"); shift ;;
+                --conferma) conferma=true; shift ;;
+                *) uso; exit 1 ;;
+            esac
+        done
+        $conferma || pagine_env+=("WPF_PROVA=1")
+        mkdir -p "${REPO}/log"
+        log="${REPO}/log/pagine-$(date +%Y-%m-%d-%H%M%S).log"
+        # L'output va nel log sull'host (file dell'utente dell'host, non del container) e se ne mostra il
+        # riassunto: niente pipe con tee, il codice d'uscita dello script deve restare quello vero
+        esito=0
+        esegui_script pagine.php ${pagine_env[@]+"${pagine_env[@]}"} > "$log" 2>&1 || esito=$?
+        # Degli avvisi si mostrano quelli che chiedono un intervento: media non scaricati e traduzioni nostre
+        # da rivedere o non più usate (config/traduzioni/)
+        grep -E '^(RIASSUNTO|ERRORE|MANCANTE|MENU) |^AVVISO .*(media non scaricati|config/traduzioni/)' "$log" || true
+        conta() { grep -c "^$1 " "$log" || true; }
+        echo "pagine: $(conta PAGINA) · media: $(conta MEDIA) · link: $(conta LINK) · avvisi: $(conta AVVISO)"
+        echo "log completo: ${log}"
+        if grep -q '^MANCANTE ' "$log"; then
+            echo "Per ritentare solo ciò che manca: $0 pagine --contenuti-mancanti --conferma"
+        fi
+        $conferma || echo "Per scrivere: $0 pagine --conferma"
+        # Si tengono gli ultimi 60 log
+        vecchi=$(ls -1t "${REPO}"/log/pagine-*.log 2>/dev/null | tail -n +61 || true)
+        [ -n "$vecchi" ] && echo "$vecchi" | while read -r f; do rm -f "$f"; done
+        exit "$esito"
         ;;
     ritratto)
         esegui_script ritratto.php

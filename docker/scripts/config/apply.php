@@ -4,7 +4,7 @@
  *
  * Uso: [WPF_CONFIG_DIR=<cartella>] [WPF_PROVA=1] [WPF_AUTOMATICO=1] [WPF_PAGINE=1]
  *      wp eval-file /usr/local/lib/wp-forestas/apply.php
- * La cartella è config/ del repo (WPF_DIR_CONFIG), o un backup con bin/wordpress-config.sh apply --da.
+ * La cartella è config/ del repo (WPF_DIR_CONFIG), o un backup con bin/wordpress-config.sh applica --da.
  * WPF_PAGINE=1 aggiorna anche le pagine che esistono già, come la Home (vedi post.php).
  * Con WPF_PROVA=1 non scrive nulla e stampa una riga per differenza. Senza, applica nell'ordine: WPML
  * (lingue e impostazioni), post, menu, Theme Options, traduzioni dei loro testi, theme_mods, posizioni
@@ -83,7 +83,7 @@ foreach ( (array) $leggi( 'versioni.json' ) as $nome => $versione ) {
 		WP_CLI::halt( 3 );
 	}
 	if ( $automatico && $serie( $versione ) !== $serie( $sul_sito ) ) {
-		WP_CLI::warning( 'versione diversa: l\'apply automatico non applica, guarda le differenze con bin/wordpress-config.sh apply' );
+		WP_CLI::warning( 'versione diversa: l\'apply automatico non applica, guarda le differenze con bin/wordpress-config.sh applica' );
 		WP_CLI::halt( 1 );
 	}
 }
@@ -161,6 +161,6 @@ if ( $ok ) {
 } else {
 	// Esce con errore: l'init lo registra come AVVISO e ritenta se ha ancora tentativi, il comando
 	// sull'host termina con un codice diverso da 0
-	WP_CLI::warning( 'configurazione applicata solo in parte, vedi gli avvisi sopra: rilancia con bin/wordpress-config.sh apply --conferma dopo aver tolto la causa' );
+	WP_CLI::warning( 'configurazione applicata solo in parte, vedi gli avvisi sopra: rilancia con bin/wordpress-config.sh applica --conferma dopo aver tolto la causa' );
 	WP_CLI::halt( 1 );
 }

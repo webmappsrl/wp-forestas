@@ -5,7 +5,7 @@ Template: Impreza
 Author: Webmapp
 Author URI: https://webmapp.it/
 Description: Child theme di Impreza per Sardegna Sentieri (Forestas). Versionato nel repo wp-forestas e montato dal compose: si modifica nel repo, non dal pannello.
-Version: 1.3.1
+Version: 1.4.26
 */
 
 
@@ -1177,4 +1177,727 @@ Version: 1.3.1
 }
 .forestas-salta:focus-visible {
 	outline-color: currentColor;
+}
+
+
+/*
+ * Pagine statiche sincronizzate da Drupal (oc:8758), elementi di inc/pagine-statiche.php.
+ *
+ * Testata: altezze, misure e impaginazione (testo in basso, centrato) dal tema Drupal «sardegnasentieri»
+ * (_hero.scss); sfumatura dal basso delle tavole del catasto dell'artifact «Canvas Fase 2» (.sh-scrim) e
+ * barretta nel colore della sezione (tavola 8); su richiesta del dev (oc:8758). Testo, allegati e
+ * galleria: tema Drupal (sase-page-body, field--field-allegati-media), che l'artifact non ridisegna.
+ */
+.forestas-sezione-base { --forestas-sezione: #CA5C30; }          /* terra del marchio SARDEGNA */
+.forestas-sezione-sentieri { --forestas-sezione: var(--sase-sezione-sentieri); }
+.forestas-sezione-itinerari { --forestas-sezione: var(--sase-sezione-itinerari); }
+.forestas-sezione-cammini { --forestas-sezione: var(--sase-sezione-cammini); }
+.forestas-sezione-punti-di-interesse { --forestas-sezione: var(--sase-sezione-punti-di-interesse); }
+.forestas-sezione-da-sapere { --forestas-sezione: var(--sase-sezione-da-sapere); }
+.forestas-sezione-news { --forestas-sezione: var(--sase-sezione-news); }
+.forestas-sezione-mappa { --forestas-sezione: var(--sase-sezione-mappa); }
+
+.forestas-testata {
+	position: relative;
+	display: flex;
+	/* testo in basso, come la testata hero del sito Drupal (_hero.scss: align-content end) */
+	align-items: flex-end;
+	justify-content: center;
+	/* Altezze del tema Drupal (_hero.scss): 66% della finestra, minimo 17,86em (286px, 250px sotto 960px
+	   dove la radice è 14px); su tablet al massimo il 50%, su desktop fra 500 e 600px */
+	height: 66vh;
+	min-height: 17.86rem;
+	overflow: hidden;
+}
+@media (min-width: 768px) {
+	.forestas-testata { max-height: 50vh; }
+}
+/* Sotto 768px Drupal mette la testata alta quanto il suo contenuto (--hero-height: auto), con il minimo */
+@media (max-width: 767px) {
+	.forestas-testata { height: auto; }
+}
+@media (min-width: 1025px) {
+	.forestas-testata { min-height: 500px; max-height: 600px; }
+}
+.forestas-testata-sfondo {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+.forestas-testata-testo {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	width: 100%;
+	/* larghezza del contenuto del sito (1294px, 90% sotto) e margini della testata di Drupal */
+	/* Sotto il sottotitolo lo spazio della testata del Layout Builder di Drupal, misurato con il suo CSS
+	   (101px a 1440px): margine della sezione + margine della regione + 1,3em della riga dell'immagine,
+	   dove stanno anche i «Credits foto». In rem come su Drupal: sotto 960px la radice è 14px */
+	--forestas-sfumatura: 64px;
+	padding: calc(clamp(1.875rem, 4vw, 2.5rem) + var(--forestas-sfumatura)) max(5%, calc((100% - var(--sase-larghezza-contenuto)) / 2)) calc(2 * clamp(1.875rem, 4vw, 2.5rem) + 1.3rem);
+	text-align: center;
+	color: #FFFFFF;
+	/* Sfumatura dal basso delle tavole del catasto dell'artifact (.sh-scrim): piena al 60% dove c'è
+	   testo, sfuma negli ultimi 64px in alto. Bianco su #1A1A1A al 60% sopra una foto chiara resta
+	   almeno 4,54:1 (WCAG 1.4.3) */
+	background: linear-gradient(to top, rgba(26, 26, 26, 0.6) 0, rgba(26, 26, 26, 0.6) calc(100% - var(--forestas-sfumatura)), rgba(26, 26, 26, 0) 100%);
+}
+/* Con la testata alta quanto il contenuto, sopra il filo c'è lo spazio di Drupal (sezione + regione):
+   la sfumatura occupa la parte che sta sopra quello della regione */
+@media (max-width: 767px) {
+	.forestas-testata-testo { --forestas-sfumatura: clamp(1.875rem, 4vw, 2.5rem); }
+}
+/* Senza immagine in evidenza, come su Drupal: stessa testata con la sfumatura nera del tema
+   (--custom-theme-hero-gradient, sotto 768px la variante di _hero.scss) sul bianco della pagina, al posto
+   della foto e della sfumatura dell'artifact. Senza il blocco dell'immagine la regione ha una riga in
+   meno: sotto il sottotitolo restano solo i margini di sezione e regione */
+.forestas-testata-senza-immagine {
+	background: #FFFFFF linear-gradient(0deg, rgba(0, 0, 0, 0.83) 21.78%, rgba(0, 0, 0, 0.81) 28%, rgba(0, 0, 0, 0.7) 41%, rgba(0, 0, 0, 0.66) 47%, rgba(0, 0, 0, 0.5) 64%, rgba(0, 0, 0, 0) 95%);
+}
+.forestas-testata-senza-immagine .forestas-testata-testo {
+	padding-bottom: calc(2 * clamp(1.875rem, 4vw, 2.5rem));
+	background: none;
+}
+@media (max-width: 767px) {
+	.forestas-testata-senza-immagine {
+		background: #FFFFFF linear-gradient(0.08deg, rgba(0, 0, 0, 0.7) 33%, rgba(0, 0, 0, 0.6) 66%, rgba(0, 0, 0, 0.3) 90%, rgba(0, 0, 0, 0) 100%);
+	}
+}
+/* «Credits foto» della testata: sase-image-credits del tema Drupal. In basso a sinistra sopra
+   l'immagine; testo bianco 0,8125rem; il pulsante è scuro a credits nascosti, bianco quando sono aperti */
+.forestas-credits {
+	position: absolute;
+	right: 0;
+	bottom: 0;
+	left: 0;
+	z-index: 1;
+	display: flex;                                          /* senza align-items, come su Drupal: con il testo
+	                                                           su più righe (telefono) il pulsante resta in alto */
+	gap: 1ch;
+	padding: 0 1.25rem 0.3125rem;
+	color: #FFFFFF;
+	font-size: 0.8125rem;
+	font-weight: 500;
+}
+.forestas-credits i {
+	font-size: 1.2em;
+}
+.l-main .forestas-credits__pulsante {
+	display: flex;
+	align-items: center;
+	gap: 1ch;
+	margin: 0;
+	/* come il pulsante di Drupal: eredita carattere e interlinea del blocco (normalize del sito:
+	   button { font: inherit }), 0,33em × 0,5em */
+	padding: 0.33em 0.5em;
+	border: 0;
+	border-radius: 0;
+	background-color: #FFFFFF;
+	color: var(--sase-testo);
+	font-family: inherit;
+	font-size: inherit;
+	font-weight: 700;
+	line-height: 1.4;
+	white-space: nowrap;
+	cursor: pointer;
+}
+/* Fino a 1024px Drupal ingrandisce il pulsante: alto 2,5em, 0,25em × 1em */
+@media (max-width: 1024px) {
+	.l-main .forestas-credits__pulsante { height: 2.5em; padding: 0.25em 1em; }
+}
+.l-main .forestas-credits.is-hidden .forestas-credits__pulsante {
+	background-color: rgba(0, 0, 0, 0.7);
+	color: #FFFFFF;
+}
+.forestas-credits.is-hidden .forestas-credits__nascondi,
+.forestas-credits:not(.is-hidden) .forestas-credits__mostra {
+	display: none;
+}
+.l-main .forestas-credits__testo {
+	margin: 0;
+	padding: 0;
+	color: #FFFFFF;
+	font-size: inherit;
+	line-height: 1.4;
+	opacity: 1;
+	transition: all 0.3s ease;
+}
+.forestas-credits.is-hidden .forestas-credits__testo {
+	opacity: 0;
+	visibility: hidden;
+}
+/* Separatore di Drupal (.sase-image-credits p > * + *::before): «•» attaccato al secondo campo */
+.forestas-credits__testo > * + *::before {
+	content: "•";
+	display: inline;
+}
+.forestas-credits__testo strong {
+	font-weight: 700;
+}
+@media (prefers-reduced-motion: reduce) {
+	.l-main .forestas-credits__testo { transition: none; }
+}
+
+/* Barretta del tema Drupal (sase-heading-has-decoration): 57×7px sopra il titolo */
+.forestas-testata-filo {
+	display: block;
+	width: 57px;
+	height: 7px;
+	margin-bottom: calc(1.875rem - 7px);                    /* barra + spazio = 1,875rem, come su Drupal */
+	background: var(--forestas-sezione);
+}
+.l-main .forestas-testata-titolo {
+	margin: 0 0 1.3rem;
+	padding: 0;                                             /* Impreza dà 24px sopra a ogni h1 */
+	color: #FFFFFF;
+	font-family: var(--sase-font-titoli);
+	/* In rem come .sase-hero__title di Drupal: sotto 960px la radice è 14px sia lì sia in Impreza */
+	font-size: clamp(1.875rem, 1.875rem + (1vw - 0.2rem) * 0.625, 2.5rem);
+	font-weight: 600;
+	line-height: 1.2;
+}
+/* Lo spazio sotto il titolo è il row-gap della regione di Drupal: senza sottotitolo né immagine non segue
+   nessun blocco e lo spazio non c'è (Contatti) */
+.l-main .forestas-testata-senza-immagine .forestas-testata-titolo:last-child {
+	margin-bottom: 0;
+}
+@media (min-width: 768px) {
+	.l-main .forestas-testata-titolo { font-size: clamp(2.5rem, 2.5rem + (1vw - 0.2rem) * 0.938, 3.438rem); }
+}
+.forestas-testata-sottotitolo {
+	margin: 0;
+	color: #FFFFFF;
+	font-size: clamp(0.875rem, 0.9375rem + (1vw - 0.2rem) * 0.1875, 1.125rem); /* .sase-hero__subtitle */
+	line-height: 1.6;
+}
+@media (min-width: 768px) {
+	.forestas-testata-sottotitolo { font-size: clamp(1rem, 0.98rem + 0.35vw, 1.125rem); }
+}
+/* Sola intestazione (News, che su Drupal ha un layout proprio senza testata): blocco sase-container con
+   sase-heading-has-decoration, titolo sase-h1 scuro e filo centrato nel colore della sezione, come le
+   altre testate. Il percorso viene dopo, come in tutte le pagine (decisione del dev, 21/10): sopra e sotto
+   il titolo i margini della sezione hero di Drupal, dopo il percorso quello della sezione che su Drupal
+   segue (3,75rem) */
+.forestas-intestazione {
+	display: grid;
+	justify-items: center;
+	width: 90%;
+	max-width: var(--sase-larghezza-contenuto);
+	margin: 0 auto;
+	padding: calc(clamp(1.875rem, 4vw, 2.5rem) + 1.875rem) 0 clamp(1.875rem, 4vw, 2.5rem);
+	text-align: center;
+}
+.forestas-intestazione::before {
+	content: "";
+	display: block;
+	width: 57px;
+	height: 7px;
+	margin-top: -1.875rem;
+	background-color: var(--forestas-sezione);
+}
+.forestas-intestazione + .forestas-percorso {
+	margin-bottom: 3.75rem;
+}
+.l-main .forestas-intestazione-titolo {
+	margin: 0;
+	padding: 0;                                             /* Impreza dà 24px sopra a ogni h1 */
+	color: var(--sase-testo);
+	font-family: var(--sase-font-titoli);
+	font-size: clamp(2.5rem, 2.5rem + (1vw - 0.2rem) * 0.938, 3.438rem);
+	font-weight: 600;
+	line-height: 1.2;
+}
+/* Percorso di navigazione: .crumb dell'artifact «Canvas Fase 2» (tavola 8), valori dell'artifact così come
+   sono. Filo a tutta larghezza; il testo parte dove parte il logo dell'header (contenuto di 1294px) */
+.forestas-percorso {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+	padding: 11px max(22px, calc((100% - var(--sase-larghezza-contenuto)) / 2));
+	border-bottom: 1px solid #EEEBE5;
+	color: #767676;
+	font-size: 12.5px;
+	line-height: 1.4;
+}
+.forestas-percorso a {
+	color: #254877;
+	text-decoration: underline;
+}
+.forestas-percorso [aria-current] {
+	color: #1A1A1A;
+	font-weight: 600;
+}
+
+/*
+ * Riga dei pulsanti sotto il percorso: .sh-actions dell'artifact «Canvas Fase 2» (oc:8783), allineata al
+ * percorso. Per le pagine c'è solo «Condividi» (.sh-share), al posto della condivisione AddToAny di Drupal.
+ */
+.forestas-azioni {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+	padding: 13px max(22px, calc((100% - var(--sase-larghezza-contenuto)) / 2));
+	border-bottom: 1px solid #EEEBE5;
+}
+.forestas-condividi {
+	position: relative;
+	display: inline-flex;
+}
+.forestas-condividi .forestas-pulsante[aria-expanded="true"] {
+	border-color: #16497B;
+	background-color: #16497B;
+	color: #FFFFFF;
+}
+/* Pannello: collegamenti scritti, niente script né cookie di terzi */
+.forestas-condividi__pannello {
+	position: absolute;
+	top: calc(100% + 8px);
+	left: 0;
+	z-index: 20;
+	min-width: 230px;
+	padding: 10px;
+	border: 1px solid #767676;
+	border-radius: 6px;
+	background: #FFFFFF;
+	box-shadow: 0 8px 22px rgba(0, 0, 0, 0.18);
+}
+.forestas-condividi__pannello[hidden] {
+	display: none;
+}
+.forestas-condividi__titolo {
+	display: block;
+	margin: 0 0 6px 4px;
+	color: #4D4D4D;
+	font-family: var(--sase-font-testo);
+	font-size: 12px;
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+}
+.forestas-condividi__pannello ul {
+	display: grid;
+	gap: 2px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+.forestas-condividi__pannello li {
+	margin: 0;
+}
+.l-main .forestas-condividi__pannello a,
+.l-main .forestas-condividi__copia {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	width: 100%;
+	margin: 0;
+	padding: 8px;
+	border: 0;
+	border-radius: 4px;
+	background: none;
+	color: #1A1A1A;
+	font-family: var(--sase-font-testo);
+	font-size: 14px;
+	font-weight: 500;
+	line-height: 1.4;
+	text-align: left;
+	text-decoration: none;
+	cursor: pointer;
+}
+.l-main .forestas-condividi__pannello a:hover,
+.l-main .forestas-condividi__copia:hover {
+	background: #F5F5F5;
+	color: #1A1A1A;
+	text-decoration: underline;
+}
+.l-main .forestas-condividi__pannello a:focus-visible,
+.l-main .forestas-condividi__copia:focus-visible {
+	outline: 3px solid var(--sase-focus);
+	outline-offset: 1px;
+}
+.forestas-condividi__pannello svg {
+	flex: none;
+	width: 20px;
+	height: 20px;
+	fill: currentColor;
+}
+.l-main .forestas-condividi__copia {
+	margin-top: 4px;
+	padding-top: 10px;
+	border-top: 1px solid #E5E5E5;
+	border-radius: 0 0 4px 4px;
+}
+.forestas-condividi__copia svg {
+	fill: none;
+}
+.forestas-condividi__esito {
+	display: block;
+	margin: 6px 8px 0;
+	color: #0E7D2C;
+	font-size: 13px;
+	font-weight: 600;
+}
+.forestas-condividi__esito:empty {
+	display: none;
+}
+
+/*
+ * Testo della pagina come la sezione «Pagina contenuto» del Layout Builder di Drupal (oc:8758): blocco
+ * sase-container--xs (90%, al massimo 960px) in una sezione sase-padding-v-12 (3,75rem sopra e sotto).
+ * Dentro, le regole di sase-page-body copiate dal CSS compilato del tema (utilities/_typographic.scss):
+ * valgono solo per i figli diretti senza classe, e lo spazio fra due elementi è il margine superiore del
+ * secondo. Il contenitore non ha una dimensione del carattere: il testo fuori da un paragrafo ha quella
+ * del body (1rem, 1,4), come su Drupal.
+ */
+.forestas-pagina-testo {
+	width: 90%;
+	max-width: 960px;
+	margin: 0 auto;
+	padding: 3.75rem 0;
+}
+/* Reset del tema Drupal (global/_base.scss, _typography.scss) al posto degli stili di Impreza: titoli,
+   paragrafi e blockquote senza margini; liste e tabelle con gli stili del browser */
+.forestas-pagina-testo :where(h1, h2, h3, h4, h5, h6, p, blockquote) { margin: 0; padding: 0; }
+/* Drupal non dà stile ai titoli che non sono figli diretti del testo (per esempio dentro un blockquote):
+   restano quelli del browser, non quelli dei titoli di Impreza */
+.forestas-pagina-testo :where(h1, h2, h3, h4, h5, h6) {
+	font-family: inherit;
+	font-weight: 700;
+	line-height: inherit;
+	letter-spacing: inherit;
+	text-transform: none;
+}
+.forestas-pagina-testo :where(h1) { font-size: 2em; }
+.forestas-pagina-testo :where(h2) { font-size: 1.5em; }
+.forestas-pagina-testo :where(h3) { font-size: 1.17em; }
+.forestas-pagina-testo :where(h4) { font-size: 1em; }
+.forestas-pagina-testo :where(h5) { font-size: 0.83em; }
+.forestas-pagina-testo :where(h6) { font-size: 0.67em; }
+/* :where() anche sul :not([class]): queste regole perdono contro quelle di allegati e galleria */
+.forestas-pagina-testo :where(ul:not([class]), ol:not([class])) { margin: 1em 0; padding: 0 0 0 40px; }
+.forestas-pagina-testo :where(ul:not([class])) { list-style: disc; }
+.forestas-pagina-testo :where(ol:not([class])) { list-style: decimal; }
+.forestas-pagina-testo :where(ul, ol) :where(ul:not([class]), ol:not([class])) { margin: 0; }
+.forestas-pagina-testo :where(ul ul:not([class])) { list-style: circle; }
+.forestas-pagina-testo :where(li) { margin: 0; padding: 0; }
+.forestas-pagina-testo :where(h1, h2, h3, h4, h5, h6) a { color: inherit; text-decoration: none; }
+.forestas-pagina-testo blockquote { border: 0; font-size: inherit; font-style: inherit; line-height: inherit; }
+.forestas-pagina-testo blockquote::before { content: none; }
+
+/* Tutti i link del testo sottolineati, anche negli elenchi e nelle tabelle: su Drupal solo quelli nei
+   paragrafi, e altrove il colore da solo non basta (WCAG 1.4.1, 1,84:1 col testo) */
+.forestas-pagina-testo a[href]:not([class]) {
+	text-decoration: underline;
+}
+
+/* sase-page-body */
+.forestas-pagina-testo > :is(em, p) a:not([class]),
+.forestas-pagina-testo > a:not([class]) {
+	text-decoration: underline;
+	font-weight: 700;
+	word-break: break-all;
+}
+.forestas-pagina-testo > :is(h2, h3, h4, h5, h6):not([class]) {
+	font-family: var(--sase-font-titoli);
+	font-weight: 600;
+}
+.forestas-pagina-testo > h2:not([class]) { font-size: clamp(1.5rem, 0.5rem + (1vw - 0.2rem) * 0.5, 2rem); line-height: 1.2; }
+.forestas-pagina-testo > h3:not([class]) { font-size: clamp(1.375rem, 1.08rem + 0.9vw, 1.75rem); line-height: 1.3; }
+.forestas-pagina-testo > h4:not([class]) { font-size: clamp(1.125rem, 1.125rem + (1vw - 0.2rem) * 0.375, 1.5rem); line-height: 1.4; }
+.forestas-pagina-testo > :is(h5, h6):not([class]) { font-size: clamp(1rem, 0.98rem + 0.35vw, 1.125rem); line-height: 1.4; }
+.forestas-pagina-testo > :is(p, ul, ol):not([class]) {
+	font-size: clamp(0.875rem, 0.9375rem + (1vw - 0.2rem) * 0.1875, 1.125rem);
+	font-weight: 400;
+	line-height: 1.6;
+}
+.forestas-pagina-testo > h2:not([class]) + * { margin-top: 1.33em; }
+.forestas-pagina-testo > h3:not([class]) + * { margin-top: 1.25em; }
+.forestas-pagina-testo > h4:not([class]) + * { margin-top: 1.2em; }
+.forestas-pagina-testo > h5:not([class]) + * { margin-top: 1.15em; }
+.forestas-pagina-testo > h6:not([class]) + * { margin-top: 1.1em; }
+.forestas-pagina-testo > * + h2:not([class]) { margin-top: 1.45em; }
+.forestas-pagina-testo > * + h3:not([class]) { margin-top: 1.25em; }
+.forestas-pagina-testo > * + h4:not([class]) { margin-top: 1.2em; }
+.forestas-pagina-testo > * + h5:not([class]) { margin-top: 1.15em; }
+.forestas-pagina-testo > * + h6:not([class]) { margin-top: 1.1em; }
+.forestas-pagina-testo > p:not([class]) + p:not([class]),
+.forestas-pagina-testo > * + :is(ul, ol):not([class]) { margin-top: 1.3em; }
+/* Le ancore interne (FAQ) non finiscono sotto l'header fisso: riga compatta su desktop, header su mobile */
+.forestas-pagina-testo [id],
+.forestas-pagina-testo a[name] {
+	scroll-margin-top: calc(var(--wp-admin--admin-bar--height, 0px) + 140px);
+}
+
+/* Allegati e galleria sono blocchi successivi della stessa regione: 3,125rem sopra
+   (sase-section-inner-vertical-spaced-layout-region-10) */
+.forestas-pagina-testo > :is(.forestas-allegati, .forestas-galleria) {
+	margin-top: 3.125rem;
+}
+/* Titolo degli allegati: sase-h5 del tema Drupal */
+.l-main .forestas-allegati-titolo {
+	margin: 0 0 1.25rem;                                    /* sase-section-inner-vertical-spaced-padding-4 */
+	color: var(--sase-testo);
+	font-family: var(--sase-font-titoli);
+	font-size: clamp(1.125rem, 1.125rem + (1vw - 0.2rem) * 0.375, 1.5rem);
+	font-weight: 600;
+	line-height: 1.4;
+}
+.forestas-allegati ul,
+.forestas-galleria ul {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+/* Allegati: file-link del tema Drupal (sase-file), 10px fra le voci */
+.forestas-allegati li {
+	margin: 0;
+}
+.forestas-allegati li + li {
+	padding-top: 0.625rem;
+}
+.forestas-pagina-testo a.forestas-file,
+.forestas-file {
+	display: block;
+	color: var(--sase-testo);
+	font-weight: 400;
+	text-decoration: none;
+}
+.no-touch .forestas-file:hover {
+	color: var(--sase-arancio-hover);
+	text-decoration: underline;
+}
+.forestas-file__descrizione {
+	display: block;
+	font-size: clamp(1rem, 0.98rem + 0.35vw, 1.125rem);
+	font-weight: 600;
+	line-height: 1.6;
+}
+.forestas-file__info {
+	display: block;
+	font-size: clamp(0.875rem, 0.875rem + (1vw - 0.2rem) * 0.125, 1rem);
+	line-height: 1.6;
+}
+/* Icona del file nel colore della sezione; le pagine di testo usano quello del marchio, come su Drupal */
+.forestas-file__icona {
+	color: var(--sase-arancio);
+}
+/* Galleria: sezione sase-padding-v-8 (2,5rem sopra e sotto) con 1,875rem fra titolo e griglia
+   (sase-section-inner-vertical-spaced-margin-6) */
+.forestas-pagina-testo > .forestas-galleria {
+	padding: 2.5rem 0;
+}
+/* Titolo: sase-h3 con sase-heading-has-decoration is-left-aligned (field--node--field-galleria-media---custom,
+   il template attivo sulle pagine), filo nel colore della sezione */
+.l-main .forestas-galleria-titolo {
+	display: grid;
+	justify-items: start;
+	margin: 0;
+	padding: 1.875rem 0 0;
+	color: var(--sase-testo);
+	font-family: var(--sase-font-titoli);
+	font-size: clamp(1.5rem, 0.5rem + (1vw - 0.2rem) * 0.5, 2rem);
+	font-weight: 600;
+	line-height: 1.2;
+}
+.forestas-galleria-titolo::before {
+	content: "";
+	display: block;
+	width: 57px;
+	height: 7px;
+	margin-top: -1.875rem;
+	background-color: var(--forestas-sezione, var(--sase-arancio));
+}
+/* Griglia: sase-grid (0,9375rem fra le immagini), 3 colonne su telefono e 4 da 768px */
+.forestas-galleria ul {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 0.9375rem;
+	margin-top: 1.875rem;
+}
+@media (min-width: 768px) {
+	.forestas-galleria ul { grid-template-columns: repeat(4, 1fr); }
+}
+.forestas-galleria a {
+	position: relative;
+	display: block;
+}
+/* Didascalia per la lightbox, nascosta come la visually-hidden di Drupal (system, hidden.module.css) */
+.forestas-galleria .visually-hidden {
+	position: absolute !important;
+	overflow: hidden;
+	clip: rect(1px, 1px, 1px, 1px);
+	width: 1px;
+	height: 1px;
+	word-wrap: normal;
+}
+.forestas-galleria img {
+	display: block;
+	width: 100%;
+	height: 100%;
+	aspect-ratio: 1;
+	object-fit: cover;
+}
+/* Lente di Blazy al passaggio del mouse, con le modifiche del tema Drupal (_gallery.scss): cerchio scuro
+   di 3em con l'icona di ingrandimento */
+.forestas-galleria__lente {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	width: 3em;
+	height: 3em;
+	border-radius: 50%;
+	background: rgba(0, 0, 0, 0.8);
+	transform: translate(-50%, -50%);
+	visibility: hidden;
+	opacity: 0;
+	pointer-events: none;
+	transition: visibility 0s linear 0.5s, opacity 0.5s linear;
+}
+.forestas-galleria__lente::before {
+	content: "\f00e";
+	font-family: fontawesome;
+	font-weight: 400;
+	font-size: 1.5em;
+	color: #FFFFFF;
+}
+.forestas-galleria a:hover .forestas-galleria__lente,
+.forestas-galleria a:focus-visible .forestas-galleria__lente {
+	visibility: visible;
+	opacity: 1;
+	transition-delay: 0s;
+}
+@media (prefers-reduced-motion: reduce) {
+	.forestas-galleria__lente { transition: none; }
+}
+
+/*
+ * Mappa interattiva: il blocco «mappa_interattiva» del tema Drupal (block--mappa-interattiva.html.twig)
+ * con le regole compilate di sase-map-wrapper e has-iframe-fullpage. Alta quanto la finestra meno header,
+ * percorso e barra di WordPress (su Drupal la toolbar); l'iframe parte 5rem sotto, dove c'è la barra con
+ * il pulsante. A schermo intero copre la finestra, header compreso. Le altezze le misura
+ * assets/js/mappa.js, come header-navigation.js e scripts.js di Drupal.
+ */
+.forestas-mappa {
+	--_map-ratio: var(--map-ratio, var(--_iframe-ratio));
+	--_iframe-ratio: calc(var(--forestas-vh, 100vh) - var(--forestas-mappa-header, 0px) - var(--forestas-mappa-percorso, 0px) - var(--wp-admin--admin-bar--height, 0px));
+	position: relative;
+	width: 100%;
+	height: 0;
+	padding-bottom: var(--_map-ratio);
+	overflow: hidden;
+}
+.forestas-mappa iframe {
+	position: absolute;
+	top: 5rem !important;
+	right: 0;
+	bottom: 0;
+	left: 0;
+	width: 100% !important;
+	height: calc(100% - 5rem) !important;
+	border: 0;
+}
+.forestas-mappa.is-expanded {
+	--map-ratio: calc(var(--forestas-vh, 100vh) - var(--wp-admin--admin-bar--height, 0px));
+	position: fixed;
+	top: var(--wp-admin--admin-bar--height, 0px);
+	right: 0;
+	bottom: 0;
+	left: 0;
+	z-index: 60;
+}
+@media (max-width: 639px) {
+	.forestas-mappa iframe {
+		height: calc(100% - 1.25rem - 57px) !important;
+	}
+	.forestas-mappa.is-expanded {
+		height: calc(100% - 5rem - 57px) !important;
+	}
+}
+/* Barra sopra la mappa: sase-padding-4 sase-display-flex sase-justify-content-end sase-background-color-white */
+.forestas-mappa__barra {
+	display: flex;
+	justify-content: flex-end;
+	padding: 1.25rem;
+	background-color: #FFFFFF;
+}
+.forestas-mappa.is-shrinked .is-map-shrinker,
+.forestas-mappa.is-expanded .is-map-expander {
+	display: none;
+}
+/* Pulsante chiaro con bordo: sase-btn sase-btn-light sase-btn--has-icon del tema Drupal, usato dalla mappa e
+   dalla riga dei pulsanti sotto il percorso (il «secondario» dell'artifact «Canvas Fase 2») */
+.l-main .forestas-pulsante {
+	display: flex;
+	align-items: center;
+	justify-content: center;                                /* sase-btn; con l'icona space-between, sotto */
+	min-width: 165px;
+	width: 100%;
+	height: 3em;
+	margin: 0;
+	padding: 0 1.25rem;
+	border: solid currentColor;
+	border-width: 1px 2px 2px 1px;
+	border-radius: 0.25em;
+	background-color: #FFFFFF;
+	color: hsl(0deg, 0%, 30%);
+	font-family: var(--sase-font-testo);
+	font-size: 1rem;
+	font-weight: 600;
+	line-height: 1.1;
+	text-align: center;
+	text-decoration: none;
+	vertical-align: top;
+	cursor: pointer;
+	transition: all 0.3s ease;
+}
+.l-main .forestas-pulsante:hover,
+.l-main .forestas-pulsante:focus {
+	border-color: #F59F1A;
+	background-color: #F59F1A;
+	color: hsl(0deg, 0%, 30%);
+}
+.l-main .forestas-pulsante:active {
+	border-color: #16497B;
+	background-color: #16497B;
+	color: #FFFFFF;
+}
+/* Fuoco del tema Drupal (global/_base.scss, --system-focus-outline-color): azzurro con un anello bianco */
+.l-main .forestas-pulsante:focus-visible {
+	outline: max(3px, 0.08em) solid var(--sase-focus);
+	outline-offset: max(3px, 0.08em);
+	box-shadow: 0 0 0 max(3px, 0.08em) #FFFFFF;
+}
+/* sase-btn--has-icon: testo e icona ai due lati */
+.l-main .forestas-pulsante--icona {
+	justify-content: space-between;
+}
+.forestas-pulsante__icona {
+	font-size: 0.875em;
+}
+@media (min-width: 768px) {
+	.l-main .forestas-pulsante {
+		display: inline-flex;
+		width: fit-content;
+	}
+	.forestas-pulsante__icona {
+		padding-left: 0.625rem;
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	.l-main .forestas-pulsante { transition: none; }
+}
+/* Mappa a schermo intero: la pagina non scorre e l'header passa sotto, come su Drupal (has-map-expanded) */
+.forestas-mappa-aperta {
+	overflow: hidden;
+}
+.forestas-mappa-aperta .l-header {
+	z-index: -1 !important;
 }

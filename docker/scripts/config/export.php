@@ -17,7 +17,7 @@ require_once __DIR__ . '/menu.php';
 
 $dir = (string) getenv( 'WPF_EXPORT_DIR' );
 if ( $dir === '' ) {
-	WP_CLI::error( 'manca WPF_EXPORT_DIR: lancia l\'export con bin/wordpress-config.sh export' );
+	WP_CLI::error( 'manca WPF_EXPORT_DIR: lancia l\'export con bin/wordpress-config.sh esporta' );
 }
 if ( ! is_dir( $dir ) && ! mkdir( $dir, 0775, true ) ) {
 	WP_CLI::error( "impossibile creare {$dir}" );
@@ -71,6 +71,12 @@ foreach ( array_unique( $originali ) as $id ) {
 	$post = get_post( $id );
 	if ( ! $post ) {
 		$avvisi[] = "riferimento a un post che non esiste: id {$id}";
+		continue;
+	}
+	// Le pagine statiche sincronizzate da Drupal le scrive solo bin/wordpress-config.sh pagine (oc:8758):
+	// anche se un'opzione punta a loro non entrano in post.json, che è un repo pubblico
+	if ( get_post_meta( $id, '_wpf_pagina', true ) !== '' ) {
+		$avvisi[] = "un'opzione punta alla pagina sincronizzata da Drupal «" . get_post_meta( $id, '_wpf_pagina', true ) . "» (id {$id}): non esportata, la scrive il comando pagine";
 		continue;
 	}
 	$tipo_wpml = 'post_' . $post->post_type;

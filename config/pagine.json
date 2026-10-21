@@ -1,0 +1,19 @@
+{
+    "_nota": "Pagine statiche sincronizzate da Drupal con bin/wordpress-config.sh pagine (oc:8758). nid: nodo Drupal; slug.en per ogni pagina in inglese: con la traduzione di Drupal, se c'è; altrimenti con la nostra in config/traduzioni/en/<chiave>.json e .html; altrimenti, con titolo.en, pagina di sola interfaccia (dati della pagina italiana senza testo né sottotitolo: la Mappa); template: testata | testo | mappa; menu: voci di config/menu.json che portano alla pagina (chiave del menu:titolo).",
+    "pagine": [
+        { "chiave": "sentieri", "nid": 1080, "template": "testata", "slug": { "it": "sentieri", "en": "sentieri" }, "menu": [ "menu-main-menu:SENTIERI", "menu-main-menu-en-us:TRAILS" ] },
+        { "chiave": "itinerari", "nid": 1081, "template": "testata", "slug": { "it": "itinerari", "en": "itinerari" }, "menu": [ "menu-main-menu:ITINERARI", "menu-main-menu-en-us:ITINERARIES" ] },
+        { "chiave": "cammini", "nid": null, "testata_da": "itinerari", "titolo": { "it": "Cammini", "en": "Walks" }, "template": "testata", "slug": { "it": "cammini", "en": "cammini" }, "menu": [ "menu-main-menu:CAMMINI", "menu-main-menu-en-us:WALKS" ] },
+        { "chiave": "da-vedere", "nid": 1082, "template": "testata", "slug": { "it": "da-vedere", "en": "da-vedere" }, "menu": [ "menu-main-menu:PUNTI DI INTERESSE", "menu-main-menu-en-us:POINTS OF INTEREST" ] },
+        { "chiave": "da-sapere", "nid": 1083, "template": "testata", "slug": { "it": "da-sapere", "en": "da-sapere" }, "menu": [ "menu-main-menu:DA SAPERE", "menu-main-menu-en-us:GOOD TO KNOW" ] },
+        { "chiave": "news", "nid": 1084, "template": "testata", "slug": { "it": "news", "en": "news" }, "menu": [ "menu-main-menu:NEWS", "menu-main-menu-en-us:NEWS" ] },
+        { "chiave": "mappa-interattiva", "nid": 1093, "titolo": { "en": "Interactive map" }, "template": "mappa", "slug": { "it": "mappa-interattiva", "en": "interactive-map" }, "menu": [ "menu-main-menu:MAPPA INTERATTIVA", "menu-main-menu-en-us:INTERACTIVE MAP" ] },
+        { "chiave": "contatti", "nid": 1, "template": "testo", "slug": { "it": "contatti", "en": "contacts" }, "menu": [] },
+        { "chiave": "faq", "nid": 86, "template": "testo", "slug": { "it": "faq", "en": "faq" }, "menu": [ "menu-servizio-menu:FAQ", "menu-servizio-menu-en-us:FAQ" ] },
+        { "chiave": "app", "nid": 1486, "template": "testo", "slug": { "it": "app", "en": "app" }, "menu": [ "menu-servizio-menu:App", "menu-servizio-menu-en-us:App" ] },
+        { "chiave": "note-legali", "nid": 87, "template": "testo", "slug": { "it": "note-legali", "en": "legal-notes" }, "menu": [ "menu-footer-menu:NOTE LEGALI", "menu-footer-menu-en-us:LEGAL NOTES" ] },
+        { "chiave": "privacy", "nid": 88, "template": "testo", "slug": { "it": "privacy", "en": "privacy" }, "menu": [ "menu-footer-menu:PRIVACY", "menu-footer-menu-en-us:PRIVACY" ] },
+        { "chiave": "crediti", "nid": 89, "template": "testo", "slug": { "it": "crediti", "en": "credits" }, "menu": [ "menu-footer-menu:CREDITI", "menu-footer-menu-en-us:CREDITS" ] },
+        { "chiave": "dichiarazione-di-accessibilita", "nid": 1496, "template": "testo", "slug": { "it": "dichiarazione-di-accessibilita", "en": "accessibility-statement" }, "menu": [ "menu-footer-menu:DICHIARAZIONE DI ACCESSIBILITÀ", "menu-footer-menu-en-us:ACCESSIBILITY STATEMENT" ] }
+    ]
+}

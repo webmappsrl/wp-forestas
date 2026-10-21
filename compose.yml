@@ -18,6 +18,10 @@ services:
         required: false
     environment:
       WP_DB_HOST: mariadb
+    # In locale la copia del database Drupal arriva dal tunnel SSH aperto sull'host (porta 3307): dal
+    # container l'host si chiama host.docker.internal. Su UAT e in produzione non serve (oc:8758).
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "127.0.0.1:${WP_PORT:-8090}:80"
     volumes:

@@ -308,3 +308,15 @@ add_action(
 	},
 	PHP_INT_MAX
 );
+
+/*
+ * Pagine statiche sincronizzate da Drupal: testata, allegati, galleria e mappa dei loro template (oc:8758).
+ */
+/*
+ * Titolo della scheda come sul sito attuale (html.html.twig del tema Drupal: «Pagina | Sardegna Sentieri»).
+ * Il nome del sito è blogname in config/sito.json; il separatore non è un'opzione di WordPress (oc:8758).
+ */
+add_filter( 'document_title_separator', fn() => '|' );
+
+require_once __DIR__ . '/inc/pagine-statiche.php';
+require_once __DIR__ . '/inc/pagine-statiche-admin.php';

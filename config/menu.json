@@ -13,7 +13,7 @@
                     "descrizione": "",
                     "destinazione": {
                         "tipo": "custom",
-                        "url": "#"
+                        "url": "https://login.regione.sardegna.it/saml/discovery?returnIDParam=idp&entityID=accessmanager.spid.regione.sardegna.it"
                     },
                     "genitore": null,
                     "meta": [],
@@ -27,8 +27,10 @@
                     "classi": [],
                     "descrizione": "",
                     "destinazione": {
-                        "tipo": "custom",
-                        "url": "#"
+                        "percorso": "note-legali",
+                        "post_type": "page",
+                        "tipo": "pagina",
+                        "url": "/note-legali/"
                     },
                     "genitore": null,
                     "meta": [],
@@ -42,8 +44,10 @@
                     "classi": [],
                     "descrizione": "",
                     "destinazione": {
-                        "tipo": "custom",
-                        "url": "#"
+                        "percorso": "privacy",
+                        "post_type": "page",
+                        "tipo": "pagina",
+                        "url": "/privacy/"
                     },
                     "genitore": null,
                     "meta": [],
@@ -57,8 +61,10 @@
                     "classi": [],
                     "descrizione": "",
                     "destinazione": {
-                        "tipo": "custom",
-                        "url": "#"
+                        "percorso": "crediti",
+                        "post_type": "page",
+                        "tipo": "pagina",
+                        "url": "/crediti/"
                     },
                     "genitore": null,
                     "meta": [],
@@ -72,8 +78,10 @@
                     "classi": [],
                     "descrizione": "",
                     "destinazione": {
-                        "tipo": "custom",
-                        "url": "#"
+                        "percorso": "dichiarazione-di-accessibilita",
+                        "post_type": "page",
+                        "tipo": "pagina",
+                        "url": "/dichiarazione-di-accessibilita/"
                     },
                     "genitore": null,
                     "meta": [],
@@ -98,8 +106,10 @@
                     ],
                     "descrizione": "",
                     "destinazione": {
-                        "tipo": "custom",
-                        "url": "#"
+                        "percorso": "sentieri",
+                        "post_type": "page",
+                        "tipo": "pagina",
+                        "url": "/sentieri/"
                     },
                     "genitore": null,
                     "meta": [],
@@ -115,8 +125,10 @@
                     ],
                     "descrizione": "",
                     "destinazione": {
-                        "tipo": "custom",
-                        "url": "#"
+                        "percorso": "itinerari",
+                        "post_type": "page",
+                        "tipo": "pagina",
+                        "url": "/itinerari/"
                     },
                     "genitore": null,
                     "meta": [],
@@ -132,8 +144,10 @@
                     ],
                     "descrizione": "",
                     "destinazione": {
-                        "tipo": "custom",
-                        "url": "#"
+                        "percorso": "cammini",
+                        "post_type": "page",
+                        "tipo": "pagina",
+                        "url": "/cammini/"
                     },
                     "genitore": null,
                     "meta": [],
@@ -149,8 +163,10 @@
                     ],
                     "descrizione": "",
                     "destinazione": {
-                        "tipo": "custom",
-                        "url": "#"
+                        "percorso": "da-vedere",
+                        "post_type": "page",
+                        "tipo": "pagina",
+                        "url": "/da-vedere/"
                     },
                     "genitore": null,
                     "meta": [],
@@ -166,8 +182,10 @@
                     ],
                     "descrizione": "",
                     "destinazione": {
-                        "tipo": "custom",
-                        "url": "#"
+                        "percorso": "da-sapere",
+                        "post_type": "page",
+                        "tipo": "pagina",
+                        "url": "/da-sapere/"
                     },
                     "genitore": null,
                     "meta": [],
@@ -183,8 +201,10 @@
                     ],
                     "descrizione": "",
                     "destinazione": {
-                        "tipo": "custom",
-                        "url": "#"
+                        "percorso": "mappa-interattiva",
+                        "post_type": "page",
+                        "tipo": "pagina",
+                        "url": "/mappa-interattiva/"
                     },
                     "genitore": null,
                     "meta": [],
@@ -200,8 +220,10 @@
                     ],
                     "descrizione": "",
                     "destinazione": {
-                        "tipo": "custom",
-                        "url": "#"
+                        "percorso": "news",
+                        "post_type": "page",
+                        "tipo": "pagina",
+                        "url": "/news/"
                     },
                     "genitore": null,
                     "meta": [],
@@ -225,7 +247,7 @@
                     "descrizione": "",
                     "destinazione": {
                         "tipo": "custom",
-                        "url": "#"
+                        "url": "/enti/"
                     },
                     "genitore": null,
                     "meta": [],
@@ -254,8 +276,10 @@
                     "classi": [],
                     "descrizione": "",
                     "destinazione": {
-                        "tipo": "custom",
-                        "url": "#"
+                        "percorso": "faq",
+                        "post_type": "page",
+                        "tipo": "pagina",
+                        "url": "/faq/"
                     },
                     "genitore": null,
                     "meta": [],
@@ -269,8 +293,10 @@
                     "classi": [],
                     "descrizione": "",
                     "destinazione": {
-                        "tipo": "custom",
-                        "url": "#"
+                        "percorso": "app",
+                        "post_type": "page",
+                        "tipo": "pagina",
+                        "url": "/app/"
                     },
                     "genitore": null,
                     "meta": [],
@@ -311,7 +337,7 @@
                     "descrizione": "",
                     "destinazione": {
                         "tipo": "custom",
-                        "url": "#"
+                        "url": "https://login.regione.sardegna.it/saml/discovery?returnIDParam=idp&entityID=accessmanager.spid.regione.sardegna.it"
                     },
                     "genitore": null,
                     "meta": [],
@@ -325,8 +351,10 @@
                     "classi": [],
                     "descrizione": "",
                     "destinazione": {
-                        "tipo": "custom",
-                        "url": "#"
+                        "percorso": "legal-notes",
+                        "post_type": "page",
+                        "tipo": "pagina",
+                        "url": "/en/legal-notes/"
                     },
                     "genitore": null,
                     "meta": [],
@@ -340,8 +368,10 @@
                     "classi": [],
                     "descrizione": "",
                     "destinazione": {
-                        "tipo": "custom",
-                        "url": "#"
+                        "percorso": "privacy",
+                        "post_type": "page",
+                        "tipo": "pagina",
+                        "url": "/en/privacy/"
                     },
                     "genitore": null,
                     "meta": [],
@@ -355,8 +385,10 @@
                     "classi": [],
                     "descrizione": "",
                     "destinazione": {
-                        "tipo": "custom",
-                        "url": "#"
+                        "percorso": "credits",
+                        "post_type": "page",
+                        "tipo": "pagina",
+                        "url": "/en/credits/"
                     },
                     "genitore": null,
                     "meta": [],
@@ -370,8 +402,10 @@
                     "classi": [],
                     "descrizione": "",
                     "destinazione": {
-                        "tipo": "custom",
-                        "url": "#"
+                        "percorso": "accessibility-statement",
+                        "post_type": "page",
+                        "tipo": "pagina",
+                        "url": "/en/accessibility-statement/"
                     },
                     "genitore": null,
                     "meta": [],
@@ -396,8 +430,10 @@
                     ],
                     "descrizione": "",
                     "destinazione": {
-                        "tipo": "custom",
-                        "url": "#"
+                        "percorso": "sentieri",
+                        "post_type": "page",
+                        "tipo": "pagina",
+                        "url": "/en/sentieri/"
                     },
                     "genitore": null,
                     "meta": [],
@@ -413,8 +449,10 @@
                     ],
                     "descrizione": "",
                     "destinazione": {
-                        "tipo": "custom",
-                        "url": "#"
+                        "percorso": "itinerari",
+                        "post_type": "page",
+                        "tipo": "pagina",
+                        "url": "/en/itinerari/"
                     },
                     "genitore": null,
                     "meta": [],
@@ -430,8 +468,10 @@
                     ],
                     "descrizione": "",
                     "destinazione": {
-                        "tipo": "custom",
-                        "url": "#"
+                        "percorso": "cammini",
+                        "post_type": "page",
+                        "tipo": "pagina",
+                        "url": "/en/cammini/"
                     },
                     "genitore": null,
                     "meta": [],
@@ -447,8 +487,10 @@
                     ],
                     "descrizione": "",
                     "destinazione": {
-                        "tipo": "custom",
-                        "url": "#"
+                        "percorso": "da-vedere",
+                        "post_type": "page",
+                        "tipo": "pagina",
+                        "url": "/en/da-vedere/"
                     },
                     "genitore": null,
                     "meta": [],
@@ -464,8 +506,10 @@
                     ],
                     "descrizione": "",
                     "destinazione": {
-                        "tipo": "custom",
-                        "url": "#"
+                        "percorso": "da-sapere",
+                        "post_type": "page",
+                        "tipo": "pagina",
+                        "url": "/en/da-sapere/"
                     },
                     "genitore": null,
                     "meta": [],
@@ -481,8 +525,10 @@
                     ],
                     "descrizione": "",
                     "destinazione": {
-                        "tipo": "custom",
-                        "url": "#"
+                        "percorso": "interactive-map",
+                        "post_type": "page",
+                        "tipo": "pagina",
+                        "url": "/en/interactive-map/"
                     },
                     "genitore": null,
                     "meta": [],
@@ -498,8 +544,10 @@
                     ],
                     "descrizione": "",
                     "destinazione": {
-                        "tipo": "custom",
-                        "url": "#"
+                        "percorso": "news",
+                        "post_type": "page",
+                        "tipo": "pagina",
+                        "url": "/en/news/"
                     },
                     "genitore": null,
                     "meta": [],
@@ -523,7 +571,7 @@
                     "descrizione": "",
                     "destinazione": {
                         "tipo": "custom",
-                        "url": "#"
+                        "url": "/en/enti/"
                     },
                     "genitore": null,
                     "meta": [],
@@ -552,8 +600,10 @@
                     "classi": [],
                     "descrizione": "",
                     "destinazione": {
-                        "tipo": "custom",
-                        "url": "#"
+                        "percorso": "faq",
+                        "post_type": "page",
+                        "tipo": "pagina",
+                        "url": "/en/faq/"
                     },
                     "genitore": null,
                     "meta": [],
@@ -567,8 +617,10 @@
                     "classi": [],
                     "descrizione": "",
                     "destinazione": {
-                        "tipo": "custom",
-                        "url": "#"
+                        "percorso": "app",
+                        "post_type": "page",
+                        "tipo": "pagina",
+                        "url": "/en/app/"
                     },
                     "genitore": null,
                     "meta": [],

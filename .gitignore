@@ -10,5 +10,8 @@
 !/docker/plugins/.gitkeep
 !/docker/plugins/commerciali.txt
 
-# Backup della configurazione fatti da bin/wordpress-config.sh apply --conferma
+# Backup della configurazione fatti da bin/wordpress-config.sh applica --conferma
 /backup/
+
+# Log della sincronizzazione delle pagine da Drupal (bin/wordpress-config.sh pagine)
+/log/

@@ -227,7 +227,34 @@ function wpf_menu_applica( array $menu, bool $prova, callable $diff, callable $r
 			$ok        = wpf_menu_ricrea_voci( $termine, $m, $voci_cfg, $risolvi, $voci_orig ) && $ok;
 		}
 	}
+	if ( ! $prova ) {
+		wpf_menu_togli_orfane();
+	}
 	return $ok;
+}
+
+/**
+ * Cancella le voci di menu pubblicate rimaste senza menu (oc:8758). Quando l'apply ricrea un menu
+ * italiano cancella le sue voci vecchie, e WPML stacca dai menu inglesi le loro traduzioni: il menu
+ * inglese, trovato vuoto, viene ricreato subito dopo, ma le voci staccate resterebbero nel database, una
+ * serie in più a ogni cambio del menu italiano. Le bozze senza menu sono del pannello (menu non ancora
+ * salvati) e restano.
+ */
+function wpf_menu_togli_orfane(): void {
+	global $wpdb;
+	$orfane = $wpdb->get_col(
+		"SELECT p.ID FROM {$wpdb->posts} p
+		 LEFT JOIN {$wpdb->term_relationships} r ON r.object_id = p.ID
+		 LEFT JOIN {$wpdb->term_taxonomy} t ON t.term_taxonomy_id = r.term_taxonomy_id AND t.taxonomy = 'nav_menu'
+		 WHERE p.post_type = 'nav_menu_item' AND p.post_status = 'publish'
+		 GROUP BY p.ID HAVING COUNT(t.term_taxonomy_id) = 0"
+	);
+	foreach ( $orfane as $id ) {
+		wpf_wpml_cancella_post( (int) $id, 'post_nav_menu_item' );
+	}
+	if ( $orfane ) {
+		WP_CLI::log( 'menu: ' . count( $orfane ) . ' voci rimaste senza menu cancellate' );
+	}
 }
 
 /** Menu che esisteva prima della configurazione versionata: si ricollega dallo slug. */
@@ -324,6 +351,13 @@ function wpf_menu_args_destinazione( array $destinazione, array $m, callable $ri
 		$trovato = get_page_by_path( $destinazione['percorso'], OBJECT, $destinazione['post_type'] );
 		if ( $trovato ) {
 			$id_post = (int) apply_filters( 'wpml_object_id', $trovato->ID, $destinazione['post_type'], true, $m['lingua'] );
+			// Una pagina senza traduzione nella lingua del menu (Privacy nel menu inglese) non si collega:
+			// WPML staccherebbe dal menu la voce, di lingua diversa dalla pagina, lasciandola orfana. La voce
+			// diventa un link all'indirizzo della pagina (oc:8758)
+			$lingua_pagina = wpf_lingua( $id_post, 'post_' . $destinazione['post_type'] );
+			if ( $m['lingua'] && $lingua_pagina && $lingua_pagina !== $m['lingua'] ) {
+				$id_post = null;
+			}
 		} else {
 			WP_CLI::warning( "menu {$m['chiave']}: {$destinazione['post_type']} «{$destinazione['percorso']}» non c'è su questo sito, la voce è un link a {$destinazione['url']}" );
 		}

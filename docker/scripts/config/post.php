@@ -9,7 +9,7 @@ require_once __DIR__ . '/wpml.php';
 
 /**
  * Le pagine (la Home e le altre a cui puntano le opzioni) sono anche contenuto della redazione: se
- * esistono già si aggiornano solo con $pagine vero (bin/wordpress-config.sh apply --pagine), così un
+ * esistono già si aggiornano solo con $pagine vero (bin/wordpress-config.sh applica --pagine), così un
  * apply fatto per un colore o un menu non riporta la Home alla versione del repo. Header, Page Block e
  * gli altri post del builder sono configurazione e si aggiornano sempre.
  *
@@ -37,6 +37,11 @@ function wpf_post_applica( array $post_cfg, bool $prova, callable $diff, bool $p
 			continue;
 		}
 		$esistente = wpf_post_per_chiave( $p['chiave'] ) ?? wpf_post_ricollega( $p, $prova, $diff );
+		if ( $esistente && get_post_meta( $esistente->ID, '_wpf_pagina', true ) !== '' ) {
+			// Pagina statica sincronizzata da Drupal: ha un solo scrittore, il comando pagine (oc:8758)
+			WP_CLI::warning( "post {$p['chiave']}: sul sito è la pagina sincronizzata da Drupal «" . get_post_meta( $esistente->ID, '_wpf_pagina', true ) . "», la salto" );
+			continue;
+		}
 		$campi     = [
 			'post_type'    => $p['post_type'],
 			'post_title'   => $p['post_title'],
