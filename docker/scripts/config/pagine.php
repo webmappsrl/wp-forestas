@@ -6,7 +6,8 @@
  * (lo lancia bin/wordpress-config.sh pagine, che ne salva l'output nel log).
  * Scrive solo con DRUPAL_SYNC=on nel .env; con WPF_PROVA=1 mostra le differenze senza scrivere nulla.
  * Ogni riga di output comincia con un tipo: PAGINA, MEDIA, LINK, MENU, MANCANTE, AVVISO, ERRORE,
- * RIASSUNTO. Esce con 1 se c'è un errore o se restano elementi mancanti.
+ * RIASSUNTO. Esce con 1 se c'è un errore, se restano elementi mancanti (non i soli media) o se la
+ * sincronizzazione è spenta (DRUPAL_SYNC), anche in anteprima.
  */
 
 require_once __DIR__ . '/pagine-lib.php';
@@ -85,7 +86,8 @@ try {
 				if ( ! $d ) {
 					$ferma( "{$chiave}: la pagina «" . ( $voce['testata_da'] ?? '' ) . "» da cui prende la testata non ha la lingua «{$lingua}»" );
 				}
-				$d = array_merge( $d, [ 'titolo' => $voce['titolo'][ $lingua ], 'body' => '', 'allegati' => [], 'galleria' => [] ] );
+				// Lo stato no: Cammini non esiste su Drupal e resta pubblicata anche se Itinerari va in bozza
+				$d = array_merge( $d, [ 'titolo' => $voce['titolo'][ $lingua ], 'body' => '', 'allegati' => [], 'galleria' => [], 'status' => true ] );
 			}
 			$dati[ $chiave ][ $lingua ] = $d;
 		}
@@ -100,17 +102,19 @@ foreach ( $avvisi as $a ) {
 }
 
 // Una copia in ricarica o troncata manderebbe in bozza molte pagine insieme
+// Si contano le pagine di Drupal (i nodi), non le copie per lingua: una pagina spubblicata con l'inglese
+// sono due copie da mettere in bozza, ma una sola spubblicazione
 $in_bozza = [];
 foreach ( $dati as $chiave => $lingue ) {
 	foreach ( $lingue as $lingua => $d ) {
 		$post = wpf_pagina_trova( $chiave, $lingua );
 		if ( ! $d['status'] && ( ! $post || $post->post_status !== 'draft' ) ) {
-			$in_bozza[] = "{$chiave}/{$lingua}";
+			$in_bozza[ (int) $voci[ $chiave ]['nid'] ][] = "{$chiave}/{$lingua}";
 		}
 	}
 }
 if ( count( $in_bozza ) > WPF_PAGINE_SOGLIA_BOZZE ) {
-	$ferma( 'copia Drupal sospetta: ' . count( $in_bozza ) . ' pagine da mettere in bozza nello stesso giro (' . implode( ', ', $in_bozza ) . '), più di ' . WPF_PAGINE_SOGLIA_BOZZE . ': nulla scritto' );
+	$ferma( 'copia Drupal sospetta: ' . count( $in_bozza ) . ' pagine da mettere in bozza nello stesso giro (' . implode( ', ', array_merge( ...array_values( $in_bozza ) ) ) . '), più di ' . WPF_PAGINE_SOGLIA_BOZZE . ': nulla scritto' );
 }
 
 // Template di Impreza per chiave
@@ -146,7 +150,9 @@ if ( $solo_mancanti && ! $solo ) {
 	return;
 }
 
-$mancanti = $mancanti_prima;
+// Un mancante di una pagina o di una lingua tolta da config/pagine.json non si ritenterebbe mai e
+// terrebbe l'uscita a 1 per sempre: si toglie
+$mancanti = array_filter( $mancanti_prima, fn( $m ) => isset( $voci[ $m['pagina'] ]['slug'][ $m['lingua'] ] ) );
 $conteggi = [];
 $ora      = gmdate( 'c' );
 foreach ( $voci as $chiave => $voce ) {
@@ -180,6 +186,9 @@ foreach ( $voci as $chiave => $voce ) {
 		}
 		foreach ( array_unique( $l['in_attesa'] ) as $m ) {
 			$riga( 'LINK', "{$nome}: in attesa {$m} (contenuto non ancora in WordPress, resta verso Drupal)" );
+		}
+		foreach ( array_unique( $l['non_contenuti'] ) as $m ) {
+			$riga( 'LINK', "{$nome}: verso Drupal {$m} (non è un contenuto di Drupal: resta così finché quella pagina non esiste in WordPress, poi va corretto a mano o con una regola in link.php)" );
 		}
 		if ( ! $d['status'] && $r['id'] ) {
 			foreach ( wpf_pagina_voci_menu( $r['id'] ) as $v ) {
@@ -244,4 +253,9 @@ if ( $gravi ) {
 }
 if ( $elenco ) {
 	$riga( 'AVVISO', count( $elenco ) . ' media non scaricati: le pagine sono aggiornate, si ritentano al prossimo giro o con --contenuti-mancanti' );
+}
+// Con la sincronizzazione spenta anche l'anteprima esce con 1: chi la lancia (o un cron) sa che non
+// scriverebbe, anche se le differenze sono quelle di sempre
+if ( ! $sync ) {
+	WP_CLI::halt( 1 );
 }

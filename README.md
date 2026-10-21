@@ -260,7 +260,7 @@ bin/wordpress-config.sh pagine --contenuti-mancanti --conferma   # ritenta solo 
 ```
 
 - **Scrive solo con `DRUPAL_SYNC=on`** nel `wp-forestas/.env`; con `off` (il default) mostra solo
-  l'anteprima. Al passaggio in produzione va messo a `off`: da lì la fonte è WordPress.
+  l'anteprima ed esce con codice 1, così un cron si accorge che non scriverebbe. Al passaggio in produzione va messo a `off`: da lì la fonte è WordPress.
 - **Drupal vince sempre:** a ogni esecuzione le pagine riprendono i dati di Drupal. Una pagina
   spubblicata su Drupal va in bozza e torna pubblicata, con lo stesso indirizzo, se su Drupal torna.
 - **Dove legge Drupal:** per default `mysql-sardegnasentieri-dump:3306`, il container della copia
@@ -277,7 +277,8 @@ bin/wordpress-config.sh pagine --contenuti-mancanti --conferma   # ritenta solo 
   con codice 1 se manca qualcosa che non si sistema da sé (pagina, traduzione, template); se mancano
   solo media, che si ritentano al giro dopo, esce con 0 e un avviso.
 - **Si ferma senza scrivere** se la copia Drupal non è integra (tabelle mancanti o vuote, un nodo del
-  perimetro assente) o se più di 2 pagine andrebbero in bozza nello stesso giro: è il segno di una
+  perimetro assente) o se più di 2 pagine andrebbero in bozza nello stesso giro (una pagina conta una
+  volta sola, in qualunque numero di lingue): è il segno di una
   copia in ricarica (su UAT ogni giorno alle 10:00).
 - **Ricreare tutto dal reset** (installazione, pagine, menu, verifiche, problemi noti):
   [docs/howto/ricreare-wordpress-da-zero.md](docs/howto/ricreare-wordpress-da-zero.md).
@@ -285,7 +286,9 @@ bin/wordpress-config.sh pagine --contenuti-mancanti --conferma   # ritenta solo 
   [docs/howto/cron-sincronizzazione-pagine.md](docs/howto/cron-sincronizzazione-pagine.md).
 - I link dei testi verso `www.sardegnasentieri.it` diventano link relativi al contenuto WordPress con
   lo stesso nodo Drupal (`_drupal_nid`, `_drupal_langcode`); quelli verso contenuti non ancora
-  importati restano verso Drupal («in attesa» nel log) e si sistemano da soli quando arrivano.
+  importati restano verso Drupal («in attesa» nel log) e si sistemano da soli quando arrivano. Quelli
+  verso pagine di Drupal che non sono contenuti (il form `/form/segnalazione`) sono segnati «verso
+  Drupal» e non si sistemano da soli: serve una regola in `docker/scripts/config/link.php`.
 
 ## Messa in opera su UAT
 
@@ -299,6 +302,11 @@ bin/wordpress-config.sh pagine --contenuti-mancanti --conferma   # ritenta solo 
    In quella prima anteprima possono comparire anche «voci diverse» nel menu, perché le voci puntano
    a post non ancora ricollegati, e qualche avviso «riferimento non risolto»: con `--conferma` i post
    si ricollegano prima, e un riferimento che resta senza post lascia il valore del sito.
+5. Pagine statiche da Drupal: aggiungi al `wp-forestas/.env` `DRUPAL_DB_USER`, `DRUPAL_DB_PASSWORD`
+   (l'utente in sola lettura della copia) e `DRUPAL_SYNC=on`, poi `scripts/wordpress-up.sh`, perché il
+   container legge il `.env` solo all'avvio. `bin/wordpress-config.sh pagine` per l'anteprima, poi
+   `pagine --conferma`, lontano dal reload della copia delle 10:00. Va dopo `applica --conferma`, che
+   scrive i template di Impreza delle pagine: senza, le pagine restano fra i mancanti.
 
 ## Indicizzazione
 

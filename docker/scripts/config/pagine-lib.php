@@ -15,13 +15,9 @@ require_once __DIR__ . '/drupal.php';
 require_once __DIR__ . '/media.php';
 require_once __DIR__ . '/link.php';
 
-const WPF_META_PAGINA      = '_wpf_pagina';
 const WPF_META_LINGUA      = '_wpf_lingua';
 const WPF_META_NID         = '_drupal_nid';
 const WPF_META_LANGCODE    = '_drupal_langcode';
-// Meta del sottotitolo nella prima versione: ora il sottotitolo è il Riassunto nativo (post_excerpt) e il
-// meta si cancella dalle pagine che lo hanno ancora (oc:8758)
-const WPF_META_SOTTOTITOLO = 'wpf_sottotitolo';
 // Impronta (md5) del testo scritto dalla sincronizzazione: finché il testo della pagina è quello, il child
 // lo mostra così com'è, senza i filtri di the_content (inc/pagine-statiche.php)
 const WPF_META_TESTO_DRUPAL = '_wpf_testo_drupal';
@@ -174,23 +170,55 @@ function wpf_mancante_chiave( string $cosa, string $pagina, string $lingua, stri
  * l'immagine in evidenza, che è una sola, il campo tiene invece il valore che aveva: un errore di rete
  * non toglie un'immagine dal sito (oc:8758).
  *
- * @return array [ 'ids' => int[]|null (null = tenere il valore attuale), 'scaricare' => string[], 'errori' => [ nome => causa ] ]
+ * @return array [ 'ids' => int[]|null (null = tenere il valore attuale), 'scaricare' => string[],
+ *                 'scaricati' => string[], 'riusati' => int, 'errori' => [ nome => causa ] ]
  */
 function wpf_pagina_media( array $file, bool $prova ): array {
 	$ids       = [];
 	$scaricare = [];
+	$scaricati = [];
+	$riusati   = 0;
 	$errori    = [];
 	foreach ( $file as $f ) {
-		$id = wpf_media_importa( $f, $prova );
+		$presente = wpf_media_per_fid( (int) $f['fid'] ) > 0;
+		$id       = wpf_media_importa( $f, $prova );
 		if ( is_wp_error( $id ) ) {
 			$errori[ "fid {$f['fid']} {$f['nome']}" ] = $id->get_error_message();
 		} elseif ( $id === 0 ) {
 			$scaricare[] = $f['nome'];
 		} else {
 			$ids[] = $id;
+			if ( $presente ) {
+				++$riusati;
+			} else {
+				$scaricati[] = $f['nome'];
+			}
 		}
 	}
-	return [ 'ids' => $scaricare ? null : $ids, 'scaricare' => $scaricare, 'errori' => $errori ];
+	return [ 'ids' => $scaricare ? null : $ids, 'scaricare' => $scaricare, 'scaricati' => $scaricati, 'riusati' => $riusati, 'errori' => $errori ];
+}
+
+/**
+ * Campi e meta di una pagina che la sincronizzazione cambierebbe: [ nome del campo o del meta ]. Un meta
+ * a null va cancellato, quindi cambia se c'è.
+ */
+function wpf_pagina_differenze( ?WP_Post $post, array $voluti, array $meta ): array {
+	if ( ! $post ) {
+		return array_merge( array_keys( $voluti ), array_keys( array_filter( $meta, fn( $v ) => $v !== null ) ) );
+	}
+	$campi = [];
+	foreach ( $voluti as $campo => $valore ) {
+		if ( (string) $post->$campo !== (string) $valore ) {
+			$campi[] = $campo;
+		}
+	}
+	foreach ( $meta as $chiave_meta => $valore ) {
+		$attuale = get_post_meta( $post->ID, $chiave_meta, true );
+		if ( $valore === null ? metadata_exists( 'post', $post->ID, $chiave_meta ) : wpf_diverso( $attuale, $valore ) ) {
+			$campi[] = $chiave_meta;
+		}
+	}
+	return $campi;
 }
 
 /**
@@ -229,7 +257,6 @@ function wpf_pagina_scrivi( array $voce, string $lingua, array $dati, ?int $id_i
 		WPF_META_LINGUA      => $lingua,
 		WPF_META_NID         => $voce['nid'] ? (string) $voce['nid'] : null,
 		WPF_META_LANGCODE    => $voce['nid'] ? $lingua : null,
-		WPF_META_SOTTOTITOLO => null,
 		WPF_META_TESTO_DRUPAL => md5( $dati['body'] ),
 		WPF_META_TESTATA      => ( $dati['testata'] ?? 'hero' ) === 'titolo' ? 'titolo' : null,
 		WPF_META_COLORE       => ( $dati['colore'] ?? '' ) !== '' ? $dati['colore'] : null,
@@ -254,6 +281,12 @@ function wpf_pagina_scrivi( array $voce, string $lingua, array $dati, ?int $id_i
 		foreach ( $r['scaricare'] as $nome ) {
 			$media[] = "{$cosa} da scaricare: {$nome}";
 		}
+		foreach ( $r['scaricati'] as $nome ) {
+			$media[] = "{$cosa} scaricato: {$nome}";
+		}
+		if ( $r['riusati'] ) {
+			$media[] = "{$cosa}: {$r['riusati']} già nella libreria, riusati";
+		}
 		foreach ( $r['errori'] as $nome => $causa ) {
 			$mancanti[ $cosa ][ $nome ] = $causa;
 		}
@@ -272,21 +305,10 @@ function wpf_pagina_scrivi( array $voce, string $lingua, array $dati, ?int $id_i
 		$meta   = array_intersect_key( $meta, array_flip( array_filter( [ '_thumbnail_id', WPF_META_PAGINA_ALLEGATI, WPF_META_PAGINA_GALLERIA, 'us_content_id' ], fn( $k ) => array_key_exists( $k, $meta ) ) ) );
 	}
 
-	// Differenze
-	if ( $post ) {
-		foreach ( $voluti as $campo => $valore ) {
-			if ( (string) $post->$campo !== (string) $valore ) {
-				$campi[] = $campo;
-			}
-		}
-		foreach ( $meta as $chiave_meta => $valore ) {
-			$attuale = get_post_meta( $post->ID, $chiave_meta, true );
-			if ( $valore === null ? metadata_exists( 'post', $post->ID, $chiave_meta ) : wpf_diverso( $attuale, $valore ) ) {
-				$campi[] = $chiave_meta;
-			}
-		}
-	} else {
-		$campi = array_merge( array_keys( $voluti ), array_keys( array_filter( $meta, fn( $v ) => $v !== null ) ), $campi );
+	$campi = array_merge( wpf_pagina_differenze( $post, $voluti, $meta ), $campi );
+	// Con --contenuti-mancanti una traduzione non collegata si ricollega anche se il resto non cambia
+	if ( ! $tutto && $fa( 'traduzione' ) && $lingua !== 'it' ) {
+		$campi[] = 'traduzione';
 	}
 	$campi = array_values( array_unique( $campi ) );
 	$esito = ! $post ? 'creata' : ( $campi ? 'aggiornata' : 'invariata' );
@@ -320,13 +342,15 @@ function wpf_pagina_scrivi( array $voce, string $lingua, array $dati, ?int $id_i
 			update_post_meta( $id, $chiave_meta, $valore );
 		}
 	}
-	if ( $tutto ) {
+	if ( $tutto || $fa( 'traduzione' ) ) {
 		// Lingua e gruppo di traduzione; lo slug si riscrive dopo, perché WPML ammetta nella traduzione
 		// lo stesso slug dell'originale (sapendo la lingua non lo considera un doppione)
 		wpf_wpml_collega( $id, 'post_page', $lingua_wpml, $lingua === 'it' ? null : $id_it );
 		if ( $lingua !== 'it' && $id_it === null ) {
 			$mancanti['traduzione'][''] = 'pagina italiana assente: traduzione non collegata in WPML';
 		}
+	}
+	if ( $tutto ) {
 		if ( get_post_field( 'post_name', $id ) !== $voluti['post_name'] ) {
 			wp_update_post( [ 'ID' => $id, 'post_name' => $voluti['post_name'] ] );
 			if ( get_post_field( 'post_name', $id ) !== $voluti['post_name'] ) {
@@ -341,7 +365,8 @@ function wpf_pagina_scrivi( array $voce, string $lingua, array $dati, ?int $id_i
 function wpf_pagina_voci_menu( int $id ): array {
 	$voci = [];
 	foreach ( get_posts( [ 'post_type' => 'nav_menu_item', 'numberposts' => -1, 'suppress_filters' => true, 'meta_key' => '_menu_item_object_id', 'meta_value' => (string) $id ] ) as $voce ) {
-		$menu   = wp_get_post_terms( $voce->ID, 'nav_menu', [ 'fields' => 'names' ] );
+		// Con i filtri di WPML attivi i menu tradotti non si vedono (CLAUDE.md, «Trappole»)
+		$menu   = wpf_wpml_tutte_le_lingue( fn() => wp_get_post_terms( $voce->ID, 'nav_menu', [ 'fields' => 'names' ] ) );
 		$voci[] = ( $menu[0] ?? '?' ) . ': ' . ( $voce->post_title ?: get_the_title( $id ) );
 	}
 	return $voci;

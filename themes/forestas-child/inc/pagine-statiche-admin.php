@@ -32,15 +32,10 @@ add_filter(
 	2
 );
 
-/** Elenco di id di allegati da un meta, in ordine. */
-function forestas_meta_ids( int $id, string $chiave ): array {
-	return array_values( array_filter( array_map( 'intval', (array) get_post_meta( $id, $chiave, true ) ) ) );
-}
-
 /** Una voce dell'elenco del riquadro: miniatura o icona, nome, pulsante per toglierla. */
 function forestas_riquadro_voce( int $id, string $nome_campo ): string {
 	$anteprima = wp_attachment_is_image( $id )
-		? wp_get_attachment_image( $id, [ 60, 60 ] )
+		? wp_get_attachment_image( $id, 'thumbnail' )
 		: '<span class="dashicons dashicons-media-document" aria-hidden="true"></span>';
 	return sprintf(
 		'<li class="forestas-riquadro-voce" data-id="%1$d"><span class="forestas-riquadro-trascina dashicons dashicons-menu" aria-hidden="true"></span>%2$s<span class="forestas-riquadro-nome">%3$s</span><input type="hidden" name="%4$s[]" value="%1$d"><button type="button" class="button-link forestas-riquadro-togli">%5$s</button></li>',
@@ -56,7 +51,7 @@ function forestas_riquadro_pagina( WP_Post $post ): void {
 	wp_nonce_field( FORESTAS_RIQUADRO_NONCE, FORESTAS_RIQUADRO_NONCE );
 	// L'avviso serve solo finché la sincronizzazione scrive davvero: DRUPAL_SYNC arriva dal .env di
 	// wp-forestas nell'ambiente del container, e Apache lo vede (verificato con getenv)
-	if ( get_post_meta( $post->ID, '_wpf_pagina', true ) !== '' && getenv( 'DRUPAL_SYNC' ) === 'on' ) {
+	if ( get_post_meta( $post->ID, FORESTAS_META_PAGINA, true ) !== '' && getenv( 'DRUPAL_SYNC' ) === 'on' ) {
 		echo '<p class="notice notice-warning inline" style="padding:8px 12px">Questa pagina è ancora collegata al vecchio sito: testo, riassunto, allegati e galleria vengono aggiornati da lì in automatico, e le modifiche fatte qui si perdono.</p>';
 	}
 	foreach ( [

@@ -191,16 +191,20 @@ case "$comando" in
         # riassunto: niente pipe con tee, il codice d'uscita dello script deve restare quello vero
         esito=0
         esegui_script pagine.php ${pagine_env[@]+"${pagine_env[@]}"} > "$log" 2>&1 || esito=$?
-        # Degli avvisi si mostrano quelli che chiedono un intervento: media non scaricati e traduzioni nostre
-        # da rivedere o non più usate (config/traduzioni/)
-        grep -E '^(RIASSUNTO|ERRORE|MANCANTE|MENU) |^AVVISO .*(media non scaricati|config/traduzioni/)' "$log" || true
+        # Degli avvisi si mostrano quelli che chiedono un intervento: media non scaricati, traduzioni nostre
+        # da rivedere o non più usate (config/traduzioni/), sincronizzazione spenta (DRUPAL_SYNC)
+        grep -E '^(RIASSUNTO|ERRORE|MANCANTE|MENU) |^AVVISO .*(media non scaricati|config/traduzioni/|DRUPAL_SYNC)' "$log" || true
         conta() { grep -c "^$1 " "$log" || true; }
         echo "pagine: $(conta PAGINA) · media: $(conta MEDIA) · link: $(conta LINK) · avvisi: $(conta AVVISO)"
         echo "log completo: ${log}"
         if grep -q '^MANCANTE ' "$log"; then
             echo "Per ritentare solo ciò che manca: $0 pagine --contenuti-mancanti --conferma"
         fi
-        $conferma || echo "Per scrivere: $0 pagine --conferma"
+        if grep -q '^AVVISO .*DRUPAL_SYNC' "$log"; then
+            echo "Per scrivere serve DRUPAL_SYNC=on nel .env di wp-forestas (poi scripts/wordpress-up.sh di forestas)"
+        elif ! $conferma; then
+            echo "Per scrivere: $0 pagine --conferma"
+        fi
         # Si tengono gli ultimi 60 log
         vecchi=$(ls -1t "${REPO}"/log/pagine-*.log 2>/dev/null | tail -n +61 || true)
         [ -n "$vecchi" ] && echo "$vecchi" | while read -r f; do rm -f "$f"; done

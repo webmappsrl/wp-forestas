@@ -94,8 +94,10 @@ contano le scelte e i vincoli.
   `php`, mentre il container WordPress e la copia stanno sulla stessa rete Docker. Il tunnel serve
   solo in locale, e gli script non contengono SSH.
 - **Voci dei menu inglesi verso pagine solo italiane come link** (oc:8758): collegate alla pagina,
-  WPML le staccava dal menu perché di lingua diversa dalla pagina. Diventano link all'indirizzo
-  (`/privacy/`); quelle con traduzione restano collegate alle pagine.
+  WPML le staccava dal menu perché di lingua diversa dalla pagina. Una destinazione la cui pagina non è
+  nella lingua del menu diventa link all'indirizzo (`/privacy/`, `wpf_menu_args_destinazione`). Oggi
+  ogni pagina ha la versione inglese e tutte le voci inglesi del perimetro sono collegate alle pagine
+  inglesi: il ripiego scatta solo se una pagina inglese manca.
 - **Pulizia delle voci senza menu a fine apply** (oc:8758): quando l'apply ricrea un menu italiano,
   WPML stacca dai menu inglesi le traduzioni delle voci cancellate; i menu inglesi vengono ricreati, e
   `wpf_menu_togli_orfane()` cancella le voci rimaste senza menu, che altrimenti si accumulerebbero.
@@ -103,7 +105,8 @@ contano le scelte e i vincoli.
   WordPress non c'è resta verso `www.sardegnasentieri.it` ed è segnato «in attesa» nel log. Si riscrive
   da solo alla sincronizzazione dopo che l'import di quel contenuto ha scritto `_drupal_nid` e
   `_drupal_langcode`: ogni nuovo import deve scriverli. I link a pagine che non sono nodi (i form, come
-  `/form/segnalazione`) non si riscrivono mai da soli: servono una regola in `link.php`. Elenco aggiornato
+  `/form/segnalazione`) non si riscrivono mai da soli: sono segnati `LINK … verso Drupal` nel log e
+  serve una regola in `link.php`. Elenco aggiornato
   dei link in attesa: le righe `LINK … in attesa` dell'ultimo log in `log/pagine-*.log`.
 - **Link interni relativi, hook di WPML staccati** (oc:8758): al salvataggio di una traduzione WPML
   (`ItemUpdateEvent`) riscrive allo shutdown i link interni come indirizzi assoluti dell'ambiente;

@@ -18,6 +18,9 @@ const WPF_SEGNAPOSTO_URL = '@url_sito';
 const WPF_SEGRETO        = '@segreto';
 const WPF_RIFERIMENTO    = '@chiave:';
 const WPF_META_CHIAVE    = '_wp_forestas_chiave';
+// Chiave del perimetro di una pagina sincronizzata da Drupal (oc:8758): esporta e applica la saltano,
+// la scrive solo il comando pagine
+const WPF_META_PAGINA    = '_wpf_pagina';
 
 // Impostazioni del sito versionate in sito.json (export) e mostrate nel ritratto
 const WPF_OPZIONI_SITO = [ 'blogname', 'blogdescription', 'permalink_structure', 'show_on_front', 'page_on_front', 'page_for_posts' ];

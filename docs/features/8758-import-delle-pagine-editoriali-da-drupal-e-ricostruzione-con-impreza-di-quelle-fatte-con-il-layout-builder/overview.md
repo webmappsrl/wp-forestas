@@ -118,96 +118,96 @@ script, senza lavoro a mano dal pannello, perché un cambio di server non richie
 
 ## Requisiti
 
-- [ ] Elenco versionato delle 14 pagine del perimetro con, per ognuna, chiave (`_wpf_pagina`), nid
+- [x] Elenco versionato delle 14 pagine del perimetro con, per ognuna, chiave (`_wpf_pagina`), nid
       Drupal (o la regola di Cammini), slug WordPress italiano e inglese scritti espliciti e
       template da usare.
-- [ ] Comando sull'host che senza opzioni mostra le differenze (pagine da creare, da aggiornare, da
+- [x] Comando sull'host che senza opzioni mostra le differenze (pagine da creare, da aggiornare, da
       mettere in bozza, media da scaricare) e con `--conferma` scrive; esce con codice diverso da 0
       in caso di errore o se manca una pagina, una traduzione o un template; se mancano solo media
       esce con 0 e un avviso (si ritentano al giro dopo); nessuna domanda interattiva.
-- [ ] Interruttore `DRUPAL_SYNC=on|off` nel `wp-forestas/.env`, predefinito `off`: con `off` il
+- [x] Interruttore `DRUPAL_SYNC=on|off` nel `wp-forestas/.env`, predefinito `off`: con `off` il
       comando mostra l'anteprima ma non scrive, ed esce con un messaggio chiaro e codice ≠ 0.
-- [ ] Controllo di integrità della copia prima di scrivere: tabelle lette presenti e non vuote;
+- [x] Controllo di integrità della copia prima di scrivere: tabelle lette presenti e non vuote;
       nid del perimetro non trovato → stop con errore (non bozza); più di 2 pagine da mettere in
       bozza nello stesso giro → stop con errore, nulla scritto.
-- [ ] Lock contro due esecuzioni contemporanee.
-- [ ] Elenco degli elementi mancanti salvato su WordPress (un'opzione, non i meta delle pagine):
+- [x] Lock contro due esecuzioni contemporanee.
+- [x] Elenco degli elementi mancanti salvato su WordPress (un'opzione, non i meta delle pagine):
       cosa, pagina, lingua, causa, primo e ultimo tentativo. `--contenuti-mancanti` ritenta solo
       quegli elementi (anteprima, poi `--conferma`); l'esecuzione normale ritenta tutto e ripulisce
       l'elenco. I link in attesa di contenuti non ancora importati non sono mancanti: il log li
       riporta a parte.
-- [ ] Un media che non si scarica finisce fra i mancanti e non ferma le altre pagine: allegati e
+- [x] Un media che non si scarica finisce fra i mancanti e non ferma le altre pagine: allegati e
       galleria mostrano intanto quelli scaricati; l'immagine in evidenza resta quella che c'era.
-- [ ] `esporta` e `applica` di `bin/wordpress-config.sh` saltano le pagine con `_wpf_pagina`, anche se
+- [x] `esporta` e `applica` di `bin/wordpress-config.sh` saltano le pagine con `_wpf_pagina`, anche se
       un'opzione di Impreza o del sito punta a loro: le pagine hanno un solo scrittore.
-- [ ] Lettura della copia Drupal in sola lettura da host e porta presi da `wp-forestas/.env`
+- [x] Lettura della copia Drupal in sola lettura da host e porta presi da `wp-forestas/.env`
       (`DRUPAL_DB_*`), con default `mysql-sardegnasentieri-dump:3306`; utente e password solo dal
       `.env`, senza default; `extra_hosts: host.docker.internal:host-gateway` nel compose; valori di
       esempio in `.env-example`, nessun valore reale nel repo.
-- [ ] Per ogni pagina: titolo, sottotitolo nel Riassunto nativo (`post_excerpt`), immagine in evidenza, testo HTML pulito
+- [x] Per ogni pagina: titolo, sottotitolo nel Riassunto nativo (`post_excerpt`), immagine in evidenza, testo HTML pulito
       (senza shortcode) nel `post_content`, allegati e galleria; meta `_drupal_nid`; template di
       contenuto di Impreza assegnato.
-- [ ] Percorso sempre subito sotto la testata; sotto, «Condividi» dell'artifact sulle pagine dove Drupal
+- [x] Percorso sempre subito sotto la testata; sotto, «Condividi» dell'artifact sulle pagine dove Drupal
       ha la condivisione: menu del sistema su telefono, pannello con i servizi e «Copia link» altrove.
-- [ ] Testo, allegati e galleria delle pagine di testo uguali a Drupal (posizione, dimensioni e stile
+- [x] Testo, allegati e galleria delle pagine di testo uguali a Drupal (posizione, dimensioni e stile
       di ogni elemento) a 1440, 800 e 375px, confrontati col CSS compilato del tema Drupal.
-- [ ] Le righe Drupal con `langcode = und` (Contatti) si trattano come italiano.
-- [ ] Pagine esistenti trovate tramite `_wpf_pagina` e lingua e aggiornate, mai ricreate; pagina con
+- [x] Le righe Drupal con `langcode = und` (Contatti) si trattano come italiano.
+- [x] Pagine esistenti trovate tramite `_wpf_pagina` e lingua e aggiornate, mai ricreate; pagina con
       `status = 0` su Drupal → bozza; di nuovo pubblicata → pubblicata con lo stesso indirizzo.
-- [ ] Slug inglesi uguali a quelli italiani (per esempio `da-vedere`) verificati con WPML: la pagina
+- [x] Slug inglesi uguali a quelli italiani (per esempio `da-vedere`) verificati con WPML: la pagina
       inglese non deve diventare `…-2` (in `config/post.json` l'header inglese è `header-2`).
-- [ ] Le voci di menu verso pagine in bozza restano visibili e portano a un 404 (WordPress invalida
+- [x] Le voci di menu verso pagine in bozza restano visibili e portano a un 404 (WordPress invalida
       solo le voci verso il cestino, `wp-includes/nav-menu.php:888`): il log le segnala come avviso.
-- [ ] Versione inglese per ogni pagina: di Drupal dove c'è, altrimenti la nostra traduzione (avviso nel
+- [x] Versione inglese per ogni pagina: di Drupal dove c'è, altrimenti la nostra traduzione (avviso nel
       log quando il testo italiano cambia) o la sola interfaccia (Mappa); collegate all'italiano in WPML con le
       funzioni esistenti (`wpf_wpml_collega`, `wpf_wpml_tutte_le_lingue`, `wpf_wpml_cancella_post`).
-- [ ] Cammini: pagina propria, titolo «Cammini» / inglese, sottotitolo e immagine presi da
+- [x] Cammini: pagina propria, titolo «Cammini» / inglese, sottotitolo e immagine presi da
       Itinerari (1081), aggiornati quando cambiano su Drupal.
-- [ ] Media scaricati da `https://www.sardegnasentieri.it/sites/default/files/…` (`public://`) e
+- [x] Media scaricati da `https://www.sardegnasentieri.it/sites/default/files/…` (`public://`) e
       registrati nella libreria, riconosciuti a ogni esecuzione (per esempio dal fid Drupal) senza
       riscaricarli; alt delle immagini dal media Drupal.
-- [ ] Link assoluti a `www.sardegnasentieri.it` (anche con `index.php/` e `/en/`) risolti in modo
+- [x] Link assoluti a `www.sardegnasentieri.it` (anche con `index.php/` e `/en/`) risolti in modo
       generico: dall'indirizzo Drupal (alias o `/node/<nid>`) si ricava il nid, si cerca in WordPress
       un contenuto di qualunque tipo con quel `_drupal_nid` e quella lingua (`_drupal_langcode`) e,
       se c'è, il link diventa il suo
       indirizzo WordPress relativo; se non c'è, il link resta verso Drupal ed è elencato. Così i link
       verso contenuti importati più avanti (i «da sapere» di oc:8760) si sistemano da soli alla
       sincronizzazione successiva.
-- [ ] File di log per ogni esecuzione (anteprima e `--conferma`), scritto dallo script sull'host
+- [x] File di log per ogni esecuzione (anteprima e `--conferma`), scritto dallo script sull'host
       (non dal container, perché i file non diventino di root), escluso da git, con data e ora nel
       nome, conservati gli ultimi 60: per ogni pagina cosa è stato fatto (creata, aggiornata, messa in bozza,
       nessuna differenza) e quali campi sono cambiati; media scaricati, riusati o non scaricabili;
       link riscritti e link rimasti verso Drupal, con la pagina in cui stanno; avvisi ed errori con
       la causa. L'output a schermo ne è un riassunto e indica il percorso del log.
-- [ ] Tre template di contenuto di Impreza versionati in `config/post.json` («pagina con testata»,
+- [x] Tre template di contenuto di Impreza versionati in `config/post.json` («pagina con testata»,
       «pagina di testo», «mappa»): testata con colori dell'artifact «Canvas Fase 2» (tavola 8) e misure del tema Drupal, testo, allegati e
       galleria come il tema Drupal; verificati desktop e mobile, IT ed EN.
-- [ ] Voci di `config/menu.json` del perimetro collegate alle pagine con un riferimento indipendente
-      dall'id WordPress; voci inglesi senza traduzione verso la pagina italiana; su un sito ricreato
+- [x] Voci di `config/menu.json` del perimetro collegate alle pagine con un riferimento indipendente
+      dall'id WordPress; voci inglesi verso le pagine inglesi; su un sito ricreato
       da zero, apply e comando delle pagine portano allo stesso risultato in qualunque ordine li si
       lanci, o l'ordine è documentato e imposto.
-- [ ] Una seconda esecuzione subito dopo la prima non mostra differenze.
-- [ ] [UX] Testo della testata leggibile sopra l'immagine (contrasto almeno 4,5:1, con velo scuro o
+- [x] Una seconda esecuzione subito dopo la prima non mostra differenze.
+- [x] [UX] Testo della testata leggibile sopra l'immagine (contrasto almeno 4,5:1, con velo scuro o
       fondo come su Drupal), anche con immagini chiare.
-- [ ] [UX] Le ancore interne della FAQ (35) portano alla domanda senza che l'header fisso la copra
+- [x] [UX] Le ancore interne della FAQ (35) portano alla domanda senza che l'header fisso la copra
       (`scroll-margin-top` pari all'altezza dell'header compatto e di quello mobile).
-- [ ] [UX] L'iframe della Mappa interattiva ha un `title` descrittivo; pulsanti per lo schermo intero
+- [x] [UX] L'iframe della Mappa interattiva ha un `title` descrittivo; pulsanti per lo schermo intero
       usabili da tastiera (Esc lo chiude). Niente link alternativo: su Drupal non c'è e le pagine
       seguono Drupal 1 a 1 (decisione del dev, 20/10).
-- [ ] [UX] Allegati PDF con nome, formato e dimensione nel testo del link; immagini della galleria
+- [x] [UX] Allegati PDF con nome, formato e dimensione nel testo del link; immagini della galleria
       con alt; immagini sotto la piega con `loading="lazy"` e dimensioni dichiarate, per evitare
       spostamenti della pagina durante il caricamento.
-- [ ] Riquadro «Allegati e galleria» nell'editor delle pagine (child): allegati e galleria dalla
+- [x] Riquadro «Allegati e galleria» nell'editor delle pagine (child): allegati e galleria dalla
       libreria media, riordinabili, sugli stessi campi personalizzati (`wpf_allegati`, `wpf_galleria`)
       che legge il template; il sottotitolo si modifica nel riquadro nativo «Riassunto», acceso anche
       sulle pagine; sulle pagine che vengono da Drupal avvisa
       che la sincronizzazione sovrascrive le modifiche. Serve alla redazione dopo il lancio, come i campi
       della pagina di Drupal (richiesta del dev, 20/10).
-- [ ] Autore e credits delle immagini (campi «Autore» e «Credits» dei media di Drupal) importati in due
+- [x] Autore e credits delle immagini (campi «Autore» e «Credits» dei media di Drupal) importati in due
       campi dell'immagine (`wpf_autore`, `wpf_credits`), modificabili nella libreria media, e mostrati
       nella testata dietro il pulsante «Credits foto», come su Drupal (richiesta del dev, 20/10).
-- [ ] axe senza violazioni sulle pagine create, IT ed EN, desktop e mobile.
-- [ ] Documentazione: README di `wp-forestas` (uso del comando, variabili del `.env`), pagina di
+- [x] axe senza violazioni sulle pagine create, IT ed EN, desktop e mobile.
+- [x] Documentazione: README di `wp-forestas` (uso del comando, variabili del `.env`), pagina di
       conoscenza, trappole nel `CLAUDE.md`.
 
 ## Rischi
@@ -237,9 +237,13 @@ che crea. Il form
   riscriverebbe il lavoro fatto in WordPress. Mitigato da `DRUPAL_SYNC`, predefinito `off`; metterlo
   a `off` in produzione è un passo della procedura di lancio.
 - [UX] **Testata diversa dal sito attuale, per scelta.** Segue l'artifact concordato col cliente e non
-  la testata hero di Drupal (sfumatura dal basso, testo in basso): chi confronta con il sito attuale
-  vede una differenza voluta nei colori e nella resa dell'immagine; altezze e misure sono quelle del
-  tema Drupal.
+  la testata hero di Drupal nella sfumatura sull'immagine e nella barretta col colore della sezione:
+  chi confronta con il sito attuale vede una differenza voluta nei colori e nella resa dell'immagine;
+  altezze, misure e posizione del testo (in basso, centrato) sono quelle del tema Drupal.
+- **Traduzioni nostre dei testi legali.** Privacy e Dichiarazione di accessibilità in inglese non
+  esistono su Drupal e le abbiamo tradotte noi (`config/traduzioni/en/`): non sono testi rivisti dal
+  cliente né da un legale. Vanno fatte verificare a Forestas prima del lancio; il campo `da_verificare`
+  dei due file JSON lo ricorda e dice quali passaggi sono stati interpretati.
 
 ## Out of scope
 
@@ -250,7 +254,7 @@ che crea. Il form
 - Segnalazioni (su Drupal è un form), Open Data e Area riservata, che su Drupal non hanno una pagina.
 - Il cron della sincronizzazione sul server.
 - I redirect 301 dai vecchi indirizzi e la sitemap, da fare al lancio.
-- Traduzioni inglesi che su Drupal non esistono.
+- La revisione delle nostre traduzioni inglesi (quelle che su Drupal non esistono): spetta al cliente.
 
 ## Moduli toccati
 

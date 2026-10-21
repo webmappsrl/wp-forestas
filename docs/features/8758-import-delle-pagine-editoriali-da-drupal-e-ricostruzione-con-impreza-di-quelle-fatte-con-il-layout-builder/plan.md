@@ -30,20 +30,24 @@ Impreza 9.4 + UpSolution Core, WPML; copia Drupal MySQL 8 in sola lettura (utent
   `--contenuti-mancanti`), come in `wordpress-config.sh`.
 - Lettura Drupal solo in `SELECT`, con `MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT` (una query
   rifiutata deve essere un'eccezione, non un risultato vuoto) e `utf8mb4`.
-- Default della connessione: `mysql-sardegnasentieri-dump:3306`, database `sardegnasentieri`, utente
-  e password `readonly`; sovrascrivibili con `DRUPAL_DB_HOST`, `DRUPAL_DB_PORT`, `DRUPAL_DB_NAME`,
-  `DRUPAL_DB_USER`, `DRUPAL_DB_PASSWORD`. In locale col tunnel: `host.docker.internal` / `3307`.
+- Default della connessione: `mysql-sardegnasentieri-dump:3306`, database `sardegnasentieri`,
+  sovrascrivibili con `DRUPAL_DB_HOST`, `DRUPAL_DB_PORT`, `DRUPAL_DB_NAME`. Utente e password
+  (`DRUPAL_DB_USER`, `DRUPAL_DB_PASSWORD`) non hanno default: il repo è pubblico, stanno solo nel `.env`
+  e senza lo script si ferma (deviazione emersa in review, 21/10). In locale col tunnel:
+  `host.docker.internal` / `3307`.
 - `DRUPAL_SYNC=on|off`, predefinito `off`: con `off` solo anteprima, messaggio chiaro, codice ≠ 0.
 - Nessuna chiamata SSH negli script.
 - Lingue: su Drupal `it` (più `und`, trattato come `it`) ed `en`; in WPML `it` ed **`en-us`** (codice dei
   menu inglesi in `config/menu.json`). `_drupal_langcode` conserva il codice Drupal (`en`); le chiavi
   `en` di `config/pagine.json` sono codici Drupal, convertiti in `en-us` solo nelle chiamate WPML.
 - Media da `https://www.sardegnasentieri.it/sites/default/files/<percorso>` per `public://<percorso>`.
-- Soglia: più di 2 pagine da mettere in bozza nello stesso giro → stop senza scrivere.
+- Soglia: più di 2 pagine da mettere in bozza nello stesso giro → stop senza scrivere. Si contano i nid
+  distinti, non le lingue (correzione della review del 21/10).
 - Log in `log/pagine-AAAA-MM-GG-HHMMSS.log` sull'host, ultimi 60 conservati, `/log/` in `.gitignore`.
 - Meta delle pagine: `_wpf_pagina` (chiave del perimetro), `_drupal_nid`, `_drupal_langcode`,
-  `wpf_sottotitolo`, `wpf_allegati` (array di id allegato), `wpf_galleria` (array di id allegato),
-  `us_content_id` (id del template); meta degli allegati: `_drupal_fid`.
+  `wpf_allegati` (array di id allegato), `wpf_galleria` (array di id allegato), `us_content_id` (id del
+  template); meta degli allegati: `_drupal_fid`. Il sottotitolo previsto in `wpf_sottotitolo` sta invece
+  nel Riassunto nativo (`post_excerpt`), vedi notes.md.
 - Opzioni di WordPress: `wpf_sync_mancanti` (elenco dei mancanti), `wp_forestas_pagine_in_corso`
   (lock, stesso schema di `WPF_OPZIONE_APPLY_IN_CORSO`).
 - Chiavi dei template (`_wp_forestas_chiave`): `template-pagina-testata`, `template-pagina-testo`,
@@ -79,19 +83,19 @@ Impreza 9.4 + UpSolution Core, WPML; copia Drupal MySQL 8 in sola lettura (utent
   `template` ∈ `testata | testo | mappa`; `nid` è `null` per Cammini, che ha `"testata_da": "itinerari"`
   e `"titolo": {"it": "Cammini", "en": "Walks"}`; `slug` ha la chiave `en` solo dove l'inglese esiste.
 
-- [ ] **Passo 1:** compila le 14 voci. Slug italiani: `contatti`, `faq`, `app`, `note-legali`, `privacy`,
+- [x] **Passo 1:** compila le 14 voci. Slug italiani: `contatti`, `faq`, `app`, `note-legali`, `privacy`,
   `crediti`, `dichiarazione-di-accessibilita`, `sentieri`, `itinerari`, `cammini`, `da-vedere`,
   `da-sapere`, `news`, `mappa-interattiva`. Inglesi solo per `note-legali`, `crediti`, `sentieri`,
   `itinerari`, `cammini`, `da-vedere`, `da-sapere`: leggi gli alias inglesi su Drupal
   (`select alias from path_alias where path in ('/node/87','/node/89','/node/1080','/node/1081','/node/1082','/node/1083') and langcode='en'`)
   e usa l'ultimo segmento quando esiste (`legal-notes`, `credits`), altrimenti lo stesso slug italiano.
-- [ ] **Passo 2 (verifica WPML):** in locale crea a mano con WP-CLI una pagina `prova-slug` in italiano
+- [x] **Passo 2 (verifica WPML):** in locale crea a mano con WP-CLI una pagina `prova-slug` in italiano
   e la sua traduzione inglese con lo stesso `post_name`, collegate con `wpf_wpml_collega`.
   Atteso: `wp post list --post_type=page --name=prova-slug --fields=ID,post_name` restituisce due
   pagine con `post_name` = `prova-slug`. Se l'inglese diventa `prova-slug-2`, usa per l'inglese gli slug
   `trails`, `itineraries`, `walks`, `points-of-interest`, `good-to-know` e annota la divergenza.
   Cancella le pagine di prova con `wpf_wpml_cancella_post`.
-- [ ] **Commit (utente):** `feat(oc:8758): perimetro delle pagine statiche`
+- [x] **Commit (utente):** `feat(oc:8758): perimetro delle pagine statiche`
 
 ### Task 2: Lettura di Drupal e controllo di integrità
 
@@ -114,16 +118,16 @@ Impreza 9.4 + UpSolution Core, WPML; copia Drupal MySQL 8 in sola lettura (utent
 - `wpf_drupal_alias( mysqli $db ): array` — `['/percorso' => ['nid' => int, 'lingua' => string]]` da
   `path_alias` (solo `/node/N`), lingua `und` resa come `it`.
 
-- [ ] **Passo 1:** scrivi le funzioni.
-- [ ] **Passo 2 (verifica dati):** con il tunnel aperto e `DRUPAL_DB_HOST=host.docker.internal`,
+- [x] **Passo 1:** scrivi le funzioni.
+- [x] **Passo 2 (verifica dati):** con il tunnel aperto e `DRUPAL_DB_HOST=host.docker.internal`,
   `DRUPAL_DB_PORT=3307` nel `.env`, ricrea il container (`scripts/wordpress-up.sh` di forestas) e lancia
   `docker exec -u www-data wordpress-forestas wp eval 'require "/usr/local/lib/wp-forestas/drupal.php"; print_r(wpf_drupal_pagina(wpf_drupal_connessione(), 87, "en"));'`.
   Atteso: titolo «Legal notes», `status` true, body non vuoto, 2 allegati (media 8721, 8722).
   `wpf_drupal_pagina(…, 1, 'it')` restituisce «Contatti» (riga `und`).
-- [ ] **Passo 3 (verifica integrità):** crea nel MariaDB locale di WordPress un database `prova_drupal`
+- [x] **Passo 3 (verifica integrità):** crea nel MariaDB locale di WordPress un database `prova_drupal`
   con `node_field_data` vuota e le altre tabelle assenti, punta `DRUPAL_DB_*` lì con un utente di prova,
   chiama `wpf_drupal_controlla`. Atteso: `RuntimeException` che nomina la tabella. Togli il database.
-- [ ] **Commit (utente):** `feat(oc:8758): lettura della copia Drupal con controllo di integrità`
+- [x] **Commit (utente):** `feat(oc:8758): lettura della copia Drupal con controllo di integrità`
 
 ### Task 3: Media nella libreria
 
@@ -136,11 +140,11 @@ Impreza 9.4 + UpSolution Core, WPML; copia Drupal MySQL 8 in sola lettura (utent
   registra con `media_handle_sideload()`, imposta alt (`_wp_attachment_image_alt`) e `_drupal_fid`. In
   prova restituisce `0` per «da scaricare» senza scaricare. Errori di rete o 404 → `WP_Error` con la causa.
 
-- [ ] **Passo 1:** scrivi la funzione.
-- [ ] **Passo 2 (verifica):** importa il file del media 8202 (1 MB). Atteso: un allegato con
+- [x] **Passo 1:** scrivi la funzione.
+- [x] **Passo 2 (verifica):** importa il file del media 8202 (1 MB). Atteso: un allegato con
   `_drupal_fid` 3595; una seconda chiamata restituisce lo stesso id senza nuovo file in `uploads`.
   Con `uri` = `public://non-esiste.jpg` atteso `WP_Error` con codice HTTP 404 nel messaggio.
-- [ ] **Commit (utente):** `feat(oc:8758): import dei media da Drupal`
+- [x] **Commit (utente):** `feat(oc:8758): import dei media da Drupal`
 
 ### Task 4: Pagine, traduzioni, bozze, mancanti
 
@@ -164,24 +168,25 @@ Impreza 9.4 + UpSolution Core, WPML; copia Drupal MySQL 8 in sola lettura (utent
 - Righe di output per il log, una per evento, prefisso fisso: `PAGINA`, `MEDIA`, `LINK`, `MENU`,
   `MANCANTE`, `AVVISO`, `ERRORE`, `RIASSUNTO`.
 
-- [ ] **Passo 1:** scrivi `pagine-lib.php` e `pagine.php`. Ordine: `DRUPAL_SYNC` (con `off` e senza
-  `WPF_PROVA` → `ERRORE` ed `exit(1)`), lock, connessione, `wpf_drupal_controlla` con i nid del perimetro,
+- [x] **Passo 1:** scrivi `pagine-lib.php` e `pagine.php`. Ordine: `DRUPAL_SYNC` (con `off` e senza
+  `WPF_PROVA` → `ERRORE` ed `exit(1)`; con `off` in anteprima `AVVISO` e a fine giro `exit(1)`), lock, connessione, `wpf_drupal_controlla` con i nid del perimetro,
   conteggio delle pagine con `status` falso (> 2 → `ERRORE`, nulla scritto), poi per ogni voce: italiano,
   poi inglese collegato con `wpf_wpml_collega( $id_en, 'post_page', 'en-us', $id_it )`. Campi scritti:
   `post_title`, `post_name`, `post_content` (body Drupal, dopo il Task 6), `post_status`, `_thumbnail_id`,
-  `wpf_sottotitolo`, `wpf_allegati`, `wpf_galleria`, `us_content_id`, `_wpf_pagina`, `_drupal_nid`,
+  `post_excerpt` (sottotitolo), `wpf_allegati`, `wpf_galleria`, `us_content_id`, `_wpf_pagina`, `_drupal_nid`,
   `_drupal_langcode`. Cammini: titolo da `pagine.json`, sottotitolo e immagine da Itinerari, niente
   `_drupal_nid`. Un elemento fallito non ferma le altre pagine: va nei mancanti; un elemento riuscito ne
   esce. Con `WPF_SOLO_MANCANTI` lavora solo sugli elementi dell'elenco. `exit(1)` se a fine giro
-  l'elenco non è vuoto o c'è stato un `ERRORE`.
-- [ ] **Passo 2 (verifica):** `DRUPAL_SYNC=on`, esecuzione con `WPF_PROVA=1`: 14 pagine IT + 7 EN «da
+  l'elenco ha un elemento diverso da un media o c'è stato un `ERRORE`; se mancano solo media, `AVVISO` e
+  uscita 0 (decisione del dev, 20/10).
+- [x] **Passo 2 (verifica):** `DRUPAL_SYNC=on`, esecuzione con `WPF_PROVA=1`: 14 pagine IT + 7 EN «da
   creare», nulla scritto (`wp post list --post_type=page --meta_key=_wpf_pagina` vuoto). Poi senza
   prova: 21 pagine; `wp post meta get <id-en-note-legali> _drupal_langcode` = `en`; Cammini ha la stessa
   `_thumbnail_id` di Itinerari. Seconda esecuzione con `WPF_PROVA=1`: tutte `invariata`.
-- [ ] **Passo 3 (verifica bozza e soglia):** nel database di prova del Task 2 (copia ridotta di
+- [x] **Passo 3 (verifica bozza e soglia):** nel database di prova del Task 2 (copia ridotta di
   `node_field_data`) metti `status = 0` su 88: Privacy va in bozza e torna `publish` rimettendo 1, con lo
   stesso `post_name`. Con `status = 0` su tre nid: `ERRORE` sulla soglia, nessuna pagina cambiata.
-- [ ] **Commit (utente):** `feat(oc:8758): sincronizzazione delle pagine statiche da Drupal`
+- [x] **Commit (utente):** `feat(oc:8758): sincronizzazione delle pagine statiche da Drupal`
 
 ### Task 5: Media delle pagine e fallimenti
 
@@ -193,14 +198,15 @@ Impreza 9.4 + UpSolution Core, WPML; copia Drupal MySQL 8 in sola lettura (utent
 **Interfacce:**
 - Consuma: `wpf_media_importa` (Task 3), `wpf_mancanti_*` (Task 4).
 
-- [ ] **Passo 1:** collega immagine in evidenza, allegati e galleria ai media importati. Un `WP_Error`
+- [x] **Passo 1:** collega immagine in evidenza, allegati e galleria ai media importati. Un `WP_Error`
   lascia il valore precedente del campo, aggiunge `['cosa' => 'allegato|immagine|galleria', …]` ai
   mancanti e scrive `MEDIA … non scaricato: <causa>`.
-- [ ] **Passo 2 (verifica):** con un `uri` alterato nel database di prova per l'immagine di Privacy:
+- [x] **Passo 2 (verifica):** con un `uri` alterato nel database di prova per l'immagine di Privacy:
   Privacy mantiene la `_thumbnail_id` precedente, `wp option get wpf_sync_mancanti --format=json` contiene
-  l'elemento con la causa 404, le altre pagine `invariata`, `exit 1`. Ripristinato l'`uri`,
+  l'elemento con la causa 404, le altre pagine `invariata`, uscita 0 con un AVVISO (un media mancante
+  si ritenta al giro dopo e non ferma un cron: decisione del dev, vedi overview). Ripristinato l'`uri`,
   `--contenuti-mancanti` (Task 7) lo risolve e l'elenco torna vuoto.
-- [ ] **Commit (utente):** `feat(oc:8758): media delle pagine e media mancanti`
+- [x] **Commit (utente):** `feat(oc:8758): media delle pagine e media mancanti`
 
 ### Task 6: Pulizia del body e riscrittura dei link
 
@@ -212,17 +218,21 @@ Impreza 9.4 + UpSolution Core, WPML; copia Drupal MySQL 8 in sola lettura (utent
   `wpf_drupal_alias`; `$trova( int $nid, string $lingua ): ?int` cerca un post di qualunque tipo con
   `_drupal_nid` e `_drupal_langcode`. Riconosce `https?://(www\.)?sardegnasentieri\.it` con o senza
   `index.php/`, con o senza `/en/`, alias o `/node/N`. Restituisce
-  `['html' => string, 'riscritti' => string[], 'in_attesa' => string[]]`; un link verso una pagina del
-  perimetro senza `_drupal_nid` (link a `/` = Home) diventa `/`.
-- La pulizia del body si limita a togliere `style` inline e attributi Drupal (`data-entity-*`); il resto
-  dell'HTML resta com'è (verificato: niente `<img>`, `<drupal-media>`, `<script>` nei body).
+  `['html' => string, 'riscritti' => string[], 'in_attesa' => string[], 'non_contenuti' => string[]]`
+  (`non_contenuti`: indirizzi Drupal che non sono un nodo, come `/form/segnalazione`, lasciati verso
+  Drupal); un link verso una pagina del perimetro senza `_drupal_nid` (link a `/` = Home) diventa `/`.
+- La pulizia del body è il filtro `filtered_html` di Drupal rifatto all'import: `wp_kses` con i tag e
+  gli attributi che quel formato ammette, poi gli indirizzi scritti nel testo resi link solo fuori dai
+  link esistenti (`wpf_pagina_link_dagli_indirizzi`: `make_clickable` sul testo intero creava link
+  annidati in FAQ, Crediti e Privacy). Deviazione dal piano, che prevedeva di togliere solo `style` e
+  `data-entity-*`: i body mostrati senza `the_content` devono essere già quelli che mostra Drupal.
 
-- [ ] **Passo 1:** scrivi la funzione e chiamala in `wpf_pagina_scrivi` prima di confrontare il body.
-- [ ] **Passo 2 (verifica):** dopo un `--conferma`, nel `post_content` di App
+- [x] **Passo 1:** scrivi la funzione e chiamala in `wpf_pagina_scrivi` prima di confrontare il body.
+- [x] **Passo 2 (verifica):** dopo un `--conferma`, nel `post_content` di App
   `https://www.sardegnasentieri.it/index.php/pagina-base/privacy` è diventato `/privacy/`; i quattro link
   ai «da sapere» e `/form/segnalazione` sono invariati e compaiono come `LINK … in attesa` nell'output.
   In Crediti EN `/en/node/1491` è `in attesa`.
-- [ ] **Commit (utente):** `feat(oc:8758): riscrittura dei link interni`
+- [x] **Commit (utente):** `feat(oc:8758): riscrittura dei link interni`
 
 ### Task 7: Comando sull'host, log, lock, interruttore
 
@@ -239,12 +249,12 @@ Impreza 9.4 + UpSolution Core, WPML; copia Drupal MySQL 8 in sola lettura (utent
   percorso del log; il comando suggerito per i mancanti se ce ne sono.
 - Codice d'uscita = quello dello script.
 
-- [ ] **Passo 1:** scrivi il comando.
-- [ ] **Passo 2 (verifica):** senza `DRUPAL_SYNC` nel `.env`, `bin/wordpress-config.sh pagine --conferma`
+- [x] **Passo 1:** scrivi il comando.
+- [x] **Passo 2 (verifica):** senza `DRUPAL_SYNC` nel `.env`, `bin/wordpress-config.sh pagine --conferma`
   esce ≠ 0 con «sincronizzazione da Drupal spenta in questo ambiente» e nessuna pagina modificata;
   `pagine` senza `--conferma` mostra l'anteprima. Due `--conferma` lanciati insieme: il secondo esce
   subito con il messaggio del lock. Il file di log appartiene all'utente dell'host. Con 61 log ne restano 60.
-- [ ] **Commit (utente):** `feat(oc:8758): comando pagine con log e interruttore`
+- [x] **Commit (utente):** `feat(oc:8758): comando pagine con log e interruttore`
 
 ### Task 8: Template di Impreza e stili
 
@@ -253,15 +263,18 @@ Impreza 9.4 + UpSolution Core, WPML; copia Drupal MySQL 8 in sola lettura (utent
 **File:**
 - Modifica: `config/post.json` (tre `us_content_template`, IT ed EN se il resto della configurazione lo fa
   per gli oggetti builder), `themes/forestas-child/style.css` (o il file di stili del child), shortcode del
-  child per sottotitolo, allegati e galleria (`[forestas_sottotitolo]`, `[forestas_allegati]`,
-  `[forestas_galleria]`, leggono i meta del Task 4), `Version` del child
+  child, `Version` del child. Realizzati: `[forestas_testata]` (titolo, sottotitolo dal Riassunto,
+  immagine, credits, percorso), `[forestas_pagina_testo]` (testo, poi `[forestas_allegati]` e
+  `[forestas_galleria]`), `[forestas_mappa]`, in `inc/pagine-statiche.php`
 
 **Interfacce:**
-- Consuma: meta `wpf_sottotitolo`, `wpf_allegati`, `wpf_galleria`, immagine in evidenza, `post_content`.
+- Consuma: `post_excerpt` (il meta `wpf_sottotitolo` previsto non esiste: il sottotitolo sta nel
+  Riassunto nativo), `wpf_allegati`, `wpf_galleria`, `_wpf_testo_drupal`, `_wpf_testata`, `_wpf_colore`,
+  immagine in evidenza, `post_content`.
 - Produce: template con chiavi `template-pagina-testata`, `template-pagina-testo`,
   `template-pagina-mappa`, che `pagine.php` risolve con `wpf_post_per_chiave` per scrivere `us_content_id`.
 
-- [ ] **Passo 1:** ricava misure, colori e tipografia di testata hero, testo e allegati da due fonti:
+- [x] **Passo 1:** ricava misure, colori e tipografia di testata hero, testo e allegati da due fonti:
   - la copia locale del codice Drupal,
     `/Volumes/Crucial X6 1/Siti Webmapp/Wordpress/Forestas/Drupal sardegnasentieri/sardegnasentieri/docroot/themes/custom/sardegnasentieri/`
     (`scss/`, `layouts/`, `css/`; in alternativa lo zip su UAT, `/root/sardegnasentieri.zip`);
@@ -271,15 +284,15 @@ Impreza 9.4 + UpSolution Core, WPML; copia Drupal MySQL 8 in sola lettura (utent
   Dove le due fonti divergono vale la regola del `CLAUDE.md`: il sito Drupal, salvo le modifiche
   concordate in oc:8783; le divergenze si chiedono al dev. Il sito in produzione il 20/10 rispondeva 503:
   il confronto nel browser si fa quando torna su, altrimenti con il tema Drupal.
-- [ ] **Passo 2:** costruisci i tre template dal pannello in locale (titolo, sottotitolo, immagine come
+- [x] **Passo 2:** costruisci i tre template dal pannello in locale (titolo, sottotitolo, immagine come
   sfondo con velo, contenuto, allegati, galleria; mappa con iframe a tutta pagina), assegna le chiavi,
   `bin/wordpress-config.sh esporta`, controlla `git diff config/`.
-- [ ] **Passo 3 (verifica):** rilancia `pagine --conferma`; confronta nel browser ogni pagina con la
+- [x] **Passo 3 (verifica):** rilancia `pagine --conferma`; confronta nel browser ogni pagina con la
   produzione (se raggiungibile) e con l'artifact a 390, 768, 1280 e 1440px, IT ed EN. Requisiti [UX] dell'overview: contrasto della testata
   ≥ 4,5:1, ancore della FAQ non coperte dall'header (`scroll-margin-top`), `title` dell'iframe con link
   alternativo, allegati con nome, formato e dimensione, immagini con `loading="lazy"` e dimensioni.
   axe senza violazioni, anche da loggato.
-- [ ] **Commit (utente):** `feat(oc:8758): template di Impreza per le pagine statiche`
+- [x] **Commit (utente):** `feat(oc:8758): template di Impreza per le pagine statiche`
 
 ### Task 9: Un solo scrittore e menu collegati
 
@@ -294,18 +307,18 @@ Impreza 9.4 + UpSolution Core, WPML; copia Drupal MySQL 8 in sola lettura (utent
 - Consuma: destinazione `{"tipo": "pagina", "post_type": "page", "percorso": …, "url": …}` già gestita da
   `wpf_menu_args_destinazione` (`menu.php:319`).
 
-- [ ] **Passo 1:** escludi le pagine nei due file.
-- [ ] **Passo 2:** collega dal pannello in locale le voci del perimetro alle pagine (menu IT ed EN; le
+- [x] **Passo 1:** escludi le pagine nei due file.
+- [x] **Passo 2:** collega dal pannello in locale le voci del perimetro alle pagine (menu IT ed EN; le
   voci inglesi senza traduzione alla pagina italiana), `bin/wordpress-config.sh esporta`, controlla che in
   `config/menu.json` le voci abbiano `tipo: pagina` e nessun id numerico.
-- [ ] **Passo 3:** in `pagine.php` aggiungi l'avviso `MENU <voce> punta a una pagina in bozza` per le voci
+- [x] **Passo 3:** in `pagine.php` aggiungi l'avviso `MENU <voce> punta a una pagina in bozza` per le voci
   di menu verso pagine del perimetro in bozza.
-- [ ] **Passo 4 (verifica, sito ricreato):** `scripts/wordpress-reset.sh --conferma` in locale, attesa
+- [x] **Passo 4 (verifica, sito ricreato):** `scripts/wordpress-reset.sh --conferma` in locale, attesa
   dell'apply automatico, `pagine --conferma`, `applica --conferma`: menu collegati alle pagine, anteprima di
   `applica` e di `pagine` senza differenze. Ripeti invertendo l'ordine (pagine prima dell'apply): stesso
   risultato. Imposta temporaneamente `page_for_posts` sulla pagina News ed esegui `esporta`: News non
   compare in `config/post.json`.
-- [ ] **Commit (utente):** `feat(oc:8758): menu collegati alle pagine e un solo scrittore`
+- [x] **Commit (utente):** `feat(oc:8758): menu collegati alle pagine e un solo scrittore`
 
 ### Task 10: Documentazione
 
@@ -317,8 +330,8 @@ Impreza 9.4 + UpSolution Core, WPML; copia Drupal MySQL 8 in sola lettura (utent
   `blog_public`, media allo spegnimento di Drupal, `DRUPAL_SYNC=off` al lancio, cron lontano dalle 10:00,
   vincolo `_drupal_nid` + `_drupal_langcode` per oc:8760)
 
-- [ ] **Passo 1:** scrivi la documentazione; controlla i link fra i file.
-- [ ] **Commit (utente):** `docs(oc:8758): sincronizzazione delle pagine statiche`
+- [x] **Passo 1:** scrivi la documentazione; controlla i link fra i file.
+- [x] **Commit (utente):** `docs(oc:8758): sincronizzazione delle pagine statiche`
 
 Dopo il merge (utente): PR verso `develop` di `wp-forestas`, poi in `forestas` puntatore del submodule
 con l'hash letto da `git rev-parse`.

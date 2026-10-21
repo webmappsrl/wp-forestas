@@ -219,7 +219,8 @@ evidenza, che è una sola, resta quella che c'era.
   Drupal, body filtrato all'import come `filtered_html` e mostrato senza `the_content` finché è quello di
   Drupal (impronta `_wpf_testo_drupal`: `wpautop`, `wptexturize` e `paragraph_fix` di Impreza
   cambiavano paragrafi, virgolette e un `<br>` delle FAQ). Theme Options di Impreza non toccate: body e
-  h1–h6 erano già quelli di Drupal. Galleria: titolo «Photogallery» `sase-h2` con il filo a sinistra,
+  h1–h6 erano già quelli di Drupal. Galleria: titolo «Photogallery» `sase-h2` (superato: è `sase-h3`,
+  vedi sotto) con il filo a sinistra,
   sezione con 2,5rem sopra e sotto, griglia con 0,9375rem fra le immagini, lente di Blazy al passaggio
   del mouse; resta su Drupal una riga 6px più alta, dallo spazio sotto l'immagine nel markup di Blazy,
   ricostruito a mano dai template e non copiato. Child alla Version 1.4.16.
@@ -278,6 +279,11 @@ evidenza, che è una sola, resta quella che c'era.
   `themes/forestas-child/inc/pagine-statiche.php`; child alla Version 1.4.2.
 
 ### Task 9: menu inglesi verso pagine solo italiane
+
+> Superato il 21/10: ora ogni pagina ha la versione inglese (nostra traduzione dove Drupal non ce l'ha) e
+> le voci inglesi di `config/menu.json` sono di nuovo di tipo pagina, verso le pagine inglesi. Resta
+> valido il meccanismo descritto qui (`wpf_menu_args_destinazione`, `wpf_menu_togli_orfane`), che
+> interviene se una pagina inglese manca.
 
 Emerso dalla prova sul sito ricreato da zero. Una voce del menu inglese con destinazione «pagina»
 verso una pagina che esiste solo in italiano (Privacy, Contatti, FAQ, App, News, Mappa,
@@ -354,13 +360,13 @@ insieme alle sezioni su enti, altro da Drupal e form). Criterio: prima ciò da c
    `/index.php`): oggi restano verso Drupal, perché il form non è un nodo e la sincronizzazione non lo
    riscrive. Il ticket del form deve dare a quei link un indirizzo WordPress (per esempio una regola in
    `docker/scripts/config/link.php` per `/form/segnalazione`) e verificare il testo di App.
+8. **Ricerca (`/cerca-nel-sito`):** per ultima, perché cerca in tutti i contenuti.
+9. **Prima del lancio:** 301 dai vecchi indirizzi e sitemap; cron unico con l'ordine 1 → 2 → 3;
+   `DRUPAL_SYNC=off` in produzione; decisione su dove tenere i media quando Drupal sarà spento.
 10. **Da segnalare al cliente, da correggere su Drupal:** le 35 ancore interne della FAQ non hanno
    destinazione; titoli che saltano livelli nei testi di App (anche un secondo h1), Note legali, Privacy,
    Crediti e Dichiarazione di accessibilità (WCAG 1.3.1, verifica del 21/10). Corretti su Drupal, la
    sincronizzazione li porta in WordPress.
-8. **Ricerca (`/cerca-nel-sito`):** per ultima, perché cerca in tutti i contenuti.
-9. **Prima del lancio:** 301 dai vecchi indirizzi e sitemap; cron unico con l'ordine 1 → 2 → 3;
-   `DRUPAL_SYNC=off` in produzione; decisione su dove tenere i media quando Drupal sarà spento.
 
 ## Elenco degli enti (`/enti`): da riportare nel tag `wp-forestas`
 
@@ -423,6 +429,12 @@ Drupal di UAT il 20/10; gli invii sono stati contati, non letti, perché conteng
 
 - Regex dei link con `#` sia come delimitatore sia dentro il pattern: corretta con `~`.
 - Voci orfane nei menu inglesi a ogni ricreazione di un menu, in due modi diversi (vedi Task 9): corretto in `menu.php`.
+- **Link annidati creati dall'import** (verifica di accessibilità del 21/10): `make_clickable`,
+  usato come `filter_url` di Drupal, trasformava in link anche il testo di un link che è un indirizzo
+  («<a href="…">https://…</a>»), e il browser lasciava vuoto il primo. Succedeva nella FAQ (email del
+  tavolo tecnico) e in Crediti (link all'App): su Drupal sono link singoli e funzionanti. Ora gli
+  indirizzi diventano link solo fuori dai link (`wpf_pagina_link_dagli_indirizzi`). Smentita quindi una
+  nota precedente: il link all'App in Crediti non è rotto su Drupal, lo era da noi.
 
 ## Decisioni
 
@@ -465,12 +477,6 @@ Drupal di UAT il 20/10; gli invii sono stati contati, non letti, perché conteng
   creano: è così che i link «in attesa» di FAQ, Crediti e App si sistemano da soli.
 - Il form delle segnalazioni (`/form/segnalazione`) non ha un ticket: i link restano verso Drupal. I
   form da ricreare sono descritti più sopra, «Form di Drupal: informazioni per il tag `wp-forestas`».
-- **Link annidati creati dall'import, corretto** (verifica di accessibilità del 21/10): `make_clickable`,
-  usato come `filter_url` di Drupal, trasformava in link anche il testo di un link che è un indirizzo
-  («<a href="…">https://…</a>»), e il browser lasciava vuoto il primo. Succedeva nella FAQ (email del
-  tavolo tecnico) e in Crediti (link all'App): su Drupal sono link singoli e funzionanti. Ora gli
-  indirizzi diventano link solo fuori dai link (`wpf_pagina_link_dagli_indirizzi`). Smentita quindi una
-  nota precedente: il link all'App in Crediti non è rotto su Drupal, lo era da noi.
 - **Link «in attesa» allo spegnimento di Drupal**: se un contenuto collegato non arriva in WordPress
   prima, il link resta verso `www.sardegnasentieri.it` e smette di funzionare. Oggi sono i 4 articoli Da
   sapere (FAQ, App, Crediti IT ed EN) e il form `/form/segnalazione` (App, due indirizzi).
@@ -478,3 +484,36 @@ Drupal di UAT il 20/10; gli invii sono stati contati, non letti, perché conteng
   nessun elemento con quell'`id` o `name` (li ha tolti il filtro `filtered_html` di Drupal). Su
   WordPress restano rotti allo stesso modo; da segnalare al cliente, che può correggere il testo su
   Drupal.
+- **Design delle pagine dopo il lancio**: le pagine riproducono Drupal 1 a 1 (salvo testata e
+  «Condividi» dell'artifact); un ridisegno di testo, allegati e galleria secondo l'artifact, che oggi non
+  li ridisegna, va concordato col cliente e fatto con un ticket a sé.
+
+## Review del 21/10
+
+Review con 5 finder sul branch (commit `ab192a1`), poi correzioni nello stesso branch.
+
+- **Soglia delle bozze per pagina, non per lingua** (bloccante): la soglia contava le coppie
+  pagina/lingua, così una sola pagina tolta su Drupal in due lingue valeva due; ora conta i nid
+  distinti. Cammini, che non ha un nodo proprio, non va mai in bozza (`'status' => true`). Verificato
+  spubblicando Itinerari nella copia di prova: in bozza solo itinerari it/en, Cammini invariata; con 3
+  pagine tolte il comando si ferma.
+- **Sincronizzazione spenta, anteprima con uscita 0** (bloccante): con `DRUPAL_SYNC=off` l'anteprima
+  usciva con 0 e un cron non si accorgeva che non avrebbe scritto; ora esce con 1 e
+  `bin/wordpress-config.sh` stampa come accenderla.
+- Credenziali della copia Drupal: tolte le predefinite dal codice (repo pubblico), obbligatorie nel
+  `.env`. Su UAT vanno aggiunte prima del primo `pagine`.
+- Link: un indirizzo Drupal che non è un nodo (il form delle segnalazioni) è contato a parte
+  («non è un contenuto») invece che «in attesa»; un alias scritto con l'accento («cosè») si trova anche
+  se l'alias di Drupal è senza (normalizzazione come il confronto di MySQL); `/en/<alias>` cade sulla
+  pagina inglese.
+- Log: media scaricati e riusati distinti; menu letti in tutte le lingue; mancanti fuori perimetro
+  scartati; `--contenuti-mancanti` ricollega anche le traduzioni.
+- Child (Version 1.4.27): `FORESTAS_META_PAGINA` e `forestas_meta_ids` condivisi fra template e
+  riquadro; tolta la sezione «mappa» non usata; galleria che salta le immagini tolte dalla libreria e
+  carica la lightbox solo se ha immagini; `credits-foto.js` solo dove ci sono credits; guardia contro la
+  ricorsione di `[forestas_pagina_testo]`; classi e opzioni non lette tolte da galleria e lightbox;
+  misure del filo e dello spazio di sezione in variabili. Nessuna differenza visibile: anteprima
+  «invariata: 28», lightbox, didascalia inglese e filo verificati nel browser.
+- I tre template di Impreza esistono solo in italiano e le pagine inglesi usano quelli (`us_content_id`
+  verso il template italiano): il testo dei template è solo shortcode, le etichette le traduce il child.
+  Se un template avrà testo fisso, servirà la sua copia inglese.

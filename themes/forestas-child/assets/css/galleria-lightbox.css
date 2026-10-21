@@ -32,13 +32,7 @@
 	content: "•  Credits: ";
 }
 
-/* Etichette in inglese: la lingua è quella di <html>, e la lightbox sta nel body */
+/* Etichetta in inglese («Credits» è uguale): la lingua è quella di <html>, e la lightbox sta nel body */
 :lang(en) .slick-lightbox-slick-caption .auth.has-value::before {
 	content: "Photo by: ";
-}
-:lang(en) .slick-lightbox-slick-caption .cred.has-value::before {
-	content: "Credits: ";
-}
-:lang(en) .slick-lightbox-slick-caption .auth.has-value + .cred.has-value::before {
-	content: "•  Credits: ";
 }

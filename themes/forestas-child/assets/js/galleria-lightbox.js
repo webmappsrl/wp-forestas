@@ -16,10 +16,7 @@
 		swipeToSlide: true,
 		waitForAnimate: false
 	};
-	var impostazioniLightbox = {
-		itemContainers: ['.box', '.grid', '.field__item', '.views-row', '.content'],
-		itemSelector: '[data-slick-lightbox-trigger],.slick-lightbox-trigger'
-	};
+	var selettore = '[data-slick-lightbox-trigger]';
 	var base = '.slick-lightbox-slick';
 
 	// Pulsante con il markup della libreria e l'etichetta tradotta (Slick e slick-lightbox l'hanno solo in inglese)
@@ -34,7 +31,6 @@
 			nextArrow: pulsante('slick-next', $container.attr('data-successivo') || 'Next')
 		});
 		var chiudi = $container.attr('data-chiudi') || 'Close';
-		var selettore = impostazioniLightbox.itemSelector;
 		var $voci = $(selettore, galleria);
 
 		function initSlick(modale) {
@@ -60,7 +56,7 @@
 			return istanza;
 		}
 
-		var opzioni = $.extend({}, {
+		var opzioni = {
 			closeOnBackdropClick: false,
 			itemSelector: selettore,
 			caption: function (voce) {
@@ -73,7 +69,7 @@
 			slick: initSlick,
 			// Pulsante di chiusura della libreria, con un nome (senza, uno screen reader legge solo «pulsante»)
 			layouts: { closeButton: $('<button type="button" class="slick-lightbox-close">').attr('aria-label', chiudi).prop('outerHTML') }
-		}, impostazioniLightbox);
+		};
 
 		var origine = null;
 

@@ -37,9 +37,9 @@ function wpf_post_applica( array $post_cfg, bool $prova, callable $diff, bool $p
 			continue;
 		}
 		$esistente = wpf_post_per_chiave( $p['chiave'] ) ?? wpf_post_ricollega( $p, $prova, $diff );
-		if ( $esistente && get_post_meta( $esistente->ID, '_wpf_pagina', true ) !== '' ) {
+		if ( $esistente && get_post_meta( $esistente->ID, WPF_META_PAGINA, true ) !== '' ) {
 			// Pagina statica sincronizzata da Drupal: ha un solo scrittore, il comando pagine (oc:8758)
-			WP_CLI::warning( "post {$p['chiave']}: sul sito è la pagina sincronizzata da Drupal «" . get_post_meta( $esistente->ID, '_wpf_pagina', true ) . "», la salto" );
+			WP_CLI::warning( "post {$p['chiave']}: sul sito è la pagina sincronizzata da Drupal «" . get_post_meta( $esistente->ID, WPF_META_PAGINA, true ) . "», la salto" );
 			continue;
 		}
 		$campi     = [

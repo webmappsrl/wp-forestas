@@ -137,6 +137,22 @@ subagent.
   decidere: il SIGPIPE fa fallire la pipeline anche quando il testo c'è (oc:8717)
 - `wp option get WPLANG` fallisce su un'installazione appena fatta: la lingua attiva si legge con
   `wp language core list --status=active` (oc:8711)
+- Le pagine con `_wpf_pagina` le scrive solo `bin/wordpress-config.sh pagine`: `esporta` e `applica`
+  le saltano, e con `DRUPAL_SYNC=on` una modifica fatta dal pannello (testo, riassunto, allegati,
+  galleria) si perde alla sincronizzazione successiva (oc:8758)
+- Il testo di una pagina sincronizzata si mostra senza `the_content` finché coincide con l'impronta
+  `_wpf_testo_drupal`: un filtro aggiunto a `the_content` non cambia quelle pagine, e passa solo dopo
+  una modifica fatta in WordPress (oc:8758)
+- `DRUPAL_DB_USER` e `DRUPAL_DB_PASSWORD` non hanno valori predefiniti (repo pubblico): senza nel
+  `.env` il comando `pagine` si ferma; su un server nuovo vanno aggiunte prima del primo giro, poi
+  `scripts/wordpress-up.sh` di `forestas`, perché il container legge il `.env` solo all'avvio (oc:8758)
+- Le traduzioni inglesi nostre (`config/traduzioni/en/`) portano l'impronta del testo italiano da cui
+  sono state fatte (`sorgente`): se Drupal cambia l'italiano il log dà un AVVISO con l'impronta nuova,
+  e la traduzione va rifatta prima di aggiornare `sorgente`; se Drupal aggiunge la sua traduzione,
+  vince quella (oc:8758)
+- La sincronizzazione non va lanciata durante il reload giornaliero della copia Drupal su UAT (alle
+  10:00, crontab di `root`, pochi minuti): il controllo di integrità la ferma senza scrivere, ma il giro
+  va perso; il cron va messo lontano da quell'ora (`docs/howto/cron-sincronizzazione-pagine.md`) (oc:8758)
 
 ## Conoscenza
 
@@ -144,3 +160,4 @@ subagent.
 |---|---|---|
 | Inizializzazione di WordPress | perché lo script lavora a passi, perché il core non sta nell'immagine, cosa succede senza GitHub o senza Impreza | [docs/knowledge/inizializzazione-wordpress.md](docs/knowledge/inizializzazione-wordpress.md) |
 | Header e footer del sito | identici al sito attuale, oggetti di Impreza scritti in codice e copiati per lingua, shortcode e font del child, menu mobile, riga compatta su desktop, loghi del footer, accessibilità | [docs/knowledge/8757-header-e-footer-di-wordpress-forestas-secondo-il-mockup.md](docs/knowledge/8757-header-e-footer-di-wordpress-forestas-secondo-il-mockup.md) |
+| Pagine editoriali da Drupal | perimetro, sincronizzazione dalla copia Drupal, media, link, traduzioni nostre, template e shortcode del child; il cron in [docs/howto/cron-sincronizzazione-pagine.md](docs/howto/cron-sincronizzazione-pagine.md) | [docs/knowledge/8758-import-delle-pagine-editoriali-da-drupal-e-ricostruzione-con-impreza-di-quelle-fatte-con-il-layout-builder.md](docs/knowledge/8758-import-delle-pagine-editoriali-da-drupal-e-ricostruzione-con-impreza-di-quelle-fatte-con-il-layout-builder.md) |

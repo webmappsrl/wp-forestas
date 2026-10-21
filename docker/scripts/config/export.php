@@ -7,7 +7,7 @@
  * wpml.json. Si ferma senza scrivere se un valore ha la forma di una chiave (WPF_FORME_SEGRETE), tranne
  * in sola lettura (backup dell'apply, fuori da git).
  * Assegna la chiave stabile (_wp_forestas_chiave) ai post e ai menu esportati che non l'hanno ancora:
- * è l'unica scrittura sul sito. Con WPF_SOLA_LETTURA=1 (backup di apply --conferma) non scrive nulla,
+ * è l'unica scrittura sul sito. Con WPF_SOLA_LETTURA=1 (backup di applica --conferma) non scrive nulla,
  * così il backup non cambia ciò che l'apply ricollegherà subito dopo.
  */
 
@@ -75,8 +75,8 @@ foreach ( array_unique( $originali ) as $id ) {
 	}
 	// Le pagine statiche sincronizzate da Drupal le scrive solo bin/wordpress-config.sh pagine (oc:8758):
 	// anche se un'opzione punta a loro non entrano in post.json, che è un repo pubblico
-	if ( get_post_meta( $id, '_wpf_pagina', true ) !== '' ) {
-		$avvisi[] = "un'opzione punta alla pagina sincronizzata da Drupal «" . get_post_meta( $id, '_wpf_pagina', true ) . "» (id {$id}): non esportata, la scrive il comando pagine";
+	if ( get_post_meta( $id, WPF_META_PAGINA, true ) !== '' ) {
+		$avvisi[] = "un'opzione punta alla pagina sincronizzata da Drupal «" . get_post_meta( $id, WPF_META_PAGINA, true ) . "» (id {$id}): non esportata, la scrive il comando pagine";
 		continue;
 	}
 	$tipo_wpml = 'post_' . $post->post_type;

@@ -82,11 +82,13 @@ un eventuale script che lanci più import in fila.
 | 0, `AVVISO … non si usa più e si può cancellare` | Drupal ha ora la sua traduzione inglese, che vince | cancellare i due file in `config/traduzioni/en/`, commit |
 | 1, righe `MANCANTE` di pagina, traduzione o template | qualcosa che non si sistema da sé | leggere la causa nella riga `MANCANTE`, correggere, poi `--contenuti-mancanti --conferma` |
 | 1, `ERRORE copia Drupal non integra` | la copia era in ricarica o è troncata: nulla scritto | controllare l'orario del cron e il log del sync della copia |
-| 1, `ERRORE … DRUPAL_SYNC` | interruttore spento: nulla scritto | punto 1 |
+| 1, `ERRORE … DRUPAL_SYNC` (con `--conferma`) o `AVVISO … DRUPAL_SYNC … solo anteprima` (senza) | interruttore spento: nulla scritto | punto 1 |
 | 1, `ERRORE … un'altra sincronizzazione` | due esecuzioni sovrapposte: la seconda esce | nessuna, se è un caso isolato |
 
 Le righe `LINK … in attesa` non sono errori: sono link verso contenuti non ancora importati, che si
-sistemano da soli quando arrivano.
+sistemano da soli quando arrivano. Nemmeno le righe `LINK … verso Drupal`: sono link a pagine di Drupal
+che non sono contenuti (il form `/form/segnalazione`), che restano verso Drupal finché una regola in
+`docker/scripts/config/link.php` non dà loro un indirizzo WordPress.
 
 ## 5. Al lancio in produzione
 

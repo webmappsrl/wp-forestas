@@ -246,7 +246,8 @@ function wpf_drupal_campo_testo( mysqli $db, int $nid, string $lingua ): ?string
 
 /**
  * Alias Drupal dei nodi: '/percorso' => [ 'nid', 'lingua' ]. Un alias «und» vale per tutte le lingue
- * del nodo e si registra come italiano; i link /en/… si risolvono togliendo il prefisso e usando l'en.
+ * del nodo e si registra come italiano; un link «/en/<alias>» lo risolve wpf_link_nodo (link.php)
+ * togliendo il prefisso e prendendo la versione inglese dello stesso nodo.
  */
 function wpf_drupal_alias( mysqli $db ): array {
 	$alias = [];
