@@ -1,6 +1,6 @@
 # Immagine WordPress di Forestas: PHP 8.3 + Apache, estensioni richieste da WordPress e WP-CLI.
 # Il core di WordPress NON sta nell'immagine: lo scarica init-wordpress.sh nel volume.
-FROM php:8.3-apache
+FROM php:8.3.36-apache
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
