@@ -742,3 +742,13 @@ nel repo finché il cron non c'è), unico posto in cui è scritta, con lo stato 
 non installata su nessun server. Chi la installa aggiorna lo stato nello stesso commit. La howto del
 cron, il README, il `CLAUDE.md` e la howto UAT di forestas rimandano al file.
 
+Controllo dei docs del 22/10 su wp-forestas e forestas, dopo il commit di `allinea`: corretti la howto
+del cron (cosa `allinea` non fa: l'`applica --conferma` di tutto `config/`; i casi senza riga `STATO`;
+cosa finisce nel file del cron; due log per giro, quindi circa un mese di log), il messaggio di
+`post.php` ancora con «apply --pagine», la riga di News nell'overview (solo il titolo, non la testata)
+e il Task 11 nel plan. In forestas, non committati: howto UAT (intestazione con oc:8758; `allinea` fa
+pagine e menu solo su un sito con `config/` già applicata; dopo il reset le pagine statiche le crea
+`allinea`, non l'init) e knowledge «WordPress nello shard». I docs di forestas citano `allinea` e
+`cron/allinea.crontab`, che esistono da questo branch: vanno committati insieme al puntatore del
+submodule.
+

@@ -23,8 +23,10 @@ esegue gli script. Va messo solo dove la copia Drupal c'è e Drupal è ancora la
    tocca nulla e lo segnala: quello si applica a mano guardando l'anteprima;
 4. verifica: `applica` deve dire «nessuna differenza» e l'anteprima delle pagine uscire con 0.
 
-L'ultima riga è `STATO allineato (…)` con uscita 0, o `STATO non allineato: <motivo>` con uscita 1. Un
-giro su un sito già allineato non scrive nulla e non crea backup.
+L'ultima riga è `STATO allineato (…)` con uscita 0, o `STATO non allineato: <motivo>` con uscita 1.
+Fanno eccezione i casi in cui il comando non trova il WordPress: nessun container avviato (un reset o
+un `wordpress-up.sh` in corso) o più di uno; allora esce con 1 e una riga `ERRORE: …`, senza `STATO`.
+Un giro su un sito già allineato non scrive nulla e non crea backup.
 
 ## 1. Accendere la sincronizzazione
 
@@ -60,8 +62,10 @@ Dalla cartella `wp-forestas` sull'host, la stessa riga del cron, a mano, per ved
 bin/wordpress-config.sh allinea      # ultima riga: STATO allineato (…)
 ```
 
-Va bene anche su un sito appena ricreato. Se si preferisce guardare un passo alla volta, sono questi
-(gli stessi che `allinea` fa da solo):
+Va bene anche su un sito appena ricreato, dove l'init ha già applicato `config/`. Se si preferisce
+guardare un passo alla volta, sono questi. `allinea` fa da solo gli ultimi quattro, e l'ultimo solo se
+le differenze sono tutte di menu; il primo, l'`applica --conferma` di tutto `config/`, non lo fa mai:
+su un sito nuovo lo fa l'init, su un sito in uso è un rilascio:
 
 ```bash
 bin/wordpress-config.sh applica --conferma    # template delle pagine (e il resto di config/), con backup
@@ -90,9 +94,11 @@ ferma senza scrivere, ma il giro va perso.
 
 - `cd` nella cartella del repo e `PATH` esplicito: il cron parte con un ambiente ridotto, e il comando
   usa `docker`.
-- Il file indicato nella riga raccoglie solo il riassunto di ogni giro (con le righe che chiedono un
-  intervento: `ERRORE`, `MANCANTE`, `MENU`, ogni `AVVISO`); il dettaglio è in
-  `wp-forestas/log/pagine-<data-ora>.log` (si tengono gli ultimi 60).
+- Il file indicato nella riga raccoglie di ogni giro il riassunto delle pagine (con le righe che
+  chiedono un intervento: `ERRORE`, `MANCANTE`, `MENU`, ogni `AVVISO`) e lo `STATO`; in più l'output
+  intero dell'apply quando `allinea` collega i menu, e quello della verifica quando fallisce. Il
+  dettaglio delle pagine è in `wp-forestas/log/pagine-<data-ora>.log`: ogni giro di `allinea` ne scrive
+  due (il giro e la verifica), quindi i 60 tenuti coprono circa un mese di cron.
 
 ## 4. Leggere l'esito
 
@@ -108,6 +114,9 @@ ogni giro, `STATO …`:
 | `non allineato: config/ è diverso dal sito anche fuori dai menu` | un rilascio di `config/` non ancora applicato, o una modifica fatta dal pannello | `bin/wordpress-config.sh applica`, guardare le differenze (elencate sopra la riga), poi `applica --conferma` a mano |
 | `non allineato: il giro delle pagine è uscito con 1` o `la verifica delle pagine esce con 1` | righe `ERRORE` o `MANCANTE` del comando delle pagine, sopra nel file | la tabella qui sotto |
 | `non allineato: errore imprevisto delle pagine` o `applica dei menu non riuscito` | errore di PHP, di WP-CLI o dell'apply | le righe sopra, e il log completo |
+| `non allineato: anteprima di applica non riuscita` | l'anteprima dell'apply è uscita con errore (il suo output è sopra) | le righe sopra |
+| `non allineato: dopo il giro applica mostra ancora differenze` | dopo pagine e menu `config/` e il sito differiscono ancora (le differenze sono sopra) | `bin/wordpress-config.sh applica` a mano, guardando le differenze |
+| nessuno `STATO`, `ERRORE: nessun container WordPress avviato monta …` o `più container montano questo child` | WordPress fermo (reset o riavvio in corso) o più container con lo stesso child | niente se il giro dopo passa; altrimenti `docker ps` e `scripts/wordpress-up.sh` |
 
 Le righe del comando delle pagine, sopra lo `STATO`:
 

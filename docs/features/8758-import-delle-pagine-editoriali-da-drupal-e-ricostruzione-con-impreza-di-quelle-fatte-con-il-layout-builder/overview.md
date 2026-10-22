@@ -18,7 +18,7 @@ zero con un comando: pagine, testi, immagini, allegati, traduzioni inglesi e col
 | principale | Cammini | — (pagina nuova chiesta dal cliente, non esiste in Drupal) | solo testata, con titolo «Cammini» e, per ora, sottotitolo e immagine di Itinerari (1081), anche in inglese |
 | principale | Punti di interesse | 1082 «Da vedere» (+EN) | solo testata |
 | principale | Da sapere | 1083 (+EN) | solo testata |
-| principale | News | 1084 | solo testata |
+| principale | News | 1084 | solo il titolo, senza immagine (su Drupal ha un layout proprio senza hero) |
 | principale | Mappa interattiva | 1093 | il blocco mappa del tema Drupal (iframe dell'app, pulsante per lo schermo intero), titolo nascosto alla vista come sul sito attuale |
 | servizio | Contatti | 1 | pagina completa; la voce di menu però porta a `/enti`, come su Drupal |
 | servizio | FAQ | 86 | pagina completa |

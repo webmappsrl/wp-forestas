@@ -358,5 +358,26 @@ Impreza 9.4 + UpSolution Core, WPML; copia Drupal MySQL 8 in sola lettura (utent
 - [x] **Passo 1:** scrivi la documentazione; controlla i link fra i file.
 - [x] **Commit (utente):** `docs(oc:8758): sincronizzazione delle pagine statiche`
 
+### Task 11: Comando per il cron (aggiunto il 22/10)
+
+> Aggiunto dopo il piano, su richiesta del dev: il cron, quando ci sarà, deve portare il sito dal reset
+> allo stato di riferimento senza interventi. Motivo e verifiche in [notes.md](notes.md#comando-per-il-cron-allinea-2210).
+
+**File:**
+- Modifica: `bin/wordpress-config.sh` (comando `allinea`), `docs/howto/cron-sincronizzazione-pagine.md`,
+  README, knowledge, `CLAUDE.md`
+- Crea: `cron/allinea.crontab` (la riga del crontab, con lo stato dell'installazione)
+
+**Interfacce:**
+- `bin/wordpress-config.sh allinea`: sito pronto (`wp_forestas_config_applicata`), `pagine --conferma`,
+  `applica --conferma` solo se le differenze sono tutte di menu, verifica; ultima riga `STATO allineato
+  (…)` con uscita 0 o `STATO non allineato: <motivo>` con uscita 1.
+
+- [x] **Passo 1:** scrivi il comando e la riga del crontab.
+- [x] **Passo 2 (verifica):** sito già allineato → `STATO allineato`, nessun backup; nome del sito
+  cambiato a mano → differenza elencata, nulla applicato, uscita 1; reset, poi solo `allinea` con
+  `env -i` → `STATO allineato`, ritratto identico a quello di prima del reset.
+- [x] **Commit (utente):** `feat(oc:8758): comando allinea per il cron`
+
 Dopo il merge (utente): PR verso `develop` di `wp-forestas`, poi in `forestas` puntatore del submodule
 con l'hash letto da `git rev-parse`.

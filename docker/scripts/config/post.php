@@ -82,7 +82,7 @@ function wpf_post_applica( array $post_cfg, bool $prova, callable $diff, bool $p
 			}
 			if ( ! $pagine && ! in_array( $p['post_type'], WPF_TIPI_BUILDER, true ) ) {
 				// Non è una differenza da applicare: si segnala senza contarla
-				WP_CLI::log( "post {$p['chiave']}: diverso dal repo in " . implode( ', ', $diversi ) . ', non aggiornato perché è una pagina della redazione (per aggiornarla: apply --pagine)' );
+				WP_CLI::log( "post {$p['chiave']}: diverso dal repo in " . implode( ', ', $diversi ) . ', non aggiornato perché è una pagina della redazione (per aggiornarla: applica --pagine)' );
 				if ( ! $prova ) {
 					wpf_wpml_collega( $esistente->ID, $tipo_wpml, $p['lingua'], $originale ? $originale->ID : null );
 				}
