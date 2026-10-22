@@ -222,7 +222,7 @@ fi
 #     ha un blocco più recente e resta.
 $WP eval "require '${CONFIG_LIB}/comune.php'; wpf_sblocca_apply( ${AVVIO} );" \
     || log "AVVISO: impossibile togliere il blocco dell'apply"
-$WP eval "require '${CONFIG_LIB}/comune.php'; if ( function_exists( 'wpf_sblocca' ) ) { wpf_sblocca( WPF_OPZIONE_PAGINE_IN_CORSO, ${AVVIO} ); }" \
+$WP eval "require '${CONFIG_LIB}/comune.php'; wpf_sblocca( WPF_OPZIONE_PAGINE_IN_CORSO, ${AVVIO} );" \
     || log "AVVISO: impossibile togliere il blocco delle pagine"
 
 # 5. Lingua

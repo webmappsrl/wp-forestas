@@ -223,6 +223,8 @@ Impreza 9.4 + UpSolution Core, WPML; copia Drupal MySQL 8 in sola lettura (utent
 
 ### Task 6: Pulizia del body e riscrittura dei link
 
+> ⚠️ L'implementazione ha deviato da questo task: [notes.md](notes.md#task-6-link-nelle-pagine-inglesi-e-pulizia-del-body)
+
 **File:**
 - Crea: `docker/scripts/config/link.php`
 
@@ -262,7 +264,8 @@ Impreza 9.4 + UpSolution Core, WPML; copia Drupal MySQL 8 in sola lettura (utent
   cancellazione dei log oltre i 60 più recenti. A schermo: le righe `RIASSUNTO`, `ERRORE`, `MANCANTE` e il
   percorso del log; il comando suggerito per i mancanti se ce ne sono. Come è oggi: a schermo, scelte con
   `grep`, anche `MENU`, ogni `AVVISO` e le righe `Warning:`/`Error:` di WP-CLI, i conteggi, e per
-  un'uscita non 0 senza righe del comando la coda del log.
+  un'uscita non 0 senza `RIASSUNTO` né `ERRORE` la riga `Fatal error` (o la coda del log), e nessun
+  comando suggerito dopo un errore.
 - Codice d'uscita = quello dello script.
 
 - [x] **Passo 1:** scrivi il comando.

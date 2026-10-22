@@ -22,10 +22,12 @@ const WPF_MEDIA_ATTESA = 60;
 function wpf_media_allinea( int $id, array $file, bool $prova ): array {
 	$cambiati = [];
 	if ( wp_attachment_is_image( $id ) ) {
-		$meta = [ '_wp_attachment_image_alt' => [ 'alt', $file['alt'] ] ];
-		foreach ( [ WPF_META_AUTORE => 'autore', WPF_META_CREDITS => 'credits' ] as $chiave => $campo ) {
-			$meta[ $chiave ] = [ $campo, (string) ( $file[ $campo ] ?? '' ) ];
-		}
+		// wpf_drupal_file_media dà sempre alt, autore e credits come stringhe
+		$meta = [
+			'_wp_attachment_image_alt' => [ 'alt', $file['alt'] ],
+			WPF_META_AUTORE            => [ 'autore', $file['autore'] ],
+			WPF_META_CREDITS           => [ 'credits', $file['credits'] ],
+		];
 		foreach ( $meta as $chiave => [ $campo, $valore ] ) {
 			if ( (string) get_post_meta( $id, $chiave, true ) === $valore ) {
 				continue;
@@ -93,7 +95,7 @@ function wpf_media_importa( array $file, bool $prova ) {
 	// mostrano come link, non come immagini)
 	add_filter( 'fallback_intermediate_image_sizes', '__return_empty_array' );
 	// Titolo dell'allegato: per i documenti il testo del link che mostra Drupal (descrizione o nome del file)
-	$titolo = ! str_starts_with( (string) ( $file['mime'] ?? '' ), 'image/' ) ? $file['titolo'] : pathinfo( $file['nome'], PATHINFO_FILENAME );
+	$titolo = ! str_starts_with( $file['mime'], 'image/' ) ? $file['titolo'] : pathinfo( $file['nome'], PATHINFO_FILENAME );
 	$id     = media_handle_sideload( [ 'name' => $file['nome'], 'tmp_name' => $tmp ], 0, $titolo );
 	remove_filter( 'fallback_intermediate_image_sizes', '__return_empty_array' );
 	if ( is_wp_error( $id ) ) {

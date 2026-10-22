@@ -280,7 +280,10 @@ bin/wordpress-config.sh pagine --contenuti-mancanti --conferma   # ritenta solo 
   anteprima se manca un template (`AVVISO … non riuscirebbe`: l'anteprima non scrive, e una pagina o
   una traduzione che non si salvano si scoprono solo al `--conferma`); se mancano solo media, che si ritentano al giro
   dopo, esce con 0 e un avviso. Un errore di PHP o di WP-CLI (un fatal, un `WP_ADMIN_USER` che non c'è)
-  esce anche lui con 1, ma senza righe del comando: allora il comando mostra le ultime righe del log.
+  esce anche lui con 1, ma il giro non arriva al `RIASSUNTO` né a un `ERRORE`: allora il comando mostra
+  la riga `Fatal error` del log (o le sue ultime righe). Dopo un errore non suggerisce nessun comando,
+  salvo come accendere la sincronizzazione quando è spenta ed è l'unico problema; per un template
+  assente suggerisce `applica --conferma`.
 - **Si ferma senza scrivere** se la copia Drupal non è integra (tabelle mancanti o vuote, un nodo del
   perimetro assente) o se più di 2 pagine andrebbero in bozza nello stesso giro (una pagina conta una
   volta sola, in qualunque numero di lingue): è il segno di una

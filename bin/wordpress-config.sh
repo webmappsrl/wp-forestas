@@ -179,10 +179,10 @@ case "$comando" in
         ;;
     pagine)
         shift
-        pagine_env=() conferma=false
+        pagine_env=() conferma=false solo_mancanti=""
         while [ $# -gt 0 ]; do
             case "$1" in
-                --contenuti-mancanti) pagine_env+=("WPF_SOLO_MANCANTI=1"); shift ;;
+                --contenuti-mancanti) pagine_env+=("WPF_SOLO_MANCANTI=1"); solo_mancanti=" --contenuti-mancanti"; shift ;;
                 --conferma) conferma=true; shift ;;
                 *) uso; exit 1 ;;
             esac
@@ -200,25 +200,30 @@ case "$comando" in
         conta() { grep -c "^$1 " "$log" || true; }
         echo "pagine: $(conta PAGINA) · media: $(conta MEDIA) · link: $(conta LINK) · avvisi: $(conta AVVISO)"
         echo "log completo: ${log}"
-        # Un errore di PHP o di WP-CLI (un fatal, un WP_ADMIN_USER che non c'è) esce con 1 come il comando,
-        # ma senza le sue righe ERRORE, MANCANTE o AVVISO: se ne mostra la coda del log
+        # Un giro finito arriva al RIASSUNTO; uno fermato dal comando ha una riga ERRORE. Senza nessuna
+        # delle due l'uscita viene da un errore di PHP o di WP-CLI (un fatal, un WP_ADMIN_USER che non c'è),
+        # che esce con 1 come il comando: se ne mostra la causa, la riga «Fatal error», o la coda del log
         imprevisto=false
-        if [ "$esito" -ne 0 ] && ! grep -qE '^(ERRORE|MANCANTE|AVVISO) ' "$log"; then
+        if [ "$esito" -ne 0 ] && ! grep -qE '^(RIASSUNTO|ERRORE) ' "$log"; then
             imprevisto=true
-            echo "Uscita ${esito}: errore imprevisto, ultime righe del log:"
-            tail -n 5 "$log"
+            echo "Uscita ${esito}: errore imprevisto, il giro non è finito. Dal log:"
+            grep -m 1 'Fatal error' "$log" || tail -n 5 "$log"
         fi
-        spenta=false
-        grep -qE '^(AVVISO|ERRORE) .*DRUPAL_SYNC' "$log" && spenta=true
-        if $imprevisto; then
-            : # prima va capito l'errore: nessun comando da suggerire
-        elif $spenta; then
+        # Dopo un errore nessun comando da suggerire, prima va capito. La sincronizzazione spenta non è un
+        # errore da capire (anteprima con AVVISO, --conferma con ERRORE): se è l'unico problema si dice come
+        # accenderla. Un template assente si risolve con l'apply, non con un altro giro delle pagine
+        errori=$(grep '^ERRORE ' "$log" | grep -vc 'DRUPAL_SYNC' || true)
+        if $imprevisto || [ "${errori:-0}" -gt 0 ]; then
+            :
+        elif grep -qE '^(AVVISO|ERRORE) .*DRUPAL_SYNC' "$log"; then
             echo "Per scrivere serve DRUPAL_SYNC=on nel .env di wp-forestas (poi scripts/wordpress-up.sh di forestas)"
+        elif grep -q '^AVVISO .*: template .* non riuscirebbe' "$log"; then
+            echo "Prima i template di Impreza: $0 applica --conferma, poi di nuovo $0 pagine"
         else
-            if grep -q '^MANCANTE ' "$log"; then
+            if [ -z "$solo_mancanti" ] && grep -q '^MANCANTE ' "$log"; then
                 echo "Per ritentare solo ciò che manca: $0 pagine --contenuti-mancanti --conferma"
             fi
-            $conferma || echo "Per scrivere: $0 pagine --conferma"
+            $conferma || echo "Per scrivere: $0 pagine${solo_mancanti} --conferma"
         fi
         # Si tengono gli ultimi LOG_PAGINE_TENUTI log
         vecchi=$(ls -1t "${REPO}"/log/pagine-*.log 2>/dev/null | tail -n +$((LOG_PAGINE_TENUTI + 1)) || true)

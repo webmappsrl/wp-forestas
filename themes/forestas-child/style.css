@@ -5,7 +5,7 @@ Template: Impreza
 Author: Webmapp
 Author URI: https://webmapp.it/
 Description: Child theme di Impreza per Sardegna Sentieri (Forestas). Versionato nel repo wp-forestas e montato dal compose: si modifica nel repo, non dal pannello.
-Version: 1.4.29
+Version: 1.4.30
 */
 
 
@@ -22,15 +22,17 @@ Version: 1.4.29
  *
  * I colori che il sito attuale usa anche fuori da header e footer stanno nelle Theme Options di Impreza
  * (config/impreza.json, con gli stessi valori): qui rimandano alle loro variabili, così si cambiano in
- * un posto solo. Gli altri sono solo di header e footer.
+ * un posto solo, e valgono anche per le pagine sincronizzate da Drupal (oc:8758). Nel gruppo «Misure del
+ * tema Drupal» le prime quattro sono anche di header e footer; da --sase-spazio-sezione in giù sono delle
+ * sole pagine, con i colori dell'artifact «Canvas Fase 2».
  */
 :root {
-	--sase-testo: var(--color-content-text);                 /* #4D4D4D: testo e link di header e footer */
+	--sase-testo: var(--color-content-text);                 /* #4D4D4D: testo e link di header e footer, testo e pulsanti delle pagine */
 	--sase-testo-chiaro: var(--color-content-faded);         /* #595959: contatti, icona della ricerca */
 	--sase-bordo: var(--color-content-border);               /* #F0F0F0 */
 	--sase-fondo: var(--color-content-bg);                   /* #FFFFFF */
-	--sase-fondo-campo: var(--color-content-bg-alt);         /* #F5F5F5: campo e pulsante di ricerca */
-	--sase-arancio: var(--color-content-primary);            /* #F59F1A: filo del footer, pulsante menu */
+	--sase-fondo-campo: var(--color-content-bg-alt);         /* #F5F5F5: campo e pulsante di ricerca, voce di Condividi sotto il mouse */
+	--sase-arancio: var(--color-content-primary);            /* #F59F1A: filo del footer, pulsante menu, filo della galleria, icona degli allegati, pulsanti sotto il mouse */
 	--sase-arancio-scuro: var(--color-content-link);         /* #CA4D1C: social, lingua attiva, menu aperto */
 	--sase-arancio-hover: var(--color-content-link-hover);   /* #D63D00: social al passaggio del mouse */
 	--sase-overlay: var(--color-content-overlay);            /* pagina coperta dal menu aperto */
@@ -55,7 +57,7 @@ Version: 1.4.29
 	--sase-font-titoli: "Montserrat", sans-serif;
 	--sase-font-testo: "Work Sans Sardegna Sentieri", sans-serif;
 
-	/* Misure del tema Drupal usate in più punti */
+	/* Misure del tema Drupal */
 	--sase-larghezza-contenuto: 1294px;
 	--sase-larghezza-logo: clamp(231px, 25vw, 382px);
 	--sase-spazio-riga-logo: clamp(1rem, 3vw, 2.5rem);       /* sopra e sotto la riga del logo */
@@ -67,6 +69,8 @@ Version: 1.4.29
 	--sase-rientro-contenuto: max(22px, calc((100% - var(--sase-larghezza-contenuto)) / 2)); /* percorso e pulsanti allineati al logo */
 	--sase-filo-percorso: #EEEBE5;                           /* sotto percorso e pulsanti (artifact) */
 	--sase-blu-pulsante: #16497B;                            /* pulsante premuto o aperto (tema Drupal) */
+	--sase-inchiostro: #1A1A1A;                              /* testi scuri del percorso e di Condividi (artifact) */
+	--sase-grigio-percorso: #767676;                         /* percorso e bordo del pannello Condividi (artifact) */
 	/* Caratteri del tema Drupal che ricorrono: titoli della testata, delle sezioni e degli allegati, testo */
 	--sase-titolo-grande: clamp(2.5rem, 2.5rem + (1vw - 0.2rem) * 0.938, 3.438rem);
 	--sase-titolo-medio: clamp(1.5rem, 0.5rem + (1vw - 0.2rem) * 0.5, 2rem);
@@ -1268,7 +1272,7 @@ Version: 1.4.29
    della foto e della sfumatura dell'artifact. Senza il blocco dell'immagine la regione ha una riga in
    meno: sotto il sottotitolo restano solo i margini di sezione e regione */
 .forestas-testata-senza-immagine {
-	background: #FFFFFF linear-gradient(0deg, rgba(0, 0, 0, 0.83) 21.78%, rgba(0, 0, 0, 0.81) 28%, rgba(0, 0, 0, 0.7) 41%, rgba(0, 0, 0, 0.66) 47%, rgba(0, 0, 0, 0.5) 64%, rgba(0, 0, 0, 0) 95%);
+	background: var(--sase-fondo) linear-gradient(0deg, rgba(0, 0, 0, 0.83) 21.78%, rgba(0, 0, 0, 0.81) 28%, rgba(0, 0, 0, 0.7) 41%, rgba(0, 0, 0, 0.66) 47%, rgba(0, 0, 0, 0.5) 64%, rgba(0, 0, 0, 0) 95%);
 }
 .forestas-testata-senza-immagine .forestas-testata-testo {
 	padding-bottom: calc(2 * var(--sase-spazio-sezione));
@@ -1276,7 +1280,7 @@ Version: 1.4.29
 }
 @media (max-width: 767px) {
 	.forestas-testata-senza-immagine {
-		background: #FFFFFF linear-gradient(0.08deg, rgba(0, 0, 0, 0.7) 33%, rgba(0, 0, 0, 0.6) 66%, rgba(0, 0, 0, 0.3) 90%, rgba(0, 0, 0, 0) 100%);
+		background: var(--sase-fondo) linear-gradient(0.08deg, rgba(0, 0, 0, 0.7) 33%, rgba(0, 0, 0, 0.6) 66%, rgba(0, 0, 0, 0.3) 90%, rgba(0, 0, 0, 0) 100%);
 	}
 }
 /* «Credits foto» della testata: sase-image-credits del tema Drupal. In basso a sinistra sopra
@@ -1308,7 +1312,7 @@ Version: 1.4.29
 	padding: 0.33em 0.5em;
 	border: 0;
 	border-radius: 0;
-	background-color: #FFFFFF;
+	background-color: var(--sase-fondo);
 	color: var(--sase-testo);
 	font-family: inherit;
 	font-size: inherit;
@@ -1355,13 +1359,19 @@ Version: 1.4.29
 }
 
 /* Barretta del tema Drupal (sase-heading-has-decoration): 57×7px sopra il titolo della testata,
-   dell'intestazione e della galleria; cambia solo il colore */
+   dell'intestazione e della galleria. Nella testata è un elemento con lo spazio sotto; negli altri due
+   è un ::before che sale di 1,875rem nel padding del titolo */
 .forestas-testata-filo,
 .forestas-intestazione::before,
 .forestas-galleria-titolo::before {
 	display: block;
 	width: var(--sase-filo-larghezza);
 	height: var(--sase-filo-altezza);
+}
+.forestas-intestazione::before,
+.forestas-galleria-titolo::before {
+	content: "";
+	margin-top: calc(-1 * var(--sase-filo-spazio));
 }
 .forestas-testata-filo {
 	margin-bottom: calc(var(--sase-filo-spazio) - var(--sase-filo-altezza)); /* barra + spazio = 1,875rem, come su Drupal */
@@ -1409,8 +1419,6 @@ Version: 1.4.29
 	text-align: center;
 }
 .forestas-intestazione::before {
-	content: "";
-	margin-top: calc(-1 * var(--sase-filo-spazio));
 	background-color: var(--forestas-sezione);
 }
 .forestas-intestazione + .forestas-percorso {
@@ -1434,7 +1442,7 @@ Version: 1.4.29
 	gap: 8px;
 	padding: 11px var(--sase-rientro-contenuto);
 	border-bottom: 1px solid var(--sase-filo-percorso);
-	color: #767676;
+	color: var(--sase-grigio-percorso);
 	font-size: 12.5px;
 	line-height: 1.4;
 }
@@ -1443,7 +1451,7 @@ Version: 1.4.29
 	text-decoration: underline;
 }
 .forestas-percorso [aria-current] {
-	color: #1A1A1A;
+	color: var(--sase-inchiostro);
 	font-weight: 600;
 }
 
@@ -1476,9 +1484,9 @@ Version: 1.4.29
 	z-index: 20;
 	min-width: 230px;
 	padding: 10px;
-	border: 1px solid #767676;
+	border: 1px solid var(--sase-grigio-percorso);
 	border-radius: 6px;
-	background: #FFFFFF;
+	background: var(--sase-fondo);
 	box-shadow: 0 8px 22px rgba(0, 0, 0, 0.18);
 }
 .forestas-condividi__pannello[hidden] {
@@ -1515,7 +1523,7 @@ Version: 1.4.29
 	border: 0;
 	border-radius: 4px;
 	background: none;
-	color: #1A1A1A;
+	color: var(--sase-inchiostro);
 	font-family: var(--sase-font-testo);
 	font-size: 14px;
 	font-weight: 500;
@@ -1526,8 +1534,8 @@ Version: 1.4.29
 }
 .l-main .forestas-condividi__pannello a:hover,
 .l-main .forestas-condividi__copia:hover {
-	background: #F5F5F5;
-	color: #1A1A1A;
+	background: var(--sase-fondo-campo);
+	color: var(--sase-inchiostro);
 	text-decoration: underline;
 }
 .l-main .forestas-condividi__pannello a:focus-visible,
@@ -1720,8 +1728,6 @@ Version: 1.4.29
 	line-height: 1.2;
 }
 .forestas-galleria-titolo::before {
-	content: "";
-	margin-top: calc(-1 * var(--sase-filo-spazio));
 	background-color: var(--sase-arancio);
 }
 /* Griglia: sase-grid (0,9375rem fra le immagini), 3 colonne su telefono e 4 da 768px */
@@ -1839,7 +1845,7 @@ Version: 1.4.29
 	display: flex;
 	justify-content: flex-end;
 	padding: 1.25rem;
-	background-color: #FFFFFF;
+	background-color: var(--sase-fondo);
 }
 .forestas-mappa.is-shrinked .is-map-shrinker,
 .forestas-mappa.is-expanded .is-map-expander {
@@ -1859,7 +1865,7 @@ Version: 1.4.29
 	border: solid currentColor;
 	border-width: 1px 2px 2px 1px;
 	border-radius: 0.25em;
-	background-color: #FFFFFF;
+	background-color: var(--sase-fondo);
 	color: var(--sase-testo);
 	font-family: var(--sase-font-testo);
 	font-size: 1rem;

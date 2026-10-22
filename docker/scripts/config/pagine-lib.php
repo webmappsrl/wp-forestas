@@ -183,7 +183,8 @@ function wpf_mancante_chiave( string $cosa, string $pagina, string $lingua, stri
  * non toglie un'immagine dal sito (oc:8758).
  *
  * @return array [ 'ids' => int[]|null (null = tenere il valore attuale), 'scaricare' => string[],
- *                 'scaricati' => string[], 'riusati' => int, 'errori' => [ nome => causa ] ]
+ *                 'scaricati' => string[], 'riusati' => int, 'aggiornati' => [ nome => campi riallineati ],
+ *                 'errori' => [ nome => causa ] ]
  */
 function wpf_pagina_media( array $file, bool $prova ): array {
 	$ids        = [];

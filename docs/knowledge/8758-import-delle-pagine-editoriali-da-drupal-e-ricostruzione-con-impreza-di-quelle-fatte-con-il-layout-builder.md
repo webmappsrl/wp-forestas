@@ -20,7 +20,7 @@ contano le scelte e i vincoli.
   galleria nativa sta dentro il testo, che Drupal riscrive. Nell'editor il riquadro «Allegati e
   galleria» del child li gestisce con la libreria media. Finché la sincronizzazione è attiva le modifiche fatte lì
   vengono riscritte, e così testo alternativo, autore e credits delle immagini che una pagina sincronizzata
-  usa ancora (e il titolo dei suoi PDF): la scheda dell'immagine lo dice sotto i campi, e il log lo
+  usa ancora, in evidenza, in galleria o fra gli allegati (e il titolo dei suoi PDF): la scheda dell'immagine lo dice sotto i campi, e il log lo
   segnala con una riga `MEDIA …, credits riallineati a Drupal`.
 - **Autore e credits delle immagini in due campi dell'immagine** (`wpf_autore`, `wpf_credits`), come i
   due campi dei media di Drupal; la testata li mostra dietro «Credits foto». Non nella Didascalia, che
@@ -47,8 +47,8 @@ contano le scelte e i vincoli.
   cambia (impronta «sorgente»); la Mappa inglese è di sola interfaccia (`titolo.en`). Nelle pagine
   inglesi i link portano alla versione inglese, se c'è, e la home è `/en/`.
 - **Un solo scrittore:** `esporta` e `applica` di `bin/wordpress-config.sh` saltano le pagine con
-  `_wpf_pagina`, anche se un'opzione punta a loro: in quel caso nemmeno l'opzione si esporta (resta fuori
-  da `sito.json` e dalle Theme Options), l'apply lascia il valore di ogni sito e l'export avvisa che lì va
+  `_wpf_pagina`, anche se un'opzione punta a loro: in quel caso nemmeno l'opzione si esporta (`null` in
+  `sito.json`, assente dalle Theme Options), l'apply lascia il valore di ogni sito e l'export avvisa che lì va
   impostata dal pannello dopo il comando pagine (oggi nessuna opzione lo fa; con oc:8759 la
   pagina degli articoli potrebbe essere News). I menu invece li scrive solo l'apply: le voci del
   perimetro in `config/menu.json` hanno `tipo: pagina` e il percorso, cioè lo slug, che va cambiato lì

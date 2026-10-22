@@ -239,7 +239,7 @@ function wpf_menu_applica( array $menu, bool $prova, callable $diff, callable $r
  * salvati) e restano. In anteprima quelle che ci sono già sono una differenza (con $diff), senza
  * cancellarle: quelle che l'apply stesso staccherebbe si vedono solo dopo.
  */
-function wpf_menu_togli_orfane( bool $prova = false, ?callable $diff = null ): void {
+function wpf_menu_togli_orfane( bool $prova, callable $diff ): void {
 	global $wpdb;
 	$orfane = $wpdb->get_col(
 		"SELECT p.ID FROM {$wpdb->posts} p
@@ -249,7 +249,7 @@ function wpf_menu_togli_orfane( bool $prova = false, ?callable $diff = null ): v
 		 GROUP BY p.ID HAVING COUNT(t.term_taxonomy_id) = 0"
 	);
 	if ( $prova ) {
-		if ( $orfane && $diff ) {
+		if ( $orfane ) {
 			$diff( 'menu: voci senza menu', count( $orfane ), 'cancellate' );
 		}
 		return;

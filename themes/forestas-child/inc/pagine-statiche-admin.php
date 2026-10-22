@@ -41,7 +41,10 @@ function forestas_sincronizzazione_accesa(): bool {
 	return getenv( 'DRUPAL_SYNC' ) === 'on';
 }
 
-/** Immagini in evidenza e della galleria delle pagine sincronizzate: quelle che la sincronizzazione riallinea. */
+/*
+ * Immagini delle pagine sincronizzate (in evidenza, galleria e allegati che sono immagini): quelle che la
+ * sincronizzazione riallinea.
+ */
 function forestas_immagini_sincronizzate(): array {
 	static $ids = null;
 	if ( $ids === null ) {
@@ -49,7 +52,7 @@ function forestas_immagini_sincronizzate(): array {
 		$pagine = get_posts( [ 'post_type' => 'page', 'post_status' => 'any', 'numberposts' => -1, 'fields' => 'ids', 'meta_key' => FORESTAS_META_PAGINA, 'suppress_filters' => true ] );
 		foreach ( $pagine as $pagina ) {
 			$ids[] = (int) get_post_thumbnail_id( $pagina );
-			array_push( $ids, ...forestas_meta_ids( $pagina, FORESTAS_META_GALLERIA ) );
+			array_push( $ids, ...forestas_meta_ids( $pagina, FORESTAS_META_GALLERIA ), ...forestas_meta_ids( $pagina, FORESTAS_META_ALLEGATI ) );
 		}
 		$ids = array_values( array_unique( array_filter( $ids ) ) );
 	}
@@ -132,8 +135,8 @@ add_action(
  * Campi «Autore» e «Credits» nella scheda di un'immagine della libreria media, come i campi omonimi dei
  * media di Drupal: la testata li mostra dietro il pulsante «Credits foto» (oc:8758). Su un'immagine che
  * una pagina sincronizzata usa ancora e con la sincronizzazione accesa, un avviso dice che testo
- * alternativo, autore e credits si riallineano a Drupal a ogni giro (wpf_media_importa li riallinea solo
- * per i file delle pagine del perimetro).
+ * alternativo, autore e credits si riallineano a Drupal a ogni giro (wpf_media_allinea, solo per i file
+ * delle pagine del perimetro).
  */
 const FORESTAS_CAMPI_CREDITS = [
 	FORESTAS_META_AUTORE  => 'Autore',

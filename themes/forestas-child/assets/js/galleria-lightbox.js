@@ -2,7 +2,7 @@
  * Lightbox della galleria delle pagine, come sul sito Drupal (oc:8758): la stessa libreria
  * (slick-lightbox 0.2.12 su Slick 1.8.1) con le impostazioni e il caricamento del modulo slick_lightbox
  * (js/slick-lightbox.load.js, ridotto alle immagini: niente video) e la didascalia del tema
- * sardegnasentieri (js/scripts.js). Il markup lo scrive [forestas_galleria] (inc/pagine-statiche.php).
+ * sardegnasentieri (js/scripts.js). Il markup lo scrive forestas_galleria() (inc/pagine-statiche.php).
  */
 (function ($) {
 	'use strict';

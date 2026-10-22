@@ -44,6 +44,15 @@ allegato perché uno dei due PDF non era stato servito da Drupal. Su richiesta d
 e galleria mostrano i file scaricati e il mancante si aggiunge quando arriva; per l'immagine in
 evidenza, che è una sola, resta quella che c'era.
 
+### Task 6: link nelle pagine inglesi e pulizia del body
+
+`wpf_link_riscrivi` ha un quarto parametro, la lingua della pagina (`link.php`): in una pagina inglese il
+link alla home diventa `/en/`, non `/`, e un link a un contenuto porta alla sua versione inglese se c'è,
+altrimenti all'italiano, come Drupal. Restituisce anche `non_contenuti` (indirizzi che non sono nodi, come
+`/form/segnalazione`). La pulizia del body non toglie solo stili e `data-entity-*`: rifà il filtro
+`filtered_html` di Drupal (vedi il Task 6 in plan.md). Motivo: senza la lingua le pagine inglesi
+mandavano alla home e ai contenuti italiani anche dove la versione inglese c'era.
+
 ### Task 8: grafica dei template
 
 - **Testata dall'artifact, non dal tema Drupal** (decisione del dev, 20/10): l'artifact «Canvas Fase
@@ -612,4 +621,38 @@ Lasciati così, con il motivo:
   sito scrive `post.json` con lo stesso contenuto ma i post in un altro ordine, perché li ordina per data
   e i tre template hanno date a un secondo di distanza. `git diff config/` mostra uno spostamento di righe
   che non cambia nulla.
+
+## Quarta review del 22/10
+
+Review con 5 finder sul branch (commit `8390923`), poi correzioni nello stesso branch.
+
+- **Export delle Theme Options** (bloccante): la correzione descritta nella terza review non era nel
+  codice. Il comando che doveva applicarla si era fermato su un `grep` fallito prima dello script di
+  modifica, e il controllo di sintassi lanciato dopo, da solo, era passato. Ora c'è: un'opzione di
+  Impreza che punta a una pagina sincronizzata esce da `impreza.json`. Verificato con un'opzione
+  `search_page` verso Contatti aggiunta solo in memoria (filtro) e un export in sola lettura in una
+  cartella di prova: l'avviso compare, la chiave no.
+- **Messaggi del comando `pagine` dopo un errore** (bloccante): dopo un `ERRORE` suggeriva comunque
+  `--conferma` (riprodotto col tunnel verso la copia chiuso), un errore di PHP dopo un `AVVISO` non
+  mostrava la causa, e la coda di 5 righe di un fatal era solo stack trace. Ora è imprevista un'uscita
+  diversa da 0 senza `RIASSUNTO` né `ERRORE`, se ne mostra la riga `Fatal error`, e dopo un errore non
+  si suggerisce nulla (salvo come accendere `DRUPAL_SYNC`). Verificato col tunnel chiuso (nessun
+  suggerimento) e con una copia dello script che simula un fatal dopo l'AVVISO della sincronizzazione
+  spenta (a schermo la riga con la causa).
+- Avviso nella scheda dell'immagine anche per le immagini fra gli allegati; commenti allineati
+  (`forestas_galleria()`, `wpf_media_allinea`, chiave `aggiornati`); guardia `function_exists` tolta
+  dall'init; `wpf_menu_togli_orfane` con i parametri obbligatori; `media.php` senza conversioni inutili.
+- Child 1.4.30: `content` e margine dei due filo `::before` in una regola sola; colori dell'artifact
+  (`--sase-inchiostro`, `--sase-grigio-percorso`) e fondi delle pagine in variabili; commento delle
+  variabili in cima allo stile aggiornato. Valori calcolati verificati nel browser (percorso, pannello
+  Condividi, testata senza immagine, filo di testata, intestazione di News e galleria).
+- Anteprima delle pagine «invariata: 28», anteprima di `applica` «nessuna differenza».
+
+Chiusura del ciclo: la quinta review (22/10, sul working tree dopo la quarta) non ha trovato bloccanti.
+Sistemati poi i suoi cleanup, provati uno per uno senza un'altra review: in anteprima a sincronizzazione
+spenta un `ERRORE` vero non fa più suggerire di accenderla; per un template assente si suggerisce
+`applica --conferma`; dopo `--contenuti-mancanti` si suggerisce lo stesso comando con `--conferma`; la
+riga `Fatal error` si mostra una volta; commenti delle variabili di `style.css` (Version invariata: solo
+commenti), Task 6 in notes e plan, frase su `sito.json` nella knowledge. Il controllo «c'è un ERRORE che
+non è DRUPAL_SYNC» usa `grep -vc` e non `grep -q` in pipe, per la trappola del SIGPIPE con `pipefail`.
 
