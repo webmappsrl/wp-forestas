@@ -220,10 +220,8 @@ fi
 #     Senza, un blocco rimasto da un «docker stop» farebbe fallire l'apply automatico o le pagine finché
 #     non scade (WPF_APPLY_SCADENZA, WPF_PAGINE_SCADENZA). Un comando lanciato dall'host durante l'avvio
 #     ha un blocco più recente e resta.
-$WP eval "require '${CONFIG_LIB}/comune.php'; wpf_sblocca_apply( ${AVVIO} );" \
-    || log "AVVISO: impossibile togliere il blocco dell'apply"
-$WP eval "require '${CONFIG_LIB}/comune.php'; wpf_sblocca( WPF_OPZIONE_PAGINE_IN_CORSO, ${AVVIO} );" \
-    || log "AVVISO: impossibile togliere il blocco delle pagine"
+$WP eval "require '${CONFIG_LIB}/comune.php'; wpf_sblocca_apply( ${AVVIO} ); wpf_sblocca_pagine( ${AVVIO} );" \
+    || log "AVVISO: impossibile togliere i blocchi dell'apply e delle pagine"
 
 # 5. Lingua
 if ! $WP language core is-installed it_IT; then

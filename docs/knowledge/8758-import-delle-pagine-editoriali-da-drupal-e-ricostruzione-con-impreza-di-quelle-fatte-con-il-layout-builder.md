@@ -8,7 +8,10 @@ contano le scelte e i vincoli.
 - **Perimetro fisso:** le 14 pagine di `config/pagine.json`, quelle raggiungibili dai menu (Contatti
   è nel perimetro anche se la voce CONTATTI porta a `/enti`, come su Drupal). Lo script
   non cerca pagine nuove su Drupal. La homepage, gli elenchi sotto le testate (View di Drupal) e le
-  pagine fuori dai menu (Eventi, Attività e comunicazioni, le 4 non pubblicate) non ne fanno parte.
+  pagine fuori dai menu (Eventi, Attività e comunicazioni, le 4 non pubblicate) non ne fanno parte. La
+  chiave di una voce è l'identità della pagina (`_wpf_pagina`) e non si rinomina: una pagina la cui
+  chiave non è più in `config/pagine.json` resta com'era, nessuno la aggiorna, e ogni giro lo segnala
+  con un AVVISO.
 - **Chiave:** una pagina si riconosce da `_wpf_pagina` (la chiave del perimetro) e `_wpf_lingua`,
   mai dall'id di WordPress. `_drupal_nid` e `_drupal_langcode` dicono da quale nodo viene e servono
   ai link. Cammini non ha un nodo: è una pagina nuova chiesta dal cliente e prende, per ora, la
@@ -97,11 +100,20 @@ contano le scelte e i vincoli.
   fatto in WordPress.
 - **Controllo di integrità e soglia di 2 bozze** (oc:8758): il reload della copia fa `DROP DATABASE`
   e carica le tabelle una per volta (`forestas/scripts/drupal-dump-reload.sh`); in quei minuti, senza
-  controlli, tutte le pagine andrebbero in bozza o si salverebbero testi vuoti.
+  controlli, tutte le pagine andrebbero in bozza o si salverebbero testi vuoti. Una spubblicazione vera
+  di più pagine insieme passa con `--accetta-bozze`, a mano: un'opzione invece di una soglia più alta,
+  perché la soglia deve fermare il cron. Il riassunto di ogni giro completo dice anche la data dell'ultima modifica nella
+  copia, e un AVVISO la segnala oltre 30 giorni: la copia non registra la data del dump, ma un dump che
+  non arriva più la ferma.
 - **Elenco dei mancanti sul sito, non nel log** (oc:8758): i log ruotano, e un file di testo non è un
   elenco affidabile da cui ripartire. L'opzione (`wpf_sync_mancanti`) è delle pagine: a ogni giro si
   tolgono le voci che non sono chiavi di `config/pagine.json`. Un altro import (oc:8759, oc:8760) che
   volesse un elenco così deve averne uno suo, o dare alle voci la parte di provenienza.
+- **Un comando per il cron, `allinea`** (oc:8758): dopo un reset l'init applica `config/` prima che le
+  pagine esistano, e le voci di menu restano link per indirizzo finché un apply non le collega; un cron
+  con le sole pagine non avrebbe mai chiuso il ciclo. `allinea` fa pagine, poi applica da solo le
+  differenze **solo se sono tutte di menu**, poi verifica. Applicare sempre tutto `config/` dal cron
+  riscriverebbe ogni giorno, senza anteprima, quello che è cambiato sul sito: un rilascio resta a mano.
 - **Un blocco per comando** (oc:8758): `wpf_blocca( $opzione, $scadenza )` in `comune.php`, usato
   dall'apply (40 minuti) e dalle pagine (`WPF_PAGINE_SCADENZA`, 2 ore: con il sito Drupal lento ogni
   file può costare un minuto, e un blocco tolto mentre la prima esecuzione scrive ancora lascerebbe
@@ -124,10 +136,16 @@ contano le scelte e i vincoli.
 - **Link verso contenuti non ancora in WordPress** (oc:8758): un link del testo a un nodo Drupal che in
   WordPress non c'è resta verso `www.sardegnasentieri.it` ed è segnato «in attesa» nel log. Si riscrive
   da solo alla sincronizzazione dopo che l'import di quel contenuto ha scritto `_drupal_nid` e
-  `_drupal_langcode`: ogni nuovo import deve scriverli. I link a pagine che non sono nodi (i form, come
+  `_drupal_langcode`: ogni nuovo import deve scriverli. `_drupal_langcode` è la lingua del sito (`it`,
+  `en`): questo import scrive `it` anche per un nodo `und`; la ricerca accetta comunque `und` per
+  l'italiano, se un altro import scrive il codice di Drupal così com'è. I link a pagine che non sono nodi (i form, come
   `/form/segnalazione`) non si riscrivono mai da soli: sono segnati `LINK … verso Drupal` nel log e
   serve una regola in `link.php`. Elenco aggiornato
   dei link in attesa: le righe `LINK … in attesa` dell'ultimo log in `log/pagine-*.log`.
+  Un link verso una pagina del perimetro che su Drupal è spubblicata (e qui resta in bozza) è «in
+  attesa» anche lui: un link relativo darebbe 404 a chi non è loggato. In una pagina inglese, se in
+  bozza è solo la versione inglese, il link ripiega su quella italiana, come per i contenuti senza
+  traduzione.
 - **Link interni relativi, hook di WPML staccati** (oc:8758): al salvataggio di una traduzione WPML
   (`ItemUpdateEvent`) riscrive allo shutdown i link interni come indirizzi assoluti dell'ambiente;
   `wpf_wpml_senza_link_automatici()` stacca quegli hook durante la sincronizzazione.

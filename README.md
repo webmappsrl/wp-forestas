@@ -22,7 +22,8 @@ provarlo.
 | `docker/plugins/` | zip dei plugin commerciali (esclusi da git); l'elenco è in `commerciali.txt`, versionato |
 | `config/` | configurazione versionata del sito: Theme Options, header, footer, Home, menu, WPML |
 | `docker/scripts/config/` | esporta, applica, sincronizzazione delle pagine da Drupal (`pagine.php`, `drupal.php`, `link.php`, `media.php`), ritratto e licenza Impreza, eseguiti con `wp eval-file`; montati dal compose (non copiati nell'immagine). `costanti.php` contiene i nomi e i percorsi che legge l'init |
-| `bin/wordpress-config.sh` | comando sull'host per esporta, applica, pagine, ritratto e zip |
+| `bin/wordpress-config.sh` | comando sull'host per esporta, applica, pagine, allinea, ritratto e zip |
+| `cron/allinea.crontab` | riga del crontab per `allinea`, con lo stato dell'installazione sul server (non installata da nessuno script) |
 | `backup/` | backup creati da `applica --conferma` (esclusi da git) |
 | `themes/forestas-child/` | child theme di Impreza, montato in `wp-content/themes/forestas-child` |
 | `docker/uat/` | virtual host di riferimento per l'Apache dell'host di UAT |
@@ -281,16 +282,30 @@ bin/wordpress-config.sh pagine --contenuti-mancanti --conferma   # ritenta solo 
   una traduzione che non si salvano si scoprono solo al `--conferma`); se mancano solo media, che si ritentano al giro
   dopo, esce con 0 e un avviso. Un errore di PHP o di WP-CLI (un fatal, un `WP_ADMIN_USER` che non c'è)
   esce anche lui con 1, ma il giro non arriva al `RIASSUNTO` né a un `ERRORE`: allora il comando mostra
-  la riga `Fatal error` del log (o le sue ultime righe). Dopo un errore non suggerisce nessun comando,
+  la riga `Fatal error` del log (o le sue ultime righe). Dopo un errore il comando non aggiunge
+  suggerimenti suoi (cosa fare lo dice, quando si sa, il messaggio dell'`ERRORE`: `--accetta-bozze`,
+  togliere una voce da `config/pagine.json`, scrivere una traduzione),
   salvo come accendere la sincronizzazione quando è spenta ed è l'unico problema; per un template
   assente suggerisce `applica --conferma`.
 - **Si ferma senza scrivere** se la copia Drupal non è integra (tabelle mancanti o vuote, un nodo del
   perimetro assente) o se più di 2 pagine andrebbero in bozza nello stesso giro (una pagina conta una
   volta sola, in qualunque numero di lingue): è il segno di una
-  copia in ricarica (su UAT ogni giorno alle 10:00).
+  copia in ricarica (su UAT ogni giorno alle 10:00). Se le spubblicazioni su Drupal sono vere,
+  `pagine --accetta-bozze --conferma` le accetta, una volta.
+- **Controlli a ogni giro completo:** il riassunto dice la data dell'ultima modifica nella copia Drupal (non
+  quello di `--contenuti-mancanti` quando non c'è nulla da ritentare), e un
+  AVVISO la segnala oltre 30 giorni (il dump potrebbe non arrivare più); un AVVISO segnala le pagine
+  sincronizzate che `config/pagine.json` non elenca più (voce tolta o chiave rinominata: la chiave
+  non si rinomina). Un link verso una pagina del perimetro che resta in bozza resta verso Drupal, «in
+  attesa», invece di un link che darebbe 404; in una pagina inglese, se in bozza è solo la versione
+  inglese, il link ripiega su quella italiana, come per i contenuti senza traduzione.
 - **Ricreare tutto dal reset** (installazione, pagine, menu, verifiche, problemi noti):
   [docs/howto/ricreare-wordpress-da-zero.md](docs/howto/ricreare-wordpress-da-zero.md).
-- **Cron sul server:** procedura in
+- **Cron sul server:** `bin/wordpress-config.sh allinea`, un comando solo che da un sito appena
+  ricreato o già in uso porta allo stato di riferimento (pagine dalla copia Drupal, menu collegati alle
+  pagine, verifica finale) e chiude con `STATO allineato` o `STATO non allineato: <motivo>`. Applica da
+  solo solo le differenze dei menu: un `config/` diverso dal sito si applica a mano. La riga da mettere
+  nel crontab è in [cron/allinea.crontab](cron/allinea.crontab); procedura in
   [docs/howto/cron-sincronizzazione-pagine.md](docs/howto/cron-sincronizzazione-pagine.md).
 - I link dei testi verso `www.sardegnasentieri.it` diventano link relativi al contenuto WordPress con
   lo stesso nodo Drupal (`_drupal_nid`, `_drupal_langcode`); quelli verso contenuti non ancora

@@ -336,6 +336,11 @@ function wpf_blocca_pagine(): bool {
 	return wpf_blocca( WPF_OPZIONE_PAGINE_IN_CORSO, WPF_PAGINE_SCADENZA );
 }
 
+/** Toglie il blocco delle pagine; con $prima_di solo uno preso prima di quell'istante (come per l'apply). */
+function wpf_sblocca_pagine( ?int $prima_di = null ): void {
+	wpf_sblocca( WPF_OPZIONE_PAGINE_IN_CORSO, $prima_di );
+}
+
 /** Ordina le chiavi degli array associativi, per file con differenze stabili fra un export e l'altro. */
 function wpf_ordina( $dati ) {
 	if ( ! is_array( $dati ) ) {

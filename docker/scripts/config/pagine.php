@@ -2,7 +2,7 @@
 /**
  * Sincronizzazione delle pagine statiche da Drupal (oc:8758).
  *
- * Uso: [WPF_PROVA=1] [WPF_SOLO_MANCANTI=1] wp eval-file /usr/local/lib/wp-forestas/pagine.php
+ * Uso: [WPF_PROVA=1] [WPF_SOLO_MANCANTI=1] [WPF_ACCETTA_BOZZE=1] wp eval-file /usr/local/lib/wp-forestas/pagine.php
  * (lo lancia bin/wordpress-config.sh pagine, che ne salva l'output nel log).
  * Scrive solo con DRUPAL_SYNC=on nel .env; con WPF_PROVA=1 mostra le differenze senza scrivere nulla.
  * Ogni riga di output comincia con un tipo: PAGINA, MEDIA, LINK, MENU, MANCANTE, AVVISO, ERRORE,
@@ -14,6 +14,7 @@ require_once __DIR__ . '/pagine-lib.php';
 
 $prova         = getenv( 'WPF_PROVA' ) === '1';
 $solo_mancanti = getenv( 'WPF_SOLO_MANCANTI' ) === '1';
+$accetta_bozze = getenv( 'WPF_ACCETTA_BOZZE' ) === '1';
 $sync          = getenv( 'DRUPAL_SYNC' ) === 'on';
 $riga          = fn( string $tipo, string $testo ) => WP_CLI::log( "{$tipo} {$testo}" );
 $ferma         = function ( string $messaggio ) use ( $riga ) {
@@ -77,7 +78,7 @@ try {
 					$d = $d ? array_merge( $d, [ 'titolo' => $voce['titolo'][ $lingua ], 'sottotitolo' => '', 'body' => '', 'formato' => '', 'allegati' => [], 'galleria' => [] ] ) : null;
 				}
 				if ( ! $d ) {
-					$ferma( "copia Drupal non integra: il nodo {$voce['nid']} non ha la lingua «{$lingua}» indicata in config/pagine.json" );
+					$ferma( "il nodo {$voce['nid']} ({$chiave}) non ha la lingua «{$lingua}» indicata in config/pagine.json: se la copia Drupal è in ricarica riprova più tardi; se su Drupal la traduzione è stata tolta, scrivi la nostra in config/traduzioni/{$lingua}/{$chiave}.json e .html, o togli slug.{$lingua} da config/pagine.json" );
 				}
 			} else {
 				// Pagina senza nodo (Cammini): titolo suo, testata della pagina indicata in testata_da
@@ -92,11 +93,24 @@ try {
 			$dati[ $chiave ][ $lingua ] = $d;
 		}
 	}
-	$alias = wpf_drupal_alias( $db );
+	$alias           = wpf_drupal_alias( $db );
+	$ultima_modifica = wpf_drupal_ultima_modifica( $db );
 } catch ( RuntimeException | mysqli_sql_exception $e ) {
 	$ferma( $e->getMessage() );
 }
 
+// Pagine sincronizzate che config/pagine.json non elenca più (voce tolta o chiave rinominata): restano
+// com'erano e nessuno le aggiorna, perché anche esporta e applica le saltano
+foreach ( get_posts( [ 'post_type' => 'page', 'post_status' => 'any', 'numberposts' => -1, 'meta_key' => WPF_META_PAGINA, 'suppress_filters' => true ] ) as $p ) {
+	$chiave = (string) get_post_meta( $p->ID, WPF_META_PAGINA, true );
+	$lingua = (string) get_post_meta( $p->ID, WPF_META_LINGUA, true );
+	if ( ! isset( $voci[ $chiave ]['slug'][ $lingua ] ) ) {
+		$avvisi[] = "la pagina «{$p->post_title}» (id {$p->ID}, {$chiave}/{$lingua}, {$p->post_status}) non è più in config/pagine.json: nessuno la aggiorna; se va tolta, mettila nel cestino dal pannello";
+	}
+}
+if ( $ultima_modifica && time() - $ultima_modifica > WPF_DRUPAL_GIORNI_FERMA * DAY_IN_SECONDS ) {
+	$avvisi[] = 'nella copia Drupal l\'ultimo contenuto è stato modificato il ' . gmdate( 'Y-m-d', $ultima_modifica ) . ', più di ' . WPF_DRUPAL_GIORNI_FERMA . ' giorni fa: controlla che il dump arrivi ancora (forestas/docs/howto/copia-database-drupal.md)';
+}
 foreach ( $avvisi as $a ) {
 	$riga( 'AVVISO', $a );
 }
@@ -113,8 +127,12 @@ foreach ( $dati as $chiave => $lingue ) {
 		}
 	}
 }
+$elenco_bozze = $in_bozza ? implode( ', ', array_merge( ...array_values( $in_bozza ) ) ) : '';
+if ( count( $in_bozza ) > WPF_PAGINE_SOGLIA_BOZZE && ! $accetta_bozze ) {
+	$ferma( 'copia Drupal sospetta: ' . count( $in_bozza ) . " pagine da mettere in bozza nello stesso giro ({$elenco_bozze}), più di " . WPF_PAGINE_SOGLIA_BOZZE . ': nulla scritto. Se su Drupal sono state spubblicate davvero: pagine --accetta-bozze' );
+}
 if ( count( $in_bozza ) > WPF_PAGINE_SOGLIA_BOZZE ) {
-	$ferma( 'copia Drupal sospetta: ' . count( $in_bozza ) . ' pagine da mettere in bozza nello stesso giro (' . implode( ', ', array_merge( ...array_values( $in_bozza ) ) ) . '), più di ' . WPF_PAGINE_SOGLIA_BOZZE . ': nulla scritto' );
+	$riga( 'AVVISO', count( $in_bozza ) . " pagine in bozza nello stesso giro, accettate con --accetta-bozze ({$elenco_bozze})" );
 }
 
 // Template di Impreza per chiave, quelli che config/pagine.json usa
@@ -124,17 +142,28 @@ foreach ( array_unique( array_column( $voci, 'template' ) ) as $t ) {
 	$template[ $t ] = $p && $p->post_type === 'us_content_template' ? $p->ID : 0;
 }
 
-// Link al contenuto WordPress di un nodo: quello esistente, o il percorso che avrà una pagina del
-// perimetro che questa esecuzione crea
+// Link al contenuto WordPress di un nodo: quello pubblicato, o il percorso che avrà una pagina del
+// perimetro che questa esecuzione crea o pubblica. Una pagina del perimetro spubblicata su Drupal non ha
+// link, anche se in WordPress è ancora pubblicata (va in bozza in questo giro, magari dopo la pagina che
+// la linka): il link resta verso Drupal ed è «in attesa», invece di un link relativo che darebbe 404
 $percorsi = [];
-foreach ( $voci as $voce ) {
+$in_bozza_nodi = [];
+foreach ( $voci as $chiave => $voce ) {
 	foreach ( array_keys( $voce['slug'] ) as $lingua ) {
-		if ( $voce['nid'] ) {
+		if ( ! $voce['nid'] ) {
+			continue;
+		}
+		if ( empty( $dati[ $chiave ][ $lingua ]['status'] ) ) {
+			$in_bozza_nodi[ "{$voce['nid']}|{$lingua}" ] = true;
+		} else {
 			$percorsi[ "{$voce['nid']}|{$lingua}" ] = wpf_pagina_percorso( $voce, $lingua );
 		}
 	}
 }
-$trova = function ( int $nid, string $lingua ) use ( $percorsi ) {
+$trova = function ( int $nid, string $lingua ) use ( $percorsi, $in_bozza_nodi ) {
+	if ( isset( $in_bozza_nodi[ "{$nid}|{$lingua}" ] ) ) {
+		return null;
+	}
 	$id = wpf_contenuto_per_nodo( $nid, $lingua );
 	return $id ? wpf_link_relativo( $id ) : ( $percorsi[ "{$nid}|{$lingua}" ] ?? null );
 };
@@ -247,6 +276,7 @@ $riga(
 	'RIASSUNTO',
 	( $prova ? 'anteprima, nulla scritto — ' : '' ) . implode( ', ', array_map( fn( $e, $n ) => "{$e}: {$n}", array_keys( $conteggi ), $conteggi ) )
 	. '; mancanti: ' . count( $mancanti )
+	. '; copia Drupal: ultima modifica ' . ( $ultima_modifica ? gmdate( 'Y-m-d', $ultima_modifica ) : 'nessuna' )
 );
 // Codice d'uscita: 1 solo se manca qualcosa che non si sistema da sé (una pagina non salvata, una
 // traduzione non collegata, un template assente). Un media non scaricato (sito Drupal lento) lascia le

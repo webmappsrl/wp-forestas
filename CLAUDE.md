@@ -150,6 +150,10 @@ subagent.
   sono state fatte (`sorgente`): se Drupal cambia l'italiano il log dà un AVVISO con l'impronta nuova,
   e la traduzione va rifatta prima di aggiornare `sorgente`; se Drupal aggiunge la sua traduzione,
   vince quella (oc:8758)
+- Il cron usa `bin/wordpress-config.sh allinea`, con la riga versionata in `cron/allinea.crontab`
+  (lì anche lo stato: oggi non installata su nessun server, da aggiornare quando la si installa). Applica
+  da solo solo le differenze dei menu: un rilascio di `config/` (header, footer, Theme Options…) va
+  applicato a mano con `applica --conferma`, altrimenti ogni giro chiude con `STATO non allineato` (oc:8758)
 - La sincronizzazione non va lanciata durante il reload giornaliero della copia Drupal su UAT (alle
   10:00, crontab di `root`, circa un quarto d'ora: il 20/10 è finito alle 10:14): il controllo di integrità la ferma senza scrivere, ma il giro
   va perso; il cron va messo lontano da quell'ora (`docs/howto/cron-sincronizzazione-pagine.md`) (oc:8758)

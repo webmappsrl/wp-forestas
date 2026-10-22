@@ -84,9 +84,23 @@ function wpf_drupal_controlla( mysqli $db, array $nid ): void {
 	$trovati    = array_map( 'intval', array_column( wpf_drupal_righe( $db, "SELECT DISTINCT nid FROM node_field_data WHERE nid IN ({$segnaposti})", $nid ), 'nid' ) );
 	$mancano    = array_diff( $nid, $trovati );
 	if ( $mancano ) {
-		throw new RuntimeException( 'copia Drupal non integra: nodi non trovati ' . implode( ', ', $mancano ) . ' (nessuna pagina va in bozza per un nodo assente)' );
+		throw new RuntimeException( 'nodi di config/pagine.json non trovati nella copia Drupal: ' . implode( ', ', $mancano ) . '. Nulla scritto (nessuna pagina va in bozza per un nodo assente). Se la copia è in ricarica riprova più tardi; se su Drupal il nodo è stato cancellato, togli la sua voce da config/pagine.json' );
 	}
 }
+
+/*
+ * Tag e attributi che il formato «filtered_html» di Drupal lascia passare (filtro filter_html, letto dalla
+ * configurazione filter.format.filtered_html della copia): il resto Drupal lo toglie dalla pagina, il testo
+ * dentro resta.
+ */
+const WPF_DRUPAL_FILTERED_HTML = [
+	'br' => [], 'p' => [], 'h1' => [], 'h2' => [ 'id' => true ], 'h3' => [ 'id' => true ], 'h4' => [ 'id' => true ],
+	'h5' => [ 'id' => true ], 'h6' => [ 'id' => true ], 'cite' => [], 'dl' => [], 'dt' => [], 'dd' => [], 'b' => [],
+	'a' => [ 'hreflang' => true, 'href' => true ], 'blockquote' => [ 'cite' => true ], 'ul' => [ 'type' => true ],
+	'ol' => [ 'type' => true, 'start' => true ], 'strong' => [], 'em' => [], 'code' => [], 'li' => [], 'table' => [],
+	'tr' => [], 'td' => [ 'rowspan' => true, 'colspan' => true ], 'th' => [ 'rowspan' => true, 'colspan' => true ],
+	'thead' => [], 'tbody' => [], 'tfoot' => [], 'caption' => [],
+];
 
 /** Lingua di Drupal come la usa il sito: «und» (lingua non specificata) vale come italiano. */
 function wpf_drupal_lingua( string $langcode ): string {
@@ -173,21 +187,17 @@ function wpf_drupal_pagina( mysqli $db, int $nid, string $lingua ): ?array {
 	$originale = wpf_drupal_lingua( $r['originale'] );
 	$campo     = fn( string $nome, string $colonna ) => wpf_drupal_campo( $db, $nome, $colonna, $nid, $lingua, $originale );
 	$file      = fn( array $mid ) => array_values( array_filter( array_map( fn( $m ) => wpf_drupal_file_media( $db, (int) $m ), $mid ) ) );
-	// Il body è traducibile: si prende solo nella lingua chiesta, senza ripiegare sull'originale
-	$body      = wpf_drupal_righe(
-		$db,
-		'SELECT body_value, body_format FROM node__body WHERE entity_id = ? AND deleted = 0 AND ' . wpf_drupal_in_lingua( 'langcode', $lingua ) . ' LIMIT 1',
-		array_merge( [ $nid ], wpf_drupal_lingue( $lingua ) )
-	);
+	$body      = wpf_drupal_campo_tradotto( $db, 'body', [ 'value', 'format' ], $nid, $lingua );
 	$immagine = $file( array_slice( $campo( 'field_immagine_principale_media', 'target_id' ), 0, 1 ) );
 	return [
 		'titolo'      => $r['title'],
 		'status'      => (bool) $r['status'],
-		'sottotitolo' => (string) ( wpf_drupal_sottotitolo( $db, $nid, $lingua ) ?? '' ),
+		// La «Descrizione testata» di Drupal
+		'sottotitolo' => (string) ( wpf_drupal_campo_tradotto( $db, 'field_descrizione_testata_pagina', [ 'value' ], $nid, $lingua )['value'] ?? '' ),
 		'testata'     => wpf_drupal_testata( $db, $nid ),
 		'colore'      => wpf_drupal_colore( $db, $nid ),
-		'body'        => (string) ( $body[0]['body_value'] ?? '' ),
-		'formato'     => (string) ( $body[0]['body_format'] ?? '' ),
+		'body'        => (string) ( $body['value'] ?? '' ),
+		'formato'     => (string) ( $body['format'] ?? '' ),
 		'immagine'    => $immagine[0] ?? null,
 		'allegati'    => $file( $campo( 'field_allegati_media', 'target_id' ) ),
 		'galleria'    => $file( $campo( 'field_galleria_media', 'target_id' ) ),
@@ -243,20 +253,37 @@ function wpf_drupal_colore( mysqli $db, int $nid ): string {
 	return (string) ( $righe[0]['v'] ?? '' );
 }
 
-/** Sottotitolo della testata: traducibile, quindi solo nella lingua chiesta. */
-function wpf_drupal_sottotitolo( mysqli $db, int $nid, string $lingua ): ?string {
-	$righe = wpf_drupal_righe(
+/**
+ * Un campo traducibile del nodo (body, sottotitolo), solo nella lingua chiesta e senza ripiegare
+ * sull'originale come fa wpf_drupal_campo: una traduzione senza testo resta senza testo.
+ * Restituisce [ colonna => valore ] della prima riga, o [] se il campo non c'è in quella lingua.
+ */
+function wpf_drupal_campo_tradotto( mysqli $db, string $campo, array $colonne, int $nid, string $lingua ): array {
+	$scelte = implode( ', ', array_map( fn( $c ) => "`{$campo}_{$c}` AS `{$c}`", $colonne ) );
+	return wpf_drupal_righe(
 		$db,
-		'SELECT field_descrizione_testata_pagina_value AS v FROM node__field_descrizione_testata_pagina WHERE entity_id = ? AND deleted = 0 AND ' . wpf_drupal_in_lingua( 'langcode', $lingua ) . ' LIMIT 1',
+		"SELECT {$scelte} FROM `node__{$campo}` WHERE entity_id = ? AND deleted = 0 AND " . wpf_drupal_in_lingua( 'langcode', $lingua ) . ' LIMIT 1',
 		array_merge( [ $nid ], wpf_drupal_lingue( $lingua ) )
-	);
-	return $righe[0]['v'] ?? null;
+	)[0] ?? [];
+}
+
+/*
+ * Data dell'ultima modifica di un contenuto nella copia (timestamp, 0 se vuota). Non è la data del dump,
+ * che la copia non registra, ma un dump che smette di arrivare la ferma: dopo WPF_DRUPAL_GIORNI_FERMA
+ * giorni senza modifiche la sincronizzazione lo segnala.
+ */
+const WPF_DRUPAL_GIORNI_FERMA = 30;
+
+function wpf_drupal_ultima_modifica( mysqli $db ): int {
+	return (int) ( wpf_drupal_righe( $db, 'SELECT MAX(changed) AS v FROM node_field_data' )[0]['v'] ?? 0 );
 }
 
 /**
  * Alias Drupal dei nodi: '/percorso' => [ 'nid', 'lingua' ]. Un alias «und» vale per tutte le lingue
  * del nodo e si registra come italiano; un link «/en/<alias>» lo risolve wpf_link_nodo (link.php)
- * togliendo il prefisso e prendendo la versione inglese dello stesso nodo.
+ * togliendo il prefisso e prendendo la versione inglese dello stesso nodo. Dopo gli alias esatti, ognuno
+ * anche nella forma senza accenti e in minuscolo (wpf_drupal_normalizza_alias), se non è già un alias:
+ * Drupal cerca gli alias con un confronto che ignora accenti e maiuscole.
  */
 function wpf_drupal_alias( mysqli $db ): array {
 	$alias = [];
@@ -267,7 +294,15 @@ function wpf_drupal_alias( mysqli $db ): array {
 		$lingua = wpf_drupal_lingua( $r['langcode'] );
 		$alias[ $lingua === 'it' ? $r['alias'] : "/{$lingua}{$r['alias']}" ] = [ 'nid' => (int) $m[1], 'lingua' => $lingua ];
 	}
+	foreach ( $alias as $percorso => $nodo ) {
+		$alias[ wpf_drupal_normalizza_alias( (string) $percorso ) ] ??= $nodo;
+	}
 	return $alias;
+}
+
+/** Percorso senza accenti e in minuscolo, per confrontare gli alias come fa il database di Drupal. */
+function wpf_drupal_normalizza_alias( string $percorso ): string {
+	return strtolower( remove_accents( $percorso ) );
 }
 
 /** URL da cui scaricare un file public:// di Drupal, o null per un altro schema. */

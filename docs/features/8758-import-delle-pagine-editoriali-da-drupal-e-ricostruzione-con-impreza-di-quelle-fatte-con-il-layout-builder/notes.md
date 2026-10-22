@@ -656,3 +656,89 @@ riga `Fatal error` si mostra una volta; commenti delle variabili di `style.css` 
 commenti), Task 6 in notes e plan, frase su `sito.json` nella knowledge. Il controllo «c'è un ERRORE che
 non è DRUPAL_SYNC» usa `grep -vc` e non `grep -q` in pipe, per la trappola del SIGPIPE con `pipefail`.
 
+## Review interna del 22/10 (commit `91c4312`)
+
+Review dalla sessione di review, nessun bloccante; cleanup risolti nello stesso branch, senza commit.
+
+- Howto UAT di `forestas` (modifica non committata nel repo padre): completa e coerente con il README
+  di wp-forestas; va committata insieme al puntatore del submodule.
+- Messaggi d'errore che rimandavano solo al reload della copia: un nid del perimetro che manca dice di
+  togliere la voce da `config/pagine.json` se su Drupal è stato cancellato; una lingua che manca dice di
+  scrivere la traduzione nostra o togliere `slug.<lingua>`. Soglia delle bozze: nuova opzione
+  `pagine --accetta-bozze` per una spubblicazione vera di più pagine (un'opzione a mano, non una soglia
+  più alta, perché la soglia deve fermare il cron). Tabelle del cron e di ricreare-wordpress-da-zero
+  completate (credenziali mancanti, blocco rimasto, template assente, errore imprevisto, sync spenta in
+  anteprima; nel cron le prime due dopo un controllo dei docs dello stesso giorno).
+- `_drupal_langcode`: questo import scrive la lingua normalizzata (`und` → `it`); la ricerca dei link
+  (`wpf_contenuto_per_nodo`) accetta anche `und` per l'italiano, se un altro import lo scrive così.
+  Plan e knowledge corretti.
+- Le righe `MENU` (voci verso pagine in bozza) contano fra gli avvisi del riassunto.
+- Link verso una pagina del perimetro spubblicata su Drupal: «in attesa» verso Drupal, anche se in
+  WordPress la pagina è ancora pubblicata quando si scrive il link (va in bozza nello stesso giro).
+- AVVISO a ogni giro per le pagine con `_wpf_pagina` che `config/pagine.json` non elenca più; nella
+  `_nota` di `pagine.json`: la chiave è l'identità e non si rinomina. Verificato togliendo Contatti dal
+  file (anteprima, poi file ripristinato): due avvisi, IT ed EN.
+- Dopo il lancio: avviso nel riquadro dell'editor quando il testo è ancora quello importato (un
+  salvataggio che lo cambia lo fa passare per i filtri di WordPress) e passo nella procedura di lancio
+  del cron. Verificato con la sincronizzazione spenta sulla FAQ.
+- Età della copia: il riassunto dice la data dell'ultima modifica (`MAX(changed)` di
+  `node_field_data`), un AVVISO oltre 30 giorni (`WPF_DRUPAL_GIORNI_FERMA`). È la data dell'ultima
+  modifica, non del dump, che la copia non registra.
+- Codice: uscite di `wpf_pagina_scrivi` in una funzione; una query sola per un media già importato;
+  `wpf_drupal_campo_tradotto` per body e sottotitolo; forme senza accenti degli alias calcolate una
+  volta in `wpf_drupal_alias` (tolta la cache con chiave md5 di `wpf_link_nodo`);
+  `WPF_DRUPAL_FILTERED_HTML` in `drupal.php`; `WPF_PREFISSO_INGLESE` per l'indirizzo inglese di
+  WordPress (il «/en/» di Drupal resta scritto, con un commento); una sola callback
+  `admin_enqueue_scripts` e niente stili in linea negli avvisi; `wpf_sblocca_pagine()` simmetrica a
+  `wpf_sblocca_apply()` e una sola chiamata nell'init; una condizione sola nell'export. Il suggerimento
+  finale del comando mantiene `--accetta-bozze`, come già `--contenuti-mancanti`.
+- Verifiche: anteprima «invariata: 28», righe `LINK` identiche al giro precedente (alias «cosè»
+  compreso), `php -l` e `bash -n` puliti, `wpf_contenuto_per_nodo` trova FAQ IT ed EN.
+
+Non corretti, con il motivo:
+- Margine di `.forestas-galleria ul` «scritto due volte»: non è un doppione, la prima regola azzera i
+  margini delle liste di allegati e galleria, la seconda dà alla griglia lo spazio sopra.
+- Blocchi `prefers-reduced-motion`: restano accanto alle animazioni che annullano, come quello
+  dell'header; raccolti in fondo si allontanerebbero dalle regole a cui servono.
+- Data di ultima verifica di ricreare-wordpress-da-zero.md invariata: il ciclo dal reset non è stato
+  rifatto, sono state aggiunte righe alla tabella dei problemi e la variante a sincronizzazione spenta.
+
+Ciclo completo dal reset rifatto il 22/10 dopo tutte le review, in locale, dopo un backup completo
+(`Backup/Local/forestas-wordpress-20261022-104226`): reset, apply automatico con gli avvisi attesi sulle
+voci verso pagine non ancora create, `pagine` (anteprima «creata: 28», poi `--conferma` senza mancanti
+né avvisi), `applica --conferma` con le 17 voci senza menu cancellate, poi `applica` «nessuna
+differenza», `pagine` «invariata: 28» e ritratto identico a quello di prima del reset. Pagine IT ed EN
+a 200 con titolo, testata, percorso, Condividi, galleria e allegati dove previsti; menu IT ed EN verso
+le pagine della loro lingua; lightbox e Condividi provati nel browser. `/en/` rimanda a `/`, come prima
+del reset (home inglese fuori perimetro).
+
+## Comando per il cron: `allinea` (22/10)
+
+Richiesta del dev: il cron, quando ci sarà, deve portare il sito dal reset allo stato attuale dei
+contenuti del tag senza interventi. Il cron con le sole pagine non bastava: dopo un reset l'init applica
+`config/` prima che le pagine esistano, e le voci di menu restavano link per indirizzo (6 differenze
+in `applica`) finché qualcuno non rifaceva l'apply a mano.
+
+`bin/wordpress-config.sh allinea`: controlla che il sito sia pronto (`wp_forestas_config_applicata`),
+`pagine --conferma`, poi applica da solo le differenze di `applica` solo se sono tutte di menu (righe
+`menu …`), poi verifica (`applica` «nessuna differenza», anteprima delle pagine con uscita 0). Ultima
+riga `STATO allineato (…)` o `STATO non allineato: <motivo>`, uscita 0 o 1. Applicare sempre tutto
+`config/` dal cron è stato scartato: riscriverebbe ogni giorno, senza anteprima, quello che è cambiato
+sul sito; un rilascio di `config/` resta a mano e `allinea` lo segnala.
+
+Verificato in locale:
+- sito già allineato: `STATO allineato`, nessuna scrittura, nessun backup;
+- nome del sito cambiato a mano: `allinea` elenca la differenza, non applica nulla, esce con 1;
+- reset, poi **solo** `allinea` con `env -i` e `PATH` ridotto come nel cron: 28 pagine create, 6
+  differenze dei menu applicate da sole, `STATO allineato`, uscita 0; ritratto identico a quello di
+  prima del reset; un secondo giro senza nulla da fare.
+
+Non verificato: il comando sul server (copia `mysql-sardegnasentieri-dump` sulla rete Docker, `.env`
+di UAT, crontab di `root`). Resta aperto anche dove arriva l'avviso quando lo `STATO` non è
+«allineato»: su UAT il cron non manda email.
+
+La riga del crontab è versionata in `cron/allinea.crontab` (richiesta del dev del 22/10: tenerne traccia
+nel repo finché il cron non c'è), unico posto in cui è scritta, con lo stato dell'installazione: oggi
+non installata su nessun server. Chi la installa aggiorna lo stato nello stesso commit. La howto del
+cron, il README, il `CLAUDE.md` e la howto UAT di forestas rimandano al file.
+

@@ -62,41 +62,33 @@ function wpf_pagina_trova( string $chiave, string $lingua ): ?WP_Post {
 	return $id ? get_post( (int) $id ) : null;
 }
 
-/** Contenuto WordPress (di qualunque tipo) che porta un nodo Drupal in una lingua, o 0. */
+/**
+ * Contenuto WordPress pubblicato (di qualunque tipo) che porta un nodo Drupal in una lingua, o 0.
+ * _drupal_langcode è la lingua normalizzata (questo import scrive «it» anche per un nodo «und»), ma un
+ * altro import può scrivere il codice di Drupal: per l'italiano vale anche «und» (wpf_drupal_lingue).
+ */
 function wpf_contenuto_per_nodo( int $nid, string $lingua ): int {
 	global $wpdb;
+	$lingue = wpf_drupal_lingue( $lingua );
 	return (int) $wpdb->get_var(
 		$wpdb->prepare(
 			"SELECT p.ID FROM {$wpdb->posts} p
 			 JOIN {$wpdb->postmeta} n ON n.post_id = p.ID AND n.meta_key = %s AND n.meta_value = %s
-			 JOIN {$wpdb->postmeta} l ON l.post_id = p.ID AND l.meta_key = %s AND l.meta_value = %s
-			 WHERE p.post_status = 'publish' ORDER BY p.ID LIMIT 1",
+			 JOIN {$wpdb->postmeta} l ON l.post_id = p.ID AND l.meta_key = %s
+			 WHERE p.post_status = 'publish' AND l.meta_value IN (" . implode( ',', array_fill( 0, count( $lingue ), '%s' ) ) . ')
+			 ORDER BY p.ID LIMIT 1',
 			WPF_META_NID,
 			(string) $nid,
 			WPF_META_LANGCODE,
-			$lingua
+			...$lingue
 		)
 	);
 }
 
 /** Percorso relativo che una pagina del perimetro ha (o avrà) in una lingua. */
 function wpf_pagina_percorso( array $voce, string $lingua ): string {
-	return ( $lingua === 'it' ? '/' : '/en/' ) . $voce['slug'][ $lingua ] . '/';
+	return ( $lingua === 'it' ? '/' : WPF_PREFISSO_INGLESE ) . $voce['slug'][ $lingua ] . '/';
 }
-
-/*
- * Tag e attributi che il formato «filtered_html» di Drupal lascia passare (filtro filter_html, letto dalla
- * configurazione filter.format.filtered_html della copia): il resto Drupal lo toglie dalla pagina, il testo
- * dentro resta.
- */
-const WPF_DRUPAL_FILTERED_HTML = [
-	'br' => [], 'p' => [], 'h1' => [], 'h2' => [ 'id' => true ], 'h3' => [ 'id' => true ], 'h4' => [ 'id' => true ],
-	'h5' => [ 'id' => true ], 'h6' => [ 'id' => true ], 'cite' => [], 'dl' => [], 'dt' => [], 'dd' => [], 'b' => [],
-	'a' => [ 'hreflang' => true, 'href' => true ], 'blockquote' => [ 'cite' => true ], 'ul' => [ 'type' => true ],
-	'ol' => [ 'type' => true, 'start' => true ], 'strong' => [], 'em' => [], 'code' => [], 'li' => [], 'table' => [],
-	'tr' => [], 'td' => [ 'rowspan' => true, 'colspan' => true ], 'th' => [ 'rowspan' => true, 'colspan' => true ],
-	'thead' => [], 'tbody' => [], 'tfoot' => [], 'caption' => [],
-];
 
 /**
  * Indirizzi e email scritti nel testo trasformati in link, come filter_url di Drupal: solo fuori dai
@@ -194,9 +186,11 @@ function wpf_pagina_media( array $file, bool $prova ): array {
 	$aggiornati = []; // file già importati di cui Drupal ha cambiato alt, autore, credits o titolo
 	$errori     = [];
 	foreach ( $file as $f ) {
-		$presente = wpf_media_per_fid( (int) $f['fid'] ) > 0;
-		$id       = wpf_media_importa( $f, $prova );
-		if ( $presente && ! is_wp_error( $id ) && ( $cambiati = wpf_media_allinea( $id, $f, $prova ) ) ) {
+		// Un file già importato si riusa e si riallinea; gli altri li importa wpf_media_importa
+		$esistente = wpf_media_per_fid( (int) $f['fid'] );
+		$presente  = $esistente > 0;
+		$id        = $presente ? $esistente : wpf_media_importa( $f, $prova );
+		if ( $presente && ( $cambiati = wpf_media_allinea( $id, $f, $prova ) ) ) {
 			$aggiornati[ $f['nome'] ] = $cambiati;
 		}
 		if ( is_wp_error( $id ) ) {
@@ -337,9 +331,13 @@ function wpf_pagina_scrivi( array $voce, string $lingua, array $dati, ?int $id_i
 	}
 	$campi = array_values( array_unique( $campi ) );
 	$esito = ! $post ? 'creata' : ( $campi ? 'aggiornata' : 'invariata' );
+	// Ogni uscita restituisce la stessa forma; $mancanti si legge al momento della chiamata
+	$risultato = function ( ?int $id, string $esito ) use ( &$campi, &$mancanti, &$media ): array {
+		return [ 'id' => $id, 'esito' => $esito, 'campi' => $campi, 'mancanti' => $mancanti, 'media' => $media ];
+	};
 
 	if ( $prova || ( $post && ! $campi ) ) {
-		return [ 'id' => $post->ID ?? null, 'esito' => $esito, 'campi' => $campi, 'mancanti' => $mancanti, 'media' => $media ];
+		return $risultato( $post->ID ?? null, $esito );
 	}
 
 	// Scrittura
@@ -348,7 +346,7 @@ function wpf_pagina_scrivi( array $voce, string $lingua, array $dati, ?int $id_i
 		$id = wp_insert_post( wp_slash( array_merge( $voluti, [ 'post_type' => 'page', 'post_parent' => 0 ] ) ), true );
 		if ( is_wp_error( $id ) ) {
 			$mancanti['pagina'][''] = $id->get_error_message();
-			return [ 'id' => null, 'esito' => 'non creata', 'campi' => $campi, 'mancanti' => $mancanti, 'media' => $media ];
+			return $risultato( null, 'non creata' );
 		}
 	} else {
 		$id = $post->ID;
@@ -356,7 +354,7 @@ function wpf_pagina_scrivi( array $voce, string $lingua, array $dati, ?int $id_i
 			$r = wp_update_post( wp_slash( array_merge( $voluti, [ 'ID' => $id ] ) ), true );
 			if ( is_wp_error( $r ) ) {
 				$mancanti['pagina'][''] = $r->get_error_message();
-				return [ 'id' => $id, 'esito' => 'non aggiornata', 'campi' => $campi, 'mancanti' => $mancanti, 'media' => $media ];
+				return $risultato( $id, 'non aggiornata' );
 			}
 		}
 	}
@@ -383,7 +381,7 @@ function wpf_pagina_scrivi( array $voce, string $lingua, array $dati, ?int $id_i
 			}
 		}
 	}
-	return [ 'id' => $id, 'esito' => $esito, 'campi' => $campi, 'mancanti' => $mancanti, 'media' => $media ];
+	return $risultato( $id, $esito );
 }
 
 /** Voci di menu che portano a una pagina, con il loro menu: [ «menu: voce» ]. */

@@ -11,6 +11,11 @@
  * ne sono.
  */
 
+require_once __DIR__ . '/drupal.php';
+
+// Prefisso degli indirizzi inglesi in WordPress (WPML, lingua nella cartella)
+const WPF_PREFISSO_INGLESE = '/en/';
+
 // Link al sito Drupal, con o senza www e index.php/: gruppo 1 il percorso, gruppo 2 query e ancora
 const WPF_LINK_DRUPAL = '~https?://(?:www\.)?sardegnasentieri\.it(?:/index\.php)?(/[^"\'\s?#]*)?([?#][^"\'\s]*)?~i';
 
@@ -60,7 +65,8 @@ function wpf_link_riscrivi( string $html, array $alias, callable $trova, string 
 function wpf_link_destinazione( string $percorso, array $alias, callable $trova, string $lingua = 'it' ) {
 	$percorso = '/' . trim( $percorso, '/' );
 	if ( $percorso === '/' || $percorso === '/en' ) {
-		return $percorso === '/en' || $lingua === 'en' ? '/en/' : '/';
+		// «/en» qui è il percorso di Drupal, il risultato è l'indirizzo WordPress
+		return $percorso === '/en' || $lingua === 'en' ? WPF_PREFISSO_INGLESE : '/';
 	}
 	$nodo = wpf_link_nodo( $percorso, $alias );
 	if ( ! $nodo ) {
@@ -79,25 +85,15 @@ function wpf_link_nodo( string $percorso, array $alias ): ?array {
 	if ( preg_match( '#^(?:/(en))?/node/(\d+)$#', $percorso, $n ) ) {
 		return [ 'nid' => (int) $n[2], 'lingua' => $n[1] ?: 'it' ];
 	}
-	static $simili = [];
-	$chiave = md5( (string) count( $alias ) . array_key_first( $alias ) );
-	if ( ! isset( $simili[ $chiave ] ) ) {
-		$simili[ $chiave ] = [];
-		foreach ( $alias as $a => $nodo ) {
-			$simili[ $chiave ][ wpf_link_normalizza( $a ) ] ??= $nodo;
-		}
-	}
-	$trova = fn( string $p ) => $alias[ $p ] ?? $simili[ $chiave ][ wpf_link_normalizza( $p ) ] ?? null;
+	// L'elenco ha anche le forme normalizzate degli alias (wpf_drupal_alias)
+	$trova = fn( string $p ) => $alias[ $p ] ?? $alias[ wpf_drupal_normalizza_alias( $p ) ] ?? null;
 	if ( $nodo = $trova( $percorso ) ) {
 		return $nodo;
 	}
+	// «/en/» di Drupal (lingua nel percorso), non quello di WordPress
 	if ( str_starts_with( $percorso, '/en/' ) && ( $nodo = $trova( substr( $percorso, 3 ) ) ) ) {
 		return [ 'nid' => $nodo['nid'], 'lingua' => 'en' ];
 	}
 	return null;
 }
 
-/** Percorso senza accenti e in minuscolo, per confrontare gli alias come fa il database di Drupal. */
-function wpf_link_normalizza( string $percorso ): string {
-	return strtolower( remove_accents( $percorso ) );
-}

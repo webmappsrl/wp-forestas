@@ -27,10 +27,13 @@ Configurazione del WordPress di Forestas, dall'host.
   bin/wordpress-config.sh applica [OPZIONI]        mostra cosa cambierebbe, senza scrivere
   bin/wordpress-config.sh applica [OPZIONI] --conferma
                                                    salva un backup in backup/<data-ora>/ e applica
-  bin/wordpress-config.sh pagine [--contenuti-mancanti] [--conferma]
+  bin/wordpress-config.sh pagine [--contenuti-mancanti] [--accetta-bozze] [--conferma]
                                                    sincronizza le pagine statiche dalla copia di Drupal
                                                    (config/pagine.json): senza --conferma mostra le
                                                    differenze; scrive solo con DRUPAL_SYNC=on nel .env
+  bin/wordpress-config.sh allinea                  per il cron: pagine da Drupal, menu collegati alle pagine,
+                                                   verifica finale; esce con 0 solo se il sito è allineato
+                                                   a config/ e alla copia Drupal (STATO nell'ultima riga)
   bin/wordpress-config.sh ritratto                 stato del sito, da confrontare prima e dopo un reset
   bin/wordpress-config.sh zip                      zip di Impreza e dei plugin commerciali installati
 
@@ -40,6 +43,8 @@ Opzioni di applica:
 
 Opzioni di pagine:
   --contenuti-mancanti   ritenta solo gli elementi non riusciti nelle esecuzioni precedenti
+  --accetta-bozze        mette in bozza anche più di 2 pagine nello stesso giro: solo se su Drupal
+                         sono state davvero spubblicate (di solito è una copia in ricarica)
   --conferma             scrive (altrimenti solo anteprima)
 Ogni esecuzione scrive un log in log/pagine-<data-ora>.log (si tengono gli ultimi ${LOG_PAGINE_TENUTI}).
 
@@ -76,7 +81,7 @@ case "$comando" in
     apply) echo "AVVISO: «apply» è il nome vecchio, usa «applica»" >&2; comando=applica ;;
 esac
 case "$comando" in
-    esporta|applica|pagine|ritratto|zip) ;;
+    esporta|applica|pagine|allinea|ritratto|zip) ;;
     *)
         uso
         exit 1
@@ -179,10 +184,11 @@ case "$comando" in
         ;;
     pagine)
         shift
-        pagine_env=() conferma=false solo_mancanti=""
+        pagine_env=() conferma=false solo_mancanti="" opzioni=""
         while [ $# -gt 0 ]; do
             case "$1" in
                 --contenuti-mancanti) pagine_env+=("WPF_SOLO_MANCANTI=1"); solo_mancanti=" --contenuti-mancanti"; shift ;;
+                --accetta-bozze) pagine_env+=("WPF_ACCETTA_BOZZE=1"); opzioni+=" --accetta-bozze"; shift ;;
                 --conferma) conferma=true; shift ;;
                 *) uso; exit 1 ;;
             esac
@@ -198,7 +204,8 @@ case "$comando" in
         # avvisi e gli errori di WP-CLI (Warning:, Error:) vengono da WordPress o da un plugin
         grep -E '^(RIASSUNTO|ERRORE|MANCANTE|MENU|AVVISO) |^(Warning|Error): ' "$log" || true
         conta() { grep -c "^$1 " "$log" || true; }
-        echo "pagine: $(conta PAGINA) · media: $(conta MEDIA) · link: $(conta LINK) · avvisi: $(conta AVVISO)"
+        # Avvisi: le righe AVVISO e le MENU (voci verso pagine in bozza)
+        echo "pagine: $(conta PAGINA) · media: $(conta MEDIA) · link: $(conta LINK) · avvisi: $(( $(conta AVVISO) + $(conta MENU) ))"
         echo "log completo: ${log}"
         # Un giro finito arriva al RIASSUNTO; uno fermato dal comando ha una riga ERRORE. Senza nessuna
         # delle due l'uscita viene da un errore di PHP o di WP-CLI (un fatal, un WP_ADMIN_USER che non c'è),
@@ -223,12 +230,67 @@ case "$comando" in
             if [ -z "$solo_mancanti" ] && grep -q '^MANCANTE ' "$log"; then
                 echo "Per ritentare solo ciò che manca: $0 pagine --contenuti-mancanti --conferma"
             fi
-            $conferma || echo "Per scrivere: $0 pagine${solo_mancanti} --conferma"
+            # Lo stesso giro dell'anteprima: con le sue opzioni
+            $conferma || echo "Per scrivere: $0 pagine${solo_mancanti}${opzioni} --conferma"
         fi
         # Si tengono gli ultimi LOG_PAGINE_TENUTI log
         vecchi=$(ls -1t "${REPO}"/log/pagine-*.log 2>/dev/null | tail -n +$((LOG_PAGINE_TENUTI + 1)) || true)
         [ -n "$vecchi" ] && echo "$vecchi" | while read -r f; do rm -f "$f"; done
         exit "$esito"
+        ;;
+    allinea)
+        # Il comando del cron (oc:8758): da un sito appena ricreato o già in uso porta allo stato di
+        # riferimento, config/ applicata e pagine allineate alla copia Drupal, senza interventi. Usa i
+        # comandi qui sopra come li userebbe una persona. Applica da solo solo le differenze dei menu
+        # (voci da collegare alle pagine appena create): un config/ diverso dal sito è un rilascio, che si
+        # fa a mano guardando l'anteprima, e qui si segnala soltanto
+        [ $# -eq 1 ] || { uso; exit 1; }
+        stato() { echo "STATO $*"; }
+        echo "== $(date '+%Y-%m-%d %H:%M:%S') allinea ${URL}"
+        # 1. Sito pronto: installato e con config/ applicata dall'init (o da un applica a mano)
+        if ! docker exec -u www-data "$C" wp --path="$WP_PATH" option get "$(docker exec "$C" php -r "require '${CONFIG_LIB}/costanti.php'; echo WPF_OPZIONE_FATTO;")" >/dev/null 2>&1; then
+            stato "non allineato: config/ non ancora applicata dall'init (sito appena ricreato?): riprovo al prossimo giro"
+            exit 1
+        fi
+        # 2. Pagine
+        esito_pagine=0
+        "$0" pagine --conferma || esito_pagine=$?
+        if [ "$esito_pagine" -ne 0 ] && [ "$esito_pagine" -ne 1 ]; then
+            stato "non allineato: errore imprevisto delle pagine (uscita ${esito_pagine})"
+            exit 1
+        fi
+        # 3. Menu: si applica solo se tutte le differenze di applica sono di menu
+        anteprima=$("$0" applica 2>&1) || { echo "$anteprima"; stato "non allineato: anteprima di applica non riuscita"; exit 1; }
+        differenze=$(printf '%s\n' "$anteprima" | grep ' → ' | grep -v '^Warning: ' || true)
+        if [ -n "$differenze" ]; then
+            if grep -vqE '^menu[ :]' <<< "$differenze"; then
+                printf '%s\n' "$differenze"
+                stato "non allineato: config/ è diverso dal sito anche fuori dai menu; non applico in automatico: $0 applica, poi applica --conferma a mano"
+                exit 1
+            fi
+            echo "differenze solo nei menu ($(printf '%s\n' "$differenze" | grep -c .)): le applico"
+            "$0" applica --conferma || { stato "non allineato: applica dei menu non riuscito"; exit 1; }
+        fi
+        # 4. Verifica: nessuna differenza con config/, pagine senza nulla da fare
+        anteprima=$("$0" applica 2>&1) || true
+        if ! grep -q '^nessuna differenza$' <<< "$anteprima"; then
+            printf '%s\n' "$anteprima" | grep ' → ' | grep -v '^Warning: ' || true
+            stato "non allineato: dopo il giro applica mostra ancora differenze"
+            exit 1
+        fi
+        verifica=$("$0" pagine 2>&1) && esito_verifica=0 || esito_verifica=$?
+        riassunto=$(printf '%s\n' "$verifica" | grep '^RIASSUNTO ' || true)
+        if [ "$esito_verifica" -ne 0 ]; then
+            printf '%s\n' "$verifica"
+            stato "non allineato: la verifica delle pagine esce con ${esito_verifica}"
+            exit 1
+        fi
+        if [ "$esito_pagine" -ne 0 ]; then
+            stato "non allineato: il giro delle pagine è uscito con ${esito_pagine} (righe MANCANTE o ERRORE sopra)"
+            exit 1
+        fi
+        riassunto=${riassunto#RIASSUNTO }
+        stato "allineato (pagine: ${riassunto#anteprima, nulla scritto — })"
         ;;
     ritratto)
         esegui_script ritratto.php

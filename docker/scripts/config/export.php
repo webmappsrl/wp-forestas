@@ -163,10 +163,12 @@ foreach ( $chiavi as $id => $chiave ) {
 // --- impreza.json: Theme Options con i riferimenti al posto degli id ------------------------------
 
 foreach ( $impreza as $nome => $valore ) {
-	if ( wpf_opzione_riferimento( (string) $nome, $valore ) && isset( $sincronizzate[ (int) $valore ] ) ) {
-		unset( $impreza[ $nome ] ); // l'id di questo sito, altrove una pagina qualsiasi: resta il valore di ogni sito
-	} elseif ( wpf_opzione_riferimento( (string) $nome, $valore ) ) {
-		$impreza[ $nome ] = $riferimento( $valore ) ?? $valore;
+	if ( wpf_opzione_riferimento( (string) $nome, $valore ) ) {
+		if ( isset( $sincronizzate[ (int) $valore ] ) ) {
+			unset( $impreza[ $nome ] ); // l'id di questo sito, altrove una pagina qualsiasi: resta il valore di ogni sito
+		} else {
+			$impreza[ $nome ] = $riferimento( $valore ) ?? $valore;
+		}
 	} elseif ( wpf_opzione_allegato( (string) $nome, $valore ) ) {
 		$avvisi[] = "impreza {$nome}: è l'allegato {$valore} della Libreria media, che non sta in config/: su un altro sito va ricaricato dal pannello (l'apply tiene il valore di quel sito)";
 	}

@@ -62,7 +62,9 @@ torna pubblicata, con lo stesso indirizzo, se su Drupal ritorna.
 scrivere controlla che la copia Drupal sia integra (tabelle presenti e non vuote, pagine del
 perimetro trovate) e si ferma senza toccare nulla se un nid del perimetro non c'è o se più di 2
 pagine dovrebbero andare in bozza nello stesso giro: è il segno di una copia in ricarica o
-troncata. Un lock impedisce due esecuzioni insieme.
+troncata (una spubblicazione vera passa a mano con `pagine --accetta-bozze`). Un lock impedisce due
+esecuzioni insieme. A ogni giro un AVVISO segnala le pagine sincronizzate che `config/pagine.json` non
+elenca più e una copia senza modifiche da più di 30 giorni, di cui il riassunto dà la data.
 
 **Ciò che manca si ritenta.** Ogni elemento non riuscito (pagina, traduzione e il suo collegamento
 WPML, immagine della testata, allegato, galleria, template) finisce in un elenco salvato su WordPress con
@@ -130,7 +132,8 @@ script, senza lavoro a mano dal pannello, perché un cambio di server non richie
       (con `--conferma` si ferma subito con un `ERRORE`, senza anteprima).
 - [x] Controllo di integrità della copia prima di scrivere: tabelle lette presenti e non vuote;
       nid del perimetro non trovato → stop con errore (non bozza); più di 2 pagine da mettere in
-      bozza nello stesso giro → stop con errore, nulla scritto.
+      bozza nello stesso giro → stop con errore, nulla scritto, salvo `--accetta-bozze` a mano
+      (review interna del 22/10).
 - [x] Lock contro due esecuzioni contemporanee.
 - [x] Elenco degli elementi mancanti salvato su WordPress (un'opzione, non i meta delle pagine):
       cosa, pagina, lingua, causa, primo e ultimo tentativo. `--contenuti-mancanti` ritenta solo
@@ -188,6 +191,10 @@ script, senza lavoro a mano dal pannello, perché un cambio di server non richie
       da zero, apply e comando delle pagine portano allo stesso risultato in qualunque ordine li si
       lanci, o l'ordine è documentato e imposto.
 - [x] Una seconda esecuzione subito dopo la prima non mostra differenze.
+- [x] Un comando per il cron (`bin/wordpress-config.sh allinea`, richiesta del dev del 22/10) che, da un
+      sito appena ricreato o già in uso, porta allo stato di riferimento senza interventi: pagine,
+      menu collegati alle pagine (solo le differenze dei menu si applicano da sole), verifica finale
+      con `STATO` e codice d'uscita.
 - [x] [UX] Testo della testata leggibile sopra l'immagine (contrasto almeno 4,5:1, con velo scuro o
       fondo come su Drupal), anche con immagini chiare.
 - [x] [UX] Le ancore interne della FAQ (35) portano alla domanda senza che l'header fisso la copra
@@ -257,7 +264,7 @@ che crea. Il form
   sapere e News (View di Drupal): ticket dedicati, insieme ai contenuti che li riempiono.
 - Eventi (1085) e Attività e comunicazioni (1086), che non sono nei menu; le 4 pagine non pubblicate.
 - Segnalazioni (su Drupal è un form), Open Data e Area riservata, che su Drupal non hanno una pagina.
-- Il cron della sincronizzazione sul server.
+- La riga del crontab sul server: il comando c'è (`bin/wordpress-config.sh allinea`, aggiunto su richiesta del dev il 22/10), metterlo in cron è un passo della messa in opera.
 - I redirect 301 dai vecchi indirizzi e la sitemap, da fare al lancio.
 - La revisione delle nostre traduzioni inglesi (quelle che su Drupal non esistono): spetta al cliente.
 
@@ -276,6 +283,8 @@ Tutto in `wp-forestas` (il codice è specifico di Forestas; `wm-package` non è 
 - `wp-forestas/docker/scripts/config/export.php`, `apply.php` (o `post.php`) — esclusione delle
   pagine con `_wpf_pagina`.
 - `wp-forestas/.gitignore` — cartella dei log.
+- `wp-forestas/cron/allinea.crontab` — riga del crontab per `bin/wordpress-config.sh allinea`, con lo
+  stato dell'installazione (non installata da nessuno script).
 - `wp-forestas/config/` — elenco delle pagine del perimetro (nuovo file), template di contenuto in
   `post.json`, collegamenti in `menu.json`, traduzioni nostre in `traduzioni/en/`, nome del sito
   «Sardegna Sentieri» in `sito.json`.

@@ -10,9 +10,15 @@ configurazione, pagine statiche, media e menu collegati. Vale in locale e su UAT
 i due sono indicate passo per passo. **In produzione il reset non si usa**: lì i dati di WordPress
 sono permanenti.
 
-Ultima verifica dell'intero ciclo: 21/10/2026, in locale (oc:8758), con le 28 pagine (14 IT, 14 EN,
-sei con la nostra traduzione): passi 1-5 senza interventi a mano, ritratto identico a quello di prima
-del reset. Il 20/10 cinque volte, in tutti e due gli ordini fra pagine e apply.
+Ultima verifica dell'intero ciclo: 22/10/2026, in locale (oc:8758, dopo le review), con le 28 pagine
+(14 IT, 14 EN, sei con la nostra traduzione): passi 1-5 senza interventi a mano, nessun mancante né
+avviso, `applica` senza differenze, ritratto identico a quello di prima del reset. Il 21/10 lo stesso;
+il 20/10 cinque volte, in tutti e due gli ordini fra pagine e apply.
+
+In alternativa ai passi 3-5, dopo il reset basta `bin/wordpress-config.sh allinea`, il comando del
+cron: crea le pagine, collega i menu e verifica (`STATO allineato`). Verificato il 22/10 in locale
+lanciandolo con l'ambiente ridotto del cron: ritratto identico a quello di prima del reset, e un
+secondo giro senza nulla da fare. I passi qui sotto restano per guardare un passo alla volta.
 
 ## Prima di cominciare
 
@@ -74,8 +80,13 @@ bin/wordpress-config.sh pagine              # anteprima: 28 pagine «creata» (1
 bin/wordpress-config.sh pagine --conferma   # crea pagine, scarica media, assegna i template
 ```
 
-Il riassunto finale dice quante pagine sono state create e quanti elementi mancano. Il dettaglio è in
-`log/pagine-<data-ora>.log`. Cosa fare se qualcosa manca: passo 6.
+Il riassunto finale dice quante pagine sono state create, quanti elementi mancano e la data dell'ultima
+modifica nella copia Drupal (un AVVISO se è più vecchia di 30 giorni). Il dettaglio è in `log/pagine-<data-ora>.log`. Cosa fare se qualcosa
+manca: passo 6.
+
+Con `DRUPAL_SYNC` spenta l'anteprima funziona ma comincia con `AVVISO sincronizzazione da Drupal spenta
+in questo ambiente (DRUPAL_SYNC): solo anteprima`, esce con 1 e chiude con «Per scrivere serve
+DRUPAL_SYNC=on…»; il `--conferma` si ferma subito con un `ERRORE`. Vedi la tabella dei problemi.
 
 ## 4. Collegare i menu alle pagine
 
@@ -137,6 +148,10 @@ Da qui in poi le pagine si tengono allineate a Drupal con un cron sull'host:
 | `ERRORE copia Drupal non integra: tabella … non leggibile` o `… vuota` | la copia di UAT si sta ricaricando (cron delle 10:00, circa 15 minuti) | aspettare la fine (`ssh uat.forestas 'tail -n 5 /var/www/html/forestas/storage/logs/drupal-dump-sync.log'` mostra «fine (uscita 0)») e rilanciare |
 | `ERRORE copia Drupal non raggiungibile su host.docker.internal:3307` | tunnel caduto (in locale) | riaprire il tunnel |
 | `ERRORE sincronizzazione da Drupal spenta in questo ambiente` | `DRUPAL_SYNC` non è `on`, o il container non ha riletto il `.env` | `.env`, poi `scripts/wordpress-up.sh` |
+| `ERRORE DRUPAL_DB_USER e DRUPAL_DB_PASSWORD mancano nel .env di wp-forestas` | credenziali della copia non impostate (non hanno valori predefiniti), o container non riavviato | aggiungerle al `wp-forestas/.env`, poi `scripts/wordpress-up.sh` |
+| `ERRORE un'altra sincronizzazione delle pagine è in corso` | un giro sta già girando, o ne è rimasto il blocco dopo un container fermato a metà | aspettare la fine del giro; un blocco rimasto lo toglie l'avvio del container (solo con l'init nuovo, dopo `scripts/wordpress-up.sh`) o scade dopo 2 ore |
+| `AVVISO … template … non riuscirebbe` in anteprima, uscita 1, «Prima i template di Impreza: … applica --conferma» | i template delle pagine non ci sono: l'apply del passo 2 non è stato fatto o non è riuscito | `bin/wordpress-config.sh applica --conferma`, poi di nuovo il passo 3 |
+| `Uscita N: errore imprevisto, il giro non è finito` con la riga `Fatal error` | errore di PHP o di WP-CLI (per esempio `WP_ADMIN_USER` che non c'è più, o una funzione di WPML cambiata) | leggere la causa e il log completo; il comando non suggerisce nulla finché non è capita |
 | `MANCANTE immagine/allegato … cURL error 28` o `Service Unavailable` | il sito Drupal non serve il file | passo 6, più tardi |
 | `AVVISO aggiornamento automatico dei link di WPML non trovato` | WPML aggiornato: gli hook che rendevano assoluti i link non si chiamano più così | controllare che i link dei testi inglesi restino relativi; aggiornare `wpf_wpml_senza_link_automatici()` |
 | PHPStan di `forestas` fallisce con `Unable to create file …/build/phpstan/cache/…` | cache scritta da più processi su un volume montato da macOS | rilanciare con `--debug` (un solo processo) |

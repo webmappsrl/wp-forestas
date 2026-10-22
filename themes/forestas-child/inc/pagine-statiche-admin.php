@@ -77,7 +77,11 @@ function forestas_riquadro_voce( int $id, string $nome_campo ): string {
 function forestas_riquadro_pagina( WP_Post $post ): void {
 	wp_nonce_field( FORESTAS_RIQUADRO_NONCE, FORESTAS_RIQUADRO_NONCE );
 	if ( get_post_meta( $post->ID, FORESTAS_META_PAGINA, true ) !== '' && forestas_sincronizzazione_accesa() ) {
-		echo '<p class="notice notice-warning inline" style="padding:8px 12px">Questa pagina è ancora collegata al vecchio sito: testo, riassunto, allegati e galleria vengono aggiornati da lì in automatico, e le modifiche fatte qui si perdono.</p>';
+		echo '<p class="notice notice-warning inline forestas-riquadro-avviso">Questa pagina è ancora collegata al vecchio sito: testo, riassunto, allegati e galleria vengono aggiornati da lì in automatico, e le modifiche fatte qui si perdono.</p>';
+	} elseif ( md5( $post->post_content ) === get_post_meta( $post->ID, FORESTAS_META_TESTO_DRUPAL, true ) ) {
+		// Il testo si mostra così com'è finché coincide con quello importato ([forestas_pagina_testo]): un
+		// salvataggio dall'editor lo riscrive, e da lì passa per i filtri di WordPress
+		echo '<p class="notice notice-info inline forestas-riquadro-avviso">Il testo è ancora quello importato dal vecchio sito e si mostra così com\'è. Se un salvataggio lo cambia (anche solo per aggiungere un allegato: l\'editor può riscriverne l\'HTML), da lì passa per la formattazione di WordPress (paragrafi, virgolette): controlla la pagina dopo aver salvato.</p>';
 	}
 	foreach ( [
 		FORESTAS_META_ALLEGATI => [ 'Allegati', 'Aggiungi dalla libreria media', '', 'Documenti mostrati sotto il testo, con formato e dimensione. Si riordinano trascinandoli.' ],
@@ -118,6 +122,9 @@ add_action(
 add_action(
 	'admin_enqueue_scripts',
 	function ( string $pagina ) {
+		// Caselle di Autore e Credits larghe quanto gli altri campi della scheda dell'immagine, che si apre
+		// anche dalla libreria media: in tutte le pagine del pannello
+		wp_add_inline_style( 'common', '.compat-attachment-fields{width:100%}.compat-field-' . FORESTAS_META_AUTORE . ' input.text,.compat-field-' . FORESTAS_META_CREDITS . ' input.text{width:100%;min-width:30em}' );
 		if ( ! in_array( $pagina, [ 'post.php', 'post-new.php' ], true ) || get_current_screen()->post_type !== 'page' ) {
 			return;
 		}
@@ -125,7 +132,7 @@ add_action(
 		wp_enqueue_script( 'forestas-riquadro-pagina', get_stylesheet_directory_uri() . '/assets/js/riquadro-pagina.js', [ 'jquery', 'jquery-ui-sortable' ], forestas_versione(), true );
 		wp_add_inline_style(
 			'common',
-			'.forestas-riquadro-elenco ul{margin:0 0 8px}.forestas-riquadro-voce{display:flex;align-items:center;gap:10px;padding:6px 8px;border:1px solid #dcdcde;background:#fff;margin-bottom:4px}'
+			'.forestas-riquadro-avviso{padding:8px 12px}.forestas-riquadro-elenco ul{margin:0 0 8px}.forestas-riquadro-voce{display:flex;align-items:center;gap:10px;padding:6px 8px;border:1px solid #dcdcde;background:#fff;margin-bottom:4px}'
 			. '.forestas-riquadro-voce img{width:40px;height:40px;object-fit:cover}.forestas-riquadro-nome{flex:1}.forestas-riquadro-trascina{cursor:move;color:#8c8f94}'
 		);
 	}
@@ -180,12 +187,4 @@ add_filter(
 	},
 	10,
 	2
-);
-
-// Caselle di Autore e Credits larghe quanto gli altri campi della scheda dell'immagine
-add_action(
-	'admin_enqueue_scripts',
-	function () {
-		wp_add_inline_style( 'common', '.compat-attachment-fields{width:100%}.compat-field-' . FORESTAS_META_AUTORE . ' input.text,.compat-field-' . FORESTAS_META_CREDITS . ' input.text{width:100%;min-width:30em}' );
-	}
 );

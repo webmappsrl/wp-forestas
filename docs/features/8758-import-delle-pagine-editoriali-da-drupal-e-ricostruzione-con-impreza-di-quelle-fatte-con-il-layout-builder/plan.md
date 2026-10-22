@@ -38,11 +38,13 @@ Impreza 9.4 + UpSolution Core, WPML; copia Drupal MySQL 8 in sola lettura (utent
 - `DRUPAL_SYNC=on|off`, predefinito `off`: con `off` solo anteprima, messaggio chiaro, codice ≠ 0.
 - Nessuna chiamata SSH negli script.
 - Lingue: su Drupal `it` (più `und`, trattato come `it`) ed `en`; in WPML `it` ed **`en-us`** (codice dei
-  menu inglesi in `config/menu.json`). `_drupal_langcode` conserva il codice Drupal (`en`); le chiavi
+  menu inglesi in `config/menu.json`). `_drupal_langcode` conserva il codice Drupal (`en`) (come è oggi: la lingua normalizzata, `und` → `it`;
+  la ricerca dei link accetta anche `und` per l'italiano, se un altro import lo scrive così); le chiavi
   `en` di `config/pagine.json` sono codici Drupal, convertiti in `en-us` solo nelle chiamate WPML.
 - Media da `https://www.sardegnasentieri.it/sites/default/files/<percorso>` per `public://<percorso>`.
 - Soglia: più di 2 pagine da mettere in bozza nello stesso giro → stop senza scrivere. Si contano i nid
-  distinti, non le lingue (correzione della review del 21/10).
+  distinti, non le lingue (correzione della review del 21/10). Come è oggi: una spubblicazione vera passa
+  con `pagine --accetta-bozze` (review interna del 22/10).
 - Log in `log/pagine-AAAA-MM-GG-HHMMSS.log` sull'host, ultimi 60 conservati, `/log/` in `.gitignore`.
 - Meta delle pagine: `_wpf_pagina` (chiave del perimetro), `_drupal_nid`, `_drupal_langcode`,
   `wpf_allegati` (array di id allegato), `wpf_galleria` (array di id allegato), `us_content_id` (id del
@@ -161,7 +163,8 @@ Impreza 9.4 + UpSolution Core, WPML; copia Drupal MySQL 8 in sola lettura (utent
 - Modifica: `docker/scripts/config/comune.php` (lock: `wpf_blocca_pagine(): bool`, `wpf_sblocca_pagine(): void`
   sullo schema di `wpf_blocca_apply`, con `WPF_APPLY_SCADENZA` come scadenza). Dopo la seconda review
   del 21/10 il blocco è uno solo, `wpf_blocca( $opzione, $scadenza )`, usato da apply e pagine; le
-  pagine hanno `WPF_PAGINE_SCADENZA` (2 ore) e `wpf_sblocca_pagine` non esiste più.
+  pagine hanno `WPF_PAGINE_SCADENZA` (2 ore). `wpf_sblocca_pagine( ?int $prima_di )` è tornata (review
+  del 22/10) come `wpf_sblocca_apply`, per l'init che toglie all'avvio i blocchi di tutti e due.
 
 **Interfacce:**
 - Consuma: Task 1 (`config/pagine.json`), Task 2, Task 3, `wpf_wpml_collega`, `wpf_wpml_tutte_le_lingue`,
@@ -311,7 +314,9 @@ Impreza 9.4 + UpSolution Core, WPML; copia Drupal MySQL 8 in sola lettura (utent
   produzione (se raggiungibile) e con l'artifact a 390, 768, 1280 e 1440px, IT ed EN. Requisiti [UX] dell'overview: contrasto della testata
   ≥ 4,5:1, ancore della FAQ non coperte dall'header (`scroll-margin-top`), `title` dell'iframe con link
   alternativo, allegati con nome, formato e dimensione, immagini con `loading="lazy"` e dimensioni.
-  axe senza violazioni, anche da loggato.
+  axe senza violazioni, anche da loggato. Come è oggi: niente link alternativo all'iframe, che su Drupal
+  non c'è (decisione del dev del 20/10, overview), e le ancore della FAQ sono predisposte ma rotte già su
+  Drupal.
 - [x] **Commit (utente):** `feat(oc:8758): template di Impreza per le pagine statiche`
 
 ### Task 9: Un solo scrittore e menu collegati
