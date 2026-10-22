@@ -240,6 +240,30 @@ function wpf_wpml_cancella_post( int $id, string $tipo ): void {
 	}
 }
 
+/**
+ * Spegne, per l'esecuzione corrente, l'aggiornamento automatico dei link di WPML: registra i post
+ * salvati (save_post, post_updated) e allo shutdown ne riscrive i link interni come indirizzi assoluti
+ * del sito (http://localhost:8090/app/), diversi in ogni ambiente. Gli hook sono closure: si
+ * riconoscono dal file che le definisce. Restituisce quante ne ha tolte (0 = WPML cambiato, da
+ * ricontrollare: oc:8758).
+ */
+function wpf_wpml_senza_link_automatici(): int {
+	global $wp_filter;
+	$tolte = 0;
+	foreach ( [ 'save_post', 'post_updated', 'shutdown' ] as $hook ) {
+		foreach ( $wp_filter[ $hook ]->callbacks ?? [] as $priorita => $callback ) {
+			foreach ( $callback as $chiave => $c ) {
+				if ( $c['function'] instanceof Closure
+					&& substr( ( new ReflectionFunction( $c['function'] ) )->getFileName(), -strlen( 'Translation/Links/ItemUpdateEvent.php' ) ) === 'Translation/Links/ItemUpdateEvent.php' ) {
+					unset( $wp_filter[ $hook ]->callbacks[ $priorita ][ $chiave ] );
+					$tolte++;
+				}
+			}
+		}
+	}
+	return $tolte;
+}
+
 /** Collega un elemento a WPML: lingua e, per una traduzione, il gruppo dell'originale. */
 function wpf_wpml_collega( int $id, string $tipo, ?string $lingua, ?int $id_originale ): void {
 	if ( ! $lingua ) {

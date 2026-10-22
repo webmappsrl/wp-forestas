@@ -68,7 +68,7 @@ Vincolo: `wp-geohub` non ha tag né release; si scarica a un commit fisso (`GEOH
   come fonte di verità e UAT che la riceve.
 - **Post e menu riconosciuti dal metadato `_wp_forestas_chiave` e non da titolo o slug** (oc:8717):
   gli id cambiano da un sito all'altro, nomi e slug si cambiano dal pannello e WPML modifica gli slug
-  delle traduzioni. Il backup di `apply --conferma` è un export in sola lettura, per non assegnare
+  delle traduzioni. Il backup di `applica --conferma` è un export in sola lettura, per non assegnare
   chiavi fra l'anteprima e l'esecuzione.
 - **Script di configurazione montati dal repo** (oc:8717): copiati solo nell'immagine, una loro
   modifica non valeva finché non si ricostruiva l'immagine, e su UAT `bin/` e `config/` nuovi potevano
@@ -113,7 +113,7 @@ Vincolo: `wp-geohub` non ha tag né release; si scarica a un commit fisso (`GEOH
   come su un sito vuoto e il passo 4 tratterebbe un sito esistente come nuovo, con l'apply automatico.
   Il controllo è una query vera con le credenziali del `.env`: `mariadb-admin ping` risponde sì anche
   con utente o password sbagliati.
-- **Le pagine esistenti si aggiornano solo con `apply --pagine`** (oc:8717): la Home è in `config/`
+- **Le pagine esistenti si aggiornano solo con `applica --pagine`** (oc:8717): la Home è in `config/`
   perché un sito ricreato deve averla, ma è anche contenuto della redazione; un apply fatto per un
   colore non deve riportarla alla versione del repo.
 - **Voci di menu lette dal database, non da `wp_get_nav_menu_items()`** (oc:8717): da WP-CLI il suo
@@ -181,7 +181,7 @@ con un apply di prova su un WordPress usa e getta prima di quello su UAT:
 
 Una versione diversa (anche solo minore) ferma l'apply automatico; un apply a mano avvisa e mostra le
 differenze prima di `--conferma`. Dopo ogni aggiornamento la prova è: su un WordPress usa e getta
-(`APP_NAME=prova`, README) con gli zip nuovi, export, poi `apply` che deve dare «nessuna differenza».
+(`APP_NAME=prova`, README) con gli zip nuovi, `esporta`, poi `applica` che deve dare «nessuna differenza».
 
 ## Come ci siamo arrivati
 

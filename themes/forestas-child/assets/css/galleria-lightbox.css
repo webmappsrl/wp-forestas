@@ -1,0 +1,38 @@
+/*
+ * Regole del tema Drupal sardegnasentieri per la lightbox della galleria (oc:8758), copiate dal CSS
+ * compilato (components/_gallery.scss, «SLICK CAPTION»). Su Drupal vengono dopo i CSS di Slick e della
+ * lightbox, e ne battono i margini della didascalia: per questo stanno qui, caricate per ultime
+ * (forestas_galleria_lightbox in inc/pagine-statiche.php), e non in style.css. Su Drupal le etichette
+ * sono in italiano anche sul sito inglese: qui hanno la traduzione (:lang(en)), come tutta l'interfaccia.
+ */
+.slick-lightbox-slick-caption {
+	max-width: 90%;
+	margin-right: auto;
+	margin-left: auto;
+	text-align: left;
+}
+.slick-lightbox-slick-caption em {
+	display: inline-block;
+	font-style: normal;
+	font-size: 0.8125rem;
+}
+.slick-lightbox-slick-caption em::before {
+	font-weight: 700;
+}
+.slick-lightbox-slick-caption em + em {
+	margin-left: 0.5ch;
+}
+.slick-lightbox-slick-caption .auth.has-value::before {
+	content: "Foto di: ";
+}
+.slick-lightbox-slick-caption .cred.has-value::before {
+	content: "Credits: ";
+}
+.slick-lightbox-slick-caption .auth.has-value + .cred.has-value::before {
+	content: "•  Credits: ";
+}
+
+/* Etichetta in inglese («Credits» è uguale): la lingua è quella di <html>, e la lightbox sta nel body */
+:lang(en) .slick-lightbox-slick-caption .auth.has-value::before {
+	content: "Photo by: ";
+}

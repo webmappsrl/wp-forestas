@@ -7,7 +7,7 @@
  * wpml.json. Si ferma senza scrivere se un valore ha la forma di una chiave (WPF_FORME_SEGRETE), tranne
  * in sola lettura (backup dell'apply, fuori da git).
  * Assegna la chiave stabile (_wp_forestas_chiave) ai post e ai menu esportati che non l'hanno ancora:
- * è l'unica scrittura sul sito. Con WPF_SOLA_LETTURA=1 (backup di apply --conferma) non scrive nulla,
+ * è l'unica scrittura sul sito. Con WPF_SOLA_LETTURA=1 (backup di applica --conferma) non scrive nulla,
  * così il backup non cambia ciò che l'apply ricollegherà subito dopo.
  */
 
@@ -17,7 +17,7 @@ require_once __DIR__ . '/menu.php';
 
 $dir = (string) getenv( 'WPF_EXPORT_DIR' );
 if ( $dir === '' ) {
-	WP_CLI::error( 'manca WPF_EXPORT_DIR: lancia l\'export con bin/wordpress-config.sh export' );
+	WP_CLI::error( 'manca WPF_EXPORT_DIR: lancia l\'export con bin/wordpress-config.sh esporta' );
 }
 if ( ! is_dir( $dir ) && ! mkdir( $dir, 0775, true ) ) {
 	WP_CLI::error( "impossibile creare {$dir}" );
@@ -66,11 +66,20 @@ foreach ( WPF_OPZIONI_SITO_PAGINA as $nome ) {
 
 // --- Chiavi stabili, traduzioni comprese ---------------------------------------------------------
 
-$chiavi = []; // id => chiave
+$chiavi        = []; // id => chiave
+$sincronizzate = []; // id delle pagine sincronizzate da Drupal a cui punta un'opzione
 foreach ( array_unique( $originali ) as $id ) {
 	$post = get_post( $id );
 	if ( ! $post ) {
 		$avvisi[] = "riferimento a un post che non esiste: id {$id}";
+		continue;
+	}
+	// Le pagine statiche sincronizzate da Drupal le scrive solo bin/wordpress-config.sh pagine (oc:8758):
+	// anche se un'opzione punta a loro non entrano in post.json, e l'opzione non si esporta (null in
+	// sito.json, assente nelle Theme Options): l'apply lascia il valore di ogni sito. Oggi nessuna lo fa
+	if ( get_post_meta( $id, WPF_META_PAGINA, true ) !== '' ) {
+		$sincronizzate[ $id ] = true;
+		$avvisi[]             = "un'opzione punta alla pagina sincronizzata da Drupal «" . get_post_meta( $id, WPF_META_PAGINA, true ) . "» (id {$id}): né la pagina né l'opzione si esportano, e l'apply lascia il valore di ogni sito: lì va impostata dal pannello dopo il comando pagine";
 		continue;
 	}
 	$tipo_wpml = 'post_' . $post->post_type;
@@ -155,7 +164,11 @@ foreach ( $chiavi as $id => $chiave ) {
 
 foreach ( $impreza as $nome => $valore ) {
 	if ( wpf_opzione_riferimento( (string) $nome, $valore ) ) {
-		$impreza[ $nome ] = $riferimento( $valore ) ?? $valore;
+		if ( isset( $sincronizzate[ (int) $valore ] ) ) {
+			unset( $impreza[ $nome ] ); // l'id di questo sito, altrove una pagina qualsiasi: resta il valore di ogni sito
+		} else {
+			$impreza[ $nome ] = $riferimento( $valore ) ?? $valore;
+		}
 	} elseif ( wpf_opzione_allegato( (string) $nome, $valore ) ) {
 		$avvisi[] = "impreza {$nome}: è l'allegato {$valore} della Libreria media, che non sta in config/: su un altro sito va ricaricato dal pannello (l'apply tiene il valore di quel sito)";
 	}

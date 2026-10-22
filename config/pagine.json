@@ -1,0 +1,19 @@
+{
+    "_nota": "Pagine statiche sincronizzate da Drupal con bin/wordpress-config.sh pagine (oc:8758). chiave: l'identità della pagina in WordPress (meta _wpf_pagina), non si rinomina: rinominata o tolta, la pagina resta senza nessuno che la aggiorni (il comando lo segnala con un AVVISO). nid: nodo Drupal; slug.en per ogni pagina in inglese: con la traduzione di Drupal, se c'è; altrimenti con la nostra in config/traduzioni/en/<chiave>.json e .html; altrimenti, con titolo.en, pagina di sola interfaccia (dati della pagina italiana senza testo né sottotitolo: la Mappa); template: testata | testo | mappa. Le voci di menu che portano alle pagine stanno in config/menu.json (destinazione «pagina» con il percorso, cioè lo slug): cambiando uno slug qui va cambiato anche lì.",
+    "pagine": [
+        { "chiave": "sentieri", "nid": 1080, "template": "testata", "slug": { "it": "sentieri", "en": "sentieri" } },
+        { "chiave": "itinerari", "nid": 1081, "template": "testata", "slug": { "it": "itinerari", "en": "itinerari" } },
+        { "chiave": "cammini", "nid": null, "testata_da": "itinerari", "titolo": { "it": "Cammini", "en": "Walks" }, "template": "testata", "slug": { "it": "cammini", "en": "cammini" } },
+        { "chiave": "da-vedere", "nid": 1082, "template": "testata", "slug": { "it": "da-vedere", "en": "da-vedere" } },
+        { "chiave": "da-sapere", "nid": 1083, "template": "testata", "slug": { "it": "da-sapere", "en": "da-sapere" } },
+        { "chiave": "news", "nid": 1084, "template": "testata", "slug": { "it": "news", "en": "news" } },
+        { "chiave": "mappa-interattiva", "nid": 1093, "titolo": { "en": "Interactive map" }, "template": "mappa", "slug": { "it": "mappa-interattiva", "en": "interactive-map" } },
+        { "chiave": "contatti", "nid": 1, "template": "testo", "slug": { "it": "contatti", "en": "contacts" } },
+        { "chiave": "faq", "nid": 86, "template": "testo", "slug": { "it": "faq", "en": "faq" } },
+        { "chiave": "app", "nid": 1486, "template": "testo", "slug": { "it": "app", "en": "app" } },
+        { "chiave": "note-legali", "nid": 87, "template": "testo", "slug": { "it": "note-legali", "en": "legal-notes" } },
+        { "chiave": "privacy", "nid": 88, "template": "testo", "slug": { "it": "privacy", "en": "privacy" } },
+        { "chiave": "crediti", "nid": 89, "template": "testo", "slug": { "it": "crediti", "en": "credits" } },
+        { "chiave": "dichiarazione-di-accessibilita", "nid": 1496, "template": "testo", "slug": { "it": "dichiarazione-di-accessibilita", "en": "accessibility-statement" } }
+    ]
+}

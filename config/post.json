@@ -1,5 +1,44 @@
 [
     {
+        "chiave": "template-pagina-testata",
+        "lingua": "it",
+        "menu_order": 0,
+        "meta": [],
+        "originale": null,
+        "post_content": "[vc_row height=\"auto\" width=\"full\"][vc_column][vc_column_text][forestas_testata][/vc_column_text][/vc_column][/vc_row]",
+        "post_excerpt": "",
+        "post_name": "pagina-testata",
+        "post_status": "publish",
+        "post_title": "Pagina con testata",
+        "post_type": "us_content_template"
+    },
+    {
+        "chiave": "template-pagina-testo",
+        "lingua": "it",
+        "menu_order": 0,
+        "meta": [],
+        "originale": null,
+        "post_content": "[vc_row height=\"auto\" width=\"full\"][vc_column][vc_column_text][forestas_testata][/vc_column_text][/vc_column][/vc_row][vc_row height=\"auto\" width=\"full\"][vc_column][vc_column_text][forestas_pagina_testo][/vc_column_text][/vc_column][/vc_row]",
+        "post_excerpt": "",
+        "post_name": "pagina-testo",
+        "post_status": "publish",
+        "post_title": "Pagina di testo",
+        "post_type": "us_content_template"
+    },
+    {
+        "chiave": "template-pagina-mappa",
+        "lingua": "it",
+        "menu_order": 0,
+        "meta": [],
+        "originale": null,
+        "post_content": "[vc_row height=\"auto\" width=\"full\"][vc_column][vc_column_text][forestas_mappa][/vc_column_text][/vc_column][/vc_row]",
+        "post_excerpt": "",
+        "post_name": "pagina-mappa",
+        "post_status": "publish",
+        "post_title": "Pagina mappa",
+        "post_type": "us_content_template"
+    },
+    {
         "chiave": "us_header-header",
         "lingua": "it",
         "menu_order": 0,

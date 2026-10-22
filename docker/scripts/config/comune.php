@@ -18,6 +18,9 @@ const WPF_SEGNAPOSTO_URL = '@url_sito';
 const WPF_SEGRETO        = '@segreto';
 const WPF_RIFERIMENTO    = '@chiave:';
 const WPF_META_CHIAVE    = '_wp_forestas_chiave';
+// Chiave del perimetro di una pagina sincronizzata da Drupal (oc:8758): esporta e applica la saltano,
+// la scrive solo il comando pagine
+const WPF_META_PAGINA    = '_wpf_pagina';
 
 // Impostazioni del sito versionate in sito.json (export) e mostrate nel ritratto
 const WPF_OPZIONI_SITO = [ 'blogname', 'blogdescription', 'permalink_structure', 'show_on_front', 'page_on_front', 'page_for_posts' ];
@@ -267,49 +270,75 @@ function wpf_scrivi_htaccess(): bool {
 }
 
 /**
- * Impedisce due apply nello stesso momento. Il blocco è una riga di wp_options inserita con
- * INSERT IGNORE: il database la accetta una volta sola, quindi solo il primo apply la ottiene
- * (add_option non basta: scrive con ON DUPLICATE KEY UPDATE e si fida della cache). Un blocco più
- * vecchio di WPF_APPLY_SCADENZA viene da un apply interrotto e si toglie; l'init toglie all'avvio del
- * container i blocchi presi prima dell'avvio (vedi wpf_sblocca_apply), perché un apply gira dentro il
- * container e muore con lui.
+ * Blocco contro due esecuzioni contemporanee dello stesso comando. È una riga di wp_options ($opzione)
+ * inserita con INSERT IGNORE: il database la accetta una volta sola, quindi solo la prima esecuzione la
+ * ottiene (add_option non basta: scrive con ON DUPLICATE KEY UPDATE e si fida della cache). Un blocco più
+ * vecchio di $scadenza secondi viene da un'esecuzione interrotta e si toglie; a fine esecuzione si toglie
+ * da sé.
  */
-function wpf_blocca_apply(): bool {
+function wpf_blocca( string $opzione, int $scadenza ): bool {
 	global $wpdb;
-	wpf_sblocca_apply( time() - WPF_APPLY_SCADENZA );
+	wpf_sblocca( $opzione, time() - $scadenza );
 	$preso = $wpdb->query(
 		$wpdb->prepare(
 			"INSERT IGNORE INTO {$wpdb->options} (option_name, option_value, autoload) VALUES (%s, %s, 'off')",
-			WPF_OPZIONE_APPLY_IN_CORSO,
+			$opzione,
 			(string) time()
 		)
 	);
 	if ( $preso !== 1 ) {
 		return false;
 	}
-	register_shutdown_function( 'wpf_sblocca_apply' );
+	register_shutdown_function( 'wpf_sblocca', $opzione );
 	return true;
 }
 
-/**
- * Toglie il blocco dell'apply (vedi wpf_blocca_apply). Con $prima_di toglie solo un blocco preso prima
- * di quell'istante: l'init passa l'ora del proprio avvio, così non toglie il blocco di un apply lanciato
- * dall'host mentre l'init sta ancora girando.
- */
-function wpf_sblocca_apply( ?int $prima_di = null ): void {
+/** Toglie il blocco $opzione (vedi wpf_blocca); con $prima_di solo uno preso prima di quell'istante. */
+function wpf_sblocca( string $opzione, ?int $prima_di = null ): void {
 	global $wpdb;
 	if ( $prima_di === null ) {
-		$wpdb->delete( $wpdb->options, [ 'option_name' => WPF_OPZIONE_APPLY_IN_CORSO ] );
+		$wpdb->delete( $wpdb->options, [ 'option_name' => $opzione ] );
 	} else {
 		$wpdb->query(
 			$wpdb->prepare(
 				"DELETE FROM {$wpdb->options} WHERE option_name = %s AND CAST(option_value AS UNSIGNED) < %d",
-				WPF_OPZIONE_APPLY_IN_CORSO,
+				$opzione,
 				$prima_di
 			)
 		);
 	}
-	wp_cache_delete( WPF_OPZIONE_APPLY_IN_CORSO, 'options' );
+	wp_cache_delete( $opzione, 'options' );
+}
+
+/**
+ * Impedisce due apply nello stesso momento (wpf_blocca). L'init toglie all'avvio del container i blocchi
+ * presi prima dell'avvio (vedi wpf_sblocca_apply), perché un apply gira dentro il container e muore con lui.
+ */
+function wpf_blocca_apply(): bool {
+	return wpf_blocca( WPF_OPZIONE_APPLY_IN_CORSO, WPF_APPLY_SCADENZA );
+}
+
+/**
+ * Toglie il blocco dell'apply. Con $prima_di toglie solo un blocco preso prima di quell'istante: l'init
+ * passa l'ora del proprio avvio, così non toglie il blocco di un apply lanciato dall'host mentre l'init sta
+ * ancora girando.
+ */
+function wpf_sblocca_apply( ?int $prima_di = null ): void {
+	wpf_sblocca( WPF_OPZIONE_APPLY_IN_CORSO, $prima_di );
+}
+
+/*
+ * Impedisce due sincronizzazioni delle pagine da Drupal insieme (un lancio a mano e un cron), che
+ * creerebbero pagine e allegati doppi (oc:8758). Come per l'apply, l'init toglie all'avvio i blocchi presi
+ * prima dell'avvio: anche la sincronizzazione gira dentro il container.
+ */
+function wpf_blocca_pagine(): bool {
+	return wpf_blocca( WPF_OPZIONE_PAGINE_IN_CORSO, WPF_PAGINE_SCADENZA );
+}
+
+/** Toglie il blocco delle pagine; con $prima_di solo uno preso prima di quell'istante (come per l'apply). */
+function wpf_sblocca_pagine( ?int $prima_di = null ): void {
+	wpf_sblocca( WPF_OPZIONE_PAGINE_IN_CORSO, $prima_di );
 }
 
 /** Ordina le chiavi degli array associativi, per file con differenze stabili fra un export e l'altro. */

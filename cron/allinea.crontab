@@ -1,0 +1,19 @@
+# Riga del crontab per tenere il WordPress di Forestas allineato (oc:8758).
+#
+# STATO: non ancora installata su nessun server (22/10/2026). Quando la si mette in un crontab,
+# aggiornare questa riga di stato (server, data) nello stesso commit.
+#
+# Dove: nel crontab di root dell'host che fa girare lo shard (UAT; produzione fino al lancio), con
+# `crontab -e`. Non viene installata da nessuno script: si copia a mano la riga qui sotto.
+# Prima: `.env` di wp-forestas con DRUPAL_SYNC=on, DRUPAL_DB_USER, DRUPAL_DB_PASSWORD, poi
+# scripts/wordpress-up.sh di forestas; una prova a mano dello stesso comando deve chiudere con
+# «STATO allineato». Procedura completa: docs/howto/cron-sincronizzazione-pagine.md.
+#
+# Cosa fa: bin/wordpress-config.sh allinea porta il sito allo stato di riferimento (pagine dalla copia
+# Drupal, voci di menu collegate alle pagine, verifica finale), anche da un sito appena ricreato. Un
+# rilascio di config/ non lo applica: va fatto a mano con «applica --conferma».
+#
+# Orario: alle 11, lontano dal reload della copia Drupal delle 10:00 (dura circa un quarto d'ora).
+# Al lancio in produzione la riga si toglie, insieme a DRUPAL_SYNC=off (howto, «Al lancio»).
+
+0 11 * * * cd /var/www/html/forestas/wp-forestas && PATH=/usr/local/bin:/usr/bin:/bin bin/wordpress-config.sh allinea >> /var/www/html/forestas/storage/logs/wordpress-pagine-cron.log 2>&1

@@ -21,9 +21,10 @@ provarlo.
 | `docker/themes/` | qui va messo `impreza.zip` (escluso da git) |
 | `docker/plugins/` | zip dei plugin commerciali (esclusi da git); l'elenco è in `commerciali.txt`, versionato |
 | `config/` | configurazione versionata del sito: Theme Options, header, footer, Home, menu, WPML |
-| `docker/scripts/config/` | export, apply, ritratto e licenza Impreza, eseguiti con `wp eval-file`; montati dal compose (non copiati nell'immagine). `costanti.php` contiene i nomi e i percorsi che legge l'init |
-| `bin/wordpress-config.sh` | comando sull'host per export, apply, ritratto e zip |
-| `backup/` | backup creati da `apply --conferma` (esclusi da git) |
+| `docker/scripts/config/` | esporta, applica, sincronizzazione delle pagine da Drupal (`pagine.php`, `drupal.php`, `link.php`, `media.php`), ritratto e licenza Impreza, eseguiti con `wp eval-file`; montati dal compose (non copiati nell'immagine). `costanti.php` contiene i nomi e i percorsi che legge l'init |
+| `bin/wordpress-config.sh` | comando sull'host per esporta, applica, pagine, allinea, ritratto e zip |
+| `cron/allinea.crontab` | riga del crontab per `allinea`, con lo stato dell'installazione sul server (non installata da nessuno script) |
+| `backup/` | backup creati da `applica --conferma` (esclusi da git) |
 | `themes/forestas-child/` | child theme di Impreza, montato in `wp-content/themes/forestas-child` |
 | `docker/uat/` | virtual host di riferimento per l'Apache dell'host di UAT |
 
@@ -144,11 +145,11 @@ di WPML, titolo, permalink e home statica stanno in `config/`, così un sito ric
 identico. Restano fuori contenuti editoriali, contenuti di esempio e uploads.
 
 ```bash
-bin/wordpress-config.sh export                     # dal sito a config/
-bin/wordpress-config.sh apply                      # cosa cambierebbe, senza scrivere
-bin/wordpress-config.sh apply --conferma           # backup in backup/<data-ora>/, poi applica config/
-bin/wordpress-config.sh apply --da DIR --conferma  # applica un'altra cartella (per esempio un backup)
-bin/wordpress-config.sh apply --pagine --conferma  # aggiorna anche le pagine già presenti, come la Home
+bin/wordpress-config.sh esporta                     # dal sito a config/
+bin/wordpress-config.sh applica                      # cosa cambierebbe, senza scrivere
+bin/wordpress-config.sh applica --conferma           # backup in backup/<data-ora>/, poi applica config/
+bin/wordpress-config.sh applica --da DIR --conferma  # applica un'altra cartella (per esempio un backup)
+bin/wordpress-config.sh applica --pagine --conferma  # aggiorna anche le pagine già presenti, come la Home
 bin/wordpress-config.sh ritratto                   # stato del sito, da confrontare prima e dopo un reset
 bin/wordpress-config.sh zip                        # zip di Impreza e dei plugin commerciali installati
 ```
@@ -157,10 +158,10 @@ Il comando trova da solo il container che monta il child da questa cartella; se 
 `WPF_CONTAINER=<nome>`.
 
 - **La configurazione si fa in locale**, come il codice del child: cambi dal pannello di
-  `localhost`, `export`, controlli `git diff config/`, commit, push, puntatore del submodule in
-  `forestas`, pull su UAT, poi `apply` (che mostra le differenze) e `apply --conferma`. Se qualcosa si
+  `localhost`, `esporta`, controlli `git diff config/`, commit, push, puntatore del submodule in
+  `forestas`, pull su UAT, poi `applica` (che mostra le differenze) e `applica --conferma`. Se qualcosa si
   cambia comunque dal pannello di UAT, l'export lì va fatto fuori dal repo
-  (`export --in /tmp/config`) e portato in locale: altrimenti il successivo `apply --conferma` riporta
+  (`esporta --in /tmp/config`) e portato in locale: altrimenti il successivo `applica --conferma` riporta
   header, footer, menu e Theme Options a quelli del repo e la modifica si perde (resta solo nel backup
   dell'apply).
 - **Nessun segreto nei file**: le opzioni con `key`, `secret`, `token`, `password` o `pass` fra le
@@ -181,7 +182,7 @@ Il comando trova da solo il container che monta il child da questa cartella; se 
   traduzioni dei testi delle opzioni fatte con String Translation (per esempio il messaggio dei
   cookie di Impreza in inglese). Le altre pagine e gli articoli sono contenuti, non configurazione.
 - **Le pagine esportate sono anche contenuto della redazione** (la Home): l'apply le crea se mancano,
-  ma se esistono già non le aggiorna, e lo dice; si aggiornano solo con `apply --pagine`. Header,
+  ma se esistono già non le aggiorna, e lo dice; si aggiornano solo con `applica --pagine`. Header,
   Page Block e gli altri post del builder si aggiornano sempre.
 - Una **voce di menu verso una pagina non esportata** (una pagina normale come «Chi siamo») si salva
   con tipo e percorso della pagina: l'apply la ritrova sul sito di destinazione, nella lingua del
@@ -210,8 +211,8 @@ Il comando trova da solo il container che monta il child da questa cartella; se 
   appena installato, che nessuno guarda, con una versione diversa, anche solo minore (Impreza 9.4
   contro 9.5), non applica: si guardano le differenze e si lancia a mano. Se manca Impreza o un plugin
   dell'elenco aspetta che arrivi lo zip, entro i 3 giorni dall'installazione in cui vale.
-- Il backup di `apply --conferma` è un export in sola lettura in `backup/<data-ora>/`, senza segreti;
-  si rimette con `apply --da backup/<data-ora> --conferma`. Impreza conserva anche un suo backup delle
+- Il backup di `applica --conferma` è un export in sola lettura in `backup/<data-ora>/`, senza segreti;
+  si rimette con `applica --da backup/<data-ora> --conferma`. Impreza conserva anche un suo backup delle
   Theme Options, ripristinabile dal pannello. Un apply che riesce solo in parte termina con errore e
   dice quali passi mancano.
 - Due apply sullo stesso sito non partono insieme (per esempio quello automatico dell'avvio e uno
@@ -224,9 +225,9 @@ Il comando trova da solo il container che monta il child da questa cartella; se 
   UAT, `bin/wordpress-config.sh zip` rigenera gli zip nelle cartelle escluse da git; copiali in locale
   e nella cartella condivisa. Altrimenti un sito ricreato tornerebbe alle versioni vecchie.
   Poi la prova: su un WordPress usa e getta (`APP_NAME=prova`, «Avvio da solo») con gli zip nuovi,
-  `export` e subito dopo `apply`, che deve dare «nessuna differenza»; altrimenti export o apply vanno
+  `esporta` e subito dopo `applica`, che deve dare «nessuna differenza»; altrimenti export o apply vanno
   adeguati alla nuova versione (le funzioni da controllare sono in
-  `docs/knowledge/inizializzazione-wordpress.md`, «Dipendenze»). Infine `export` in locale per
+  `docs/knowledge/inizializzazione-wordpress.md`, «Dipendenze»). Infine `esporta` in locale per
   aggiornare `config/versioni.json`: l'apply automatico non applica un `config/` di un'altra versione.
 - L'apply riscrive dei post esportati anche stato, riassunto e ordine: un header messo in bozza dal
   pannello torna come nel repo. `sito.json` può contenere solo le impostazioni che l'export scrive.
@@ -238,18 +239,99 @@ Il comando trova da solo il container che monta il child da questa cartella; se 
 - `root_page` di WPML (una pagina come radice del sito) non sta in `config/`: è un id di pagina.
   L'export avvisa se è impostata; su un altro sito si reimposta da WPML → Lingue.
 
+## Pagine statiche da Drupal
+
+Le pagine della struttura del sito (quelle dei menu: Sentieri, Itinerari, Cammini, Punti di
+interesse, Da sapere, News, Mappa interattiva, Contatti, FAQ, App, Note legali, Privacy, Crediti,
+Dichiarazione di accessibilità) si creano e si tengono allineate alla copia SQL del database Drupal
+con un comando (oc:8758). L'elenco è `config/pagine.json`; la grafica sta nei tre template di Impreza
+di `config/post.json` («Pagina con testata», «Pagina di testo», «Pagina mappa») e negli shortcode di
+`themes/forestas-child/inc/pagine-statiche.php`.
+
+Le pagine che Drupal ha solo in italiano hanno in inglese la nostra traduzione, in
+`config/traduzioni/en/<chiave>.json` (titolo, sottotitolo, impronta del testo italiano tradotto) e
+`<chiave>.html` (testo, con la stessa struttura HTML dell'originale). Si usa finché Drupal non ha una sua
+traduzione; quando il testo italiano su Drupal cambia, il log scrive un AVVISO: la traduzione va rifatta
+e la sua impronta aggiornata con quella che l'avviso riporta.
+
+```bash
+bin/wordpress-config.sh pagine                          # anteprima: cosa cambierebbe, nulla scritto
+bin/wordpress-config.sh pagine --conferma               # scrive
+bin/wordpress-config.sh pagine --contenuti-mancanti --conferma   # ritenta solo ciò che non è riuscito
+```
+
+- **Scrive solo con `DRUPAL_SYNC=on`** nel `wp-forestas/.env`; con `off` (il default) l'anteprima
+  funziona ma esce con codice 1, così un cron si accorge che non scriverebbe, e `--conferma` si ferma
+  subito con un `ERRORE`, senza anteprima. Al passaggio in produzione va messo a `off`: da lì la fonte è WordPress.
+- **Drupal vince sempre:** a ogni esecuzione le pagine riprendono i dati di Drupal. Una pagina
+  spubblicata su Drupal va in bozza e torna pubblicata, con lo stesso indirizzo, se su Drupal torna.
+- **Dove legge Drupal:** per default `mysql-sardegnasentieri-dump:3306`, il container della copia
+  sulla stessa macchina (UAT, produzione). Utente e password dell'utente in sola lettura della copia
+  vanno sempre nel `.env` (`DRUPAL_DB_USER`, `DRUPAL_DB_PASSWORD`): non hanno default, perché il repo è
+  pubblico e la copia contiene dati personali; senza, la sincronizzazione si ferma. In locale, col
+  tunnel verso la copia di UAT aperto sulla 3307 del Mac (`forestas/docs/howto/copia-database-drupal.md`),
+  anche `DRUPAL_DB_HOST=host.docker.internal` e `DRUPAL_DB_PORT=3307`.
+- **Log:** ogni esecuzione scrive `log/pagine-<data-ora>.log` (escluso da git; si tengono gli ultimi
+  60) con una riga per evento: `PAGINA`, `MEDIA`, `LINK`, `MENU`, `MANCANTE`, `AVVISO`, `ERRORE`,
+  `RIASSUNTO`. A schermo compaiono le righe che chiedono un intervento (`ERRORE`, `MANCANTE`, `MENU`,
+  ogni `AVVISO`, gli avvisi ed errori di WordPress), il riassunto e i conteggi.
+- **Ciò che non riesce** (un'immagine che non si scarica, un template assente…) resta in un elenco
+  sul sito, con causa e date, e `--contenuti-mancanti` ritenta solo quegli elementi. Il comando esce
+  con codice 1 se manca qualcosa che non si sistema da sé (pagina, traduzione, template), anche in
+  anteprima se manca un template (`AVVISO … non riuscirebbe`: l'anteprima non scrive, e una pagina o
+  una traduzione che non si salvano si scoprono solo al `--conferma`); se mancano solo media, che si ritentano al giro
+  dopo, esce con 0 e un avviso. Un errore di PHP o di WP-CLI (un fatal, un `WP_ADMIN_USER` che non c'è)
+  esce anche lui con 1, ma il giro non arriva al `RIASSUNTO` né a un `ERRORE`: allora il comando mostra
+  la riga `Fatal error` del log (o le sue ultime righe). Dopo un errore il comando non aggiunge
+  suggerimenti suoi (cosa fare lo dice, quando si sa, il messaggio dell'`ERRORE`: `--accetta-bozze`,
+  togliere una voce da `config/pagine.json`, scrivere una traduzione),
+  salvo come accendere la sincronizzazione quando è spenta ed è l'unico problema; per un template
+  assente suggerisce `applica --conferma`.
+- **Si ferma senza scrivere** se la copia Drupal non è integra (tabelle mancanti o vuote, un nodo del
+  perimetro assente) o se più di 2 pagine andrebbero in bozza nello stesso giro (una pagina conta una
+  volta sola, in qualunque numero di lingue): è il segno di una
+  copia in ricarica (su UAT ogni giorno alle 10:00). Se le spubblicazioni su Drupal sono vere,
+  `pagine --accetta-bozze --conferma` le accetta, una volta.
+- **Controlli a ogni giro completo:** il riassunto dice la data dell'ultima modifica nella copia Drupal (non
+  quello di `--contenuti-mancanti` quando non c'è nulla da ritentare), e un
+  AVVISO la segnala oltre 30 giorni (il dump potrebbe non arrivare più); un AVVISO segnala le pagine
+  sincronizzate che `config/pagine.json` non elenca più (voce tolta o chiave rinominata: la chiave
+  non si rinomina). Un link verso una pagina del perimetro che resta in bozza resta verso Drupal, «in
+  attesa», invece di un link che darebbe 404; in una pagina inglese, se in bozza è solo la versione
+  inglese, il link ripiega su quella italiana, come per i contenuti senza traduzione.
+- **Ricreare tutto dal reset** (installazione, pagine, menu, verifiche, problemi noti):
+  [docs/howto/ricreare-wordpress-da-zero.md](docs/howto/ricreare-wordpress-da-zero.md).
+- **Cron sul server:** `bin/wordpress-config.sh allinea`, un comando solo che da un sito appena
+  ricreato o già in uso porta allo stato di riferimento (pagine dalla copia Drupal, menu collegati alle
+  pagine, verifica finale) e chiude con `STATO allineato` o `STATO non allineato: <motivo>`. Applica da
+  solo solo le differenze dei menu: un `config/` diverso dal sito si applica a mano. La riga da mettere
+  nel crontab è in [cron/allinea.crontab](cron/allinea.crontab); procedura in
+  [docs/howto/cron-sincronizzazione-pagine.md](docs/howto/cron-sincronizzazione-pagine.md).
+- I link dei testi verso `www.sardegnasentieri.it` diventano link relativi al contenuto WordPress con
+  lo stesso nodo Drupal (`_drupal_nid`, `_drupal_langcode`); quelli verso contenuti non ancora
+  importati restano verso Drupal («in attesa» nel log) e si sistemano da soli quando arrivano. Quelli
+  verso pagine di Drupal che non sono contenuti (il form `/form/segnalazione`) sono segnati «verso
+  Drupal» e non si sistemano da soli: serve una regola in `docker/scripts/config/link.php`.
+
 ## Messa in opera su UAT
 
 1. Copia sull'host gli zip in `docker/themes/` e `docker/plugins/` e aggiungi al `wp-forestas/.env`
    `WPML_SITE_KEY`, `IMPREZA_LICENSE_SECRET` e, se serve, `IMPREZA_MAINTENANCE_KEY`.
 2. Aggiornamento abituale di `forestas`, poi `scripts/wordpress-up.sh` sull'host.
 3. Disattiva Child Theme Configurator: il child ora arriva dal repo.
-4. `bin/wordpress-config.sh apply` per vedere le differenze, poi `apply --conferma` se sono quelle
+4. `bin/wordpress-config.sh applica` per vedere le differenze, poi `applica --conferma` se sono quelle
    attese. Su un sito che esisteva prima di `config/` l'init non applica nulla da solo, e header,
    footer e Home già presenti vengono **ricollegati** («senza chiave → ricollegato»), non duplicati.
    In quella prima anteprima possono comparire anche «voci diverse» nel menu, perché le voci puntano
    a post non ancora ricollegati, e qualche avviso «riferimento non risolto»: con `--conferma` i post
    si ricollegano prima, e un riferimento che resta senza post lascia il valore del sito.
+5. Pagine statiche da Drupal: aggiungi al `wp-forestas/.env` `DRUPAL_DB_USER`, `DRUPAL_DB_PASSWORD`
+   (l'utente in sola lettura della copia) e `DRUPAL_SYNC=on`, poi `scripts/wordpress-up.sh`, perché il
+   container legge il `.env` solo all'avvio. `bin/wordpress-config.sh pagine` per l'anteprima, poi
+   `pagine --conferma`, lontano dal reload della copia delle 10:00. Va dopo `applica --conferma`, che
+   scrive i template di Impreza delle pagine: senza, le pagine restano fra i mancanti. Poi un altro
+   `applica --conferma`: le voci di menu verso pagine che al primo apply non c'erano sono rimaste link
+   per indirizzo, e solo un apply le collega alle pagine.
 
 ## Indicizzazione
 

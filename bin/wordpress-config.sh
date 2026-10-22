@@ -2,8 +2,8 @@
 # Configurazione del WordPress di Forestas, dall'host (oc:8717). Uso: vedi uso() qui sotto.
 #
 # Il container è quello avviato che monta il child theme da questa cartella; con più WordPress che la
-# montano si sceglie con WPF_CONTAINER=<nome>. La configurazione si fa in locale: su UAT un export va
-# fatto con --in, fuori dal repo, per non lasciare file fuori da git nel checkout del server.
+# montano si sceglie con WPF_CONTAINER=<nome>. La configurazione si fa in locale: su UAT un'esportazione
+# va fatta con --in, fuori dal repo, per non lasciare file fuori da git nel checkout del server.
 set -euo pipefail
 
 REPO=$(cd "$(dirname "$0")/.." && pwd -P)
@@ -16,22 +16,40 @@ CURL_ATTESA=60
 
 fail() { echo "ERRORE: $*" >&2; exit 1; }
 
+# Log di bin/wordpress-config.sh pagine da tenere in log/
+LOG_PAGINE_TENUTI=60
+
 uso() {
-    cat <<'TESTO'
+    cat <<TESTO
 Configurazione del WordPress di Forestas, dall'host.
 
-  bin/wordpress-config.sh export [--in DIR]        configurazione del sito → config/ (o DIR)
-  bin/wordpress-config.sh apply [OPZIONI]          mostra cosa cambierebbe, senza scrivere
-  bin/wordpress-config.sh apply [OPZIONI] --conferma
+  bin/wordpress-config.sh esporta [--in DIR]       configurazione del sito → config/ (o DIR)
+  bin/wordpress-config.sh applica [OPZIONI]        mostra cosa cambierebbe, senza scrivere
+  bin/wordpress-config.sh applica [OPZIONI] --conferma
                                                    salva un backup in backup/<data-ora>/ e applica
+  bin/wordpress-config.sh pagine [--contenuti-mancanti] [--accetta-bozze] [--conferma]
+                                                   sincronizza le pagine statiche dalla copia di Drupal
+                                                   (config/pagine.json): senza --conferma mostra le
+                                                   differenze; scrive solo con DRUPAL_SYNC=on nel .env
+  bin/wordpress-config.sh allinea                  per il cron: pagine da Drupal, menu collegati alle pagine,
+                                                   verifica finale; esce con 0 solo se il sito è allineato
+                                                   a config/ e alla copia Drupal (STATO nell'ultima riga)
   bin/wordpress-config.sh ritratto                 stato del sito, da confrontare prima e dopo un reset
   bin/wordpress-config.sh zip                      zip di Impreza e dei plugin commerciali installati
 
-Opzioni di apply:
+Opzioni di applica:
   --da DIR     applica DIR invece di config/ (per esempio un backup)
   --pagine     aggiorna anche le pagine che esistono già, come la Home (di solito sono della redazione)
 
+Opzioni di pagine:
+  --contenuti-mancanti   ritenta solo gli elementi non riusciti nelle esecuzioni precedenti
+  --accetta-bozze        mette in bozza anche più di 2 pagine nello stesso giro: solo se su Drupal
+                         sono state davvero spubblicate (di solito è una copia in ricarica)
+  --conferma             scrive (altrimenti solo anteprima)
+Ogni esecuzione scrive un log in log/pagine-<data-ora>.log (si tengono gli ultimi ${LOG_PAGINE_TENUTI}).
+
 Con più WordPress avviati che montano questo child: WPF_CONTAINER=<nome>.
+I nomi vecchi «export» e «apply» funzionano ancora, con un avviso.
 TESTO
 }
 
@@ -55,8 +73,15 @@ trova_container() {
     echo "${trovati# }"
 }
 
-case "${1:-}" in
-    export|apply|ritratto|zip) ;;
+# Comandi in italiano, come le opzioni (oc:8758): i nomi inglesi di oc:8717 restano accettati con un
+# avviso, per i cron e le abitudini già in uso
+comando="${1:-}"
+case "$comando" in
+    export) echo "AVVISO: «export» è il nome vecchio, usa «esporta»" >&2; comando=esporta ;;
+    apply) echo "AVVISO: «apply» è il nome vecchio, usa «applica»" >&2; comando=applica ;;
+esac
+case "$comando" in
+    esporta|applica|pagine|allinea|ritratto|zip) ;;
     *)
         uso
         exit 1
@@ -91,14 +116,16 @@ export_in() {
     [ "${2:-}" = "sola-lettura" ] && extra=("WPF_SOLA_LETTURA=1")
     if ! esegui_script export.php "WPF_EXPORT_DIR=${tmp}" ${extra[@]+"${extra[@]}"}; then
         docker exec "$C" rm -rf "$tmp"
-        fail "export non riuscito: vedi i messaggi sopra, nessun file scritto in ${dest}"
+        fail "esportazione non riuscita: vedi i messaggi sopra, nessun file scritto in ${dest}"
     fi
     # Si sostituiscono solo i file prodotti: un export con WPML spento non cancella wpml.json
     prodotti=$(docker exec "$C" sh -c "cd ${tmp} && ls *.json")
     for f in "$dest"/*.json; do
         [ -f "$f" ] || continue
+        # Il perimetro delle pagine statiche si scrive a mano, non lo produce l'export (oc:8758)
+        [ "$(basename "$f")" = "pagine.json" ] && continue
         if [[ $'\n'"$prodotti"$'\n' != *$'\n'"$(basename "$f")"$'\n'* ]]; then
-            echo "AVVISO: $(basename "$f") non prodotto dall'export (vedi gli avvisi sopra), lasciato com'è in ${dest}"
+            echo "AVVISO: $(basename "$f") non prodotto dall'esportazione (vedi gli avvisi sopra), lasciato com'è in ${dest}"
         fi
     done
     for f in $prodotti; do rm -f "${dest}/${f}"; done
@@ -108,8 +135,8 @@ export_in() {
     echo "configurazione esportata in ${dest}"
 }
 
-case "${1:-}" in
-    export)
+case "$comando" in
+    esporta)
         if [ "${2:-}" = "--in" ]; then
             [ -n "${3:-}" ] || fail "--in vuole una cartella"
             export_in "$3"
@@ -118,7 +145,7 @@ case "${1:-}" in
             echo "Controlla le differenze con «git diff config/» prima del commit."
         fi
         ;;
-    apply)
+    applica)
         shift
         sorgente="" conferma=false pagine=false
         while [ $# -gt 0 ]; do
@@ -152,8 +179,118 @@ case "${1:-}" in
         else
             echo "Differenze fra ${cartella} e il sito ${URL} (nulla viene scritto):"
             esegui_script apply.php WPF_PROVA=1 ${apply_env[@]+"${apply_env[@]}"}
-            echo "Per applicarle: $0 apply${sorgente:+ --da $sorgente}$($pagine && echo ' --pagine') --conferma"
+            echo "Per applicarle: $0 applica${sorgente:+ --da $sorgente}$($pagine && echo ' --pagine') --conferma"
         fi
+        ;;
+    pagine)
+        shift
+        pagine_env=() conferma=false solo_mancanti="" opzioni=""
+        while [ $# -gt 0 ]; do
+            case "$1" in
+                --contenuti-mancanti) pagine_env+=("WPF_SOLO_MANCANTI=1"); solo_mancanti=" --contenuti-mancanti"; shift ;;
+                --accetta-bozze) pagine_env+=("WPF_ACCETTA_BOZZE=1"); opzioni+=" --accetta-bozze"; shift ;;
+                --conferma) conferma=true; shift ;;
+                *) uso; exit 1 ;;
+            esac
+        done
+        $conferma || pagine_env+=("WPF_PROVA=1")
+        mkdir -p "${REPO}/log"
+        log="${REPO}/log/pagine-$(date +%Y-%m-%d-%H%M%S).log"
+        # L'output va nel log sull'host (file dell'utente dell'host, non del container) e se ne mostra il
+        # riassunto: niente pipe con tee, il codice d'uscita dello script deve restare quello vero
+        esito=0
+        esegui_script pagine.php ${pagine_env[@]+"${pagine_env[@]}"} > "$log" 2>&1 || esito=$?
+        # A schermo le righe che chiedono un intervento: ogni AVVISO di pagine.php ne chiede uno, e gli
+        # avvisi e gli errori di WP-CLI (Warning:, Error:) vengono da WordPress o da un plugin
+        grep -E '^(RIASSUNTO|ERRORE|MANCANTE|MENU|AVVISO) |^(Warning|Error): ' "$log" || true
+        conta() { grep -c "^$1 " "$log" || true; }
+        # Avvisi: le righe AVVISO e le MENU (voci verso pagine in bozza)
+        echo "pagine: $(conta PAGINA) · media: $(conta MEDIA) · link: $(conta LINK) · avvisi: $(( $(conta AVVISO) + $(conta MENU) ))"
+        echo "log completo: ${log}"
+        # Un giro finito arriva al RIASSUNTO; uno fermato dal comando ha una riga ERRORE. Senza nessuna
+        # delle due l'uscita viene da un errore di PHP o di WP-CLI (un fatal, un WP_ADMIN_USER che non c'è),
+        # che esce con 1 come il comando: se ne mostra la causa, la riga «Fatal error», o la coda del log
+        imprevisto=false
+        if [ "$esito" -ne 0 ] && ! grep -qE '^(RIASSUNTO|ERRORE) ' "$log"; then
+            imprevisto=true
+            echo "Uscita ${esito}: errore imprevisto, il giro non è finito. Dal log:"
+            grep -m 1 'Fatal error' "$log" || tail -n 5 "$log"
+        fi
+        # Dopo un errore nessun comando da suggerire, prima va capito. La sincronizzazione spenta non è un
+        # errore da capire (anteprima con AVVISO, --conferma con ERRORE): se è l'unico problema si dice come
+        # accenderla. Un template assente si risolve con l'apply, non con un altro giro delle pagine
+        errori=$(grep '^ERRORE ' "$log" | grep -vc 'DRUPAL_SYNC' || true)
+        if $imprevisto || [ "${errori:-0}" -gt 0 ]; then
+            :
+        elif grep -qE '^(AVVISO|ERRORE) .*DRUPAL_SYNC' "$log"; then
+            echo "Per scrivere serve DRUPAL_SYNC=on nel .env di wp-forestas (poi scripts/wordpress-up.sh di forestas)"
+        elif grep -q '^AVVISO .*: template .* non riuscirebbe' "$log"; then
+            echo "Prima i template di Impreza: $0 applica --conferma, poi di nuovo $0 pagine"
+        else
+            if [ -z "$solo_mancanti" ] && grep -q '^MANCANTE ' "$log"; then
+                echo "Per ritentare solo ciò che manca: $0 pagine --contenuti-mancanti --conferma"
+            fi
+            # Lo stesso giro dell'anteprima: con le sue opzioni
+            $conferma || echo "Per scrivere: $0 pagine${solo_mancanti}${opzioni} --conferma"
+        fi
+        # Si tengono gli ultimi LOG_PAGINE_TENUTI log
+        vecchi=$(ls -1t "${REPO}"/log/pagine-*.log 2>/dev/null | tail -n +$((LOG_PAGINE_TENUTI + 1)) || true)
+        [ -n "$vecchi" ] && echo "$vecchi" | while read -r f; do rm -f "$f"; done
+        exit "$esito"
+        ;;
+    allinea)
+        # Il comando del cron (oc:8758): da un sito appena ricreato o già in uso porta allo stato di
+        # riferimento, config/ applicata e pagine allineate alla copia Drupal, senza interventi. Usa i
+        # comandi qui sopra come li userebbe una persona. Applica da solo solo le differenze dei menu
+        # (voci da collegare alle pagine appena create): un config/ diverso dal sito è un rilascio, che si
+        # fa a mano guardando l'anteprima, e qui si segnala soltanto
+        [ $# -eq 1 ] || { uso; exit 1; }
+        stato() { echo "STATO $*"; }
+        echo "== $(date '+%Y-%m-%d %H:%M:%S') allinea ${URL}"
+        # 1. Sito pronto: installato e con config/ applicata dall'init (o da un applica a mano)
+        if ! docker exec -u www-data "$C" wp --path="$WP_PATH" option get "$(docker exec "$C" php -r "require '${CONFIG_LIB}/costanti.php'; echo WPF_OPZIONE_FATTO;")" >/dev/null 2>&1; then
+            stato "non allineato: config/ non ancora applicata dall'init (sito appena ricreato?): riprovo al prossimo giro"
+            exit 1
+        fi
+        # 2. Pagine
+        esito_pagine=0
+        "$0" pagine --conferma || esito_pagine=$?
+        if [ "$esito_pagine" -ne 0 ] && [ "$esito_pagine" -ne 1 ]; then
+            stato "non allineato: errore imprevisto delle pagine (uscita ${esito_pagine})"
+            exit 1
+        fi
+        # 3. Menu: si applica solo se tutte le differenze di applica sono di menu
+        anteprima=$("$0" applica 2>&1) || { echo "$anteprima"; stato "non allineato: anteprima di applica non riuscita"; exit 1; }
+        differenze=$(printf '%s\n' "$anteprima" | grep ' → ' | grep -v '^Warning: ' || true)
+        if [ -n "$differenze" ]; then
+            if grep -vqE '^menu[ :]' <<< "$differenze"; then
+                printf '%s\n' "$differenze"
+                stato "non allineato: config/ è diverso dal sito anche fuori dai menu; non applico in automatico: $0 applica, poi applica --conferma a mano"
+                exit 1
+            fi
+            echo "differenze solo nei menu ($(printf '%s\n' "$differenze" | grep -c .)): le applico"
+            "$0" applica --conferma || { stato "non allineato: applica dei menu non riuscito"; exit 1; }
+        fi
+        # 4. Verifica: nessuna differenza con config/, pagine senza nulla da fare
+        anteprima=$("$0" applica 2>&1) || true
+        if ! grep -q '^nessuna differenza$' <<< "$anteprima"; then
+            printf '%s\n' "$anteprima" | grep ' → ' | grep -v '^Warning: ' || true
+            stato "non allineato: dopo il giro applica mostra ancora differenze"
+            exit 1
+        fi
+        verifica=$("$0" pagine 2>&1) && esito_verifica=0 || esito_verifica=$?
+        riassunto=$(printf '%s\n' "$verifica" | grep '^RIASSUNTO ' || true)
+        if [ "$esito_verifica" -ne 0 ]; then
+            printf '%s\n' "$verifica"
+            stato "non allineato: la verifica delle pagine esce con ${esito_verifica}"
+            exit 1
+        fi
+        if [ "$esito_pagine" -ne 0 ]; then
+            stato "non allineato: il giro delle pagine è uscito con ${esito_pagine} (righe MANCANTE o ERRORE sopra)"
+            exit 1
+        fi
+        riassunto=${riassunto#RIASSUNTO }
+        stato "allineato (pagine: ${riassunto#anteprima, nulla scritto — })"
         ;;
     ritratto)
         esegui_script ritratto.php
