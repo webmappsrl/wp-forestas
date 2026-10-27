@@ -1,6 +1,7 @@
 /*
- * Riquadro «Allegati e galleria» dell'editor delle pagine (oc:8758): aggiunge allegati e immagini dalla
- * libreria media di WordPress, li toglie e li riordina. Il salvataggio lo fa il modulo della pagina
+ * Riquadro «Allegati e galleria» dell'editor delle pagine (oc:8758) e «Allegati, collegamenti e galleria»
+ * delle news (oc:8759): aggiunge allegati e immagini dalla libreria media di WordPress e righe di
+ * collegamento, li toglie e li riordina. Il salvataggio lo fa il modulo della pagina o della news
  * (inc/pagine-statiche-admin.php).
  */
 (function ($) {
@@ -21,6 +22,13 @@
 
 	$(function () {
 		$('.forestas-riquadro-elenco ul').sortable({ handle: '.forestas-riquadro-trascina', axis: 'y' });
+
+		$(document).on('click', '.forestas-riquadro-aggiungi-collegamento', function () {
+			var elenco = $(this).closest('.forestas-riquadro-collegamenti');
+			var riga = $(elenco.find('template').html());
+			elenco.find('ul').append(riga);
+			riga.find('input').first().trigger('focus');
+		});
 
 		$(document).on('click', '.forestas-riquadro-togli', function () {
 			$(this).closest('li').remove();

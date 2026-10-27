@@ -28,10 +28,10 @@ Configurazione del WordPress di Forestas, dall'host.
   bin/wordpress-config.sh applica [OPZIONI] --conferma
                                                    salva un backup in backup/<data-ora>/ e applica
   bin/wordpress-config.sh pagine [--contenuti-mancanti] [--accetta-bozze] [--conferma]
-                                                   sincronizza le pagine statiche dalla copia di Drupal
-                                                   (config/pagine.json): senza --conferma mostra le
-                                                   differenze; scrive solo con DRUPAL_SYNC=on nel .env
-  bin/wordpress-config.sh allinea                  per il cron: pagine da Drupal, menu collegati alle pagine,
+                                                   sincronizza le pagine statiche (config/pagine.json) e
+                                                   le news dalla copia di Drupal: senza --conferma mostra
+                                                   le differenze; scrive solo con DRUPAL_SYNC=on nel .env
+  bin/wordpress-config.sh allinea                  per il cron: pagine e news da Drupal, menu collegati alle pagine,
                                                    verifica finale; esce con 0 solo se il sito è allineato
                                                    a config/ e alla copia Drupal (STATO nell'ultima riga)
   bin/wordpress-config.sh ritratto                 stato del sito, da confrontare prima e dopo un reset
@@ -43,8 +43,10 @@ Opzioni di applica:
 
 Opzioni di pagine:
   --contenuti-mancanti   ritenta solo gli elementi non riusciti nelle esecuzioni precedenti
-  --accetta-bozze        mette in bozza anche più di 2 pagine nello stesso giro: solo se su Drupal
-                         sono state davvero spubblicate (di solito è una copia in ricarica)
+  --accetta-bozze        mette in bozza più pagine o news del solito nello stesso giro, e scrive le
+                         news anche se nella copia ce ne sono molte meno che in WordPress (soglie in
+                         pagine-lib.php e news-lib.php): solo se su Drupal sono state davvero
+                         spubblicate o cancellate (di solito è una copia in ricarica)
   --conferma             scrive (altrimenti solo anteprima)
 Ogni esecuzione scrive un log in log/pagine-<data-ora>.log (si tengono gli ultimi ${LOG_PAGINE_TENUTI}).
 
@@ -205,7 +207,7 @@ case "$comando" in
         grep -E '^(RIASSUNTO|ERRORE|MANCANTE|MENU|AVVISO) |^(Warning|Error): ' "$log" || true
         conta() { grep -c "^$1 " "$log" || true; }
         # Avvisi: le righe AVVISO e le MENU (voci verso pagine in bozza)
-        echo "pagine: $(conta PAGINA) · media: $(conta MEDIA) · link: $(conta LINK) · avvisi: $(( $(conta AVVISO) + $(conta MENU) ))"
+        echo "pagine: $(conta PAGINA) · news: $(conta NEWS) · termini: $(conta TERMINE) · media: $(conta MEDIA) · link: $(conta LINK) · avvisi: $(( $(conta AVVISO) + $(conta MENU) ))"
         echo "log completo: ${log}"
         # Un giro finito arriva al RIASSUNTO; uno fermato dal comando ha una riga ERRORE. Senza nessuna
         # delle due l'uscita viene da un errore di PHP o di WP-CLI (un fatal, un WP_ADMIN_USER che non c'è),
@@ -240,7 +242,7 @@ case "$comando" in
         ;;
     allinea)
         # Il comando del cron (oc:8758): da un sito appena ricreato o già in uso porta allo stato di
-        # riferimento, config/ applicata e pagine allineate alla copia Drupal, senza interventi. Usa i
+        # riferimento, config/ applicata e pagine e news (oc:8759) allineate alla copia Drupal, senza interventi. Usa i
         # comandi qui sopra come li userebbe una persona. Applica da solo solo le differenze dei menu
         # (voci da collegare alle pagine appena create): un config/ diverso dal sito è un rilascio, che si
         # fa a mano guardando l'anteprima, e qui si segnala soltanto
@@ -252,7 +254,7 @@ case "$comando" in
             stato "non allineato: config/ non ancora applicata dall'init (sito appena ricreato?): riprovo al prossimo giro"
             exit 1
         fi
-        # 2. Pagine
+        # 2. Pagine e news (lo stesso comando)
         esito_pagine=0
         "$0" pagine --conferma || esito_pagine=$?
         if [ "$esito_pagine" -ne 0 ] && [ "$esito_pagine" -ne 1 ]; then
@@ -290,7 +292,7 @@ case "$comando" in
             exit 1
         fi
         riassunto=${riassunto#RIASSUNTO }
-        stato "allineato (pagine: ${riassunto#anteprima, nulla scritto — })"
+        stato "allineato (${riassunto#anteprima, nulla scritto — })"
         ;;
     ritratto)
         esegui_script ritratto.php

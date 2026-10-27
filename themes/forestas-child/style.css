@@ -5,7 +5,7 @@ Template: Impreza
 Author: Webmapp
 Author URI: https://webmapp.it/
 Description: Child theme di Impreza per Sardegna Sentieri (Forestas). Versionato nel repo wp-forestas e montato dal compose: si modifica nel repo, non dal pannello.
-Version: 1.4.30
+Version: 1.5.8
 */
 
 
@@ -52,6 +52,7 @@ Version: 1.4.30
 	--sase-sezione-da-sapere: #0F6E6A;
 	--sase-sezione-mappa: var(--sase-arancio);
 	--sase-sezione-news: #C2410C;
+	--sase-fondo-immagine: #E9F1F9;                          /* sotto un'immagine che si sta caricando (card del Canvas) */
 	--sase-terra: #CA5C30;                                    /* terra del marchio SARDEGNA: pagine senza sezione */
 
 	--sase-font-titoli: "Montserrat", sans-serif;
@@ -1705,9 +1706,13 @@ Version: 1.4.30
 	font-size: clamp(0.875rem, 0.875rem + (1vw - 0.2rem) * 0.125, 1rem);
 	line-height: 1.6;
 }
-/* Icona del file nel colore del marchio, come nelle pagine di testo di Drupal */
+/* Icona del file nel colore del marchio, come nelle pagine di testo di Drupal; nelle news nel colore
+   della sezione, come le altre icone della news (sase-file__icon prende --section-color) */
 .forestas-file__icona {
 	color: var(--sase-arancio);
+}
+.forestas-news-corpo .forestas-file__icona {
+	color: var(--sase-sezione-news);
 }
 /* Galleria: sezione sase-padding-v-8 (2,5rem sopra e sotto) con 1,875rem fra titolo e griglia
    (sase-section-inner-vertical-spaced-margin-6) */
@@ -1920,3 +1925,301 @@ Version: 1.4.30
 .forestas-mappa-aperta .l-header {
 	z-index: -1 !important;
 }
+
+/*
+ * News (oc:8759): pagina della news, schede della pagina News, card unica e pagine d'elenco. Schede e card
+ * seguono il «Canvas Fase 2» (tavola 9, sezioni redazionali: .tabs, .red-t, .uc); la pagina della news
+ * segue il layout di Drupal (core.entity_view_display.node.news.full.yml), con le classi del tema
+ * sardegnasentieri tradotte nei valori.
+ */
+
+/* Testata della news: quella delle pagine, con la tipologia sopra il filo (sase-hero__category) e la data
+   sotto il titolo (sase-hero__date) */
+.forestas-testata-tipologia {
+	margin: 0;
+	font-size: .75rem;
+	font-weight: 600;
+	letter-spacing: .06em;
+	text-transform: uppercase;
+}
+.forestas-testata-data {
+	margin: .75rem 0 0;
+	font-size: var(--sase-carattere-piccolo);
+	font-weight: 600;
+}
+.forestas-testata-data i { margin-right: .35em; color: var(--sase-sezione-news); }
+.forestas-news-corpo { padding-top: 2.5rem; }
+.forestas-news-corpo > .forestas-collegamenti { margin-top: 3.125rem; }
+/* Tag: sase-tag del tema Drupal. Segnalibro «light» nel colore della sezione News (#C2410C concordato
+   al posto del #F67745 di Drupal, come la data, i file e la freccia dei collegamenti), voci in maiuscolo
+   separate da «-» */
+.forestas-news-tag {
+	display: flex;
+	align-items: baseline;
+	gap: 1em;
+	margin-bottom: 3.125rem;                                 /* 50px prima del testo, come il blocco sase-block */
+	color: var(--sase-testo);
+	font-weight: 600;
+	text-transform: uppercase;
+}
+.forestas-news-tag__icona { color: var(--sase-sezione-news); }
+.forestas-news-tag ul {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 1em .5em;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+.forestas-news-tag li { margin: 0; }
+.forestas-news-tag li:not(:last-child)::after {
+	content: "-";
+	margin-left: .5em;
+}
+/* Collegamenti: field--field-collegamenti di Drupal. Titolo sase-h5 come quello degli allegati, 1,25rem
+   prima dell'elenco, voci a 0,9375rem; link sase-link: grassetto, senza sottolineatura (solo al
+   passaggio del mouse), freccia davanti nel colore della sezione */
+.l-main .forestas-collegamenti-titolo {
+	margin: 0 0 1.25rem;
+	color: var(--sase-testo);
+	font-family: var(--sase-font-titoli);
+	font-size: var(--sase-titolo-piccolo);
+	font-weight: 600;
+	line-height: 1.4;
+}
+.forestas-collegamenti ul {
+	display: grid;
+	gap: .9375rem;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+.forestas-link-freccia {
+	display: flex;
+	align-items: baseline;
+	gap: .5em;
+	color: var(--sase-testo);
+	font-size: 1rem;
+	font-weight: 600;
+	text-decoration: none;
+}
+.forestas-link-freccia:hover,
+.forestas-link-freccia:focus { text-decoration: underline; }
+.forestas-link-freccia i {
+	font-size: .9375rem;
+	color: var(--sase-sezione-news);
+}
+
+/* Schede: .tabs del Canvas. Collegamenti, non un componente: quello aperto in grassetto con il filetto */
+.forestas-schede {
+	display: flex;
+	justify-content: center;
+	gap: 26px;
+	padding: 0 22px;
+	border-bottom: 1px solid var(--sase-filo-percorso);
+}
+.forestas-schede a {
+	display: block;
+	padding: 13px 0;
+	border-bottom: 3px solid transparent;
+	color: var(--sase-testo);
+	font-size: 14px;
+	font-weight: 500;
+	white-space: nowrap;
+	text-decoration: none;
+}
+.forestas-schede a:hover { color: var(--sase-inchiostro); }
+.forestas-schede a[aria-current] {
+	border-bottom-color: var(--forestas-sezione);
+	color: var(--sase-inchiostro);
+	font-weight: 700;
+}
+/* 860px: la soglia del Canvas per schede e griglie (anche più sotto e in assets/js/schede.js).
+   Sotto 860px la fila scorre in orizzontale se non ci sta, mai in verticale (con overflow-x: auto il
+   browser mette auto anche in verticale, e il filetto della scheda aperta lo faceva comparire) */
+@media (max-width: 860px) {
+	.forestas-schede { justify-content: flex-start; gap: 18px; overflow: auto hidden; }
+}
+.forestas-scheda,
+.forestas-elenco {
+	width: 90%;
+	max-width: var(--sase-larghezza-contenuto);
+	margin: 0 auto;
+	padding: 1.875rem 0 3.75rem;
+}
+/* Titolo della scheda: .red-t del Canvas, filetto corto nel colore della sezione sopra il titolo */
+.forestas-scheda-titolo {
+	display: grid;
+	justify-items: center;
+	gap: 10px;
+	margin-bottom: 1.25rem;
+	text-align: center;
+}
+.forestas-scheda-titolo span {
+	width: 34px;
+	height: 3px;
+	background: var(--forestas-sezione);
+}
+.l-main .forestas-scheda-titolo h2 {
+	margin: 0;
+	padding: 0;
+	color: var(--sase-testo);
+	font-family: var(--sase-font-titoli);
+	font-size: 1.375rem;
+	font-weight: 600;
+}
+.forestas-scheda-pulsante {
+	margin: 1.25rem 0 0;
+	text-align: center;
+}
+
+/* Card unica: .uc del Canvas. Tutta la card è cliccabile (il link del titolo la copre) */
+.forestas-griglia {
+	display: grid;
+	gap: 20px;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.forestas-griglia--evidenza { grid-template-columns: 3fr 2fr; }
+.forestas-card {
+	--c: var(--forestas-sezione, var(--sase-sezione-news));
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+	overflow: hidden;
+	border-radius: 8px;
+	background: #fff;
+	box-shadow: 0 1px 2px rgba(0, 0, 0, .06), 0 4px 14px rgba(0, 0, 0, .07);
+	transition: box-shadow .25s ease, transform .25s ease;
+}
+.forestas-card:hover {
+	box-shadow: 0 2px 4px rgba(0, 0, 0, .08), 0 12px 28px rgba(0, 0, 0, .12);
+	transform: translateY(-2px);
+}
+.forestas-card:focus-within { outline: 3px solid var(--sase-focus); outline-offset: 2px; }
+.forestas-card__media {
+	position: relative;
+	aspect-ratio: 3 / 2;
+	overflow: hidden;
+	background: var(--sase-fondo-immagine);
+}
+.forestas-card__media img {
+	display: block;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	transition: transform .4s ease;
+}
+.forestas-card:hover .forestas-card__media img { transform: scale(1.04); }
+.forestas-card__testo {
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+	gap: 8px;
+	padding: 16px 16px 18px;
+}
+.forestas-card__tag {
+	display: inline-flex;
+	align-items: center;
+	gap: .55em;
+	color: var(--sase-testo);
+	font: 600 .75rem/1.2 var(--sase-font-testo);
+	letter-spacing: .06em;
+	text-transform: uppercase;
+}
+.forestas-card__tag::before {
+	content: "";
+	flex: none;
+	width: 1.8em;
+	height: 3px;
+	background: var(--c);
+}
+.l-main .forestas-card__titolo {
+	margin: 0;
+	padding: 0;
+	color: var(--sase-testo-scuro);
+	font: 600 1.0625rem/1.25 var(--sase-font-titoli);
+}
+.forestas-card__titolo a { color: inherit; text-decoration: none; }
+.forestas-card__titolo a::after { content: ""; position: absolute; inset: 0; z-index: 1; }
+.forestas-card__titolo a:focus-visible { outline: none; }
+.forestas-card:hover .forestas-card__titolo a {
+	text-decoration: underline;
+	text-decoration-color: var(--c);
+	text-underline-offset: 3px;
+}
+.forestas-card__data {
+	margin: auto 0 0;
+	padding-top: 4px;
+	color: var(--sase-testo);
+	font-size: .875rem;
+}
+/* Senza foto: filetto in alto */
+.forestas-card--senza-immagine { border-top: 4px solid var(--c); }
+.forestas-card--senza-immagine .forestas-card__testo { min-height: 9em; padding-top: 20px; }
+/* In evidenza: foto piena, testo bianco sulla sfumatura scura */
+.forestas-card--evidenza {
+	grid-row: span 3;                                        /* accanto, le altre 3 («quanti»: 4 in config/pagine.json) */
+	min-height: 360px;
+	background: var(--sase-testo-scuro);
+}
+.forestas-card--evidenza .forestas-card__media { position: absolute; inset: 0; aspect-ratio: auto; }
+.forestas-card--evidenza .forestas-card__testo {
+	position: relative;
+	flex: none;
+	margin-top: auto;
+	padding: 80px 20px 22px;
+	background: linear-gradient(to top, rgba(0, 0, 0, .88) 0, rgba(0, 0, 0, .78) 55%, rgba(0, 0, 0, 0) 100%);
+}
+.forestas-card--evidenza :is(.forestas-card__tag, .forestas-card__data),
+.l-main .forestas-card--evidenza .forestas-card__titolo { color: #fff; }
+.l-main .forestas-card--evidenza .forestas-card__titolo { font-size: 1.375rem; line-height: 1.2; }
+.forestas-card--evidenza:hover .forestas-card__titolo a { text-decoration-color: #fff; }
+.forestas-card__flag {
+	position: absolute;
+	top: 14px;
+	left: 14px;
+	padding: .4em .7em;
+	border-radius: 4px;
+	background: #fff;
+	color: var(--sase-testo-scuro);
+	font: 600 .75rem/1 var(--sase-font-testo);
+	letter-spacing: .06em;
+	text-transform: uppercase;
+}
+/* Compatta, accanto a quella in evidenza: foto a lato */
+.forestas-card--compatta { flex-direction: row; min-height: 120px; }
+.forestas-card--compatta .forestas-card__media { flex: 0 0 38%; aspect-ratio: auto; }
+.forestas-card--compatta .forestas-card__testo { padding: 12px 14px; }
+.l-main .forestas-card--compatta .forestas-card__titolo { font-size: .9375rem; }
+@media (max-width: 860px) {
+	.forestas-griglia { grid-template-columns: 1fr; }
+	.forestas-card--evidenza { grid-row: auto; min-height: 60vw; }
+}
+@media (prefers-reduced-motion: reduce) {
+	.forestas-card,
+	.forestas-card__media img { transition: none; }
+	.forestas-card:hover,
+	.forestas-card:hover .forestas-card__media img { transform: none; }
+}
+.forestas-paginazione {
+	display: flex;
+	justify-content: center;
+	gap: .5rem;
+	margin-top: 2.5rem;
+}
+.forestas-paginazione .page-numbers {
+	min-width: 2.25em;
+	padding: .35em .6em;
+	border: 1px solid var(--sase-filo-percorso);
+	color: var(--sase-testo);
+	text-align: center;
+	text-decoration: none;
+}
+.forestas-paginazione .page-numbers.current {
+	border-color: var(--sase-sezione-news);
+	color: var(--sase-inchiostro);
+	font-weight: 700;
+}
+/* Sulle pagine a schede la fila delle schede segue subito il percorso, come nel Canvas */
+.l-main:has(.forestas-schede) .forestas-intestazione + .forestas-percorso { margin-bottom: 0; }

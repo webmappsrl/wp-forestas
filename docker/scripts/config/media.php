@@ -96,7 +96,8 @@ function wpf_media_importa( array $file, bool $prova ) {
 	add_filter( 'fallback_intermediate_image_sizes', '__return_empty_array' );
 	// Titolo dell'allegato: per i documenti il testo del link che mostra Drupal (descrizione o nome del file)
 	$titolo = ! str_starts_with( $file['mime'], 'image/' ) ? $file['titolo'] : pathinfo( $file['nome'], PATHINFO_FILENAME );
-	$id     = media_handle_sideload( [ 'name' => $file['nome'], 'tmp_name' => $tmp ], 0, $titolo );
+	// Il nome senza spazi in fondo: «….pdf » non ha un'estensione che WordPress riconosca (oc:8759, fid 1768)
+	$id     = media_handle_sideload( [ 'name' => trim( $file['nome'] ), 'tmp_name' => $tmp ], 0, $titolo );
 	remove_filter( 'fallback_intermediate_image_sizes', '__return_empty_array' );
 	if ( is_wp_error( $id ) ) {
 		@unlink( $tmp );
