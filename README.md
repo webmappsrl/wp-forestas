@@ -21,7 +21,7 @@ provarlo.
 | `docker/themes/` | qui va messo `impreza.zip` (escluso da git) |
 | `docker/plugins/` | zip dei plugin commerciali (esclusi da git); l'elenco è in `commerciali.txt`, versionato |
 | `config/` | configurazione versionata del sito: Theme Options, header, footer, Home, menu, WPML |
-| `docker/scripts/config/` | esporta, applica, sincronizzazione delle pagine da Drupal (`pagine.php`, `drupal.php`, `link.php`, `media.php`), ritratto e licenza Impreza, eseguiti con `wp eval-file`; montati dal compose (non copiati nell'immagine). `costanti.php` contiene i nomi e i percorsi che legge l'init |
+| `docker/scripts/config/` | esporta, applica, sincronizzazione di pagine e news da Drupal (`pagine.php`, `contenuti-lib.php` comune, `pagine-lib.php`, `news-lib.php`, `drupal.php`, `link.php`, `media.php`), ritratto e licenza Impreza, eseguiti con `wp eval-file`; montati dal compose (non copiati nell'immagine). `costanti.php` contiene i nomi e i percorsi che legge l'init |
 | `bin/wordpress-config.sh` | comando sull'host per esporta, applica, pagine, allinea, ritratto e zip |
 | `cron/allinea.crontab` | riga del crontab per `allinea`, con lo stato dell'installazione sul server (non installata da nessuno script) |
 | `backup/` | backup creati da `applica --conferma` (esclusi da git) |
@@ -141,7 +141,7 @@ in `git status` di questo repo.
 ## Configurazione versionata
 
 Theme Options di Impreza, header e footer, Home, menu (con le traduzioni WPML), lingue e impostazioni
-di WPML, titolo, permalink e home statica stanno in `config/`, così un sito ricreato da zero torna
+di WPML, titolo, permalink, fuso orario e home statica stanno in `config/`, così un sito ricreato da zero torna
 identico. Restano fuori contenuti editoriali, contenuti di esempio e uploads.
 
 ```bash
@@ -244,9 +244,12 @@ Il comando trova da solo il container che monta il child da questa cartella; se 
 Le pagine della struttura del sito (quelle dei menu: Sentieri, Itinerari, Cammini, Punti di
 interesse, Da sapere, News, Mappa interattiva, Contatti, FAQ, App, Note legali, Privacy, Crediti,
 Dichiarazione di accessibilità) si creano e si tengono allineate alla copia SQL del database Drupal
-con un comando (oc:8758). L'elenco è `config/pagine.json`; la grafica sta nei tre template di Impreza
-di `config/post.json` («Pagina con testata», «Pagina di testo», «Pagina mappa») e negli shortcode di
-`themes/forestas-child/inc/pagine-statiche.php`.
+con un comando (oc:8758). L'elenco è `config/pagine.json`; la grafica sta nei template di Impreza
+di `config/post.json` («Pagina con testata», «Pagina di testo», «Pagina mappa», e per le news «Pagina a
+schede» e «Pagina d'elenco») e negli shortcode di `themes/forestas-child/inc/pagine-statiche.php`. Nell'editor
+il riquadro «Allegati e galleria» (`inc/pagine-statiche-admin.php`) gestisce allegati e galleria; sulle
+news si chiama «Allegati, collegamenti e galleria», e «In evidenza» (se la news compare nella pagina
+News) ha un riquadro suo in cima alla colonna laterale.
 
 Le pagine che Drupal ha solo in italiano hanno in inglese la nostra traduzione, in
 `config/traduzioni/en/<chiave>.json` (titolo, sottotitolo, impronta del testo italiano tradotto) e
@@ -272,8 +275,8 @@ bin/wordpress-config.sh pagine --contenuti-mancanti --conferma   # ritenta solo 
   tunnel verso la copia di UAT aperto sulla 3307 del Mac (`forestas/docs/howto/copia-database-drupal.md`),
   anche `DRUPAL_DB_HOST=host.docker.internal` e `DRUPAL_DB_PORT=3307`.
 - **Log:** ogni esecuzione scrive `log/pagine-<data-ora>.log` (escluso da git; si tengono gli ultimi
-  60) con una riga per evento: `PAGINA`, `MEDIA`, `LINK`, `MENU`, `MANCANTE`, `AVVISO`, `ERRORE`,
-  `RIASSUNTO`. A schermo compaiono le righe che chiedono un intervento (`ERRORE`, `MANCANTE`, `MENU`,
+  60) con una riga per evento: `PAGINA`, `NEWS`, `TERMINE`, `MEDIA`, `LINK`, `MENU`, `MANCANTE`, `REGOLE`, `AVVISO`,
+  `ERRORE`, `RIASSUNTO`. A schermo compaiono le righe che chiedono un intervento (`ERRORE`, `MANCANTE`, `MENU`,
   ogni `AVVISO`, gli avvisi ed errori di WordPress), il riassunto e i conteggi.
 - **Ciò che non riesce** (un'immagine che non si scarica, un template assente…) resta in un elenco
   sul sito, con causa e date, e `--contenuti-mancanti` ritenta solo quegli elementi. Il comando esce
@@ -302,8 +305,8 @@ bin/wordpress-config.sh pagine --contenuti-mancanti --conferma   # ritenta solo 
 - **Ricreare tutto dal reset** (installazione, pagine, menu, verifiche, problemi noti):
   [docs/howto/ricreare-wordpress-da-zero.md](docs/howto/ricreare-wordpress-da-zero.md).
 - **Cron sul server:** `bin/wordpress-config.sh allinea`, un comando solo che da un sito appena
-  ricreato o già in uso porta allo stato di riferimento (pagine dalla copia Drupal, menu collegati alle
-  pagine, verifica finale) e chiude con `STATO allineato` o `STATO non allineato: <motivo>`. Applica da
+  ricreato o già in uso porta allo stato di riferimento (pagine e news dalla copia Drupal, menu collegati
+  alle pagine, verifica finale) e chiude con `STATO allineato` o `STATO non allineato: <motivo>`. Applica da
   solo solo le differenze dei menu: un `config/` diverso dal sito si applica a mano. La riga da mettere
   nel crontab è in [cron/allinea.crontab](cron/allinea.crontab); procedura in
   [docs/howto/cron-sincronizzazione-pagine.md](docs/howto/cron-sincronizzazione-pagine.md).
@@ -312,6 +315,25 @@ bin/wordpress-config.sh pagine --contenuti-mancanti --conferma   # ritenta solo 
   importati restano verso Drupal («in attesa» nel log) e si sistemano da soli quando arrivano. Quelli
   verso pagine di Drupal che non sono contenuti (il form `/form/segnalazione`) sono segnati «verso
   Drupal» e non si sistemano da soli: serve una regola in `docker/scripts/config/link.php`.
+
+### News
+
+Lo stesso comando sincronizza anche le news di Drupal, dopo le pagine (oc:8759): diventano post con la
+categoria «News» e le tipologie come sottocategorie, all'indirizzo `/news/<titolo>/` come su Drupal.
+La pagina News è a schede (News, la pagina stessa, e Attività e comunicazioni) e le pagine d'elenco sono
+`/attivita-e-comunicazioni/` e `/tutte-le-news/`, tutte in `config/pagine.json`; la grafica è in
+`themes/forestas-child/inc/news.php` e nei template «Pagina a schede», «Pagina d'elenco» e «News» di
+`config/post.json`. Il log ha in più le righe `NEWS`, `TERMINE` e `REGOLE` (regole degli indirizzi
+rigenerate quando cambiano le schede).
+
+- **Si ferma senza scrivere le news** (le pagine sì) se più di 5 news andrebbero in bozza nello stesso
+  giro, o se nella copia ci sono più di 5 news pubblicate in meno che in WordPress: è il segno di una
+  copia caricata a metà. Se su Drupal sono state spubblicate o cancellate davvero:
+  `pagine --accetta-bozze --conferma`. Una news che non c'è più su Drupal va in bozza, mai cancellata.
+- **File dei media:** pagine e news li scaricano da `https://www.sardegnasentieri.it/sites/default/files/`;
+  `DRUPAL_FILES_URL` nel `.env` cambia l'indirizzo, per esempio verso una copia della cartella dei file
+  quando Drupal verrà spento.
+- Scelte e vincoli: [docs/knowledge/8759-import-delle-news-da-drupal.md](docs/knowledge/8759-import-delle-news-da-drupal.md).
 
 ## Messa in opera su UAT
 
@@ -325,10 +347,12 @@ bin/wordpress-config.sh pagine --contenuti-mancanti --conferma   # ritenta solo 
    In quella prima anteprima possono comparire anche «voci diverse» nel menu, perché le voci puntano
    a post non ancora ricollegati, e qualche avviso «riferimento non risolto»: con `--conferma` i post
    si ricollegano prima, e un riferimento che resta senza post lascia il valore del sito.
-5. Pagine statiche da Drupal: aggiungi al `wp-forestas/.env` `DRUPAL_DB_USER`, `DRUPAL_DB_PASSWORD`
+5. Pagine statiche e news da Drupal: aggiungi al `wp-forestas/.env` `DRUPAL_DB_USER`, `DRUPAL_DB_PASSWORD`
    (l'utente in sola lettura della copia) e `DRUPAL_SYNC=on`, poi `scripts/wordpress-up.sh`, perché il
-   container legge il `.env` solo all'avvio. `bin/wordpress-config.sh pagine` per l'anteprima, poi
-   `pagine --conferma`, lontano dal reload della copia delle 10:00. Va dopo `applica --conferma`, che
+   container legge il `.env` solo all'avvio. `DRUPAL_FILES_URL` resta vuoto finché Drupal è acceso (i
+   file si scaricano dal sito pubblico). `bin/wordpress-config.sh pagine` per l'anteprima, poi
+   `pagine --conferma`, lontano dal reload della copia delle 10:00: il primo giro con le news dura una
+   ventina di minuti, perché scarica circa 300 file. Va dopo `applica --conferma`, che
    scrive i template di Impreza delle pagine: senza, le pagine restano fra i mancanti. Poi un altro
    `applica --conferma`: le voci di menu verso pagine che al primo apply non c'erano sono rimaste link
    per indirizzo, e solo un apply le collega alle pagine.

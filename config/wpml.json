@@ -43,7 +43,7 @@
         "custom_posts_sync_option": {
             "attachment": 1,
             "page": 1,
-            "post": 1,
+            "post": 2,
             "us_content_template": 1,
             "us_grid_layout": 1,
             "us_header": 1,
@@ -114,8 +114,9 @@
         "sync_sticky_flag": 1,
         "sync_taxonomy_parents": 0,
         "taxonomies_sync_option": {
-            "category": 1,
-            "post_tag": 1,
+            "category": 2,
+            "post_tag": 2,
+            "tipologia_da_sapere": 1,
             "translation_priority": 1,
             "us_portfolio_category": 1,
             "us_portfolio_tag": 1,

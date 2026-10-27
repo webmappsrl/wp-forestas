@@ -67,29 +67,55 @@ function forestas_sezione_pagina( int $id ): string {
 
 /*
  * Percorso di navigazione «Home › pagina», sempre subito sotto la testata (o sotto il titolo, dove la
- * testata non c'è), seguito dalla riga dei pulsanti della pagina.
+ * testata non c'è), seguito dalla riga dei pulsanti della pagina. Una pagina figlia ha in mezzo le pagine
+ * madri e una news la pagina News: «Home › News › Attività e comunicazioni», come nel Canvas (oc:8759).
  */
 function forestas_percorso( int $id ): string {
+	$sopra = get_post_type( $id ) === 'post' ? array_filter( [ forestas_pagina_news() ] ) : array_reverse( get_post_ancestors( $id ) );
+	$voci  = '';
+	foreach ( $sopra as $pagina ) {
+		$voci .= sprintf( '<a href="%s">%s</a><span aria-hidden="true">›</span>', esc_url( get_permalink( $pagina ) ), esc_html( get_the_title( $pagina ) ) );
+	}
 	return sprintf(
-		'<nav class="forestas-percorso" aria-label="%1$s"><a href="%2$s">Home</a><span aria-hidden="true">›</span><span aria-current="page">%3$s</span></nav>',
+		'<nav class="forestas-percorso" aria-label="%1$s"><a href="%2$s">Home</a><span aria-hidden="true">›</span>%3$s<span aria-current="page"%5$s>%4$s</span></nav>',
 		esc_attr( forestas_testo( 'Briciole di pane', 'Breadcrumb' ) ),
 		esc_url( apply_filters( 'wpml_home_url', home_url( '/' ) ) ),
-		esc_html( get_the_title( $id ) )
+		$voci,
+		esc_html( get_the_title( $id ) ),
+		forestas_attributo_lingua( $id )
 	) . forestas_azioni( $id );
+}
+
+/*
+ * Attributo lang per il testo di un contenuto mostrato in un'altra lingua (WCAG 3.1.2): sul sito inglese
+ * le news senza traduzione si vedono in italiano col ripiego di WPML, e lo screen reader le leggerebbe con
+ * la pronuncia inglese. Vuoto se il contenuto è nella lingua della pagina.
+ */
+function forestas_attributo_lingua( int $id ): string {
+	$dettagli = apply_filters( 'wpml_post_language_details', null, $id );
+	$lingua   = is_array( $dettagli ) ? (string) ( $dettagli['language_code'] ?? '' ) : '';
+	if ( $lingua === '' || $lingua === apply_filters( 'wpml_current_language', $lingua ) ) {
+		return '';
+	}
+	return ' lang="' . esc_attr( strtok( $lingua, '-' ) ) . '"';
 }
 
 /*
  * Pagine senza «Condividi»: su Drupal il blocco di condivisione (AddToAny) è nascosto su questi indirizzi
  * (block.block.addtoanysharebuttons, visibilità per percorso); Cammini segue Itinerari.
  */
-const FORESTAS_PAGINE_SENZA_CONDIVIDI = [ 'sentieri', 'itinerari', 'cammini', 'da-vedere', 'da-sapere', 'mappa-interattiva', 'news' ];
+const FORESTAS_PAGINE_SENZA_CONDIVIDI = [ 'sentieri', 'itinerari', 'cammini', 'da-vedere', 'da-sapere', 'mappa-interattiva', 'news',
+	// Le pagine d'elenco delle news, con le loro pagine successive (decisione del dev, oc:8759)
+	'attivita-e-comunicazioni', 'tutte-le-news' ];
 
 /*
  * Riga dei pulsanti sotto il percorso (.sh-actions dell'artifact «Canvas Fase 2»): per le pagine c'è solo
  * «Condividi», al posto di quello di Drupal. Niente riga se non c'è nessun pulsante.
  */
 function forestas_azioni( int $id ): string {
-	if ( in_array( (string) get_post_meta( $id, FORESTAS_META_PAGINA, true ), FORESTAS_PAGINE_SENZA_CONDIVIDI, true ) ) {
+	// Neanche le schede della pagina News (oc:8759): su Drupal erano blocchi della pagina /news
+	if ( in_array( (string) get_post_meta( $id, FORESTAS_META_PAGINA, true ), FORESTAS_PAGINE_SENZA_CONDIVIDI, true )
+		|| get_post_meta( $id, FORESTAS_META_SCHEDA, true ) !== '' ) {
 		return '';
 	}
 	return '<div class="forestas-azioni">' . forestas_condividi( $id ) . '</div>';
@@ -179,15 +205,21 @@ add_shortcode(
 			: '';
 		// Il Riassunto scritto, non quello che WordPress ricava dal testo quando il campo è vuoto
 		$sottotitolo = trim( (string) get_post_field( 'post_excerpt', $id ) );
+		// Una news (oc:8759) ha in più la tipologia sopra il titolo e la data sotto, come la sase-hero di Drupal
+		$news      = get_post_type( $id ) === 'post';
+		$tipologia = $news ? forestas_news_tipologia( $id ) : null;
 		return sprintf(
-			'<div class="forestas-testata forestas-sezione-%1$s%2$s">%3$s%4$s<div class="forestas-testata-testo"><span class="forestas-testata-filo" aria-hidden="true"></span><h1 class="forestas-testata-titolo">%5$s</h1>%6$s</div></div>',
-			esc_attr( forestas_sezione_pagina( $id ) ),
+			'<div class="forestas-testata forestas-sezione-%1$s%2$s">%3$s%4$s<div class="forestas-testata-testo"%9$s>%7$s<span class="forestas-testata-filo" aria-hidden="true"></span><h1 class="forestas-testata-titolo">%5$s</h1>%8$s%6$s</div></div>',
+			esc_attr( $news ? 'news' : forestas_sezione_pagina( $id ) ),
 			$immagine ? '' : ' forestas-testata-senza-immagine',
 			$immagine,
 			// Argomento, non pezzo del formato: un «%» nei credits scritti dalla redazione romperebbe sprintf
 			forestas_credits_immagine( $id_immagine ),
 			esc_html( get_the_title( $id ) ),
-			$sottotitolo !== '' ? '<p class="forestas-testata-sottotitolo">' . esc_html( $sottotitolo ) . '</p>' : ''
+			$sottotitolo !== '' ? '<p class="forestas-testata-sottotitolo">' . esc_html( $sottotitolo ) . '</p>' : '',
+			$tipologia ? '<p class="forestas-testata-tipologia">' . esc_html( $tipologia->name ) . '</p>' : '',
+			$news ? '<p class="forestas-testata-data"><i class="fas fa-calendar-edit" aria-hidden="true"></i> ' . forestas_news_data( $id ) . '</p>' : '',
+			forestas_attributo_lingua( $id )
 		) . forestas_percorso( $id );
 	}
 );
@@ -227,16 +259,8 @@ function forestas_credits_immagine( int $immagine ): string {
 }
 
 /*
- * Corpo di una pagina di testo: il testo importato da Drupal, poi allegati e galleria, nella colonna di
- * 960px del tema Drupal.
- *
- * Finché il testo è quello scritto dalla sincronizzazione (la sua impronta è in _wpf_testo_drupal) si
- * mostra così com'è: è già l'HTML che mostra Drupal, filtrato all'import come il suo «filtered_html». I
- * filtri di the_content lo cambierebbero: wpautop fa di due <br> di fila un nuovo paragrafo e mette in un
- * paragrafo il testo dei blockquote, wptexturize cambia apostrofi e virgolette, paragraph_fix di Impreza
- * toglie il <br> dopo una «]» (nelle FAQ, dopo «[...]»). Un testo modificato in WordPress passa invece
- * per the_content, che serve all'editor classico (salva i paragrafi come righe vuote). Se quel testo
- * contiene lo shortcode stesso, non lo si mostra di nuovo: sarebbe una ricorsione senza fine.
+ * Corpo di una pagina di testo: il testo (forestas_testo_importato), poi allegati e galleria, nella colonna
+ * di 960px del tema Drupal. Lo shortcode dentro il testo che mostra non si ripete.
  */
 add_shortcode(
 	'forestas_pagina_testo',
@@ -244,15 +268,35 @@ add_shortcode(
 		static $in_corso = false;
 		$id = get_the_ID();
 		if ( ! $id || $in_corso ) {
-			return '';
+			return ''; // lo shortcode dentro il testo che mostra: niente seconda copia di allegati e galleria
 		}
 		$in_corso = true;
-		$testo    = (string) get_post_field( 'post_content', $id );
-		$html     = md5( $testo ) === get_post_meta( $id, FORESTAS_META_TESTO_DRUPAL, true ) ? $testo : apply_filters( 'the_content', $testo );
+		$html     = '<div class="forestas-pagina-testo">' . forestas_testo_importato( $id ) . forestas_allegati( $id ) . forestas_galleria( $id ) . '</div>';
 		$in_corso = false;
-		return '<div class="forestas-pagina-testo">' . $html . forestas_allegati( $id ) . forestas_galleria( $id ) . '</div>';
+		return $html;
 	}
 );
+
+/*
+ * Testo di una pagina o di una news. Finché è quello scritto dalla sincronizzazione (la sua impronta è in
+ * _wpf_testo_drupal) si mostra così com'è: è già l'HTML che mostra Drupal, filtrato all'import come il suo
+ * «filtered_html». I filtri di the_content lo cambierebbero: wpautop fa di due <br> di fila un nuovo
+ * paragrafo e mette in un paragrafo il testo dei blockquote, wptexturize cambia apostrofi e virgolette,
+ * paragraph_fix di Impreza toglie il <br> dopo una «]» (nelle FAQ, dopo «[...]»). Un testo modificato in
+ * WordPress passa invece per the_content, che serve all'editor classico (salva i paragrafi come righe
+ * vuote). Se quel testo contiene lo shortcode che lo mostra, non lo si mostra di nuovo.
+ */
+function forestas_testo_importato( int $id ): string {
+	static $in_corso = false;
+	if ( $in_corso ) {
+		return '';
+	}
+	$in_corso = true;
+	$testo    = (string) get_post_field( 'post_content', $id );
+	$html     = md5( $testo ) === get_post_meta( $id, FORESTAS_META_TESTO_DRUPAL, true ) ? $testo : apply_filters( 'the_content', $testo );
+	$in_corso = false;
+	return $html;
+}
 
 /*
  * Dimensione di un file scritta come la scrive Drupal (format_size): byte, KB, MB o GB con al più due
@@ -274,7 +318,8 @@ function forestas_dimensione_file( int $byte ): string {
 /*
  * Allegati, come nel tema Drupal (field--field-allegati-media e file-link): titolo «Allegati», poi per ogni
  * file il testo del link (la descrizione del documento su Drupal, o il nome del file) e, sotto, l'icona
- * del file nel colore del marchio con formato e dimensione. Li mostra [forestas_pagina_testo] sotto il testo.
+ * del file nel colore del marchio con formato e dimensione. Li mostrano [forestas_pagina_testo] e
+ * [forestas_news] sotto il testo.
  */
 function forestas_allegati( int $pagina ): string {
 	$voci = '';
@@ -305,7 +350,7 @@ function forestas_allegati( int $pagina ): string {
  * (slick_lightbox) sull'immagine intera, con la didascalia configurata nel formatter della galleria:
  * testo alternativo, poi autore e credits dell'immagine. Link e didascalia nascosta hanno le classi e gli
  * attributi di blazy.html.twig, che lo script del modulo legge (assets/js/galleria-lightbox.js). La mostra
- * [forestas_pagina_testo] sotto gli allegati.
+ * [forestas_pagina_testo] e [forestas_news] sotto gli allegati (nelle news, dopo i collegamenti).
  */
 function forestas_galleria( int $pagina ): string {
 	$voci      = '';
