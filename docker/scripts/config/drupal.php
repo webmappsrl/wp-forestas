@@ -233,13 +233,15 @@ function wpf_drupal_pagina( mysqli $db, int $nid, string $lingua ): ?array {
 }
 
 /**
- * Righe di una tabella delle news, lette una volta per esecuzione: [ nid ][ langcode ] => righe in ordine
- * di delta. Dal Mac col tunnel ogni query costa quasi mezzo secondo: una query per campo e per news
- * vorrebbe dire più di dieci minuti a giro (oc:8759).
+ * Righe di una query, lette una volta per esecuzione e tenute per chiave: [ entity_id ][ langcode ] =>
+ * righe nell'ordine della query. Dal Mac col tunnel ogni query costa quasi mezzo secondo: una query per
+ * campo e per contenuto vorrebbe dire più di dieci minuti a giro (oc:8759). La chiave deve dire tutto
+ * quello che cambia la query (bundle, campo, colonne): due query con la stessa chiave darebbero le
+ * stesse righe.
  *
  * @param string $sql query con entity_id e langcode fra le colonne
  */
-function wpf_drupal_news_righe( mysqli $db, string $chiave, string $sql ): array {
+function wpf_drupal_in_memoria( mysqli $db, string $chiave, string $sql ): array {
 	static $tabelle = [];
 	if ( ! isset( $tabelle[ $chiave ] ) ) {
 		$tabelle[ $chiave ] = [];
@@ -250,14 +252,23 @@ function wpf_drupal_news_righe( mysqli $db, string $chiave, string $sql ): array
 	return $tabelle[ $chiave ];
 }
 
+/** Le righe di un campo per tutti i nodi di un bundle (wpf_drupal_in_memoria), in ordine di delta. */
+function wpf_drupal_bundle_tabella( mysqli $db, string $bundle, string $campo, array $colonne ): array {
+	$scelte = implode( ', ', array_map( fn( $c ) => "`{$campo}_{$c}` AS `{$c}`", $colonne ) );
+	return wpf_drupal_in_memoria(
+		$db,
+		"{$bundle}|{$campo}|" . implode( ',', $colonne ),
+		"SELECT entity_id, langcode, {$scelte} FROM `node__{$campo}` WHERE bundle = '" . addslashes( $bundle ) . "' AND deleted = 0 ORDER BY entity_id, delta"
+	);
+}
+
 /**
- * Valori di un campo di una news, come wpf_drupal_campo: nella lingua chiesta e, se non ne ha (campi
- * non traducibili), in quella originale. Con $tradotto solo nella lingua chiesta, come
+ * Valori di un campo di un nodo di un bundle, come wpf_drupal_campo: nella lingua chiesta e, se non ne ha
+ * (campi non traducibili), in quella originale. Con $tradotto solo nella lingua chiesta, come
  * wpf_drupal_campo_tradotto. Ogni valore è la riga con le colonne chieste.
  */
-function wpf_drupal_news_campo( mysqli $db, string $campo, array $colonne, int $nid, string $lingua, string $originale, bool $tradotto = false ): array {
-	$scelte = implode( ', ', array_map( fn( $c ) => "`{$campo}_{$c}` AS `{$c}`", $colonne ) );
-	$righe  = wpf_drupal_news_righe( $db, $campo, "SELECT entity_id, langcode, {$scelte} FROM `node__{$campo}` WHERE bundle = 'news' AND deleted = 0 ORDER BY entity_id, delta" );
+function wpf_drupal_bundle_campo( mysqli $db, string $bundle, string $campo, array $colonne, int $nid, string $lingua, string $originale, bool $tradotto = false ): array {
+	$righe  = wpf_drupal_bundle_tabella( $db, $bundle, $campo, $colonne );
 	$lingue = $tradotto ? wpf_drupal_lingue( $lingua ) : array_unique( array_merge( wpf_drupal_lingue( $lingua ), wpf_drupal_lingue( $originale ) ) );
 	foreach ( $lingue as $l ) {
 		if ( ! empty( $righe[ $nid ][ $l ] ) ) {
@@ -267,17 +278,16 @@ function wpf_drupal_news_campo( mysqli $db, string $campo, array $colonne, int $
 	return [];
 }
 
-/** I file di tutti i media delle news, in una query sola (wpf_drupal_file_media_tutti), alla prima news letta. */
-function wpf_drupal_news_precarica_media( mysqli $db ): void {
-	static $fatto = false;
-	if ( $fatto ) {
+/** I file di tutti i media di un bundle, in una query sola (wpf_drupal_file_media_tutti). */
+function wpf_drupal_bundle_precarica_media( mysqli $db, string $bundle, array $campi ): void {
+	static $fatti = [];
+	if ( isset( $fatti[ $bundle ] ) ) {
 		return;
 	}
-	$fatto = true;
-	$mid   = [];
-	foreach ( [ 'field_top_image_media', 'field_file_media', 'field_galleria_media' ] as $campo ) {
-		wpf_drupal_news_campo( $db, $campo, [ 'target_id' ], 0, 'it', 'it' ); // carica la tabella
-		foreach ( wpf_drupal_news_righe( $db, $campo, '' ) as $lingue ) {
+	$fatti[ $bundle ] = true;
+	$mid              = [];
+	foreach ( $campi as $campo ) {
+		foreach ( wpf_drupal_bundle_tabella( $db, $bundle, $campo, [ 'target_id' ] ) as $lingue ) {
 			foreach ( $lingue as $righe ) {
 				$mid = array_merge( $mid, array_column( $righe, 'target_id' ) );
 			}
@@ -306,13 +316,14 @@ function wpf_drupal_news_elenco( mysqli $db ): array {
 
 /**
  * Una news nella lingua chiesta, o null se la traduzione non esiste: i campi di wpf_drupal_pagina più
- * data mostrata (field_data, AAAA-MM-GG), tipologia, tag, «in evidenza», collegamenti, riferimenti e alias. I collegamenti hanno l'uri com'è su
- * Drupal (internal:/…, entity:node/N, http…); i riferimenti sono [ bundle, nid ] dei nodi collegati.
+ * data mostrata (field_data, AAAA-MM-GG), tipologia, tag, «in evidenza», collegamenti, riferimenti e
+ * alias. I collegamenti hanno l'uri com'è su Drupal (internal:/…, entity:node/N, http…); i riferimenti
+ * sono [ bundle, nid ] dei nodi collegati.
  */
 function wpf_drupal_news( mysqli $db, int $nid, string $lingua ): ?array {
-	$nodi = wpf_drupal_news_righe(
+	$nodi = wpf_drupal_in_memoria(
 		$db,
-		'nodi',
+		'news|nodi',
 		"SELECT f.nid AS entity_id, f.langcode, f.title, f.status, n.langcode AS originale
 		 FROM node_field_data f JOIN node n ON n.nid = f.nid WHERE f.type = 'news'"
 	);
@@ -324,17 +335,21 @@ function wpf_drupal_news( mysqli $db, int $nid, string $lingua ): ?array {
 		return null;
 	}
 	$originale = wpf_drupal_lingua( $r['originale'] );
-	wpf_drupal_news_precarica_media( $db );
-	$campo     = fn( string $nome, string $colonna ) => array_column( wpf_drupal_news_campo( $db, $nome, [ $colonna ], $nid, $lingua, $originale ), $colonna );
-	$tradotto  = fn( string $nome, array $colonne ) => wpf_drupal_news_campo( $db, $nome, $colonne, $nid, $lingua, $originale, true )[0] ?? [];
-	$file      = fn( array $mid ) => array_values( array_intersect_key( wpf_drupal_file_media_tutti( $db, $mid ), array_flip( array_map( 'intval', $mid ) ) ) );
+	wpf_drupal_bundle_precarica_media( $db, 'news', [ 'field_top_image_media', 'field_file_media', 'field_galleria_media' ] );
+	$campo     = fn( string $nome, string $colonna ) => array_column( wpf_drupal_bundle_campo( $db, 'news', $nome, [ $colonna ], $nid, $lingua, $originale ), $colonna );
+	$tradotto  = fn( string $nome, array $colonne ) => wpf_drupal_bundle_campo( $db, 'news', $nome, $colonne, $nid, $lingua, $originale, true )[0] ?? [];
+	// I file nell'ordine del campo su Drupal (delta), non in quello in cui sono stati letti
+	$file      = function ( array $mid ) use ( $db ): array {
+		$letti = wpf_drupal_file_media_tutti( $db, $mid );
+		return array_values( array_filter( array_map( fn( $m ) => $letti[ (int) $m ] ?? null, $mid ) ) );
+	};
 	$body      = $tradotto( 'body', [ 'value', 'format' ] );
 	$immagine  = $file( array_slice( $campo( 'field_top_image_media', 'target_id' ), 0, 1 ) );
 	$tid_tag   = array_map( 'intval', $campo( 'field_tag_news', 'target_id' ) );
 	$termini   = wpf_drupal_termini( $db, $tid_tag );
-	$tipi      = wpf_drupal_news_righe(
+	$tipi      = wpf_drupal_in_memoria(
 		$db,
-		'riferimenti',
+		'news|riferimenti',
 		"SELECT DISTINCT n.nid AS entity_id, n.langcode, n.type FROM node n
 		 JOIN node__field_references r ON r.field_references_target_id = n.nid WHERE r.bundle = 'news' AND r.deleted = 0"
 	);
@@ -345,7 +360,8 @@ function wpf_drupal_news( mysqli $db, int $nid, string $lingua ): ?array {
 			$riferimenti[] = [ $tipo, $collegato ];
 		}
 	}
-	$alias = wpf_drupal_news_righe(
+	// Il nid è il resto del percorso dopo «/node/» (6 caratteri, quindi dal settimo)
+	$alias = wpf_drupal_in_memoria(
 		$db,
 		'alias',
 		"SELECT CAST(SUBSTRING(path, 7) AS UNSIGNED) AS entity_id, langcode, alias FROM path_alias
@@ -371,7 +387,7 @@ function wpf_drupal_news( mysqli $db, int $nid, string $lingua ): ?array {
 		'tag'          => array_values( array_map( fn( $tid ) => [ $tid, $termini[ $tid ]['vid'] ], array_filter( $tid_tag, fn( $tid ) => isset( $termini[ $tid ] ) ) ) ),
 		'tag_mancanti' => array_values( array_filter( $tid_tag, fn( $tid ) => ! isset( $termini[ $tid ] ) ) ),
 		'in_evidenza'  => (bool) ( $campo( 'field_in_evidenza', 'value' )[0] ?? false ),
-		'collegamenti' => array_map( fn( $c ) => [ (string) $c['title'], (string) $c['uri'] ], wpf_drupal_news_campo( $db, 'field_collegamenti', [ 'uri', 'title' ], $nid, $lingua, $originale ) ),
+		'collegamenti' => array_map( fn( $c ) => [ (string) $c['title'], (string) $c['uri'] ], wpf_drupal_bundle_campo( $db, 'news', 'field_collegamenti', [ 'uri', 'title' ], $nid, $lingua, $originale ) ),
 		'riferimenti'  => $riferimenti,
 		// Ultimo pezzo dell'alias (/news/<x>): lo slug del post; null se il nodo non ha alias (nid 1094)
 		'alias'        => $alias_news !== null ? basename( $alias_news ) : null,
@@ -379,16 +395,16 @@ function wpf_drupal_news( mysqli $db, int $nid, string $lingua ): ?array {
 }
 
 /**
- * Termini della copia: [ tid => [ 'vid', 'nome' => [ lingua => nome ], 'peso' ] ]. Un tid che non esiste
+ * Termini della copia: [ tid => [ 'vid', 'nome' => [ lingua => nome ] ] ]. Un tid che non esiste
  * più (la tipologia 3905 di due news) non è nell'elenco.
  */
 function wpf_drupal_termini( mysqli $db, array $tid ): array {
 	static $tutti = null;
 	if ( $tutti === null ) {
 		$tutti = [];
-		foreach ( wpf_drupal_righe( $db, 'SELECT tid, vid, langcode, name, weight FROM taxonomy_term_field_data ORDER BY tid, default_langcode DESC' ) as $r ) {
+		foreach ( wpf_drupal_righe( $db, 'SELECT tid, vid, langcode, name FROM taxonomy_term_field_data ORDER BY tid, default_langcode DESC' ) as $r ) {
 			$id            = (int) $r['tid'];
-			$tutti[ $id ] ??= [ 'vid' => $r['vid'], 'nome' => [], 'peso' => (int) $r['weight'] ];
+			$tutti[ $id ] ??= [ 'vid' => $r['vid'], 'nome' => [] ];
 			$tutti[ $id ]['nome'][ wpf_drupal_lingua( $r['langcode'] ) ] ??= $r['name'];
 		}
 	}

@@ -2,7 +2,8 @@
 
 > **Piano eseguito il 27/10/2026.** Le differenze fra questo piano e il lavoro fatto (schede invertite,
 > niente `/news/news`, shortcode al posto delle griglie di Impreza, ordine per data, riquadro
-> dell'editor delle news, lettura delle news in memoria) sono in `notes.md`, «Divergenze dal piano».
+> dell'editor delle news, lettura delle news in memoria, CSS in `style.css`, term meta e firme delle
+> funzioni) sono in `notes.md`, «Divergenze dal piano».
 
 # Import delle news da Drupal: piano di implementazione
 

@@ -5,7 +5,7 @@ Template: Impreza
 Author: Webmapp
 Author URI: https://webmapp.it/
 Description: Child theme di Impreza per Sardegna Sentieri (Forestas). Versionato nel repo wp-forestas e montato dal compose: si modifica nel repo, non dal pannello.
-Version: 1.5.4
+Version: 1.5.5
 */
 
 
@@ -1930,8 +1930,7 @@ Version: 1.5.4
 
 /* Testata della news: quella delle pagine, con la tipologia sopra il filo (sase-hero__category) e la data
    sotto il titolo (sase-hero__date) */
-.forestas-testata-tipologia,
-.forestas-testata-data {
+.forestas-testata-tipologia {
 	margin: 0;
 	font-size: .75rem;
 	font-weight: 600;
@@ -1939,14 +1938,13 @@ Version: 1.5.4
 	text-transform: uppercase;
 }
 .forestas-testata-data {
-	margin-top: .75rem;
+	margin: .75rem 0 0;
 	font-size: var(--sase-carattere-piccolo);
-	letter-spacing: 0;
-	text-transform: none;
+	font-weight: 600;
 }
 .forestas-testata-data i { margin-right: .35em; color: var(--sase-arancio); }
 .forestas-news-corpo { padding-top: 2.5rem; }
-.forestas-news-corpo > :is(.forestas-collegamenti) { margin-top: 3.125rem; }
+.forestas-news-corpo > .forestas-collegamenti { margin-top: 3.125rem; }
 /* Tag: sase-tag del tema Drupal, icona del segnalibro e voci separate */
 .forestas-news-tag {
 	display: flex;
@@ -2045,7 +2043,7 @@ Version: 1.5.4
 .forestas-scheda-titolo span {
 	width: 34px;
 	height: 3px;
-	background: var(--sase-sezione-news);
+	background: var(--forestas-sezione);
 }
 .l-main .forestas-scheda-titolo h2 {
 	margin: 0;
@@ -2180,8 +2178,7 @@ Version: 1.5.4
 .forestas-card--compatta .forestas-card__testo { padding: 12px 14px; }
 .l-main .forestas-card--compatta .forestas-card__titolo { font-size: .9375rem; }
 @media (max-width: 860px) {
-	.forestas-griglia,
-	.forestas-griglia--evidenza { grid-template-columns: 1fr; }
+	.forestas-griglia { grid-template-columns: 1fr; }
 	.forestas-card--evidenza { grid-row: auto; min-height: 60vw; }
 }
 @media (prefers-reduced-motion: reduce) {

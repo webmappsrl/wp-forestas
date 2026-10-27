@@ -319,7 +319,7 @@ bin/wordpress-config.sh pagine --contenuti-mancanti --conferma   # ritenta solo 
 
 Lo stesso comando sincronizza anche le news di Drupal, dopo le pagine (oc:8759): diventano post con la
 categoria «News» e le tipologie come sottocategorie, all'indirizzo `/news/<titolo>/` come su Drupal.
-La pagina News è a schede (Attività e comunicazioni, News) e le pagine d'elenco sono
+La pagina News è a schede (News, la pagina stessa, e Attività e comunicazioni) e le pagine d'elenco sono
 `/attivita-e-comunicazioni/` e `/tutte-le-news/`, tutte in `config/pagine.json`; la grafica è in
 `themes/forestas-child/inc/news.php` e nei template «Pagina a schede», «Pagina d'elenco» e «News» di
 `config/post.json`. Il log ha in più le righe `NEWS`, `TERMINE` e `REGOLE` (regole degli indirizzi

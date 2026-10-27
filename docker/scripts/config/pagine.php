@@ -258,50 +258,17 @@ foreach ( $voci as $chiave => $voce ) {
 		foreach ( $r['media'] as $m ) {
 			$riga( 'MEDIA', "{$nome}: {$m}" );
 		}
-		foreach ( $l['riscritti'] as $m ) {
-			$riga( 'LINK', "{$nome}: riscritto {$m}" );
-		}
-		foreach ( array_unique( $l['in_attesa'] ) as $m ) {
-			$riga( 'LINK', "{$nome}: in attesa {$m} (contenuto non ancora in WordPress, resta verso Drupal)" );
-		}
-		foreach ( array_unique( $l['non_contenuti'] ) as $m ) {
-			$riga( 'LINK', "{$nome}: verso Drupal {$m} (né /node/N né l'alias di un nodo di Drupal: un modulo come i form, un file o un vecchio indirizzo; resta verso Drupal finché non si corregge a mano o con una regola in link.php)" );
-		}
+		wpf_link_log( $riga, $nome, $l );
 		if ( ! $d['status'] && $r['id'] ) {
 			foreach ( wpf_pagina_voci_menu( $r['id'] ) as $v ) {
 				$riga( 'MENU', "{$nome}: la voce «{$v}» porta a una pagina in bozza (404 per chi non è loggato)" );
 			}
 		}
 		if ( $prova ) {
-			foreach ( $r['mancanti'] as $cosa => $elementi ) {
-				foreach ( $elementi as $dettaglio => $causa ) {
-					$riga( 'AVVISO', "{$nome}: {$cosa}" . ( $dettaglio !== '' ? " {$dettaglio}" : '' ) . " non riuscirebbe: {$causa}" );
-					$previsti[] = [ 'cosa' => $cosa ];
-				}
-			}
+			$previsti = array_merge( $previsti, wpf_mancanti_previsti( $riga, $nome, $r['mancanti'] ) );
 			continue;
 		}
-		// Gli elementi trattati in questo giro escono dall'elenco; quelli falliti ci rientrano
-		foreach ( $mancanti as $k => $m ) {
-			if ( $m['elemento'] === $chiave && $m['lingua'] === $lingua && ( $solo_mancanti ? in_array( $m['cosa'], $solo[ $chiave ][ $lingua ], true ) : true ) ) {
-				unset( $mancanti[ $k ] );
-			}
-		}
-		foreach ( $r['mancanti'] as $cosa => $elementi ) {
-			foreach ( $elementi as $dettaglio => $causa ) {
-				$k              = wpf_mancante_chiave( 'pagina', $cosa, $chiave, $lingua, (string) $dettaglio );
-				$mancanti[ $k ] = [
-					'origine'   => 'pagina',
-					'cosa'      => $cosa,
-					'elemento'  => $chiave,
-					'lingua'    => $lingua,
-					'dettaglio' => (string) $dettaglio,
-					'causa'     => $causa,
-					'primo'     => $mancanti_prima[ $k ]['primo'] ?? $ora,
-					'ultimo'    => $ora,
-				];
-			}
-		}
+		$mancanti = wpf_mancanti_aggiorna( $mancanti, 'pagina', $chiave, $lingua, $solo_mancanti ? $solo[ $chiave ][ $lingua ] : null, $r['mancanti'], $ora );
 	}
 }
 
@@ -313,14 +280,15 @@ $news = ( $solo_mancanti && ! $solo_news )
 $mancanti = array_merge( $mancanti, $news['mancanti'] );
 $previsti = array_merge( $previsti, $news['previsti'] );
 
-// Regole di rewrite delle schede (child, inc/news.php): si rigenerano quando l'elenco delle schede
-// pubblicate cambia, se no una scheda nuova darebbe 404 (oc:8759)
+// Regole di rewrite del child (inc/news.php): si rigenerano quando cambia l'elenco delle schede figlie
+// pubblicate, se no una scheda nuova darebbe 404, o quando cambia la versione delle regole (WPF_REGOLE_VERSIONE),
+// da alzare quando il child cambia le sue regole (oc:8759)
 if ( ! $prova ) {
-	$schede = wpf_wpml_tutte_le_lingue( fn() => array_map( 'get_page_uri', get_posts( [ 'post_type' => 'page', 'post_status' => 'publish', 'numberposts' => -1, 'meta_key' => WPF_META_SCHEDA, 'suppress_filters' => true, 'orderby' => 'ID', 'order' => 'ASC' ] ) ) );
-	if ( get_option( 'wpf_schede_regole' ) !== $schede ) {
+	$regole = [ 'versione' => WPF_REGOLE_VERSIONE, 'schede' => array_values( wpf_schede_figlie() ) ];
+	if ( get_option( WPF_OPZIONE_SCHEDE_REGOLE ) !== $regole ) {
 		flush_rewrite_rules( false );
-		update_option( 'wpf_schede_regole', $schede, false );
-		$riga( 'REGOLE', 'rigenerate per le schede: ' . implode( ', ', array_unique( $schede ) ) );
+		update_option( WPF_OPZIONE_SCHEDE_REGOLE, $regole, false );
+		$riga( 'REGOLE', 'rigenerate per le schede: ' . implode( ', ', array_unique( $regole['schede'] ) ) );
 	}
 }
 
@@ -338,16 +306,16 @@ $riga(
 	. '; mancanti: ' . count( $mancanti )
 	. '; copia Drupal: ultima modifica ' . ( $ultima_modifica ? gmdate( 'Y-m-d', $ultima_modifica ) : 'nessuna' )
 );
-// Codice d'uscita: 1 solo se manca qualcosa che non si sistema da sé (una pagina non salvata, una
-// traduzione non collegata, un template assente). Un media non scaricato (sito Drupal lento) lascia le
-// pagine a posto e si ritenta al giro dopo: avviso nel log e uscita 0, così un cron o una catena di
+// Codice d'uscita: 1 solo se manca qualcosa che non si sistema da sé (una pagina o una news non salvata, una
+// traduzione non collegata, un template assente). Un media non scaricato (sito Drupal lento) lascia pagine e
+// news a posto e si ritenta al giro dopo: avviso nel log e uscita 0, così un cron o una catena di
 // import non si ferma per questo (decisione del dev, oc:8758)
 $gravi = array_filter( array_merge( $mancanti, $previsti ), fn( $m ) => ! isset( WPF_PAGINA_MEDIA[ $m['cosa'] ] ) );
 if ( $gravi || $news['errore'] ) {
 	WP_CLI::halt( 1 );
 }
 if ( $mancanti ) {
-	$riga( 'AVVISO', count( $mancanti ) . ' media non scaricati: le pagine sono aggiornate, si ritentano al prossimo giro o con --contenuti-mancanti' );
+	$riga( 'AVVISO', count( $mancanti ) . ' media non scaricati: pagine e news sono aggiornate, si ritentano al prossimo giro o con --contenuti-mancanti' );
 }
 // Con la sincronizzazione spenta anche l'anteprima esce con 1: chi la lancia (o un cron) sa che non
 // scriverebbe, anche se le differenze sono quelle di sempre

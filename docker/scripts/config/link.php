@@ -13,6 +13,10 @@
 
 require_once __DIR__ . '/drupal.php';
 
+// Indirizzo del sito Drupal, per costruire i link di Drupal che la copia salva senza (collegamenti
+// «internal:/…», news-lib.php): devono corrispondere a WPF_LINK_DRUPAL per essere riscritti
+const WPF_SITO_DRUPAL = 'https://www.sardegnasentieri.it';
+
 // Prefisso degli indirizzi inglesi in WordPress (WPML, lingua nella cartella)
 const WPF_PREFISSO_INGLESE = '/en/';
 

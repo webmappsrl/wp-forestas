@@ -34,6 +34,16 @@ const WPF_PAGINA_MEDIA = [
 const WPF_OPZIONE_MANCANTI = 'wpf_sync_mancanti';
 // Lingua di WPML per una lingua di Drupal (i menu inglesi del sito sono en-us)
 const WPF_LINGUE_WPML = [ 'it' => 'it', 'en' => 'en-us' ];
+// Term meta di un termine importato: «<vocabolario>:<tid>», non univoco (un termine che ne fonde due
+// porta tutte le coppie). È la chiave con cui un import successivo lo ritrova (oc:8760)
+const WPF_TERM_META_DRUPAL = '_drupal_chiave';
+// Scheda di una pagina a schede (oc:8759): ordine fra le schede, dal campo «scheda» di config/pagine.json.
+// La legge anche news-lib.php (slug delle news in conflitto con una scheda)
+const WPF_META_SCHEDA = '_wpf_scheda';
+// Elenco delle schede per cui sono state generate le regole di rewrite del child (inc/news.php), con la
+// versione delle regole: cambiando l'uno o l'altra il giro le rigenera
+const WPF_OPZIONE_SCHEDE_REGOLE = 'wpf_schede_regole';
+const WPF_REGOLE_VERSIONE       = 2;
 
 /**
  * Contenuto WordPress pubblicato (di qualunque tipo) che porta un nodo Drupal in una lingua, o 0.
@@ -220,6 +230,8 @@ function wpf_contenuto_differenze( ?WP_Post $post, array $voluti, array $meta, a
  *   'template' => id del template di Impreza (0 se non c'è sul sito),
  *   'nome_template' => chiave del template in config/post.json, per il messaggio,
  *   'termini'  => [ tassonomia => term_id[] ],
+ *   'scrittura' => argomenti in più per wp_insert_post e wp_update_post, che non si confrontano (per
+ *                  esempio post_date_gmt ed edit_date delle news),
  * ]
  * @param ?array $solo con --contenuti-mancanti: gli elementi da riscrivere (la «cosa» del contenuto = tutti)
  * @return array [ 'id' => ?int, 'esito' => creata|aggiornata|invariata|non creata|non aggiornata,
@@ -308,7 +320,7 @@ function wpf_contenuto_scrivi( array $c, bool $prova, ?array $solo = null ): arr
 	// Scrittura
 	$lingua_wpml = WPF_LINGUE_WPML[ $lingua ];
 	if ( ! $post ) {
-		$id = wp_insert_post( wp_slash( array_merge( [ 'post_parent' => 0 ], $voluti, [ 'post_type' => $c['tipo'] ] ) ), true );
+		$id = wp_insert_post( wp_slash( array_merge( [ 'post_parent' => 0 ], $voluti, $c['scrittura'] ?? [], [ 'post_type' => $c['tipo'] ] ) ), true );
 		if ( is_wp_error( $id ) ) {
 			$mancanti[ $cosa_tutto ][''] = $id->get_error_message();
 			return $risultato( null, 'non creata' );
@@ -316,7 +328,7 @@ function wpf_contenuto_scrivi( array $c, bool $prova, ?array $solo = null ): arr
 	} else {
 		$id = $post->ID;
 		if ( $voluti ) {
-			$r = wp_update_post( wp_slash( array_merge( $voluti, [ 'ID' => $id ] ) ), true );
+			$r = wp_update_post( wp_slash( array_merge( $voluti, $c['scrittura'] ?? [], [ 'ID' => $id ] ) ), true );
 			if ( is_wp_error( $r ) ) {
 				$mancanti[ $cosa_tutto ][''] = $r->get_error_message();
 				return $risultato( $id, 'non aggiornata' );
@@ -351,4 +363,127 @@ function wpf_contenuto_scrivi( array $c, bool $prova, ?array $solo = null ): arr
 		}
 	}
 	return $risultato( $id, $esito );
+}
+
+/*
+ * Regole dei termini importati da Drupal (oc:8759), comuni a ogni import: un termine si ritrova dal term
+ * meta «<vocabolario>:<tid>», e due vocabolari con lo stesso nome nella stessa tassonomia e sotto lo
+ * stesso genitore diventano un termine solo. oc:8760 le usa per eventi, «Da sapere» e carte.
+ */
+/** Termine importato da Drupal in una tassonomia, dal suo vocabolario e tid, o 0. */
+function wpf_termine_per_drupal( string $vid, int $tid, string $tassonomia ): int {
+	$ids = wpf_wpml_tutte_le_lingue(
+		fn() => get_terms( [ 'taxonomy' => $tassonomia, 'hide_empty' => false, 'fields' => 'ids', 'meta_key' => WPF_TERM_META_DRUPAL, 'meta_value' => "{$vid}:{$tid}" ] )
+	);
+	return is_array( $ids ) && $ids ? (int) $ids[0] : 0;
+}
+
+/**
+ * Il termine di WordPress di un termine Drupal: ritrovato dal term meta; se no uno con lo stesso slug
+ * nella stessa tassonomia e sotto lo stesso genitore (due vocabolari con lo stesso nome diventano un
+ * termine solo, che prende anche questa coppia); se no creato. In anteprima un termine da creare è 0.
+ *
+ * @return array [ 'id' => int, 'esito' => ritrovato|fuso|creato|da creare, 'errore' => ?string ]
+ */
+function wpf_termine_ritrova_o_crea( string $vid, int $tid, string $nome, string $tassonomia, int $parent, bool $prova ): array {
+	$id = wpf_termine_per_drupal( $vid, $tid, $tassonomia );
+	if ( $id ) {
+		return [ 'id' => $id, 'esito' => 'ritrovato', 'errore' => null ];
+	}
+	$uguale = wpf_wpml_tutte_le_lingue( fn() => get_term_by( 'slug', sanitize_title( $nome ), $tassonomia ) );
+	if ( $uguale && (int) $uguale->parent === $parent ) {
+		if ( ! $prova ) {
+			add_term_meta( $uguale->term_id, WPF_TERM_META_DRUPAL, "{$vid}:{$tid}" );
+		}
+		return [ 'id' => (int) $uguale->term_id, 'esito' => 'fuso', 'errore' => null ];
+	}
+	if ( $prova ) {
+		return [ 'id' => 0, 'esito' => 'da creare', 'errore' => null ];
+	}
+	$nuovo = wpf_wpml_tutte_le_lingue( fn() => wp_insert_term( $nome, $tassonomia, [ 'parent' => $parent ] ) );
+	if ( is_wp_error( $nuovo ) ) {
+		return [ 'id' => 0, 'esito' => 'non creato', 'errore' => $nuovo->get_error_message() ];
+	}
+	add_term_meta( (int) $nuovo['term_id'], WPF_TERM_META_DRUPAL, "{$vid}:{$tid}" );
+	wpf_wpml_collega( (int) $nuovo['term_id'], "tax_{$tassonomia}", WPF_LINGUE_WPML['it'], null );
+	return [ 'id' => (int) $nuovo['term_id'], 'esito' => 'creato', 'errore' => null ];
+}
+
+/** Righe LINK di un testo riscritto (wpf_link_riscrivi): link riscritti, in attesa, verso Drupal. */
+function wpf_link_log( callable $riga, string $nome, array $l ): void {
+	foreach ( $l['riscritti'] as $m ) {
+		$riga( 'LINK', "{$nome}: riscritto {$m}" );
+	}
+	foreach ( array_unique( $l['in_attesa'] ) as $m ) {
+		$riga( 'LINK', "{$nome}: in attesa {$m} (contenuto non ancora in WordPress, resta verso Drupal)" );
+	}
+	foreach ( array_unique( $l['non_contenuti'] ) as $m ) {
+		$riga( 'LINK', "{$nome}: verso Drupal {$m} (né /node/N né l'alias di un nodo di Drupal: un modulo come i form, un file o un vecchio indirizzo; resta verso Drupal finché non si corregge a mano o con una regola in link.php)" );
+	}
+}
+
+/**
+ * Elementi non riusciti di un contenuto, in anteprima: una riga AVVISO per ciascuno.
+ *
+ * @return array [ [ 'cosa' ] ] da contare per il codice d'uscita
+ */
+function wpf_mancanti_previsti( callable $riga, string $nome, array $mancanti_contenuto ): array {
+	$previsti = [];
+	foreach ( $mancanti_contenuto as $cosa => $elementi ) {
+		foreach ( $elementi as $dettaglio => $causa ) {
+			$riga( 'AVVISO', "{$nome}: {$cosa}" . ( $dettaglio !== '' ? " {$dettaglio}" : '' ) . " non riuscirebbe: {$causa}" );
+			$previsti[] = [ 'cosa' => $cosa ];
+		}
+	}
+	return $previsti;
+}
+
+/**
+ * Elenco dei mancanti dopo la scrittura di un contenuto in una lingua: gli elementi trattati in questo
+ * giro escono (tutti, o con --contenuti-mancanti quelli ritentati), quelli falliti ci rientrano.
+ *
+ * @param ?array $ritentati con --contenuti-mancanti: le «cosa» ritentate; null = giro completo
+ * @param array  $falliti   [ cosa => [ dettaglio => causa ] ] da wpf_contenuto_scrivi
+ */
+function wpf_mancanti_aggiorna( array $mancanti, string $origine, string $elemento, string $lingua, ?array $ritentati, array $falliti, string $ora ): array {
+	$primo = []; // data del primo fallimento di un elemento che fallisce ancora
+	foreach ( $mancanti as $k => $m ) {
+		if ( $m['origine'] === $origine && (string) $m['elemento'] === $elemento && $m['lingua'] === $lingua
+			&& ( $ritentati === null || in_array( $m['cosa'], $ritentati, true ) ) ) {
+			$primo[ $k ] = $m['primo'];
+			unset( $mancanti[ $k ] );
+		}
+	}
+	foreach ( $falliti as $cosa => $elementi ) {
+		foreach ( $elementi as $dettaglio => $causa ) {
+			$k              = wpf_mancante_chiave( $origine, $cosa, $elemento, $lingua, (string) $dettaglio );
+			$mancanti[ $k ] = [
+				'origine'   => $origine,
+				'cosa'      => $cosa,
+				'elemento'  => $elemento,
+				'lingua'    => $lingua,
+				'dettaglio' => (string) $dettaglio,
+				'causa'     => $causa,
+				'primo'     => $primo[ $k ] ?? $ora,
+				'ultimo'    => $ora,
+			];
+		}
+	}
+	return $mancanti;
+}
+
+/**
+ * Schede pubblicate delle pagine a schede: [ id => percorso ] in tutte le lingue. Le regole di rewrite
+ * del child (inc/news.php, forestas_regole_schede) le danno solo alle schede figlie: la pagina madre
+ * (News) è già raggiungibile come pagina.
+ */
+function wpf_schede_figlie(): array {
+	$schede = wpf_wpml_tutte_le_lingue( fn() => get_posts( [ 'post_type' => 'page', 'post_status' => 'publish', 'numberposts' => -1, 'meta_key' => WPF_META_SCHEDA, 'suppress_filters' => true, 'orderby' => 'ID', 'order' => 'ASC' ] ) );
+	$figlie = [];
+	foreach ( $schede as $s ) {
+		if ( $s->post_parent ) {
+			$figlie[ $s->ID ] = get_page_uri( $s );
+		}
+	}
+	return $figlie;
 }

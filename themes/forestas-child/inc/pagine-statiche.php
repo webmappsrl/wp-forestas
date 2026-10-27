@@ -28,6 +28,7 @@ const FORESTAS_META_PAGINA       = '_wpf_pagina';        // chiave della pagina 
 const FORESTAS_META_TESTATA      = '_wpf_testata';       // «titolo»: sola intestazione, senza hero
 const FORESTAS_META_COLORE       = '_wpf_colore';        // colore tematico di Drupal
 const FORESTAS_META_TESTO_DRUPAL = '_wpf_testo_drupal';  // impronta del testo scritto dalla sincronizzazione
+const FORESTAS_META_NID          = '_drupal_nid';        // nodo Drupal d'origine (news e pagine con un nodo)
 const FORESTAS_META_ALLEGATI     = 'wpf_allegati';
 const FORESTAS_META_GALLERIA     = 'wpf_galleria';
 const FORESTAS_META_AUTORE       = 'wpf_autore';         // dell'immagine
@@ -100,7 +101,7 @@ const FORESTAS_PAGINE_SENZA_CONDIVIDI = [ 'sentieri', 'itinerari', 'cammini', 'd
 function forestas_azioni( int $id ): string {
 	// Neanche le schede della pagina News (oc:8759): su Drupal erano blocchi della pagina /news
 	if ( in_array( (string) get_post_meta( $id, FORESTAS_META_PAGINA, true ), FORESTAS_PAGINE_SENZA_CONDIVIDI, true )
-		|| get_post_meta( $id, '_wpf_scheda', true ) !== '' ) {
+		|| get_post_meta( $id, FORESTAS_META_SCHEDA, true ) !== '' ) {
 		return '';
 	}
 	return '<div class="forestas-azioni">' . forestas_condividi( $id ) . '</div>';
@@ -257,18 +258,27 @@ function forestas_credits_immagine( int $immagine ): string {
 add_shortcode(
 	'forestas_pagina_testo',
 	function () {
-		static $in_corso = false;
 		$id = get_the_ID();
-		if ( ! $id || $in_corso ) {
-			return '';
-		}
-		$in_corso = true;
-		$testo    = (string) get_post_field( 'post_content', $id );
-		$html     = md5( $testo ) === get_post_meta( $id, FORESTAS_META_TESTO_DRUPAL, true ) ? $testo : apply_filters( 'the_content', $testo );
-		$in_corso = false;
-		return '<div class="forestas-pagina-testo">' . $html . forestas_allegati( $id ) . forestas_galleria( $id ) . '</div>';
+		return $id ? '<div class="forestas-pagina-testo">' . forestas_testo_importato( $id ) . forestas_allegati( $id ) . forestas_galleria( $id ) . '</div>' : '';
 	}
 );
+
+/*
+ * Testo di una pagina o di una news: com'è se è ancora quello importato (impronta in _wpf_testo_drupal),
+ * altrimenti passato da the_content. Se il testo contiene lo shortcode che lo mostra, non lo si mostra di
+ * nuovo: sarebbe una ricorsione senza fine.
+ */
+function forestas_testo_importato( int $id ): string {
+	static $in_corso = false;
+	if ( $in_corso ) {
+		return '';
+	}
+	$in_corso = true;
+	$testo    = (string) get_post_field( 'post_content', $id );
+	$html     = md5( $testo ) === get_post_meta( $id, FORESTAS_META_TESTO_DRUPAL, true ) ? $testo : apply_filters( 'the_content', $testo );
+	$in_corso = false;
+	return $html;
+}
 
 /*
  * Dimensione di un file scritta come la scrive Drupal (format_size): byte, KB, MB o GB con al più due

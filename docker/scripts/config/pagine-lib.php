@@ -18,10 +18,8 @@ const WPF_META_TESTATA = '_wpf_testata';
 const WPF_META_COLORE = '_wpf_colore';
 // Chiave in config/post.json del template di Impreza di una pagina: prefisso + «template» di config/pagine.json
 const WPF_PREFISSO_TEMPLATE = 'template-pagina-';
-// Schede di una pagina a schede (oc:8759): ordine della scheda fra le sorelle e pulsante verso la pagina
-// d'elenco completa ([ testo, verso: chiave della voce ], un array: in JSON update_post_meta toglierebbe
-// le «\» degli accenti), dai campi «scheda» e «pulsante» di config/pagine.json
-const WPF_META_SCHEDA   = '_wpf_scheda';
+// Pulsante di una scheda verso la pagina d'elenco completa ([ testo, verso: chiave della voce ], un array:
+// in JSON update_post_meta toglierebbe le «\» degli accenti), dal campo «pulsante» di config/pagine.json
 const WPF_META_PULSANTE = '_wpf_pulsante';
 // Le news che una scheda o una pagina d'elenco mostra, dal campo «griglia» di config/pagine.json: il child
 // le legge così, senza nomi di View nel codice (inc/news.php)

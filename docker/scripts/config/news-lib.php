@@ -34,9 +34,6 @@ const WPF_NEWS_TIPI_RIFERIMENTO = [
 const WPF_TEMPLATE_NEWS = 'template-news';
 // Categoria che contiene tutte le news; le tipologie di Drupal sono sue figlie
 const WPF_NEWS_CATEGORIA = 'news';
-// Term meta di un termine importato: «<vocabolario>:<tid>», non univoco (un termine che ne fonde due
-// porta tutte le coppie). È la chiave con cui un import successivo lo ritrova (oc:8760)
-const WPF_TERM_META_DRUPAL = '_drupal_chiave';
 
 /** Post delle news, di qualunque stato tranne il cestino: [ nid ][ lingua ] => WP_Post. */
 function wpf_news_esistenti(): array {
@@ -60,45 +57,6 @@ function wpf_news_esistenti(): array {
 		$news[ $nid ][ $lingua ] ??= $p;
 	}
 	return $news;
-}
-
-/** Termine importato da Drupal in una tassonomia, dal suo vocabolario e tid, o 0. */
-function wpf_termine_per_drupal( string $vid, int $tid, string $tassonomia ): int {
-	$ids = wpf_wpml_tutte_le_lingue(
-		fn() => get_terms( [ 'taxonomy' => $tassonomia, 'hide_empty' => false, 'fields' => 'ids', 'meta_key' => WPF_TERM_META_DRUPAL, 'meta_value' => "{$vid}:{$tid}" ] )
-	);
-	return is_array( $ids ) && $ids ? (int) $ids[0] : 0;
-}
-
-/**
- * Il termine di WordPress di un termine Drupal: ritrovato dal term meta; se no uno con lo stesso slug
- * nella stessa tassonomia e sotto lo stesso genitore (due vocabolari con lo stesso nome diventano un
- * termine solo, che prende anche questa coppia); se no creato. In anteprima un termine da creare è 0.
- *
- * @return array [ 'id' => int, 'esito' => ritrovato|fuso|creato|da creare, 'errore' => ?string ]
- */
-function wpf_news_termine( string $vid, int $tid, string $nome, string $tassonomia, int $parent, bool $prova ): array {
-	$id = wpf_termine_per_drupal( $vid, $tid, $tassonomia );
-	if ( $id ) {
-		return [ 'id' => $id, 'esito' => 'ritrovato', 'errore' => null ];
-	}
-	$uguale = wpf_wpml_tutte_le_lingue( fn() => get_term_by( 'slug', sanitize_title( $nome ), $tassonomia ) );
-	if ( $uguale && (int) $uguale->parent === $parent ) {
-		if ( ! $prova ) {
-			add_term_meta( $uguale->term_id, WPF_TERM_META_DRUPAL, "{$vid}:{$tid}" );
-		}
-		return [ 'id' => (int) $uguale->term_id, 'esito' => 'fuso', 'errore' => null ];
-	}
-	if ( $prova ) {
-		return [ 'id' => 0, 'esito' => 'da creare', 'errore' => null ];
-	}
-	$nuovo = wpf_wpml_tutte_le_lingue( fn() => wp_insert_term( $nome, $tassonomia, [ 'parent' => $parent ] ) );
-	if ( is_wp_error( $nuovo ) ) {
-		return [ 'id' => 0, 'esito' => 'non creato', 'errore' => $nuovo->get_error_message() ];
-	}
-	add_term_meta( (int) $nuovo['term_id'], WPF_TERM_META_DRUPAL, "{$vid}:{$tid}" );
-	wpf_wpml_collega( (int) $nuovo['term_id'], "tax_{$tassonomia}", WPF_LINGUE_WPML['it'], null );
-	return [ 'id' => (int) $nuovo['term_id'], 'esito' => 'creato', 'errore' => null ];
 }
 
 /** La categoria che contiene le news, creata se manca: [ 'id', 'esito', 'errore' ] come wpf_news_termine. */
@@ -127,7 +85,7 @@ function wpf_news_categoria( bool $prova ): array {
 function wpf_news_collegamenti( array $collegamenti, array $alias, callable $trova, string $lingua ): array {
 	$html = '';
 	foreach ( $collegamenti as [ , $uri ] ) {
-		$url   = preg_replace( [ '#^internal:/?#', '#^entity:node/#' ], [ 'https://www.sardegnasentieri.it/', 'https://www.sardegnasentieri.it/node/' ], $uri );
+		$url   = preg_replace( [ '#^internal:/?#', '#^entity:node/#' ], [ WPF_SITO_DRUPAL . '/', WPF_SITO_DRUPAL . '/node/' ], $uri );
 		$html .= '<a href="' . esc_attr( $url ) . '"></a>' . "\n";
 	}
 	$l = wpf_link_riscrivi( $html, $alias, $trova, $lingua );
@@ -252,7 +210,7 @@ function wpf_news_termini( mysqli $db, array $dati, bool $prova ): array {
 		if ( ! isset( $termini[ $tid ] ) ) {
 			continue; // tipologia che su Drupal non esiste più: lo dice la riga della news
 		}
-		$r = wpf_news_termine( $termini[ $tid ]['vid'], $tid, $termini[ $tid ]['nome']['it'] ?? reset( $termini[ $tid ]['nome'] ), 'category', $categoria['id'], $prova );
+		$r = wpf_termine_ritrova_o_crea( $termini[ $tid ]['vid'], $tid, $termini[ $tid ]['nome']['it'] ?? reset( $termini[ $tid ]['nome'] ), 'category', $categoria['id'], $prova );
 		$tipologie[ $tid ] = $r['id'];
 		if ( $r['esito'] !== 'ritrovato' ) {
 			$righe[] = "tipologia «" . reset( $termini[ $tid ]['nome'] ) . "» ({$tid}): {$r['esito']}" . ( $r['errore'] ? " ({$r['errore']})" : '' );
@@ -263,7 +221,7 @@ function wpf_news_termini( mysqli $db, array $dati, bool $prova ): array {
 	}
 	$tag = [];
 	foreach ( $coppie_tag as $chiave => [ $vid, $tid ] ) {
-		$r             = wpf_news_termine( $vid, $tid, $termini[ $tid ]['nome']['it'] ?? reset( $termini[ $tid ]['nome'] ), 'post_tag', 0, $prova );
+		$r             = wpf_termine_ritrova_o_crea( $vid, $tid, $termini[ $tid ]['nome']['it'] ?? reset( $termini[ $tid ]['nome'] ), 'post_tag', 0, $prova );
 		$tag[ $chiave ] = $r['id'];
 		if ( $r['esito'] !== 'ritrovato' ) {
 			$righe[] = "tag «" . reset( $termini[ $tid ]['nome'] ) . "» ({$chiave}): {$r['esito']}" . ( $r['errore'] ? " ({$r['errore']})" : '' );
@@ -346,6 +304,10 @@ function wpf_news_scrivi( int $nid, string $lingua, array $d, ?WP_Post $post, ?i
 				'category' => array_values( array_filter( $categorie ) ),
 				'post_tag' => array_values( array_filter( $tag ) ),
 			],
+			// Con la data GMT e edit_date WordPress tiene la data anche su una bozza: senza, wp_update_post
+			// di una bozza la sostituisce con l'ora corrente (e una news pubblicata dopo uscirebbe con la
+			// data del giorno)
+			'scrittura'     => $data !== null ? [ 'post_date_gmt' => get_gmt_from_date( $data ), 'edit_date' => true ] : [],
 		],
 		$prova,
 		$solo
@@ -387,7 +349,8 @@ function wpf_news_sincronizza( mysqli $db, array $elenco, array $dati, array $al
 	$esistenti = wpf_news_esistenti();
 
 	if ( $solo === null ) {
-		$conteggio  = $prova && getenv( 'WPF_NEWS_PROVA_CONTEGGIO' ) !== false ? (int) getenv( 'WPF_NEWS_PROVA_CONTEGGIO' ) : null;
+		$simulato   = getenv( 'WPF_NEWS_PROVA_CONTEGGIO' );
+		$conteggio  = $prova && $simulato !== false ? (int) $simulato : null;
 		$controllo  = wpf_news_controlla( $elenco, $esistenti, $accetta_bozze, $conteggio );
 		if ( $controllo['errore'] ) {
 			$riga( 'ERRORE', $controllo['errore'] );
@@ -398,7 +361,8 @@ function wpf_news_sincronizza( mysqli $db, array $elenco, array $dati, array $al
 		}
 	}
 
-	$termini = wpf_news_termini( $db, $solo === null ? $dati : [], $prova );
+	// Con --contenuti-mancanti i termini delle sole news da ritentare: una news ritentata per intero li riscrive
+	$termini = wpf_news_termini( $db, $solo === null ? $dati : array_intersect_key( $dati, $solo ), $prova );
 	foreach ( $termini['righe'] as $r ) {
 		$riga( 'TERMINE', $r );
 	}
@@ -408,8 +372,8 @@ function wpf_news_sincronizza( mysqli $db, array $elenco, array $dati, array $al
 	}
 	$p        = wpf_post_per_chiave( WPF_TEMPLATE_NEWS );
 	$template = $p && $p->post_type === 'us_content_template' ? $p->ID : 0;
-	// Slug delle schede della pagina News: un post con lo stesso slug non si raggiungerebbe
-	$schede = array_map( fn( $s ) => $s->post_name, wpf_wpml_tutte_le_lingue( fn() => get_posts( [ 'post_type' => 'page', 'post_status' => 'any', 'numberposts' => -1, 'meta_key' => WPF_META_SCHEDA, 'suppress_filters' => true ] ) ) );
+	// Slug delle schede figlie (quelle con una regola di rewrite): un post con lo stesso slug non si raggiungerebbe
+	$schede = array_map( 'basename', wpf_schede_figlie() );
 
 	foreach ( $dati as $nid => $lingue ) {
 		$id_it = null;
@@ -441,53 +405,20 @@ function wpf_news_sincronizza( mysqli $db, array $elenco, array $dati, array $al
 			foreach ( $r['avvisi'] as $a ) {
 				$riga( 'AVVISO', "news {$nome}: {$a}" );
 			}
-			if ( in_array( wpf_news_slug( $d ), $schede, true ) ) {
-				$riga( 'AVVISO', "news {$nome}: lo slug «" . wpf_news_slug( $d ) . '» è quello di una scheda della pagina News, che ha la precedenza: la news non si raggiunge' );
+			$slug = wpf_news_slug( $d );
+			if ( in_array( $slug, $schede, true ) ) {
+				$riga( 'AVVISO', "news {$nome}: lo slug «{$slug}» è quello di una scheda della pagina News, che ha la precedenza: la news non si raggiunge" );
 			}
 			foreach ( $r['media'] as $m ) {
 				$riga( 'MEDIA', "news {$nome}: {$m}" );
 			}
-			foreach ( [ $l, $c['link'] ] as $link ) {
-				foreach ( $link['riscritti'] as $m ) {
-					$riga( 'LINK', "news {$nome}: riscritto {$m}" );
-				}
-				foreach ( array_unique( $link['in_attesa'] ) as $m ) {
-					$riga( 'LINK', "news {$nome}: in attesa {$m} (contenuto non ancora in WordPress, resta verso Drupal)" );
-				}
-				foreach ( array_unique( $link['non_contenuti'] ) as $m ) {
-					$riga( 'LINK', "news {$nome}: verso Drupal {$m} (non è un nodo di Drupal: resta verso Drupal)" );
-				}
-			}
+			wpf_link_log( $riga, "news {$nome}", $l );
+			wpf_link_log( $riga, "news {$nome}", $c['link'] );
 			if ( $prova ) {
-				foreach ( $r['mancanti'] as $cosa => $elementi ) {
-					foreach ( $elementi as $dettaglio => $causa ) {
-						$riga( 'AVVISO', "news {$nome}: {$cosa}" . ( $dettaglio !== '' ? " {$dettaglio}" : '' ) . " non riuscirebbe: {$causa}" );
-						$previsti[] = [ 'cosa' => $cosa ];
-					}
-				}
+				$previsti = array_merge( $previsti, wpf_mancanti_previsti( $riga, "news {$nome}", $r['mancanti'] ) );
 				continue;
 			}
-			// Gli elementi trattati in questo giro escono dall'elenco; quelli falliti ci rientrano
-			foreach ( $mancanti as $k => $m ) {
-				if ( (int) $m['elemento'] === $nid && $m['lingua'] === $lingua && ( $solo === null || in_array( $m['cosa'], $solo[ $nid ][ $lingua ], true ) ) ) {
-					unset( $mancanti[ $k ] );
-				}
-			}
-			foreach ( $r['mancanti'] as $cosa => $elementi ) {
-				foreach ( $elementi as $dettaglio => $causa ) {
-					$k              = wpf_mancante_chiave( 'news', $cosa, (string) $nid, $lingua, (string) $dettaglio );
-					$mancanti[ $k ] = [
-						'origine'   => 'news',
-						'cosa'      => $cosa,
-						'elemento'  => (string) $nid,
-						'lingua'    => $lingua,
-						'dettaglio' => (string) $dettaglio,
-						'causa'     => $causa,
-						'primo'     => $mancanti[ $k ]['primo'] ?? $ora,
-						'ultimo'    => $ora,
-					];
-				}
-			}
+			$mancanti = wpf_mancanti_aggiorna( $mancanti, 'news', (string) $nid, $lingua, $solo[ $nid ][ $lingua ] ?? null, $r['mancanti'], $ora );
 		}
 	}
 

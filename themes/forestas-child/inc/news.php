@@ -45,9 +45,26 @@ add_action(
 );
 
 /*
+ * Con i permalink «/news/%postname%/» WordPress mette «/news/» davanti a ogni tipo di contenuto e
+ * tassonomia registrati con with_front (il default): i tracciati e i POI di wp-geohub finirebbero a
+ * /news/track/…, la tassonomia tipologia_da_sapere e i tipi di oc:8760 sotto /news/. «/news/» vale solo
+ * per i post: per tutti i tipi e le tassonomie non nativi with_front è falso (categorie e tag, nativi,
+ * restano a /news/category/ e /news/tag/, che nessun link usa). Le regole si rigenerano al giro di pagine
+ * dopo un cambio di WPF_REGOLE_VERSIONE (docker/scripts/config/contenuti-lib.php).
+ */
+function forestas_senza_front( array $argomenti ): array {
+	if ( empty( $argomenti['_builtin'] ) && ( $argomenti['rewrite'] ?? true ) !== false ) {
+		$argomenti['rewrite'] = array_merge( is_array( $argomenti['rewrite'] ?? null ) ? $argomenti['rewrite'] : [], [ 'with_front' => false ] );
+	}
+	return $argomenti;
+}
+add_filter( 'register_post_type_args', 'forestas_senza_front' );
+add_filter( 'register_taxonomy_args', 'forestas_senza_front' );
+
+/*
  * Precedenza delle schede della pagina News sui post (oc:8759). Con i permalink «/news/%postname%/»
  * WordPress prova /news/<x>/ come un post prima che come una pagina figlia di News: le schede
- * (/news/news/, /news/attivita-e-comunicazioni/) darebbero 404. Ogni pagina con il meta della scheda ha
+ * (/news/attivita-e-comunicazioni/) darebbero 404. Ogni scheda figlia (pagina con il meta della scheda e un genitore) ha
  * una regola sua, in testa: le schede si leggono dal database, quindi una scheda nuova (Eventi, oc:8760)
  * non richiede codice, ma le regole vanno rigenerate (lo fa bin/wordpress-config.sh pagine quando le
  * schede cambiano). Con WPML il prefisso /en/ è tolto prima delle regole: valgono per le due lingue.
@@ -81,13 +98,14 @@ add_action(
 		}
 		$cerca = [ 'post_type' => 'post', 'post_status' => 'publish', 'numberposts' => 1 ];
 		if ( preg_match( '#^node/(\d+)/?$#', $richiesta, $m ) ) {
-			$cerca += [ 'meta_key' => '_drupal_nid', 'meta_value' => $m[1] ];
+			$cerca += [ 'meta_key' => FORESTAS_META_NID, 'meta_value' => $m[1] ];
 		} elseif ( preg_match( '#^news/([^/]+)/?$#', $richiesta, $m ) && sanitize_title( rawurldecode( $m[1] ) ) !== $m[1] ) {
 			$cerca += [ 'name' => sanitize_title( rawurldecode( $m[1] ) ) ];
 		} else {
 			return;
 		}
-		$news = get_posts( $cerca );
+		// Prima la news nella lingua della richiesta; una news che non ha la traduzione porta all'italiano
+		$news = get_posts( $cerca + [ 'suppress_filters' => false ] ) ?: get_posts( $cerca );
 		if ( $news ) {
 			wp_safe_redirect( get_permalink( $news[0] ), 301 );
 			exit;
@@ -95,16 +113,28 @@ add_action(
 	}
 );
 
-// Griglia di una scheda o di una pagina d'elenco: [ tipologia (tid Drupal), in_evidenza, quanti, ordine
-// (data), paginata, variante (testo | evidenza | immagine) ], da config/pagine.json
+// Griglia di una scheda o di una pagina d'elenco, da config/pagine.json: tipo (tipo di contenuto, «post»
+// se manca: le news), tipologia (tid Drupal) con vocabolario e tassonomia (per le news tipologia_news e
+// category, i valori se mancano), in_evidenza, quanti (9 se manca), paginata, variante (testo | evidenza
+// | immagine). L'ordine è sempre per data, le più recenti prima
 const FORESTAS_META_GRIGLIA = '_wpf_griglia';
+// Testo di un collegamento oltre il quale si taglia con «…», come il formatter «link» di Drupal (trim_length)
+const FORESTAS_COLLEGAMENTO_MAX = 80;
 // Term meta dei termini importati da Drupal: «<vocabolario>:<tid>» (WPF_TERM_META_DRUPAL di news-lib.php)
 const FORESTAS_TERM_META_DRUPAL = '_drupal_chiave';
 
-/** La pagina News nella lingua corrente (chiave «news» di config/pagine.json), o 0. */
-function forestas_pagina_news(): int {
-	$pagine = get_posts( [ 'post_type' => 'page', 'post_status' => 'publish', 'numberposts' => 1, 'meta_key' => FORESTAS_META_PAGINA, 'meta_value' => 'news', 'fields' => 'ids' ] );
+/**
+ * Pagina del perimetro con una chiave di config/pagine.json nella lingua corrente, o 0. Con i filtri di
+ * WPML (get_posts li toglie per default): la chiave è la stessa sulla pagina italiana e su quella inglese.
+ */
+function forestas_pagina_per_chiave( string $chiave ): int {
+	$pagine = get_posts( [ 'post_type' => 'page', 'post_status' => 'publish', 'numberposts' => 1, 'meta_key' => FORESTAS_META_PAGINA, 'meta_value' => $chiave, 'fields' => 'ids', 'suppress_filters' => false ] );
 	return (int) ( $pagine[0] ?? 0 );
+}
+
+/** La pagina News nella lingua corrente, o 0. */
+function forestas_pagina_news(): int {
+	return forestas_pagina_per_chiave( 'news' );
 }
 
 /** Termine importato da Drupal («tipologia_news:4734»), o null. */
@@ -141,22 +171,17 @@ function forestas_news_data( int $id ): string {
 add_shortcode(
 	'forestas_news',
 	function () {
-		static $in_corso = false;
 		$id = get_the_ID();
-		if ( ! $id || $in_corso ) {
+		if ( ! $id ) {
 			return '';
 		}
-		$in_corso = true;
-		$tag      = '';
+		$tag = '';
 		foreach ( get_the_tags( $id ) ?: [] as $t ) {
 			$tag .= '<li>' . esc_html( $t->name ) . '</li>';
 		}
-		$tag      = $tag !== '' ? '<div class="forestas-news-tag"><h2 class="screen-reader-text">Tags</h2><i class="far fa-bookmark" aria-hidden="true"></i><ul role="list">' . $tag . '</ul></div>' : '';
-		$testo    = (string) get_post_field( 'post_content', $id );
-		$html     = md5( $testo ) === get_post_meta( $id, FORESTAS_META_TESTO_DRUPAL, true ) ? $testo : apply_filters( 'the_content', $testo );
-		$in_corso = false;
+		$tag = $tag !== '' ? '<div class="forestas-news-tag"><h2 class="screen-reader-text">Tags</h2><i class="far fa-bookmark" aria-hidden="true"></i><ul role="list">' . $tag . '</ul></div>' : '';
 		return do_shortcode( '[forestas_testata]' )
-			. '<div class="forestas-pagina-testo forestas-news-corpo">' . $tag . $html . forestas_allegati( $id ) . forestas_news_collegamenti( $id ) . forestas_galleria( $id ) . '</div>';
+			. '<div class="forestas-pagina-testo forestas-news-corpo">' . $tag . forestas_testo_importato( $id ) . forestas_allegati( $id ) . forestas_news_collegamenti( $id ) . forestas_galleria( $id ) . '</div>';
 	}
 );
 
@@ -172,7 +197,7 @@ function forestas_news_collegamenti( int $id ): string {
 		if ( empty( $c['url'] ) ) {
 			continue;
 		}
-		$testo = mb_strlen( $c['titolo'] ) > 80 ? mb_substr( $c['titolo'], 0, 79 ) . '…' : $c['titolo'];
+		$testo = mb_strlen( $c['titolo'] ) > FORESTAS_COLLEGAMENTO_MAX ? mb_substr( $c['titolo'], 0, FORESTAS_COLLEGAMENTO_MAX - 1 ) . '…' : $c['titolo'];
 		$voci .= sprintf( '<li><a class="forestas-link-freccia" href="%s"><i class="fas fa-arrow-right" aria-hidden="true"></i>%s</a></li>', esc_url( $c['url'] ), esc_html( $testo ) );
 	}
 	return $voci === '' ? '' : '<section class="forestas-collegamenti"><h2 class="forestas-collegamenti-titolo">' . esc_html( forestas_testo( 'Collegamenti', 'Links' ) ) . '</h2><ul>' . $voci . '</ul></section>';
@@ -189,7 +214,7 @@ function forestas_news_collegamenti( int $id ): string {
  * Tutta la card è cliccabile, con il link sul titolo.
  */
 function forestas_news_card( int $id, string $variante ): string {
-	$immagine = in_array( $variante, [ 'testo' ], true ) ? '' : get_the_post_thumbnail( $id, $variante === 'evidenza' ? 'large' : 'medium_large', [ 'loading' => 'lazy', 'alt' => '' ] );
+	$immagine = $variante === 'testo' ? '' : get_the_post_thumbnail( $id, $variante === 'evidenza' ? 'large' : 'medium_large', [ 'loading' => 'lazy', 'alt' => '' ] );
 	if ( ! in_array( $variante, [ 'evidenza', 'compatta' ], true ) ) {
 		$etichetta = implode( ', ', wp_list_pluck( get_the_tags( $id ) ?: [], 'name' ) );
 	} else {
@@ -218,20 +243,25 @@ function forestas_news_card( int $id, string $variante ): string {
  * recenti non hanno: qui per data anche lei (decisione del dev, 27/10).
  */
 function forestas_news_query( array $griglia, int $pagina = 1 ): WP_Query {
+	$tipo = (string) ( $griglia['tipo'] ?? 'post' );
 	$args = [
-		'post_type'      => 'post',
+		'post_type'      => $tipo,
 		'post_status'    => 'publish',
-		'category_name'  => 'news',
 		'posts_per_page' => (int) ( $griglia['quanti'] ?? 9 ),
 		'paged'          => max( 1, $pagina ),
 		// A parità di data prima il nid più basso, come le View di Drupal (le news si creano in ordine di nid)
 		'orderby'        => [ 'date' => 'DESC', 'ID' => 'ASC' ],
 	];
+	// I post sono le news solo nella categoria News (la categoria predefinita, ma la redazione può cambiarla)
+	if ( $tipo === 'post' ) {
+		$args['category_name'] = 'news';
+	}
 	$tax = [];
 	if ( ! empty( $griglia['tipologia'] ) ) {
-		$termine = forestas_termine_drupal( 'tipologia_news:' . (int) $griglia['tipologia'], 'category' );
-		// Una tipologia che non c'è (import non ancora fatto) non mostra tutte le news
-		$tax[] = [ 'taxonomy' => 'category', 'field' => 'term_id', 'terms' => $termine ? [ $termine->term_id ] : [ 0 ] ];
+		$tassonomia = (string) ( $griglia['tassonomia'] ?? 'category' );
+		$termine    = forestas_termine_drupal( ( $griglia['vocabolario'] ?? 'tipologia_news' ) . ':' . (int) $griglia['tipologia'], $tassonomia );
+		// Una tipologia che non c'è (import non ancora fatto) non mostra tutti i contenuti
+		$tax[] = [ 'taxonomy' => $tassonomia, 'field' => 'term_id', 'terms' => $termine ? [ $termine->term_id ] : [ 0 ] ];
 	}
 	if ( $tax ) {
 		$args['tax_query'] = $tax;
@@ -306,9 +336,9 @@ add_shortcode(
 			$link .= sprintf( '<a href="%s"%s>%s</a>', esc_url( get_permalink( $s ) ), $s === $id ? ' aria-current="page"' : '', esc_html( get_the_title( $s ) ) );
 		}
 		$pulsante = get_post_meta( $id, FORESTAS_META_PULSANTE, true );
-		$verso    = is_array( $pulsante ) ? get_posts( [ 'post_type' => 'page', 'post_status' => 'publish', 'numberposts' => 1, 'meta_key' => FORESTAS_META_PAGINA, 'meta_value' => $pulsante['verso'], 'fields' => 'ids' ] ) : [];
+		$verso    = is_array( $pulsante ) ? array_filter( [ forestas_pagina_per_chiave( (string) $pulsante['verso'] ) ] ) : [];
 		return sprintf(
-			'<nav class="forestas-schede forestas-sezione-%1$s" aria-label="%2$s">%3$s</nav><div class="forestas-scheda"><div class="forestas-scheda-titolo"><span aria-hidden="true"></span><h2>%4$s</h2></div>%5$s%6$s</div>',
+			'<nav class="forestas-schede forestas-sezione-%1$s" aria-label="%2$s">%3$s</nav><div class="forestas-scheda forestas-sezione-%1$s"><div class="forestas-scheda-titolo"><span aria-hidden="true"></span><h2>%4$s</h2></div>%5$s%6$s</div>',
 			esc_attr( forestas_sezione_pagina( $madre ) ),
 			esc_attr( sprintf( forestas_testo( 'Sezioni di %s', 'Sections of %s' ), get_the_title( $madre ) ) ),
 			$link,

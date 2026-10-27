@@ -68,13 +68,14 @@ di Drupal.
 - [ ] Slug uguale all'ultimo pezzo dell'alias Drupal, quindi l'indirizzo resta `/news/<titolo>`
       senza bisogno di redirect. Lo slug passa da `sanitize_title` come lo salverebbe WordPress (3
       alias con accenti o apostrofi tipografici): il vecchio indirizzo porta alla news con un 301.
-- [ ] Data del post e data mostrata da `field_data` (presente in tutte le 95 news italiane).
+- [ ] Data del post e data mostrata da `field_data` (presente in tutte le 95 news italiane), che resta
+      anche su una news in bozza (data GMT ed `edit_date` nella scrittura).
 - [ ] Testo filtrato come `filtered_html` (lo stesso filtro di oc:8758). I link verso altri
       contenuti di Drupal si riscrivono con `_drupal_nid`, compresi quelli che altri contenuti
       fanno verso una news.
 - [ ] Il sottotitolo (`field_descrizione_testata_pagina`) va nel Riassunto, come per le pagine.
 - [ ] L'immagine principale (`field_top_image_media`) diventa l'immagine in evidenza; la galleria va in
-      `wpf_galleria` e gli allegati (`field_file_media`) in `wpf_allegati`; i media sono
+      `wpf_galleria` e gli allegati (`field_file_media`) in `wpf_allegati`, nell'ordine del campo su Drupal; i media sono
       deduplicati per `_drupal_fid`, con `wpf_autore` e `wpf_credits`. Le 3 news con l'immagine solo
       nel campo legacy restano senza, come su Drupal (i file non esistono più). Gli allegati stanno
       nella libreria media di WordPress finché Alessio non conferma dove devono vivere (vedi Rischi).
@@ -95,7 +96,8 @@ di Drupal.
 - [ ] Nell'editor della news la redazione trova gli stessi campi del form della news di Drupal: data,
       immagine principale, Riassunto (sottotitolo), categorie (tipologia) e tag nativi; nel riquadro
       «Allegati, collegamenti e galleria», come quello delle pagine, allegati e galleria dalla libreria
-      media, i collegamenti (righe URL e testo, da aggiungere, togliere e riordinare) e «In evidenza».
+      media, i collegamenti (righe URL e testo, da aggiungere, togliere e riordinare; un collegamento al
+      sito stesso è un percorso relativo come `/news/x/`, che il campo accetta) e «In evidenza».
       Con la sincronizzazione accesa il riquadro avvisa che le modifiche a una news del vecchio sito si
       perdono. Una news nuova parte nella categoria News.
 
@@ -115,7 +117,9 @@ di Drupal.
       Drupal sono View. Il motore delle pagine scrive `post_parent`.
 - [ ] I post hanno indirizzo `/news/<slug>`; una regola di rewrite del child dà la precedenza alle
       pagine figlie di News, e lo script segnala un post il cui slug coincide con quello di una
-      scheda.
+      scheda. `/news/` vale solo per i post: i tipi e le tassonomie non nativi (i tracciati di
+      `wp-geohub`, `tipologia_da_sapere`, i tipi di oc:8760) non ci finiscono sotto (`with_front`
+      falso). Le regole si rigenerano quando cambiano le schede o la loro versione (`WPF_REGOLE_VERSIONE`).
 - [ ] La pagina News mostra le schede come nel Canvas: percorso di navigazione a tre livelli con
       `aria-current="page"`, un indirizzo per scheda, card unica con le varianti (in evidenza con
       foto, compatta, senza foto), colore della sezione #C2410C, scorrimento orizzontale delle schede
@@ -145,7 +149,8 @@ di Drupal.
   con il controllo sugli slug in conflitto; va provato anche sul sito inglese (`/en/news/…`).
 - **Cambiare la struttura dei permalink** (`config/sito.json`, da `/%postname%/` a
   `/news/%postname%/`) tocca tutto il sito: verificato il 27/10 che le pagine di oc:8758 e i menu
-  non cambiano indirizzo.
+  non cambiano indirizzo. La review ha trovato i tracciati di `wp-geohub` e `tipologia_da_sapere` finiti
+  sotto `/news/`: risolto con `with_front` falso per tutto ciò che non è nativo.
 - **Slug con caratteri accentati** (es. la news Co.R.E.M., `…réseau…`): WordPress li normalizza in
   modo diverso da Drupal. Risolto: lo script li normalizza come WordPress e il child porta il vecchio
   indirizzo alla news con un 301.
@@ -185,8 +190,10 @@ di Drupal.
   - `pagine.php` e `pagine-lib.php`: pagine figlie, schede, giro delle news, elenco dei mancanti con
     la provenienza, regole degli indirizzi;
   - `news-lib.php` (nuovo): lettura, termini, controlli sulla copia, scrittura delle news;
-  - `drupal.php`: `DRUPAL_FILES_URL`, query delle news, dei termini e dei riferimenti;
-  - `media.php`: nome del file senza spazi in fondo.
+  - `drupal.php`: `DRUPAL_FILES_URL`, lettura per bundle con le tabelle in memoria, query delle news,
+    dei termini e dei riferimenti;
+  - `media.php`: nome del file senza spazi in fondo;
+  - `link.php`: indirizzo del sito Drupal in una costante (`WPF_SITO_DRUPAL`).
 - `config/`:
   - `pagine.json`: News a schede, scheda Attività, pagine d'elenco;
   - `post.json`: template di Impreza della news, della pagina a schede e della pagina d'elenco;
@@ -196,9 +203,11 @@ di Drupal.
 - `.env-example`: `DRUPAL_FILES_URL`.
 - `themes/forestas-child/`:
   - `functions.php`;
-  - `inc/news.php` (nuovo): tassonomia `tipologia_da_sapere`, regole delle schede, redirect, pagina
-    della news, schede, card, griglie, collegamenti, voce NEWS attiva;
-  - `inc/pagine-statiche.php`: percorso con le pagine madri, testata della news, «Condividi»;
+  - `inc/news.php` (nuovo): tassonomia `tipologia_da_sapere`, `with_front` falso per i tipi non
+    nativi, regole delle schede, redirect, pagina della news, schede, card, griglie, collegamenti, voce
+    NEWS attiva;
+  - `inc/pagine-statiche.php`: percorso con le pagine madri, testata della news, «Condividi», testo
+    importato in una funzione comune a pagine e news;
   - `inc/pagine-statiche-admin.php` e `assets/js/riquadro-pagina.js`: riquadro anche sulle news;
   - `assets/js/schede.js`, `style.css`.
 - `docs/`: questa feature, `README.md`, `howto/ricreare-wordpress-da-zero.md`,

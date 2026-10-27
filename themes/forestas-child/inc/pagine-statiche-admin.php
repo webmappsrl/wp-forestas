@@ -60,7 +60,7 @@ function forestas_immagini_sincronizzate(): array {
 		$ids = [];
 		$pagine = array_merge(
 			get_posts( [ 'post_type' => 'page', 'post_status' => 'any', 'numberposts' => -1, 'fields' => 'ids', 'meta_key' => FORESTAS_META_PAGINA, 'suppress_filters' => true ] ),
-			get_posts( [ 'post_type' => 'post', 'post_status' => 'any', 'numberposts' => -1, 'fields' => 'ids', 'meta_key' => '_drupal_nid', 'suppress_filters' => true ] )
+			get_posts( [ 'post_type' => 'post', 'post_status' => 'any', 'numberposts' => -1, 'fields' => 'ids', 'meta_key' => FORESTAS_META_NID, 'suppress_filters' => true ] )
 		);
 		foreach ( $pagine as $pagina ) {
 			$ids[] = (int) get_post_thumbnail_id( $pagina );
@@ -88,12 +88,14 @@ function forestas_riquadro_voce( int $id, string $nome_campo ): string {
 
 /*
  * Una riga dei collegamenti di una news: indirizzo e testo, come il widget «link» del form di Drupal
- * (testo facoltativo: senza, il sito mostra l'indirizzo).
+ * (testo facoltativo: senza, il sito mostra l'indirizzo). Campo di testo e non «url»: i collegamenti
+ * verso il sito stesso sono percorsi relativi (/news/x/, come li scrive l'import), che un campo «url»
+ * rifiuterebbe bloccando il salvataggio della news.
  */
 function forestas_riquadro_collegamento( string $url, string $titolo ): string {
 	return sprintf(
 		'<li class="forestas-riquadro-voce forestas-riquadro-collegamento"><span class="forestas-riquadro-trascina dashicons dashicons-menu" aria-hidden="true"></span>'
-		. '<label>URL <input type="url" name="%1$s[url][]" value="%2$s" class="regular-text" placeholder="https://"></label>'
+		. '<label>URL <input type="text" name="%1$s[url][]" value="%2$s" class="regular-text" placeholder="https://… o /news/…"></label>'
 		. '<label>Testo del collegamento <input type="text" name="%1$s[titolo][]" value="%3$s" class="regular-text"></label>'
 		. '<button type="button" class="button-link forestas-riquadro-togli">Togli</button></li>',
 		esc_attr( FORESTAS_META_COLLEGAMENTI ),
@@ -105,7 +107,7 @@ function forestas_riquadro_collegamento( string $url, string $titolo ): string {
 function forestas_riquadro_pagina( WP_Post $post ): void {
 	wp_nonce_field( FORESTAS_RIQUADRO_NONCE, FORESTAS_RIQUADRO_NONCE );
 	$news = $post->post_type === 'post';
-	$da_drupal = $news ? get_post_meta( $post->ID, '_drupal_nid', true ) !== '' : get_post_meta( $post->ID, FORESTAS_META_PAGINA, true ) !== '';
+	$da_drupal = $news ? get_post_meta( $post->ID, FORESTAS_META_NID, true ) !== '' : get_post_meta( $post->ID, FORESTAS_META_PAGINA, true ) !== '';
 	if ( $da_drupal && forestas_sincronizzazione_accesa() ) {
 		printf(
 			'<p class="notice notice-warning inline forestas-riquadro-avviso">%s</p>',
@@ -138,7 +140,7 @@ function forestas_riquadro_pagina( WP_Post $post ): void {
 	}
 	if ( $news ) {
 		printf(
-			'<p><input type="hidden" name="%1$s_presente" value="1"><label><input type="checkbox" name="%1$s" value="1"%2$s> <strong>In evidenza</strong></label> <span class="description">La news compare nella scheda News della pagina News (le 4 più recenti in evidenza).</span></p>',
+			'<p><input type="hidden" name="%1$s_presente" value="1"><label><input type="checkbox" name="%1$s" value="1"%2$s> <strong>In evidenza</strong></label> <span class="description">La news compare fra quelle in evidenza della pagina News e, se è un\'attività, in cima alla pagina «Attività e comunicazioni».</span></p>',
 			esc_attr( FORESTAS_META_IN_EVIDENZA ),
 			checked( get_post_meta( $post->ID, FORESTAS_META_IN_EVIDENZA, true ), '1', false )
 		);
@@ -159,6 +161,18 @@ function forestas_riquadro_collegamenti( WP_Post $post ): void {
 		forestas_riquadro_collegamento( '', '' ),
 		esc_attr( FORESTAS_META_COLLEGAMENTI )
 	);
+}
+
+/*
+ * Indirizzo di un collegamento salvato dal riquadro: un percorso del sito («/news/x/») resta relativo,
+ * un indirizzo completo passa da esc_url_raw (che scarta javascript: e simili); il resto è vuoto.
+ */
+function forestas_collegamento_url( string $url ): string {
+	$url = trim( $url );
+	if ( str_starts_with( $url, '/' ) && ! str_starts_with( $url, '//' ) ) {
+		return esc_url_raw( home_url( $url ) ) !== '' ? $url : '';
+	}
+	return esc_url_raw( $url );
 }
 
 /* Salvataggio del riquadro, per pagine e news. */
@@ -183,7 +197,7 @@ function forestas_riquadro_salva( int $id ): void {
 		$inviati      = (array) wp_unslash( $_POST[ FORESTAS_META_COLLEGAMENTI ] ?? [] );
 		$collegamenti = [];
 		foreach ( (array) ( $inviati['url'] ?? [] ) as $i => $url ) {
-			$url = esc_url_raw( trim( (string) $url ) );
+			$url = forestas_collegamento_url( (string) $url );
 			if ( $url !== '' ) {
 				$collegamenti[] = [ 'titolo' => sanitize_text_field( (string) ( $inviati['titolo'][ $i ] ?? '' ) ), 'url' => $url ];
 			}

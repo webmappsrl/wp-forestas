@@ -13,7 +13,7 @@
 4. **Sito inglese:** le 4 news tradotte su Drupal diventano traduzioni WPML; le altre si mostrano in
    italiano con il ripiego di WPML.
 5. **«In evidenza» (`field_in_evidenza`) si importa come meta**, non come sticky di WordPress.
-6. **La pagina News è a schede come nel Canvas Fase 2, Tavola 8** (sezione `s2r`): prima scheda
+6. **La pagina News è a schede come nel Canvas Fase 2, Tavola 9** (sezione `s2r`): prima scheda
    Attività e comunicazioni, aperta, poi News. Le schede sono pagine figlie di News
    (`/news/attivita-e-comunicazioni`, `/news/news`), le pagine nuove si aggiungono in
    `config/pagine.json`. I post stanno a `/news/<titolo>`: serve una regola di rewrite che dia la
@@ -248,7 +248,8 @@ oc:8759 si condivide nei ticket interessati (richiesta del dev, 26/10).
   `/attivita-e-comunicazioni`.
 - **Tag nativi riusabili:** `post_tag` va associato al CPT evento; il vocabolario `tags` è usato
   anche da evento. I termini Drupal si ritrovano dal term meta `_drupal_chiave` = `<vocabolario>:<tid>`
-  (non univoco), con `wpf_termine_per_drupal()` e `wpf_news_termine()` di `news-lib.php`.
+  (non univoco), con `wpf_termine_per_drupal( string $vid, int $tid, string $tassonomia )` e
+  `wpf_termine_ritrova_o_crea()` di `contenuti-lib.php`.
 - **`tipologia_da_sapere`:** tassonomia propria registrata nel child (`inc/news.php`) senza tipo di
   contenuto: oc:8760 la collega al CPT «Da sapere» con `register_taxonomy_for_object_type` e importa i
   termini; in `config/wpml.json` è già traducibile. Su Drupal: 9 termini senza gerarchia, 1 tradotto in inglese,
@@ -276,6 +277,13 @@ oc:8759 si condivide nei ticket interessati (richiesta del dev, 26/10).
 - **Riferimenti a contenuti del catasto:** se gli eventi hanno riferimenti a enti, sentieri o
   itinerari, si salvano come le news (meta `_wpf_riferimenti`, tipo neutro e nid Drupal, tutti) e non si
   mostrano: li mostrerà il plugin con le API dello shard (call del 27/10).
+- **Lettura per bundle:** `wpf_drupal_bundle_campo( $db, '<bundle>', … )` e
+  `wpf_drupal_bundle_precarica_media()` di `drupal.php` valgono per eventi, «Da sapere» e carte; la
+  cache ha il bundle nella chiave.
+- **Griglie per tipo di contenuto:** nella `griglia` di `config/pagine.json` `tipo` (il CPT),
+  `vocabolario` e `tassonomia` della tipologia; senza, valgono quelli delle news.
+- **`with_front` già falso** per i tipi e le tassonomie non nativi (`forestas_senza_front` del child): i
+  CPT di oc:8760 non finiscono sotto `/news/`.
 - **`wpf_sync_mancanti` con la provenienza:** ogni voce ha `origine` (`pagina`, `news`) ed `elemento`;
   gli eventi useranno la loro origine e il loro filtro, come le news in `pagine.php`.
 
@@ -331,7 +339,8 @@ Ancora utili:
   nid prendono la testata da News anche in inglese, dove Drupal non ha la traduzione di News: dati
   dell'italiano, sottotitolo dalla nostra traduzione. Il pulsante è un array nei meta: in JSON
   `update_post_meta` toglieva la «\» degli accenti e la pagina risultava cambiata a ogni giro.
-- **Task 3.** Lettura riscritta con le tabelle delle news in memoria (`wpf_drupal_news_righe`,
+- **Task 3.** Lettura riscritta con le tabelle delle news in memoria (oggi `wpf_drupal_in_memoria` e
+  `wpf_drupal_bundle_*`, generalizzate per bundle dopo la review; prima `wpf_drupal_news_righe`,
   `wpf_drupal_file_media_tutti`, termini in un colpo solo): dal Mac col tunnel ogni query costa 0,4 s,
   e una query per campo voleva dire 13 minuti a giro; ora 9 secondi.
 - **Task 4-5.** Categorie e tag non si traducono: su Drupal `tipologia_news`, `tag_news` e `tags` non
@@ -383,6 +392,28 @@ Ancora utili:
   ordina per `field_date`, campo nascosto nel form che le news recenti non hanno: finivano in fondo, e
   una news scritta in WordPress ci sarebbe finita sempre. Ora tutte le griglie ordinano per data, le più
   recenti prima; `field_date` e il meta `_wpf_data_ordine` sono tolti.
+
+- **Review del 27/10 (wm-review-ticket, cinque revisori), tutto corretto prima della chiusura:**
+  - i collegamenti interni, relativi, bloccavano il salvataggio della news (campo `url` del riquadro):
+    ora campo di testo, con i percorsi `/…` accettati;
+  - galleria e allegati di 10 news erano in un ordine diverso da Drupal: ora seguono il delta;
+  - una news in bozza perdeva la data a ogni aggiornamento (`wp_update_post` di una bozza senza data
+    GMT): ora si passano `post_date_gmt` ed `edit_date` (campo `scrittura` di `wpf_contenuto_scrivi`);
+  - sulle news inglesi la voce NEWS del menu non era attiva: la pagina News e il pulsante si cercano con
+    i filtri di WPML (`forestas_pagina_per_chiave`);
+  - con `/news/%postname%/` i tracciati di `wp-geohub` e la tassonomia `tipologia_da_sapere` erano finiti
+    sotto `/news/`: `with_front` falso per tipi e tassonomie non nativi, regole versionate
+    (`WPF_REGOLE_VERSIONE`);
+  - pulizia: regole dei termini, scheda, righe di log e mancanti in `contenuti-lib.php`; lettura per
+    bundle in `drupal.php`; testo importato in una funzione del child (`forestas_testo_importato`);
+    costanti al posto dei nomi dei meta scritti a mano; `ordine` e `peso` tolti perché non usati;
+    `--contenuti-mancanti` calcola i termini delle news ritentate; CSS ridondante tolto.
+- **Divergenze dal piano non registrate prima della review:** gli stili delle news stanno in
+  `style.css`, non in `assets/css/news.css` (come il resto del child); i termini hanno il solo term meta
+  `_drupal_chiave` = `<vocabolario>:<tid>` (non `_drupal_tid` e `_drupal_vocabolario`: una chiave sola,
+  non univoca, basta per ritrovarli e fonderli), e la fusione chiede anche lo stesso genitore;
+  `wpf_news_sincronizza` riceve elenco, dati e mancanti già letti da `pagine.php`; le regole delle schede
+  usano `pagename=<percorso>`, non `page_id`, e valgono per le due lingue perché WPML toglie `/en/`.
 
 ## Bug trovati
 

@@ -9,9 +9,11 @@ regole delle pagine valgono anche qui (pagina di conoscenza di oc:8758): copia D
 con il controllo di integrità, Drupal vince sempre, `DRUPAL_SYNC`, mancanti da ritentare.
 
 - **Codice.** `docker/scripts/config/contenuti-lib.php` è la parte comune (scrittura di un contenuto,
-  pagina o post, con media, termini e traduzione WPML; pulizia del testo; elenco dei mancanti).
+  pagina o post, con media, termini e traduzione WPML; pulizia del testo; elenco dei mancanti e righe
+  di log; regole dei termini importati, `wpf_termine_per_drupal` e `wpf_termine_ritrova_o_crea`; schede).
   `pagine-lib.php` ha solo il perimetro delle pagine, `news-lib.php` solo le news. `drupal.php` legge
-  la copia: per le news carica ogni tabella una volta sola (`wpf_drupal_news_righe`).
+  la copia: per le news carica ogni tabella una volta sola, per bundle (`wpf_drupal_bundle_tabella`,
+  `wpf_drupal_bundle_campo`), e riusa la stessa lettura per gli altri bundle di oc:8760.
 - **Riconoscimento.** Una news si ritrova da `_drupal_nid` e `_wpf_lingua`, mai dall'id di WordPress.
 - **Campi.** Titolo, testo filtrato come `filtered_html`, sottotitolo nel Riassunto, data del post da
   `field_data` (ore 12:00), immagine in evidenza, `wpf_galleria`, `wpf_allegati`. In più:
@@ -76,7 +78,12 @@ con il controllo di integrità, Drupal vince sempre, `DRUPAL_SYNC`, mancanti da 
 - **Schede come pagine con il loro indirizzo:** il Canvas vuole un indirizzo per scheda. Con i
   permalink `/news/%postname%/` WordPress prova `/news/<x>/` come post prima che come pagina: il child
   aggiunge in testa una regola per ogni pagina scheda, letta dal database, e lo script rigenera le
-  regole quando l'elenco delle schede cambia (riga `REGOLE` nel log).
+  regole quando l'elenco delle schede cambia o quando cambia la versione delle regole del child
+  (`WPF_REGOLE_VERSIONE`), riga `REGOLE` nel log.
+- **`/news/` solo per i post:** con i permalink `/news/%postname%/` WordPress mette `/news/` davanti a
+  ogni tipo e tassonomia registrati con `with_front`. Il child lo toglie a tutti quelli non nativi
+  (`forestas_senza_front`): i tracciati di `wp-geohub` restano a `/track/`, e così i tipi di oc:8760.
+  Categorie e tag, nativi, stanno a `/news/category/` e `/news/tag/`, che nessun link usa.
 - **Slug normalizzati nello script:** WordPress salverebbe comunque lo slug senza accenti, e lo script
   vedrebbe lo slug «cambiato» a ogni giro (mancante perpetuo, uscita 1).
 

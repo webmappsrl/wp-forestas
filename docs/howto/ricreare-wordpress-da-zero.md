@@ -11,7 +11,7 @@ i due sono indicate passo per passo. **In produzione il reset non si usa**: lì 
 sono permanenti.
 
 Ultima verifica dell'intero ciclo: 27/10/2026, in locale (oc:8759), con `allinea` subito dopo il
-reset: 36 pagine (18 IT, 18 EN) e 99 news (95 IT, 4 EN), `STATO allineato`, ritratto identico a quello
+reset, rifatto dopo la review: 34 pagine (17 IT, 17 EN) e 99 news (95 IT, 4 EN), `STATO allineato`, ritratto identico a quello
 di prima del reset; restano 2 media mancanti, una foto di galleria che dà 404 anche sul sito Drupal
 (news 4606, in italiano e in inglese). Il giro dopo il reset dura una ventina di minuti: scarica dal
 sito Drupal circa 300 file delle news. Verifica precedente: 22/10/2026, in locale (oc:8758, dopo le review), con le 28 pagine
@@ -81,7 +81,7 @@ al passo 3, e il passo 4 collega le voci.
 Dalla cartella `wp-forestas`:
 
 ```bash
-bin/wordpress-config.sh pagine              # anteprima: 36 pagine e 99 news «creata», 26 termini, media da scaricare, link
+bin/wordpress-config.sh pagine              # anteprima: 34 pagine e 99 news «creata», 26 termini, media da scaricare, link
 bin/wordpress-config.sh pagine --conferma   # crea pagine, news e termini, scarica media, assegna i template
 ```
 
