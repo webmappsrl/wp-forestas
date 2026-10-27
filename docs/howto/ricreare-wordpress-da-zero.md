@@ -10,8 +10,8 @@ configurazione, pagine statiche, news, media e menu collegati. Vale in locale e 
 i due sono indicate passo per passo. **In produzione il reset non si usa**: lì i dati di WordPress
 sono permanenti.
 
-Ultima verifica dell'intero ciclo: 27/10/2026, in locale (oc:8759), con `allinea` subito dopo il
-reset, rifatto dopo la review: 34 pagine (17 IT, 17 EN) e 99 news (95 IT, 4 EN), `STATO allineato`, ritratto identico a quello
+Ultima verifica dell'intero ciclo: 27/10/2026, in locale (oc:8759), dopo le tre review, con `allinea`
+lanciato subito dopo il reset con l'ambiente ridotto del cron, due volte di fila: 34 pagine (17 IT, 17 EN) e 99 news (95 IT, 4 EN), `STATO allineato`, ritratto identico a quello
 di prima del reset; restano 2 media mancanti, una foto di galleria che dà 404 anche sul sito Drupal
 (news 4606, in italiano e in inglese). Il giro dopo il reset dura una ventina di minuti: scarica dal
 sito Drupal circa 300 file delle news. Verifica precedente: 22/10/2026, in locale (oc:8758, dopo le review), con le 28 pagine

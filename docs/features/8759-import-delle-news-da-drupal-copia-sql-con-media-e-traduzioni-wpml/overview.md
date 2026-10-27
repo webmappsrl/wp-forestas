@@ -99,7 +99,8 @@ di Drupal.
       immagine principale, Riassunto (sottotitolo), categorie (tipologia) e tag nativi; nel riquadro
       «Allegati, collegamenti e galleria», come quello delle pagine, allegati e galleria dalla libreria
       media, i collegamenti (righe URL e testo, da aggiungere, togliere e riordinare; un collegamento al
-      sito stesso è un percorso relativo come `/news/x/`, che il campo accetta) e «In evidenza».
+      sito stesso è un percorso relativo come `/news/x/`, che il campo accetta); «In evidenza» in un
+      riquadro suo in cima alla colonna laterale, perché decide se la news compare nella pagina News.
       Con la sincronizzazione accesa il riquadro avvisa che le modifiche a una news del vecchio sito si
       perdono. Una news nuova parte nella categoria News, in tutte e due le lingue (categoria predefinita
       anche per l'inglese in WPML).

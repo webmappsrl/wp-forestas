@@ -5,7 +5,8 @@
  * news anche wpf_collegamenti e wpf_in_evidenza) che leggono i template e che scrive la sincronizzazione
  * da Drupal. Sono l'equivalente dei campi della pagina e della news di Drupal, che la redazione gestisce
  * dalla libreria media e dal form, nello stesso ordine del form della news di Drupal (allegati,
- * collegamenti, galleria, «In evidenza»). Il sottotitolo della testata è il Riassunto nativo; per le
+ * collegamenti, galleria); «In evidenza» sta in un riquadro a parte, in cima alla colonna laterale,
+ * perché decide se la news compare nella pagina News. Il sottotitolo della testata è il Riassunto nativo; per le
  * news data, immagine principale, tipologia (sottocategoria di News) e tag sono i campi nativi del post.
  */
 
@@ -25,6 +26,9 @@ add_action(
 	'add_meta_boxes_post',
 	function () {
 		add_meta_box( 'forestas-riquadro-pagina', 'Allegati, collegamenti e galleria', 'forestas_riquadro_pagina', 'post', 'normal', 'high' );
+		// «In evidenza» decide se la news compare nella pagina News: sta da solo in cima alla colonna
+		// laterale, sopra «Pubblica», perché la redazione lo veda prima di pubblicare
+		add_meta_box( 'forestas-in-evidenza', 'In evidenza', 'forestas_riquadro_in_evidenza', 'post', 'side', 'high' );
 	}
 );
 
@@ -121,19 +125,26 @@ function forestas_riquadro_pagina( WP_Post $post ): void {
 		// salvataggio dall'editor lo riscrive, e da lì passa per i filtri di WordPress
 		echo '<p class="notice notice-info inline forestas-riquadro-avviso">Il testo è ancora quello importato dal vecchio sito e si mostra così com\'è. Se un salvataggio lo cambia (anche solo per aggiungere un allegato: l\'editor può riscriverne l\'HTML), da lì passa per la formattazione di WordPress (paragrafi, virgolette): controlla il contenuto dopo aver salvato.</p>';
 	}
-	// Nell'ordine del form di Drupal: allegati, collegamenti (solo news), galleria, «In evidenza» (solo news)
+	// Nell'ordine del form di Drupal: allegati, collegamenti (solo news), galleria. «In evidenza» ha un
+	// riquadro suo nella colonna laterale (forestas_riquadro_in_evidenza)
 	forestas_riquadro_media( $post, FORESTAS_META_ALLEGATI, 'Allegati', 'Aggiungi dalla libreria media', '', 'Documenti mostrati sotto il testo, con formato e dimensione. Si riordinano trascinandoli.' );
 	if ( $news ) {
 		forestas_riquadro_collegamenti( $post );
 	}
 	forestas_riquadro_media( $post, FORESTAS_META_GALLERIA, 'Galleria', 'Aggiungi immagini', 'image', 'Immagini mostrate in griglia sotto il testo. Si riordinano trascinandole.' );
-	if ( $news ) {
-		printf(
-			'<p><input type="hidden" name="%1$s_presente" value="1"><label><input type="checkbox" name="%1$s" value="1"%2$s> <strong>In evidenza</strong></label> <span class="description">La news compare fra quelle in evidenza della pagina News e, se è un\'attività, in cima alla pagina «Attività e comunicazioni».</span></p>',
-			esc_attr( FORESTAS_META_IN_EVIDENZA ),
-			checked( get_post_meta( $post->ID, FORESTAS_META_IN_EVIDENZA, true ), '1', false )
-		);
-	}
+}
+
+/*
+ * Riquadro laterale «In evidenza» delle news. Il nonce è quello del riquadro principale, che c'è sempre
+ * (anche nascosto dalle «Impostazioni schermata» resta nel form): il salvataggio è forestas_riquadro_salva.
+ */
+function forestas_riquadro_in_evidenza( WP_Post $post ): void {
+	printf(
+		'<p><input type="hidden" name="%1$s_presente" value="1"><label class="forestas-in-evidenza"><input type="checkbox" name="%1$s" value="1"%2$s> Mostra nella pagina News</label></p>'
+		. '<p class="description">La pagina News mostra solo le 4 news in evidenza più recenti: senza questa spunta la news si vede solo in «Tutte le news» (e, se è un\'attività, in «Attività e comunicazioni»). Con la spunta un\'attività va anche in cima alla sua pagina.</p>',
+		esc_attr( FORESTAS_META_IN_EVIDENZA ),
+		checked( get_post_meta( $post->ID, FORESTAS_META_IN_EVIDENZA, true ), '1', false )
+	);
 }
 
 /* Un elenco di media del riquadro (allegati o galleria), dalla libreria media (assets/js/riquadro-pagina.js). */

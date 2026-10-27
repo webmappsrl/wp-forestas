@@ -5,7 +5,7 @@ Template: Impreza
 Author: Webmapp
 Author URI: https://webmapp.it/
 Description: Child theme di Impreza per Sardegna Sentieri (Forestas). Versionato nel repo wp-forestas e montato dal compose: si modifica nel repo, non dal pannello.
-Version: 1.5.7
+Version: 1.5.8
 */
 
 
@@ -1706,9 +1706,13 @@ Version: 1.5.7
 	font-size: clamp(0.875rem, 0.875rem + (1vw - 0.2rem) * 0.125, 1rem);
 	line-height: 1.6;
 }
-/* Icona del file nel colore del marchio, come nelle pagine di testo di Drupal */
+/* Icona del file nel colore del marchio, come nelle pagine di testo di Drupal; nelle news nel colore
+   della sezione, come le altre icone della news (sase-file__icon prende --section-color) */
 .forestas-file__icona {
 	color: var(--sase-arancio);
+}
+.forestas-news-corpo .forestas-file__icona {
+	color: var(--sase-sezione-news);
 }
 /* Galleria: sezione sase-padding-v-8 (2,5rem sopra e sotto) con 1,875rem fra titolo e griglia
    (sase-section-inner-vertical-spaced-margin-6) */
@@ -1943,25 +1947,34 @@ Version: 1.5.7
 	font-size: var(--sase-carattere-piccolo);
 	font-weight: 600;
 }
-.forestas-testata-data i { margin-right: .35em; color: var(--sase-arancio); }
+.forestas-testata-data i { margin-right: .35em; color: var(--sase-sezione-news); }
 .forestas-news-corpo { padding-top: 2.5rem; }
 .forestas-news-corpo > .forestas-collegamenti { margin-top: 3.125rem; }
-/* Tag: sase-tag del tema Drupal, icona del segnalibro e voci separate */
+/* Tag: sase-tag del tema Drupal. Segnalibro «light» nel colore della sezione News (#C2410C concordato
+   al posto del #F67745 di Drupal, come la data, i file e la freccia dei collegamenti), voci in maiuscolo
+   separate da «-» */
 .forestas-news-tag {
 	display: flex;
 	align-items: baseline;
-	gap: .5rem;
-	margin-bottom: 1.875rem;
+	gap: 1em;
+	margin-bottom: 3.125rem;                                 /* 50px prima del testo, come il blocco sase-block */
 	color: var(--sase-testo);
+	font-weight: 600;
+	text-transform: uppercase;
 }
+.forestas-news-tag__icona { color: var(--sase-sezione-news); }
 .forestas-news-tag ul {
 	display: flex;
 	flex-wrap: wrap;
-	gap: .25rem .75rem;
+	gap: 1em .5em;
 	margin: 0;
 	padding: 0;
 	list-style: none;
-	font-weight: 600;
+}
+.forestas-news-tag li { margin: 0; }
+.forestas-news-tag li:not(:last-child)::after {
+	content: "-";
+	margin-left: .5em;
 }
 /* Collegamenti: field--field-collegamenti di Drupal. Titolo sase-h5 come quello degli allegati, 1,25rem
    prima dell'elenco, voci a 0,9375rem; link sase-link: grassetto, senza sottolineatura (solo al

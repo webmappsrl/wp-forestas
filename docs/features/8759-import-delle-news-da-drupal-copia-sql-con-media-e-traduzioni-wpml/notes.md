@@ -380,8 +380,8 @@ Ancora utili:
   (Canvas), tag nelle altre (anteprime di Drupal). A parità di data le news vanno in ordine di nid, come
   su Drupal. «Condividi» non c'è sulle schede, come sulla pagina News di Drupal. Sui post la voce NEWS
   del menu è attiva.
-- **Ordine di `/attivita-e-comunicazioni`.** Su Drupal la View non ha un ordinamento (Search API,
-  pertinenza) e l'ordine online non segue né `field_data` né `field_date`: qui data decrescente.
+- **Ordine di `/attivita-e-comunicazioni`.** Su Drupal la View non ha un ordinamento (View
+  `vista_attivita_e_comunicazioni`, nessun criterio di ordine) e l'ordine online non segue né `field_data` né `field_date`: qui data decrescente.
 - **Categoria «News» all'indirizzo `/news/category/news/`**, non `/category/news/`: con i permalink
   `/news/%postname%/` WordPress mette la base delle categorie sotto `/news/`. Nessun link porta lì.
 
@@ -404,8 +404,8 @@ Ancora utili:
   pagine).** Su Drupal la redazione inserisce i collegamenti nel campo `field_collegamenti` del form
   (widget `link_default`: URL e testo, voci illimitate, interni ed esterni). In WordPress il riquadro
   delle pagine (`inc/pagine-statiche-admin.php`) vale anche per le news, con il titolo «Allegati,
-  collegamenti e galleria», nell'ordine del form di Drupal: allegati, collegamenti, galleria, «In
-  evidenza». Il Riassunto è visibile anche sulle news. Data, immagine, tipologia e tag sono i campi nativi.
+  collegamenti e galleria», nell'ordine del form di Drupal: allegati, collegamenti, galleria. «In
+  evidenza» è poi passato in un riquadro laterale suo (vedi sotto). Il Riassunto è visibile anche sulle news. Data, immagine, tipologia e tag sono i campi nativi.
   La categoria predefinita dei post diventa News (la imposta il giro delle news, riga `TERMINE`), così
   una news scritta in WordPress compare nelle schede e negli elenchi. Verificato con WP-CLI: riquadro
   con le quattro sezioni e l'avviso, salvataggio, rimozione, un indirizzo `javascript:` scartato.
@@ -413,6 +413,40 @@ Ancora utili:
   ordina per `field_date`, campo nascosto nel form che le news recenti non hanno: finivano in fondo, e
   una news scritta in WordPress ci sarebbe finita sempre. Ora tutte le griglie ordinano per data, le più
   recenti prima; `field_date` e il meta `_wpf_data_ordine` sono tolti.
+- **`/attivita-e-comunicazioni/` confrontata con Drupal pagina per pagina (27/10, prima del push).**
+  Drupal online, pagine 1-3, contro WordPress, pagine 1-3; copia Drupal letta in sola lettura:
+  - le news in evidenza ricompaiono nella lista sotto, e il blocco «In evidenza» si ripete su ogni
+    pagina della paginazione: **Drupal fa lo stesso**, allineato 1 a 1;
+  - le 4 in evidenza sono diverse: le news Attività con `field_in_evidenza` sono 8 sia su Drupal sia
+    qui; il blocco di Drupal ordina per `field_date` e le 4 più recenti (nid 3371, 3436, 4016, 5306)
+    l'hanno vuoto, quindi mostra quelle del 2020-2022. Qui le 4 più recenti: conseguenza dell'opzione B;
+  - Drupal elenca 17 news su 18: la View `vista_attivita_e_comunicazioni` non ha ordinamento né filtro
+    sullo stato, e con la paginazione l'ordine non è stabile fra una pagina e l'altra. La news 3436
+    («Stati generali della sentieristica nazionale», pubblicata, tipologia 4734) non compare in nessuna
+    pagina, pur essendo raggiungibile a `/node/3436`. Qui ci sono tutte e 18: non è da allineare.
+- **Tag e icone della news allineati a Drupal (richiesta del dev, 27/10).** Misurati nel browser sulle
+  news 5571 e 5691, Drupal online contro WordPress a 1920px:
+  - tag: segnalibro `fa-light` (Impreza ha lo stile `fal`), maiuscolo, voci separate da «-», 1em fra
+    icona e voci, 1em × 0,5em fra le voci, 50px prima del testo. Posizioni orizzontali identiche al
+    pixel (icona 12px, voci a 28, 170 e 282px); su schermo stretto le voci vanno a capo dopo l'icona;
+  - colore: su Drupal le icone di data, tag, file e freccia dei collegamenti prendono `--section-color`
+    (`#F67745` sulle news). Qui `--sase-sezione-news` (`#C2410C`, il colore News concordato nel
+    wireframe di oc:8783): prima data, tag e file avevano l'arancio del marchio, solo la freccia era
+    già giusta. Nelle pagine l'icona del file resta nell'arancio del marchio;
+  - icona della data: `fa-calendar-lines-pen` di Drupal è di Font Awesome 6 e non c'è nel font di
+    Impreza (FA 5 Pro, verificato: il glifo `\e472` non si disegna); al suo posto `fas fa-calendar-edit`,
+    lo stesso calendario con la penna;
+  - non toccata la distanza fra testata e tag: su Drupal il breadcrumb sta sopra la testata, qui sotto,
+    come in tutte le pagine di oc:8758.
+  Child alla versione 1.5.8.
+- **«In evidenza» in un riquadro laterale suo (richiesta del dev, 27/10).** Il dev ha creato una news
+  senza la spunta e non la trovava nella pagina News, che come su Drupal mostra solo le 4 news in
+  evidenza più recenti (più Eventi e Attività): stava in fondo al riquadro «Allegati, collegamenti e
+  galleria» e non si notava. Ora è il riquadro «In evidenza» in cima alla colonna laterale, sopra
+  «Lingua» e «Pubblica», con la casella «Mostra nella pagina News» e la spiegazione di dove si vede la
+  news senza la spunta. Stesso campo e stesso salvataggio (`forestas_riquadro_salva`, nonce del
+  riquadro principale): verificato con WP-CLI su una news temporanea (spunta salvata, spunta tolta,
+  news cancellata) e nel browser sull'editor della news di prova.
 
 - **Review del 27/10 (wm-review-ticket, cinque revisori), tutto corretto prima della chiusura:**
   - i collegamenti interni, relativi, bloccavano il salvataggio della news (campo `url` del riquadro):
@@ -496,6 +530,13 @@ Ancora utili:
   una news inglese. Da verificare a mano (axe non misura il contrasto del testo su immagini e sfumature):
   il testo bianco della testata con l'immagine e della card in evidenza. Non fatta: la prova con uno
   screen reader vero (VoiceOver o NVDA).
+
+- **Ciclo da zero come il cron (27/10, dopo le tre review):** reset in locale, poi `allinea` due volte
+  con l'ambiente ridotto del cron (`env -i`, `PATH=/usr/local/bin:/usr/bin:/bin`): primo giro uscita 0 e
+  `STATO allineato` (34 pagine, 99 news, 27 termini, circa 300 media), secondo giro `STATO allineato`
+  senza nulla da scrivere, ritratto identico a quello di prima del reset. Verificati 99 news pubblicate e
+  nessuna «programmata», categoria predefinita News in tutte e due le lingue, schede 200, 404 oltre
+  l'ultima pagina, redirect di `/node/1094`, `/track/` fuori da `/news/`.
 
 ## Bug trovati
 

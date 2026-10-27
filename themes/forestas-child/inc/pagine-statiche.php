@@ -218,7 +218,7 @@ add_shortcode(
 			esc_html( get_the_title( $id ) ),
 			$sottotitolo !== '' ? '<p class="forestas-testata-sottotitolo">' . esc_html( $sottotitolo ) . '</p>' : '',
 			$tipologia ? '<p class="forestas-testata-tipologia">' . esc_html( $tipologia->name ) . '</p>' : '',
-			$news ? '<p class="forestas-testata-data"><i class="far fa-calendar-alt" aria-hidden="true"></i> ' . forestas_news_data( $id ) . '</p>' : '',
+			$news ? '<p class="forestas-testata-data"><i class="fas fa-calendar-edit" aria-hidden="true"></i> ' . forestas_news_data( $id ) . '</p>' : '',
 			forestas_attributo_lingua( $id )
 		) . forestas_percorso( $id );
 	}

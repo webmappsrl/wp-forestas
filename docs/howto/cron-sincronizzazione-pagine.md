@@ -5,9 +5,12 @@ WordPress allo stato di riferimento senza interventi: pagine statiche (oc:8758) 
 allineate alla copia SQL del database Drupal e voci dei menu collegate alle pagine. Le news fanno parte
 dello stesso giro del comando delle pagine: la riga del cron è la stessa. Vale anche per un sito appena
 ricreato da zero: dopo il reset l'init applica `config/`, e il primo giro di `allinea` crea pagine e
-news e collega i menu (verificato in locale il 27/10 lanciando solo `allinea` dopo il reset, anche dopo la review: 34 pagine
-e 99 news, `STATO allineato`, ritratto identico a quello di prima del reset; il primo giro dura una
-ventina di minuti, perché scarica dal sito Drupal circa 300 file delle news). Cosa fa il comando delle pagine e
+news e collega i menu. Verificato in locale il 27/10, dopo le tre review, con l'ambiente del cron
+(`env -i HOME=… PATH=/usr/local/bin:/usr/bin:/bin bash -c 'cd …/wp-forestas && bin/wordpress-config.sh
+allinea'`) subito dopo il reset: primo giro con 34 pagine, 99 news e 27 termini, `STATO allineato`,
+uscita 0; secondo giro, come il giorno dopo, `STATO allineato` senza nulla da scrivere; ritratto identico
+a quello di prima del reset. Il primo giro dura una ventina di minuti, perché scarica dal sito Drupal
+circa 300 file delle news. Cosa fa il comando delle pagine e
 come si legge il log: [README](../../README.md#pagine-statiche-da-drupal); le scelte e i vincoli:
 [pagine](../knowledge/8758-import-delle-pagine-editoriali-da-drupal-e-ricostruzione-con-impreza-di-quelle-fatte-con-il-layout-builder.md)
 e [news](../knowledge/8759-import-delle-news-da-drupal.md).

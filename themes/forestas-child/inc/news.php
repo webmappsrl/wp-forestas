@@ -215,7 +215,7 @@ add_shortcode(
 		foreach ( get_the_tags( $id ) ?: [] as $t ) {
 			$tag .= '<li>' . esc_html( $t->name ) . '</li>';
 		}
-		$tag = $tag !== '' ? '<div class="forestas-news-tag"><h2 class="screen-reader-text">Tags</h2><i class="far fa-bookmark" aria-hidden="true"></i><ul role="list">' . $tag . '</ul></div>' : '';
+		$tag = $tag !== '' ? '<div class="forestas-news-tag"><h2 class="screen-reader-text">Tags</h2><i class="fal fa-bookmark forestas-news-tag__icona" aria-hidden="true"></i><ul role="list">' . $tag . '</ul></div>' : '';
 		$html     = do_shortcode( '[forestas_testata]' )
 			. '<div class="forestas-pagina-testo forestas-news-corpo"' . forestas_attributo_lingua( $id ) . '>' . $tag . forestas_testo_importato( $id ) . forestas_allegati( $id ) . forestas_news_collegamenti( $id ) . forestas_galleria( $id ) . '</div>';
 		$in_corso = false;

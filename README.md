@@ -248,7 +248,8 @@ con un comando (oc:8758). L'elenco è `config/pagine.json`; la grafica sta nei t
 di `config/post.json` («Pagina con testata», «Pagina di testo», «Pagina mappa», e per le news «Pagina a
 schede» e «Pagina d'elenco») e negli shortcode di `themes/forestas-child/inc/pagine-statiche.php`. Nell'editor
 il riquadro «Allegati e galleria» (`inc/pagine-statiche-admin.php`) gestisce allegati e galleria; sulle
-news si chiama «Allegati, collegamenti e galleria».
+news si chiama «Allegati, collegamenti e galleria», e «In evidenza» (se la news compare nella pagina
+News) ha un riquadro suo in cima alla colonna laterale.
 
 Le pagine che Drupal ha solo in italiano hanno in inglese la nostra traduzione, in
 `config/traduzioni/en/<chiave>.json` (titolo, sottotitolo, impronta del testo italiano tradotto) e

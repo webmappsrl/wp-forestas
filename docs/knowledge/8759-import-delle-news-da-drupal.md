@@ -51,11 +51,18 @@ con il controllo di integrità, Drupal vince sempre, `DRUPAL_SYNC`, mancanti da 
 - **Pagina della news.** Template `template-news` (`[forestas_news]`), il predefinito di Impreza per tutti
   i post (`content_post_id` in `config/impreza.json`): anche una news scritta dalla redazione ha questo
   layout. Contiene la testata delle pagine con tipologia e data, poi tag, testo, allegati, collegamenti e galleria, nell'ordine del layout di Drupal.
+  Le icone della news (data, segnalibro dei tag, file degli allegati, freccia dei collegamenti) hanno il
+  colore della sezione News, come su Drupal (`--section-color`): `--sase-sezione-news`, `#C2410C`
+  concordato al posto del `#F67745` del sito attuale. I tag sono il blocco `sase-tag`: segnalibro
+  «light», maiuscolo, voci separate da «-». L'icona della data è `fa-calendar-edit`, l'equivalente
+  in Font Awesome 5 Pro (quello di Impreza) del `fa-calendar-lines-pen` di Drupal, che è di FA 6.
 - **Editor della news.** Gli stessi campi del form della news di Drupal: data, immagine in evidenza,
   Riassunto, categorie e tag nativi, più il riquadro delle pagine con il titolo «Allegati, collegamenti
-  e galleria» (`inc/pagine-statiche-admin.php`): allegati, collegamenti (righe URL e testo), galleria e
-  «In evidenza», nell'ordine del form di Drupal. La categoria predefinita dei post è News: la imposta il
-  giro delle news.
+  e galleria» (`inc/pagine-statiche-admin.php`): allegati, collegamenti (righe URL e testo) e galleria,
+  nell'ordine del form di Drupal. «In evidenza» ha un riquadro suo in cima alla colonna laterale
+  («Mostra nella pagina News»): la pagina News mostra solo le 4 news in evidenza più recenti, e una news
+  senza la spunta si vede solo negli elenchi; in fondo al riquadro grande la redazione non lo notava
+  (27/10). La categoria predefinita dei post è News: la imposta il giro delle news.
 - **Accessibilità (WCAG 2.1 AA).** Schede come link in un `<nav>` con `aria-current="page"`; card con
   un solo link, sul titolo, e immagine decorativa (`alt=""`); titoli delle card `h3` nelle schede (sotto
   l'`h2` della scheda) e `h2` nelle pagine d'elenco, senza saltare livelli; frecce della paginazione con
@@ -76,7 +83,13 @@ con il controllo di integrità, Drupal vince sempre, `DRUPAL_SYNC`, mancanti da 
   costanti di `news-lib.php`: `WPF_NEWS_SOGLIA_BOZZE` (news o traduzioni da mettere in bozza) e
   `WPF_NEWS_SCARTO_COPIA` (news pubblicate in meno nella copia).
 - **File dei media.** Si scaricano dal sito pubblico di Drupal: la copia ha solo il database.
-  `DRUPAL_FILES_URL` nel `.env` cambia l'indirizzo, per pagine e news.
+  `DRUPAL_FILES_URL` nel `.env` cambia l'indirizzo, per pagine e news. Esempio, l'immagine della news
+  1040: nella copia `node__field_top_image_media` porta al media 6263, `media__field_media_image` al
+  file 3052, e `file_managed` dice `uri` = `public://WhatsApp Image 2022-05-26 at 09.48.04.jpeg`. Lo
+  script sostituisce `public://` con l'indirizzo dei file e scarica
+  `https://www.sardegnasentieri.it/sites/default/files/WhatsApp%20Image%202022-05-26%20at%2009.48.04.jpeg`
+  nella libreria media (allegato con `_drupal_fid` 3052, `uploads/…/locandina-oliena.jpeg`). Ai giri
+  dopo lo ritrova dal `_drupal_fid` e non lo riscarica.
 
 ## Perché così
 
@@ -116,8 +129,11 @@ con il controllo di integrità, Drupal vince sempre, `DRUPAL_SYNC`, mancanti da 
   dinamiche `/enti/<slug>`). La call del 27/10 con Giuseppe l'ha tolto: il plugin nasce da un fork di
   `wp-geohub`, generico con personalizzazioni per shard, e legge lo shard con API dedicate a
   WordPress. Le note del ticket hanno il dettaglio.
-- `/attivita-e-comunicazioni` su Drupal non ha un ordinamento (View di Search API, ordine di
-  pertinenza): qui le news sono in ordine di data, le più recenti prima.
+- `/attivita-e-comunicazioni` su Drupal non ha un ordinamento (View `vista_attivita_e_comunicazioni`,
+  senza criterio di ordine): qui le news sono in ordine di data, le più recenti prima. Senza ordine la
+  paginazione di Drupal non è stabile e una news (nid 3436) non compare in nessuna pagina; qui ci sono
+  tutte. Come su Drupal, le news in evidenza ricompaiono nella lista e il blocco «In evidenza» si ripete
+  su ogni pagina (verificato il 27/10).
 - Su Drupal la scheda Attività ordinava per `field_date`, un campo nascosto nel form che le news
   recenti non hanno: finivano in fondo. Il dev ha scelto l'ordine per data, come le altre griglie (27/10).
 - Allegati nella libreria media di WordPress **in attesa di conferma**: se servono anche allo shard
