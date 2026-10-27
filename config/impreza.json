@@ -215,7 +215,7 @@
     "content_order_id": "",
     "content_poi_id": "__defaults__",
     "content_portfolio_id": "__defaults__",
-    "content_post_id": "__defaults__",
+    "content_post_id": "@chiave:template-news",
     "content_product_id": "",
     "content_shop_id": "",
     "content_shop_search_id": "__defaults__",

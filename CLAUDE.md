@@ -161,8 +161,8 @@ subagent.
   va perso; il cron va messo lontano da quell'ora (`docs/howto/cron-sincronizzazione-pagine.md`) (oc:8758)
 - Una scheda figlia della pagina News aggiunta o rinominata dal pannello dà 404 finché non gira
   `pagine --conferma` o `wp rewrite flush`: le regole di rewrite (`inc/news.php`) si rigenerano solo
-  quando lo script vede cambiare l'elenco delle schede o `WPF_REGOLE_VERSIONE` (riga `REGOLE`): chi cambia
-  le regole del child alza quella costante (`contenuti-lib.php`). Per la stessa precedenza una
+  quando cambia l'elenco delle schede o `FORESTAS_REGOLE_VERSIONE` (giro di `pagine`, riga `REGOLE`, o il
+  pannello): chi cambia le regole del child alza quella costante (`inc/news.php`). Per la stessa precedenza una
   news con lo slug di una scheda non si raggiunge, e lo script lo segnala con un AVVISO. Il perché sta in
   `docs/knowledge/8759-import-delle-news-da-drupal.md` (oc:8759)
 

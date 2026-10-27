@@ -101,7 +101,8 @@ di Drupal.
       media, i collegamenti (righe URL e testo, da aggiungere, togliere e riordinare; un collegamento al
       sito stesso è un percorso relativo come `/news/x/`, che il campo accetta) e «In evidenza».
       Con la sincronizzazione accesa il riquadro avvisa che le modifiche a una news del vecchio sito si
-      perdono. Una news nuova parte nella categoria News.
+      perdono. Una news nuova parte nella categoria News, in tutte e due le lingue (categoria predefinita
+      anche per l'inglese in WPML).
 
 **Termini**
 - [ ] Una categoria «news» fa da contenitore; le 6 tipologie di `tipologia_news` sono sue
@@ -121,7 +122,8 @@ di Drupal.
       pagine figlie di News, e lo script segnala un post il cui slug coincide con quello di una
       scheda. `/news/` vale solo per i post: i tipi e le tassonomie non nativi (i tracciati di
       `wp-geohub`, `tipologia_da_sapere`, i tipi di oc:8760) non ci finiscono sotto (`with_front`
-      falso). Le regole si rigenerano quando cambiano le schede o la loro versione (`WPF_REGOLE_VERSIONE`).
+      falso). Le regole si rigenerano quando cambiano le schede o la loro versione (`FORESTAS_REGOLE_VERSIONE`),
+      dal giro di `pagine` o dal pannello.
 - [ ] La pagina News mostra le schede come nel Canvas: percorso di navigazione a tre livelli con
       `aria-current="page"`, un indirizzo per scheda, card unica con le varianti (in evidenza con
       foto, compatta, senza foto), colore della sezione #C2410C, scorrimento orizzontale delle schede
@@ -131,6 +133,14 @@ di Drupal.
       «in evidenza», quantità e paginazione; ordine per `field_data` decrescente in tutte (la scheda
       Attività su Drupal ordinava per `field_date`, campo nascosto: decisione del dev, 27/10). Niente
       «Condividi» su schede e pagine d'elenco.
+- [ ] Il template della news (`template-news`) è il predefinito di Impreza per tutti i post
+      (`content_post_id` in `config/impreza.json`): anche una news scritta dalla redazione ha il layout
+      della news, non solo quelle importate.
+- [ ] Le pagine oltre l'ultima (`/tutte-le-news/page/99/`) e le schede, che non sono paginate
+      (`/news/page/2/`), rispondono 404.
+- [ ] Accessibilità (WCAG 2.1 AA): schede come link con `aria-current`, card con un solo link e immagine
+      decorativa, titoli senza salti di livello (card `h3` nelle schede, `h2` nelle pagine d'elenco),
+      frecce della paginazione con un nome, `lang="it"` sulle news italiane mostrate sul sito inglese.
 - [ ] La pagina della singola news segue il layout Drupal (`core.entity_view_display.node.news.full.yml`).
       Prima sezione: la testata con immagine di sfondo, tipologia, titolo, data, sottotitolo. Seconda
       sezione: tag, testo, allegati, collegamenti («Collegamenti» / «Links», testo tagliato a 80
@@ -199,6 +209,7 @@ di Drupal.
   - `link.php`: indirizzo del sito Drupal in una costante (`WPF_SITO_DRUPAL`).
 - `config/`:
   - `pagine.json`: News a schede, scheda Attività, pagine d'elenco;
+  - `impreza.json`: template della news predefinito per i post (`content_post_id`);
   - `post.json`: template di Impreza della news, della pagina a schede e della pagina d'elenco;
   - `sito.json`: permalink e fuso orario (`timezone_string`);
   - `wpml.json`: post e tassonomie traducibili con ripiego, `tipologia_da_sapere`.

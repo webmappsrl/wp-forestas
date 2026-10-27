@@ -360,12 +360,13 @@ function wpf_drupal_news( mysqli $db, int $nid, string $lingua ): ?array {
 			$riferimenti[] = [ $tipo, $collegato ];
 		}
 	}
-	// Il nid è il resto del percorso dopo «/node/» (6 caratteri, quindi dal settimo)
+	// Solo i percorsi /node/<nid>, con lo stesso filtro di wpf_drupal_alias; il nid è il resto del percorso
+	// dopo «/node/» (6 caratteri, quindi dal settimo)
 	$alias = wpf_drupal_in_memoria(
 		$db,
 		'alias',
 		"SELECT CAST(SUBSTRING(path, 7) AS UNSIGNED) AS entity_id, langcode, alias FROM path_alias
-		 WHERE path LIKE '/node/%' AND status = 1 ORDER BY id DESC"
+		 WHERE path REGEXP '^/node/[0-9]+$' AND status = 1 ORDER BY id DESC"
 	);
 	$alias_news = null;
 	foreach ( wpf_drupal_lingue( $lingua ) as $l ) {

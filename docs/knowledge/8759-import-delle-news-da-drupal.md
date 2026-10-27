@@ -48,13 +48,22 @@ con il controllo di integrità, Drupal vince sempre, `DRUPAL_SYNC`, mancanti da 
 - **Card unica del Canvas** con tre varianti: in evidenza (foto piena), compatta (foto a lato), senza
   foto (filetto in alto); nelle pagine d'elenco la card con la foto in alto. Etichetta: la tipologia
   nelle card in evidenza, i tag nelle altre, come le anteprime di Drupal.
-- **Pagina della news.** Template `template-news` (`[forestas_news]`): la testata delle pagine con
-  tipologia e data, poi tag, testo, allegati, collegamenti e galleria, nell'ordine del layout di Drupal.
+- **Pagina della news.** Template `template-news` (`[forestas_news]`), il predefinito di Impreza per tutti
+  i post (`content_post_id` in `config/impreza.json`): anche una news scritta dalla redazione ha questo
+  layout. Contiene la testata delle pagine con tipologia e data, poi tag, testo, allegati, collegamenti e galleria, nell'ordine del layout di Drupal.
 - **Editor della news.** Gli stessi campi del form della news di Drupal: data, immagine in evidenza,
   Riassunto, categorie e tag nativi, più il riquadro delle pagine con il titolo «Allegati, collegamenti
   e galleria» (`inc/pagine-statiche-admin.php`): allegati, collegamenti (righe URL e testo), galleria e
   «In evidenza», nell'ordine del form di Drupal. La categoria predefinita dei post è News: la imposta il
   giro delle news.
+- **Accessibilità (WCAG 2.1 AA).** Schede come link in un `<nav>` con `aria-current="page"`; card con
+  un solo link, sul titolo, e immagine decorativa (`alt=""`); titoli delle card `h3` nelle schede (sotto
+  l'`h2` della scheda) e `h2` nelle pagine d'elenco, senza saltare livelli; frecce della paginazione con
+  un nome per lo screen reader. Una news italiana mostrata sul sito inglese (ripiego di WPML) ha
+  `lang="it"` su titolo, testo, percorso e card (`forestas_attributo_lingua`, WCAG 3.1.2), così lo
+  screen reader la legge con la pronuncia italiana. Controllo axe-core 4.9.1 del 27/10 (A e AA): nessuna violazione;
+  restano da verificare a mano i contrasti del testo bianco su immagini e sfumature (testata, card in
+  evidenza).
 - **Protezioni.** Una news spubblicata o non più nella copia va in bozza, mai cancellata; così anche la
   sola traduzione inglese tolta su Drupal. Con più di 5
   news da mettere in bozza nello stesso giro, o con le news pubblicate della copia sotto quelle di
@@ -62,7 +71,10 @@ con il controllo di integrità, Drupal vince sempre, `DRUPAL_SYNC`, mancanti da 
   `--accetta-bozze`. Per provare il controllo, `WPF_NEWS_PROVA_CONTEGGIO=<n>` simula una copia con `<n>`
   news, solo in anteprima. `bin/wordpress-config.sh` non la passa al container: va data a mano, per
   esempio `docker exec -u www-data -e WPF_PROVA=1 -e WPF_NEWS_PROVA_CONTEGGIO=10 wordpress-<APP_NAME> wp
-  --path=/var/www/html --user=<admin> eval-file /usr/local/lib/wp-forestas/pagine.php`.
+  --path=/var/www/html --user=<admin> eval-file /usr/local/lib/wp-forestas/pagine.php`; con un sito in
+  https serve anche `--exec='$_SERVER["HTTPS"]="on";'`, come aggiunge lo script. Le soglie sono due
+  costanti di `news-lib.php`: `WPF_NEWS_SOGLIA_BOZZE` (news o traduzioni da mettere in bozza) e
+  `WPF_NEWS_SCARTO_COPIA` (news pubblicate in meno nella copia).
 - **File dei media.** Si scaricano dal sito pubblico di Drupal: la copia ha solo il database.
   `DRUPAL_FILES_URL` nel `.env` cambia l'indirizzo, per pagine e news.
 
@@ -85,7 +97,9 @@ con il controllo di integrità, Drupal vince sempre, `DRUPAL_SYNC`, mancanti da 
   permalink `/news/%postname%/` WordPress prova `/news/<x>/` come post prima che come pagina: il child
   aggiunge in testa una regola per ogni pagina scheda, letta dal database, e lo script rigenera le
   regole quando l'elenco delle schede cambia o quando cambia la versione delle regole del child
-  (`WPF_REGOLE_VERSIONE`), riga `REGOLE` nel log.
+  (`FORESTAS_REGOLE_VERSIONE` in `inc/news.php`): lo controlla `forestas_regole_aggiorna()`, chiamata dal
+  giro di `pagine` (riga `REGOLE` nel log) e dal pannello, quindi anche dopo il lancio, con la
+  sincronizzazione spenta.
 - **`/news/` solo per i post:** con i permalink `/news/%postname%/` WordPress mette `/news/` davanti a
   ogni tipo e tassonomia registrati con `with_front`. Il child lo toglie a tutti quelli non nativi
   (`forestas_senza_front`): i tracciati di `wp-geohub` restano a `/track/`, e così i tipi di oc:8760.

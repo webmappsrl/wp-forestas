@@ -7,7 +7,8 @@
  * Scrive solo con DRUPAL_SYNC=on nel .env; con WPF_PROVA=1 mostra le differenze senza scrivere nulla.
  * Ogni riga di output comincia con un tipo: PAGINA, NEWS, TERMINE, MEDIA, LINK, MENU, MANCANTE, REGOLE,
  * AVVISO, ERRORE, RIASSUNTO. Con WPF_NEWS_PROVA_CONTEGGIO=<n>, solo in anteprima, le news pubblicate lette
- * dalla copia contano <n>: serve a provare il controllo sulla copia caricata a metà (news-lib.php). Esce con 1 se c'è un errore, se restano elementi mancanti (non i soli media) o se la
+ * dalla copia contano <n>: serve a provare il controllo sulla copia caricata a metà (news-lib.php).
+ * Esce con 1 se c'è un errore, se restano elementi mancanti (non i soli media) o se la
  * sincronizzazione è spenta (DRUPAL_SYNC), anche in anteprima.
  */
 
@@ -236,13 +237,7 @@ foreach ( $voci as $chiave => $voce ) {
 			continue;
 		}
 		$d = $dati[ $chiave ][ $lingua ];
-		// In una pagina inglese un link porta alla versione inglese, se c'è (su Drupal molte pagine
-		// inglesi non esistevano e il testo linka l'italiano), e la home è quella della lingua. Un link
-		// alla versione inglese di un contenuto che in WordPress è solo italiano porta all'italiano, come
-		// su Drupal, che a /en/node/N senza traduzione mostra il contenuto italiano
-		$trova_qui = $lingua === 'it'
-			? fn( int $nid, string $l ) => $trova( $nid, $l ) ?? ( $l !== 'it' ? $trova( $nid, 'it' ) : null )
-			: fn( int $nid, string $l ) => $trova( $nid, $lingua ) ?? $trova( $nid, $l ) ?? $trova( $nid, 'it' );
+		$trova_qui = wpf_link_trova_in_lingua( $trova, $lingua );
 		$l         = wpf_link_riscrivi( wpf_contenuto_pulisci( $d['body'], $d['formato'] ), $alias, $trova_qui, $lingua );
 		$d['body'] = $l['html'];
 		$genitore = $voce['genitore'] ?? null;
@@ -280,16 +275,10 @@ $news = ( $solo_mancanti && ! $solo_news )
 $mancanti = array_merge( $mancanti, $news['mancanti'] );
 $previsti = array_merge( $previsti, $news['previsti'] );
 
-// Regole di rewrite del child (inc/news.php): si rigenerano quando cambia l'elenco delle schede figlie
-// pubblicate, se no una scheda nuova darebbe 404, o quando cambia la versione delle regole (WPF_REGOLE_VERSIONE),
-// da alzare quando il child cambia le sue regole (oc:8759)
-if ( ! $prova ) {
-	$regole = [ 'versione' => WPF_REGOLE_VERSIONE, 'schede' => array_values( wpf_schede_figlie() ) ];
-	if ( get_option( WPF_OPZIONE_SCHEDE_REGOLE ) !== $regole ) {
-		flush_rewrite_rules( false );
-		update_option( WPF_OPZIONE_SCHEDE_REGOLE, $regole, false );
-		$riga( 'REGOLE', 'rigenerate per le schede: ' . implode( ', ', array_unique( $regole['schede'] ) ) );
-	}
+// Regole di rewrite del child (inc/news.php, forestas_regole_aggiorna): si rigenerano quando cambia l'elenco
+// delle schede figlie pubblicate, se no una scheda nuova darebbe 404, o la versione delle regole del child
+if ( ! $prova && function_exists( 'forestas_regole_aggiorna' ) && forestas_regole_aggiorna() ) {
+	$riga( 'REGOLE', 'rigenerate per le schede: ' . implode( ', ', array_unique( forestas_schede_figlie() ) ) );
 }
 
 // In anteprima l'elenco non cambia: si mostrano gli elementi che risultano mancanti adesso
@@ -297,7 +286,7 @@ if ( ! $prova ) {
 	wpf_mancanti_salva( array_merge( $mancanti_altri, $mancanti ) );
 }
 foreach ( $mancanti as $m ) {
-	$riga( 'MANCANTE', "{$m['cosa']} {$m['elemento']}/{$m['lingua']}" . ( $m['dettaglio'] !== '' ? " {$m['dettaglio']}" : '' ) . ": {$m['causa']} (dal {$m['primo']})" );
+	$riga( 'MANCANTE', "{$m['origine']} {$m['elemento']}/{$m['lingua']} {$m['cosa']}" . ( $m['dettaglio'] !== '' ? " {$m['dettaglio']}" : '' ) . ": {$m['causa']} (dal {$m['primo']})" );
 }
 $riga(
 	'RIASSUNTO',

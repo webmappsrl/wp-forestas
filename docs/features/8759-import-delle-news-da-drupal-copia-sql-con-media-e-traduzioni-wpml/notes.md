@@ -287,6 +287,12 @@ oc:8759 si condivide nei ticket interessati (richiesta del dev, 26/10).
 - **`wpf_sync_mancanti` con la provenienza:** ogni voce ha `origine` (`pagina`, `news`) ed `elemento`;
   gli eventi useranno la loro origine e il loro filtro, come le news in `pagine.php`.
 
+- **Indicazioni della terza review per oc:8760:** le funzioni dei termini (`wpf_termine_per_drupal`,
+  `wpf_termine_ritrova_o_crea`, `forestas_termine_drupal`) non conoscono la lingua, e `zona_geografica`
+  ha 34 termini tradotti; `WPF_CONTENUTO_MEDIA` è una costante chiusa, conviene passare i media in `$c`;
+  `post_parent` si scrive solo per le pagine; il riassunto di `bin/wordpress-config.sh` conta i tipi di
+  riga scritti a mano; la regola di precedenza copre solo le pagine con `_wpf_scheda`, non tutte le
+  figlie di News.
 - **Indicazioni della seconda review per oc:8760** (architettura, non bloccanti per le news):
   - `pagine.php` conosce le news per nome (lettura, percorsi dei link, filtro dei mancanti, chiamata,
     riassunto): ogni tipo nuovo va aggiunto in quei cinque punti, o meglio va introdotto un elenco di
@@ -355,8 +361,8 @@ Ancora utili:
   dell'italiano, sottotitolo dalla nostra traduzione. Il pulsante è un array nei meta: in JSON
   `update_post_meta` toglieva la «\» degli accenti e la pagina risultava cambiata a ogni giro.
 - **Task 3.** Lettura riscritta con le tabelle delle news in memoria (oggi `wpf_drupal_in_memoria` e
-  `wpf_drupal_bundle_*`, generalizzate per bundle dopo la review; prima `wpf_drupal_news_righe`,
-  `wpf_drupal_file_media_tutti`, termini in un colpo solo): dal Mac col tunnel ogni query costa 0,4 s,
+  `wpf_drupal_bundle_*`, generalizzate per bundle dopo la review; prima `wpf_drupal_news_righe`), i file
+  dei media in una query (`wpf_drupal_file_media_tutti`, ancora in uso) e i termini in un colpo solo: dal Mac col tunnel ogni query costa 0,4 s,
   e una query per campo voleva dire 13 minuti a giro; ora 9 secondi.
 - **Task 4-5.** Categorie e tag non si traducono: su Drupal `tipologia_news`, `tag_news` e `tags` non
   hanno traduzioni, quindi in WPML post, categorie e tag sono «traducibili, con ripiego» e le news
@@ -445,6 +451,51 @@ Ancora utili:
     pagina News cercata una volta per richiesta, `wpf_termine_crea` comune a categoria e termini, nomi
     della parte comune senza «pagina» (`wpf_contenuto_pulisci`, `WPF_CONTENUTO_MEDIA`,
     `WPF_META_CONTENUTO_ALLEGATI`, `WPF_META_CONTENUTO_GALLERIA`), commenti che rimandavano al file sbagliato.
+
+- **Firme diverse dal piano (registrate dopo la terza review):** `wpf_contenuto_scrivi` riceve il
+  contenuto già trovato (`post`) e la «cosa» dei mancanti (`cosa`), non una funzione `trova`, più il campo
+  `scrittura` per gli argomenti che non si confrontano; `wpf_news_categoria` restituisce un array
+  (`id`, `esito`, `errore`) come i termini; `wpf_termine_ritrova_o_crea` (in `contenuti-lib.php`) prende il
+  posto di `wpf_news_termine`; `wpf_drupal_news_elenco` non restituisce `langcode` (bastano stato e
+  lingue); `wpf_termine_per_drupal` ha i parametri `( $vid, $tid, $tassonomia )`; `wpf_news_controlla`
+  riceve i dati letti (`$dati`), non l'elenco. In più `pagine.php` si ferma se una pagina figlia ha lingue
+  che il genitore non ha.
+- **Terza review (27/10, sessione di review), tutto corretto prima della chiusura:**
+  - una news scritta dalla redazione non aveva il layout della news (il template arrivava solo dal meta
+    `us_content_id` scritto dall'import): ora `template-news` è il predefinito di Impreza per tutti i
+    post (`content_post_id` in `config/impreza.json`), verificato con un post creato da WP-CLI;
+  - le regole delle schede si rigeneravano solo dal giro di `pagine`, che dopo il lancio è spento:
+    versione e controllo sono nel child (`FORESTAS_REGOLE_VERSIONE`, `forestas_regole_aggiorna()`,
+    chiamata dal giro e dal pannello; salvare una pagina le fa ricontrollare);
+  - la soglia delle bozze si conta sulle stesse coppie nid/lingua che vanno in bozza, e le due soglie
+    sono due costanti (`WPF_NEWS_SOGLIA_BOZZE`, `WPF_NEWS_SCARTO_COPIA`);
+  - 404 sulle pagine oltre l'ultima (`/tutte-le-news/page/99/`) e sulle schede, che non sono paginate
+    (`/news/page/2/`);
+  - immagini delle card e meta delle immagini sincronizzate caricati in una query;
+  - categoria predefinita News in tutte le lingue di WPML (era solo in italiano);
+  - pulizia: regola dei link per lingua in `wpf_link_trova_in_lingua`, filtro degli alias allineato a
+    `wpf_drupal_alias`, `WPF_NEWS_PREFISSO` separato da `WPF_NEWS_CATEGORIA`, costanti del child
+    riunite (con `FORESTAS_NEWS_CATEGORIA`), creazione dei termini con un solo blocco di log, slug
+    calcolato una volta, origine nella riga MANCANTE, riquadro dell'editor nell'ordine di Drupal senza
+    la galleria dentro il ciclo, CSS con i token del tema, commenti aggiornati, aiuto di
+    `--accetta-bozze` senza i numeri delle soglie;
+  - documentazione: durata del primo giro e `DRUPAL_FILES_URL` nella messa in opera (README e
+    `forestas/docs/howto/messa-in-opera-wordpress-uat.md`), `--exec` HTTPS nel comando di prova.
+
+- **Controllo di accessibilità (27/10, richiesta del dev):** in linea con le WCAG 2.1 AA schede, card,
+  pagina della news, percorso, paginazione e riquadro dell'editor. Corretti tre problemi: le news
+  italiane sul sito inglese (91, col ripiego di WPML) non dichiaravano la lingua, e lo screen reader le
+  leggeva con la pronuncia inglese (WCAG 3.1.2): ora `lang="it"` su titolo, testo, percorso e card; le
+  frecce della paginazione non avevano un nome («Pagina precedente», «Pagina successiva»); nelle pagine
+  d'elenco i titoli delle card passavano da `h1` a `h3`: ora sono `h2`. Non corretto, come su Drupal: i
+  collegamenti oltre gli 80 caratteri sono tagliati anche per lo screen reader.
+- **axe-core 4.9.1 (27/10, regole WCAG 2.0, 2.1 e 2.2 livelli A e AA, sito locale a 1440px):** nessuna
+  violazione su 11 pagine: `/news/`, `/news/attivita-e-comunicazioni/`, `/tutte-le-news/`,
+  `/attivita-e-comunicazioni/page/2/`, due news italiane, `/en/news/`,
+  `/en/news/attivita-e-comunicazioni/`, `/en/tutte-le-news/`, una news italiana vista dal sito inglese,
+  una news inglese. Da verificare a mano (axe non misura il contrasto del testo su immagini e sfumature):
+  il testo bianco della testata con l'immagine e della card in evidenza. Non fatta: la prova con uno
+  screen reader vero (VoiceOver o NVDA).
 
 ## Bug trovati
 

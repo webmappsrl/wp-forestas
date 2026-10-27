@@ -4,7 +4,7 @@
  *
  * Ogni news it/und di Drupal è un post con la categoria «news»; le tipologie (tipologia_news) sono
  * sottocategorie di «news», i tag (tag_news e tags) sono post_tag. Una news si riconosce da _drupal_nid e
- * _wpf_lingua, come le pagine dal perimetro. Le 4 news tradotte su Drupal hanno il post inglese collegato
+ * _wpf_lingua, come le pagine dal perimetro. Le news tradotte su Drupal hanno il post inglese collegato
  * in WPML; le altre si vedono in italiano anche sul sito inglese (ripiego di WPML, config/wpml.json).
  *
  * Categorie e tag sono gli stessi nelle due lingue: su Drupal tipologia_news, tag_news e tags non hanno
@@ -13,9 +13,10 @@
 
 require_once __DIR__ . '/contenuti-lib.php';
 
-// Più news di così da mettere in bozza nello stesso giro: copia Drupal sospetta, ci si ferma. Vale anche
-// come scarto massimo fra le news pubblicate in WordPress e quelle trovate nella copia (copia a metà)
+// Più news (o traduzioni) di così da mettere in bozza nello stesso giro: copia Drupal sospetta, ci si ferma
 const WPF_NEWS_SOGLIA_BOZZE = 5;
+// Più di così fra le news pubblicate in WordPress e quelle pubblicate nella copia: copia a metà, ci si ferma
+const WPF_NEWS_SCARTO_COPIA = 5;
 // «In evidenza» di Drupal (field_in_evidenza): «1» o assente. Le griglie «in evidenza» filtrano su questo
 const WPF_META_IN_EVIDENZA = 'wpf_in_evidenza';
 // «Collegamenti» (field_collegamenti): [ [ 'titolo', 'url' ] ], url con i link interni già riscritti
@@ -34,6 +35,8 @@ const WPF_NEWS_TIPI_RIFERIMENTO = [
 const WPF_TEMPLATE_NEWS = 'template-news';
 // Categoria che contiene tutte le news; le tipologie di Drupal sono sue figlie
 const WPF_NEWS_CATEGORIA = 'news';
+// Prefisso degli indirizzi delle news, quello di permalink_structure in config/sito.json (/news/%postname%/)
+const WPF_NEWS_PREFISSO = 'news';
 
 /** Post delle news, di qualunque stato tranne il cestino: [ nid ][ lingua ] => WP_Post. */
 function wpf_news_esistenti(): array {
@@ -72,6 +75,25 @@ function wpf_news_categoria( bool $prova ): array {
 }
 
 /**
+ * Categoria predefinita dei post impostata su News, in tutte le lingue di WPML (in WPML vale per lingua:
+ * un post creato in inglese prenderebbe quella della sua lingua). Vero se c'era da cambiarla.
+ */
+function wpf_news_categoria_predefinita( int $categoria, bool $prova ): bool {
+	global $sitepress;
+	$lingue   = $sitepress ? array_keys( (array) apply_filters( 'wpml_active_languages', [], [ 'skip_missing' => 0 ] ) ) : [];
+	$per_lingua = $sitepress ? (array) $sitepress->get_setting( 'default_categories', [] ) : [];
+	$da_fare  = (int) get_option( 'default_category' ) !== $categoria
+		|| array_filter( $lingue, fn( $l ) => (int) ( $per_lingua[ $l ] ?? 0 ) !== $categoria );
+	if ( $da_fare && ! $prova ) {
+		update_option( 'default_category', $categoria );
+		if ( $sitepress && $lingue ) {
+			$sitepress->set_setting( 'default_categories', array_merge( $per_lingua, array_fill_keys( $lingue, (string) $categoria ) ), true );
+		}
+	}
+	return (bool) $da_fare;
+}
+
+/**
  * Collegamenti di Drupal con l'indirizzo che il sito userà: «internal:/x» ed «entity:node/N» diventano
  * indirizzi del sito Drupal e passano dalla stessa riscrittura dei link del testo.
  *
@@ -105,7 +127,7 @@ function wpf_news_slug( array $d ): string {
 
 /** Percorso relativo che una news ha (o avrà) in una lingua: /news/<slug>/ o /en/news/<slug>/. */
 function wpf_news_percorso( string $slug, string $lingua ): string {
-	return ( $lingua === 'it' ? '/' : WPF_PREFISSO_INGLESE ) . WPF_NEWS_CATEGORIA . "/{$slug}/";
+	return ( $lingua === 'it' ? '/' : WPF_PREFISSO_INGLESE ) . WPF_NEWS_PREFISSO . "/{$slug}/";
 }
 
 /**
@@ -130,33 +152,35 @@ function wpf_news_leggi( mysqli $db, array $elenco ): array {
 
 /**
  * Controlli prima di scrivere le news: una copia Drupal caricata a metà (reload delle 10:00, una tabella
- * per volta) passa wpf_drupal_controlla appena ogni tabella ha una riga, ma restituisce meno news.
+ * per volta) passa wpf_drupal_controlla appena ogni tabella ha una riga, ma restituisce meno news. I conti
+ * si fanno sulle stesse coppie nid/lingua che il giro poi mette in bozza (wpf_news_sincronizza).
  *
- * @param array $elenco     da wpf_drupal_news_elenco
+ * @param array $dati       da wpf_news_leggi: [ nid ][ lingua ] => dati
  * @param array $esistenti  da wpf_news_esistenti
  * @param ?int  $conteggio  per provare il controllo: news pubblicate da considerare lette dalla copia
- * @return array [ 'in_bozza' => [ nid => motivo ], 'errore' => ?string ]
+ * @return array [ 'in_bozza' => [ "nid/lingua" => motivo ], 'errore' => ?string ]
  */
-function wpf_news_controlla( array $elenco, array $esistenti, bool $accetta_bozze, ?int $conteggio = null ): array {
+function wpf_news_controlla( array $dati, array $esistenti, bool $accetta_bozze, ?int $conteggio = null ): array {
 	$in_bozza = [];
 	foreach ( $esistenti as $nid => $lingue ) {
-		$pubblicata = (bool) array_filter( $lingue, fn( $p ) => $p->post_status !== 'draft' );
-		if ( ! $pubblicata ) {
-			continue;
-		}
-		if ( ! isset( $elenco[ $nid ] ) ) {
-			$in_bozza[ $nid ] = 'non più nella copia Drupal';
-		} elseif ( ! $elenco[ $nid ]['status'] ) {
-			$in_bozza[ $nid ] = 'non pubblicata su Drupal';
+		foreach ( $lingue as $lingua => $post ) {
+			if ( $post->post_status === 'draft' ) {
+				continue;
+			}
+			if ( ! isset( $dati[ $nid ][ $lingua ] ) ) {
+				$in_bozza[ "{$nid}/{$lingua}" ] = 'non più nella copia Drupal';
+			} elseif ( ! $dati[ $nid ][ $lingua ]['status'] ) {
+				$in_bozza[ "{$nid}/{$lingua}" ] = 'non pubblicata su Drupal';
+			}
 		}
 	}
 	$pubblicate_wp    = count( array_filter( $esistenti, fn( $l ) => isset( $l['it'] ) && $l['it']->post_status === 'publish' ) );
-	$pubblicate_copia = $conteggio ?? count( array_filter( $elenco, fn( $n ) => $n['status'] ) );
+	$pubblicate_copia = $conteggio ?? count( array_filter( $dati, fn( $l ) => ! empty( $l['it']['status'] ) ) );
 	$errore           = null;
 	if ( ! $accetta_bozze && count( $in_bozza ) > WPF_NEWS_SOGLIA_BOZZE ) {
-		$errore = 'copia Drupal sospetta: ' . count( $in_bozza ) . ' news da mettere in bozza nello stesso giro (nid ' . implode( ', ', array_keys( $in_bozza ) ) . '), più di ' . WPF_NEWS_SOGLIA_BOZZE;
-	} elseif ( ! $accetta_bozze && $pubblicate_copia < $pubblicate_wp - WPF_NEWS_SOGLIA_BOZZE ) {
-		$errore = "copia Drupal sospetta: {$pubblicate_copia} news pubblicate nella copia contro {$pubblicate_wp} in WordPress, più di " . WPF_NEWS_SOGLIA_BOZZE . ' di differenza';
+		$errore = 'copia Drupal sospetta: ' . count( $in_bozza ) . ' news da mettere in bozza nello stesso giro (' . implode( ', ', array_keys( $in_bozza ) ) . '), più di ' . WPF_NEWS_SOGLIA_BOZZE;
+	} elseif ( ! $accetta_bozze && $pubblicate_copia < $pubblicate_wp - WPF_NEWS_SCARTO_COPIA ) {
+		$errore = "copia Drupal sospetta: {$pubblicate_copia} news pubblicate nella copia contro {$pubblicate_wp} in WordPress, più di " . WPF_NEWS_SCARTO_COPIA . ' di differenza';
 	}
 	if ( $errore ) {
 		$errore .= ': nessuna news scritta. Se la copia è in ricarica riprova più tardi; se su Drupal sono state tolte davvero: pagine --accetta-bozze';
@@ -180,12 +204,10 @@ function wpf_news_termini( mysqli $db, array $dati, bool $prova ): array {
 		$mancanti['categoria News'] = $categoria['errore'];
 	}
 	// Una news scritta dalla redazione in WordPress parte nella categoria News, non in «Senza categoria»:
-	// le schede e le pagine d'elenco mostrano solo la categoria News e le sue tipologie
-	if ( $categoria['id'] && (int) get_option( 'default_category' ) !== $categoria['id'] ) {
+	// le schede e le pagine d'elenco mostrano solo la categoria News e le sue tipologie. Con WPML la
+	// categoria predefinita è per lingua: la stessa per tutte (le categorie si mostrano col ripiego)
+	if ( $categoria['id'] && wpf_news_categoria_predefinita( $categoria['id'], $prova ) ) {
 		$righe[] = 'categoria predefinita dei post: News' . ( $prova ? ' (da impostare)' : '' );
-		if ( ! $prova ) {
-			update_option( 'default_category', $categoria['id'] );
-		}
 	}
 	$tid_tipologie = [];
 	$coppie_tag    = [];
@@ -199,31 +221,28 @@ function wpf_news_termini( mysqli $db, array $dati, bool $prova ): array {
 			}
 		}
 	}
-	$termini   = wpf_drupal_termini( $db, array_merge( $tid_tipologie, array_column( $coppie_tag, 1 ) ) );
-	$tipologie = [];
-	foreach ( array_unique( $tid_tipologie ) as $tid ) {
-		if ( ! isset( $termini[ $tid ] ) ) {
-			continue; // tipologia che su Drupal non esiste più: lo dice la riga della news
-		}
-		$r = wpf_termine_ritrova_o_crea( $termini[ $tid ]['vid'], $tid, $termini[ $tid ]['nome']['it'] ?? reset( $termini[ $tid ]['nome'] ), 'category', $categoria['id'], $prova );
-		$tipologie[ $tid ] = $r['id'];
+	$termini = wpf_drupal_termini( $db, array_merge( $tid_tipologie, array_column( $coppie_tag, 1 ) ) );
+	// Un termine ritrovato, fuso o creato: il nome è quello italiano, come lo crea wpf_termine_ritrova_o_crea
+	$termine = function ( string $etichetta, string $chiave, string $vid, int $tid, string $tassonomia, int $parent ) use ( $termini, $prova, &$righe, &$mancanti ): int {
+		$nome = $termini[ $tid ]['nome']['it'] ?? reset( $termini[ $tid ]['nome'] );
+		$r    = wpf_termine_ritrova_o_crea( $vid, $tid, $nome, $tassonomia, $parent, $prova );
 		if ( $r['esito'] !== 'ritrovato' ) {
-			$righe[] = "tipologia «" . reset( $termini[ $tid ]['nome'] ) . "» ({$tid}): {$r['esito']}" . ( $r['errore'] ? " ({$r['errore']})" : '' );
+			$righe[] = "{$etichetta} «{$nome}» ({$chiave}): {$r['esito']}" . ( $r['errore'] ? " ({$r['errore']})" : '' );
 		}
 		if ( $r['errore'] ) {
-			$mancanti[ "tipologia {$tid}" ] = $r['errore'];
+			$mancanti[ "{$etichetta} {$chiave}" ] = $r['errore'];
+		}
+		return $r['id'];
+	};
+	$tipologie = [];
+	foreach ( array_unique( $tid_tipologie ) as $tid ) {
+		if ( isset( $termini[ $tid ] ) ) { // una tipologia che su Drupal non esiste più lo dice la riga della news
+			$tipologie[ $tid ] = $termine( 'tipologia', (string) $tid, $termini[ $tid ]['vid'], $tid, 'category', $categoria['id'] );
 		}
 	}
 	$tag = [];
 	foreach ( $coppie_tag as $chiave => [ $vid, $tid ] ) {
-		$r             = wpf_termine_ritrova_o_crea( $vid, $tid, $termini[ $tid ]['nome']['it'] ?? reset( $termini[ $tid ]['nome'] ), 'post_tag', 0, $prova );
-		$tag[ $chiave ] = $r['id'];
-		if ( $r['esito'] !== 'ritrovato' ) {
-			$righe[] = "tag «" . reset( $termini[ $tid ]['nome'] ) . "» ({$chiave}): {$r['esito']}" . ( $r['errore'] ? " ({$r['errore']})" : '' );
-		}
-		if ( $r['errore'] ) {
-			$mancanti[ "tag {$chiave}" ] = $r['errore'];
-		}
+		$tag[ $chiave ] = $termine( 'tag', $chiave, $vid, $tid, 'post_tag', 0 );
 	}
 	return [ 'categoria' => $categoria['id'], 'tipologie' => $tipologie, 'tag' => $tag, 'righe' => $righe, 'mancanti' => $mancanti ];
 }
@@ -269,7 +288,7 @@ function wpf_news_scrivi( int $nid, string $lingua, array $d, ?WP_Post $post, ?i
 			'cosa'          => 'news',
 			'post'          => $post,
 			'lingua'        => $lingua,
-			'slug'          => wpf_news_slug( $d ),
+			'slug'          => $d['slug'] ?? wpf_news_slug( $d ),
 			'parent'        => 0,
 			'id_it'         => $id_it,
 			'voluti'        => array_filter(
@@ -350,7 +369,7 @@ function wpf_news_sincronizza( mysqli $db, array $elenco, array $dati, array $al
 	if ( $solo === null ) {
 		$simulato   = getenv( 'WPF_NEWS_PROVA_CONTEGGIO' );
 		$conteggio  = $prova && $simulato !== false ? (int) $simulato : null;
-		$controllo  = wpf_news_controlla( $elenco, $esistenti, $accetta_bozze, $conteggio );
+		$controllo  = wpf_news_controlla( $dati, $esistenti, $accetta_bozze, $conteggio );
 		if ( $controllo['errore'] ) {
 			$riga( 'ERRORE', $controllo['errore'] );
 			return [ 'conteggi' => [], 'mancanti' => $mancanti, 'previsti' => [], 'errore' => true ];
@@ -372,7 +391,8 @@ function wpf_news_sincronizza( mysqli $db, array $elenco, array $dati, array $al
 	$p        = wpf_post_per_chiave( WPF_TEMPLATE_NEWS );
 	$template = $p && $p->post_type === 'us_content_template' ? $p->ID : 0;
 	// Slug delle schede figlie (quelle con una regola di rewrite): un post con lo stesso slug non si raggiungerebbe
-	$schede = array_map( 'basename', wpf_schede_figlie() );
+	// (l'elenco è quello del child, inc/news.php, che WP-CLI carica con il tema)
+	$schede = function_exists( 'forestas_schede_figlie' ) ? array_map( 'basename', forestas_schede_figlie() ) : [];
 
 	foreach ( $dati as $nid => $lingue ) {
 		$id_it = null;
@@ -386,10 +406,8 @@ function wpf_news_sincronizza( mysqli $db, array $elenco, array $dati, array $al
 				continue;
 			}
 			$d = $lingue[ $lingua ];
-			// Come per le pagine: in inglese un link porta alla versione inglese se c'è, se no all'italiano
-			$trova_qui = $lingua === 'it'
-				? fn( int $n, string $l ) => $trova( $n, $l ) ?? ( $l !== 'it' ? $trova( $n, 'it' ) : null )
-				: fn( int $n, string $l ) => $trova( $n, $lingua ) ?? $trova( $n, $l ) ?? $trova( $n, 'it' );
+			$trova_qui = wpf_link_trova_in_lingua( $trova, $lingua );
+			$d['slug'] = wpf_news_slug( $d );
 			$l                 = wpf_link_riscrivi( wpf_contenuto_pulisci( $d['body'], $d['formato'] ), $alias, $trova_qui, $lingua );
 			$d['body']         = $l['html'];
 			$c                 = wpf_news_collegamenti( $d['collegamenti'], $alias, $trova_qui, $lingua );
@@ -404,9 +422,8 @@ function wpf_news_sincronizza( mysqli $db, array $elenco, array $dati, array $al
 			foreach ( $r['avvisi'] as $a ) {
 				$riga( 'AVVISO', "news {$nome}: {$a}" );
 			}
-			$slug = wpf_news_slug( $d );
-			if ( in_array( $slug, $schede, true ) ) {
-				$riga( 'AVVISO', "news {$nome}: lo slug «{$slug}» è quello di una scheda della pagina News, che ha la precedenza: la news non si raggiunge" );
+			if ( in_array( $d['slug'], $schede, true ) ) {
+				$riga( 'AVVISO', "news {$nome}: lo slug «{$d['slug']}» è quello di una scheda della pagina News, che ha la precedenza: la news non si raggiunge" );
 			}
 			foreach ( $r['media'] as $m ) {
 				$riga( 'MEDIA', "news {$nome}: {$m}" );

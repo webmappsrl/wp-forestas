@@ -346,10 +346,12 @@ rigenerate quando cambiano le schede).
    In quella prima anteprima possono comparire anche «voci diverse» nel menu, perché le voci puntano
    a post non ancora ricollegati, e qualche avviso «riferimento non risolto»: con `--conferma` i post
    si ricollegano prima, e un riferimento che resta senza post lascia il valore del sito.
-5. Pagine statiche da Drupal: aggiungi al `wp-forestas/.env` `DRUPAL_DB_USER`, `DRUPAL_DB_PASSWORD`
+5. Pagine statiche e news da Drupal: aggiungi al `wp-forestas/.env` `DRUPAL_DB_USER`, `DRUPAL_DB_PASSWORD`
    (l'utente in sola lettura della copia) e `DRUPAL_SYNC=on`, poi `scripts/wordpress-up.sh`, perché il
-   container legge il `.env` solo all'avvio. `bin/wordpress-config.sh pagine` per l'anteprima, poi
-   `pagine --conferma`, lontano dal reload della copia delle 10:00. Va dopo `applica --conferma`, che
+   container legge il `.env` solo all'avvio. `DRUPAL_FILES_URL` resta vuoto finché Drupal è acceso (i
+   file si scaricano dal sito pubblico). `bin/wordpress-config.sh pagine` per l'anteprima, poi
+   `pagine --conferma`, lontano dal reload della copia delle 10:00: il primo giro con le news dura una
+   ventina di minuti, perché scarica circa 300 file. Va dopo `applica --conferma`, che
    scrive i template di Impreza delle pagine: senza, le pagine restano fra i mancanti. Poi un altro
    `applica --conferma`: le voci di menu verso pagine che al primo apply non c'erano sono rimaste link
    per indirizzo, e solo un apply le collega alle pagine.

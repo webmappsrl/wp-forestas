@@ -62,6 +62,7 @@ function forestas_immagini_sincronizzate(): array {
 			get_posts( [ 'post_type' => 'page', 'post_status' => 'any', 'numberposts' => -1, 'fields' => 'ids', 'meta_key' => FORESTAS_META_PAGINA, 'suppress_filters' => true ] ),
 			get_posts( [ 'post_type' => 'post', 'post_status' => 'any', 'numberposts' => -1, 'fields' => 'ids', 'meta_key' => FORESTAS_META_NID, 'suppress_filters' => true ] )
 		);
+		update_meta_cache( 'post', $pagine ); // i meta di tutte in una query, non tre per contenuto
 		foreach ( $pagine as $pagina ) {
 			$ids[] = (int) get_post_thumbnail_id( $pagina );
 			array_push( $ids, ...forestas_meta_ids( $pagina, FORESTAS_META_GALLERIA ), ...forestas_meta_ids( $pagina, FORESTAS_META_ALLEGATI ) );
@@ -116,28 +117,16 @@ function forestas_riquadro_pagina( WP_Post $post ): void {
 				: 'Questa pagina è ancora collegata al vecchio sito: testo, riassunto, allegati e galleria vengono aggiornati da lì in automatico, e le modifiche fatte qui si perdono.'
 		);
 	} elseif ( md5( $post->post_content ) === get_post_meta( $post->ID, FORESTAS_META_TESTO_DRUPAL, true ) ) {
-		// Il testo si mostra così com'è finché coincide con quello importato ([forestas_pagina_testo]): un
+		// Il testo si mostra così com'è finché coincide con quello importato (forestas_testo_importato): un
 		// salvataggio dall'editor lo riscrive, e da lì passa per i filtri di WordPress
 		echo '<p class="notice notice-info inline forestas-riquadro-avviso">Il testo è ancora quello importato dal vecchio sito e si mostra così com\'è. Se un salvataggio lo cambia (anche solo per aggiungere un allegato: l\'editor può riscriverne l\'HTML), da lì passa per la formattazione di WordPress (paragrafi, virgolette): controlla il contenuto dopo aver salvato.</p>';
 	}
-	foreach ( [
-		FORESTAS_META_ALLEGATI => [ 'Allegati', 'Aggiungi dalla libreria media', '', 'Documenti mostrati sotto il testo, con formato e dimensione. Si riordinano trascinandoli.' ],
-		FORESTAS_META_GALLERIA => [ 'Galleria', 'Aggiungi immagini', 'image', 'Immagini mostrate in griglia sotto il testo. Si riordinano trascinandole.' ],
-	] as $campo => [ $titolo, $pulsante, $tipo, $aiuto ] ) {
-		if ( $news && $campo === FORESTAS_META_GALLERIA ) {
-			forestas_riquadro_collegamenti( $post );
-		}
-		$voci = implode( '', array_map( fn( $id ) => forestas_riquadro_voce( $id, $campo ), forestas_meta_ids( $post->ID, $campo ) ) );
-		printf(
-			'<div class="forestas-riquadro-elenco" data-campo="%1$s" data-tipo="%2$s"><p><strong>%3$s</strong></p><ul>%4$s</ul><input type="hidden" name="%1$s_presente" value="1"><button type="button" class="button forestas-riquadro-aggiungi">%5$s</button> <span class="description">%6$s</span></div>',
-			esc_attr( $campo ),
-			esc_attr( $tipo ),
-			esc_html( $titolo ),
-			$voci,
-			esc_html( $pulsante ),
-			esc_html( $aiuto )
-		);
+	// Nell'ordine del form di Drupal: allegati, collegamenti (solo news), galleria, «In evidenza» (solo news)
+	forestas_riquadro_media( $post, FORESTAS_META_ALLEGATI, 'Allegati', 'Aggiungi dalla libreria media', '', 'Documenti mostrati sotto il testo, con formato e dimensione. Si riordinano trascinandoli.' );
+	if ( $news ) {
+		forestas_riquadro_collegamenti( $post );
 	}
+	forestas_riquadro_media( $post, FORESTAS_META_GALLERIA, 'Galleria', 'Aggiungi immagini', 'image', 'Immagini mostrate in griglia sotto il testo. Si riordinano trascinandole.' );
 	if ( $news ) {
 		printf(
 			'<p><input type="hidden" name="%1$s_presente" value="1"><label><input type="checkbox" name="%1$s" value="1"%2$s> <strong>In evidenza</strong></label> <span class="description">La news compare fra quelle in evidenza della pagina News e, se è un\'attività, in cima alla pagina «Attività e comunicazioni».</span></p>',
@@ -145,6 +134,20 @@ function forestas_riquadro_pagina( WP_Post $post ): void {
 			checked( get_post_meta( $post->ID, FORESTAS_META_IN_EVIDENZA, true ), '1', false )
 		);
 	}
+}
+
+/* Un elenco di media del riquadro (allegati o galleria), dalla libreria media (assets/js/riquadro-pagina.js). */
+function forestas_riquadro_media( WP_Post $post, string $campo, string $titolo, string $pulsante, string $tipo, string $aiuto ): void {
+	$voci = implode( '', array_map( fn( $id ) => forestas_riquadro_voce( $id, $campo ), forestas_meta_ids( $post->ID, $campo ) ) );
+	printf(
+		'<div class="forestas-riquadro-elenco" data-campo="%1$s" data-tipo="%2$s"><p><strong>%3$s</strong></p><ul>%4$s</ul><input type="hidden" name="%1$s_presente" value="1"><button type="button" class="button forestas-riquadro-aggiungi">%5$s</button> <span class="description">%6$s</span></div>',
+		esc_attr( $campo ),
+		esc_attr( $tipo ),
+		esc_html( $titolo ),
+		$voci,
+		esc_html( $pulsante ),
+		esc_html( $aiuto )
+	);
 }
 
 /* Collegamenti di una news: righe di indirizzo e testo, con «Aggiungi un collegamento» (assets/js/riquadro-pagina.js). */

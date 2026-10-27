@@ -40,10 +40,6 @@ const WPF_TERM_META_DRUPAL = '_drupal_chiave';
 // Scheda di una pagina a schede (oc:8759): ordine fra le schede, dal campo «scheda» di config/pagine.json.
 // La legge anche news-lib.php (slug delle news in conflitto con una scheda)
 const WPF_META_SCHEDA = '_wpf_scheda';
-// Elenco delle schede per cui sono state generate le regole di rewrite del child (inc/news.php), con la
-// versione delle regole: cambiando l'uno o l'altra il giro le rigenera
-const WPF_OPZIONE_SCHEDE_REGOLE = 'wpf_schede_regole';
-const WPF_REGOLE_VERSIONE       = 2;
 
 /**
  * Contenuto WordPress pubblicato (di qualunque tipo) che porta un nodo Drupal in una lingua, o 0.
@@ -422,6 +418,21 @@ function wpf_termine_crea( string $nome, string $tassonomia, array $argomenti = 
 	return [ 'id' => (int) $nuovo['term_id'], 'esito' => 'creato', 'errore' => null ];
 }
 
+/**
+ * Il link di un nodo visto da un testo in una lingua (per wpf_link_riscrivi). In un testo inglese un link
+ * porta alla versione inglese, se c'è (su Drupal molti contenuti inglesi non esistevano e il testo linka
+ * l'italiano), e la home è quella della lingua. Un link alla versione inglese di un contenuto che in
+ * WordPress è solo italiano porta all'italiano, come su Drupal, che a /en/node/N senza traduzione mostra il
+ * contenuto italiano.
+ *
+ * @param callable $trova fn( int $nid, string $lingua ): ?string, il link nella lingua chiesta
+ */
+function wpf_link_trova_in_lingua( callable $trova, string $lingua ): callable {
+	return $lingua === 'it'
+		? fn( int $nid, string $l ) => $trova( $nid, $l ) ?? ( $l !== 'it' ? $trova( $nid, 'it' ) : null )
+		: fn( int $nid, string $l ) => $trova( $nid, $lingua ) ?? $trova( $nid, $l ) ?? $trova( $nid, 'it' );
+}
+
 /** Righe LINK di un testo riscritto (wpf_link_riscrivi): link riscritti, in attesa, verso Drupal. */
 function wpf_link_log( callable $riga, string $nome, array $l ): void {
 	foreach ( $l['riscritti'] as $m ) {
@@ -485,18 +496,3 @@ function wpf_mancanti_aggiorna( array $mancanti, string $origine, string $elemen
 	return $mancanti;
 }
 
-/**
- * Schede pubblicate delle pagine a schede: [ id => percorso ] in tutte le lingue. Le regole di rewrite
- * del child (inc/news.php, forestas_regole_schede) le danno solo alle schede figlie: la pagina madre
- * (News) è già raggiungibile come pagina.
- */
-function wpf_schede_figlie(): array {
-	$schede = wpf_wpml_tutte_le_lingue( fn() => get_posts( [ 'post_type' => 'page', 'post_status' => 'publish', 'numberposts' => -1, 'meta_key' => WPF_META_SCHEDA, 'suppress_filters' => true, 'orderby' => 'ID', 'order' => 'ASC' ] ) );
-	$figlie = [];
-	foreach ( $schede as $s ) {
-		if ( $s->post_parent ) {
-			$figlie[ $s->ID ] = get_page_uri( $s );
-		}
-	}
-	return $figlie;
-}

@@ -126,7 +126,7 @@ Nel browser, in italiano e inglese:
 - News: `/news/` è la scheda News (le 4 news in evidenza), `/news/attivita-e-comunicazioni/` la
   seconda scheda; i pulsanti portano a `/attivita-e-comunicazioni/` e `/tutte-le-news/` (paginate); una news
   sta a `/news/<titolo>/` con testata, tag, testo, allegati, collegamenti e galleria; `/node/1094` porta
-  in 301 alla news «Cos'è Sardegna-SENTIERI?»;
+  in 301 alla news «Cos'è Sardegna-SENTIERI?»; `/tutte-le-news/page/99/` e `/news/page/2/` danno 404;
 - il titolo della scheda è «Pagina | Sardegna Sentieri», come su Drupal: il nome viene da `blogname`
   di `config/sito.json` (l'apply lo scrive), il separatore dal child. Se resta «Forestas» l'apply non è
   andato a buon fine.
@@ -161,7 +161,7 @@ Da qui in poi le pagine si tengono allineate a Drupal con un cron sull'host:
 | `ERRORE un'altra sincronizzazione delle pagine è in corso` | un giro sta già girando, o ne è rimasto il blocco dopo un container fermato a metà | aspettare la fine del giro; un blocco rimasto lo toglie l'avvio del container (solo con l'init nuovo, dopo `scripts/wordpress-up.sh`) o scade dopo 2 ore |
 | `AVVISO … template … non riuscirebbe` in anteprima, uscita 1, «Prima i template di Impreza: … applica --conferma» | i template delle pagine non ci sono: l'apply del passo 2 non è stato fatto o non è riuscito | `bin/wordpress-config.sh applica --conferma`, poi di nuovo il passo 3 |
 | `Uscita N: errore imprevisto, il giro non è finito` con la riga `Fatal error` | errore di PHP o di WP-CLI (per esempio `WP_ADMIN_USER` che non c'è più, o una funzione di WPML cambiata) | leggere la causa e il log completo; il comando non suggerisce nulla finché non è capita |
-| `MANCANTE immagine/allegato … cURL error 28` o `Service Unavailable` | il sito Drupal non serve il file | passo 6, più tardi |
+| `MANCANTE news 4606/it galleria … Not Found` o `cURL error 28` (o `MANCANTE pagina …`) o `Service Unavailable` | il sito Drupal non serve il file | passo 6, più tardi |
 | `ERRORE copia Drupal sospetta: N news …` | più di 5 news da mettere in bozza, o nella copia più di 5 news pubblicate in meno che in WordPress: di solito la copia è in ricarica | riprovare dopo il reload; se su Drupal sono state tolte davvero, `pagine --accetta-bozze --conferma` |
 | `/news/attivita-e-comunicazioni/` dà 404 | regole degli indirizzi non rigenerate dopo una scheda nuova | un giro di `pagine --conferma` le rigenera (riga `REGOLE`); a mano `wp rewrite flush` |
 | `AVVISO aggiornamento automatico dei link di WPML non trovato` | WPML aggiornato: gli hook che rendevano assoluti i link non si chiamano più così | controllare che i link dei testi inglesi restino relativi; aggiornare `wpf_wpml_senza_link_automatici()` |

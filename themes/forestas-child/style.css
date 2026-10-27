@@ -5,7 +5,7 @@ Template: Impreza
 Author: Webmapp
 Author URI: https://webmapp.it/
 Description: Child theme di Impreza per Sardegna Sentieri (Forestas). Versionato nel repo wp-forestas e montato dal compose: si modifica nel repo, non dal pannello.
-Version: 1.5.5
+Version: 1.5.7
 */
 
 
@@ -52,6 +52,7 @@ Version: 1.5.5
 	--sase-sezione-da-sapere: #0F6E6A;
 	--sase-sezione-mappa: var(--sase-arancio);
 	--sase-sezione-news: #C2410C;
+	--sase-fondo-immagine: #E9F1F9;                          /* sotto un'immagine che si sta caricando (card del Canvas) */
 	--sase-terra: #CA5C30;                                    /* terra del marchio SARDEGNA: pagine senza sezione */
 
 	--sase-font-titoli: "Montserrat", sans-serif;
@@ -2020,7 +2021,8 @@ Version: 1.5.5
 	color: var(--sase-inchiostro);
 	font-weight: 700;
 }
-/* Sotto 860px la fila scorre in orizzontale se non ci sta, mai in verticale (con overflow-x: auto il
+/* 860px: la soglia del Canvas per schede e griglie (anche più sotto e in assets/js/schede.js).
+   Sotto 860px la fila scorre in orizzontale se non ci sta, mai in verticale (con overflow-x: auto il
    browser mette auto anche in verticale, e il filetto della scheda aperta lo faceva comparire) */
 @media (max-width: 860px) {
 	.forestas-schede { justify-content: flex-start; gap: 18px; overflow: auto hidden; }
@@ -2066,7 +2068,7 @@ Version: 1.5.5
 }
 .forestas-griglia--evidenza { grid-template-columns: 3fr 2fr; }
 .forestas-card {
-	--c: var(--sase-sezione-news);
+	--c: var(--forestas-sezione, var(--sase-sezione-news));
 	position: relative;
 	display: flex;
 	flex-direction: column;
@@ -2086,7 +2088,7 @@ Version: 1.5.5
 	position: relative;
 	aspect-ratio: 3 / 2;
 	overflow: hidden;
-	background: #E9F1F9;
+	background: var(--sase-fondo-immagine);
 }
 .forestas-card__media img {
 	display: block;
@@ -2122,7 +2124,7 @@ Version: 1.5.5
 .l-main .forestas-card__titolo {
 	margin: 0;
 	padding: 0;
-	color: #333;
+	color: var(--sase-testo-scuro);
 	font: 600 1.0625rem/1.25 var(--sase-font-titoli);
 }
 .forestas-card__titolo a { color: inherit; text-decoration: none; }
@@ -2144,9 +2146,9 @@ Version: 1.5.5
 .forestas-card--senza-immagine .forestas-card__testo { min-height: 9em; padding-top: 20px; }
 /* In evidenza: foto piena, testo bianco sulla sfumatura scura */
 .forestas-card--evidenza {
-	grid-row: span 3;
+	grid-row: span 3;                                        /* accanto, le altre 3 («quanti»: 4 in config/pagine.json) */
 	min-height: 360px;
-	background: #333;
+	background: var(--sase-testo-scuro);
 }
 .forestas-card--evidenza .forestas-card__media { position: absolute; inset: 0; aspect-ratio: auto; }
 .forestas-card--evidenza .forestas-card__testo {
@@ -2167,7 +2169,7 @@ Version: 1.5.5
 	padding: .4em .7em;
 	border-radius: 4px;
 	background: #fff;
-	color: #333;
+	color: var(--sase-testo-scuro);
 	font: 600 .75rem/1 var(--sase-font-testo);
 	letter-spacing: .06em;
 	text-transform: uppercase;

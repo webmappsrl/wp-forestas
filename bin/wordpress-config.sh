@@ -43,10 +43,10 @@ Opzioni di applica:
 
 Opzioni di pagine:
   --contenuti-mancanti   ritenta solo gli elementi non riusciti nelle esecuzioni precedenti
-  --accetta-bozze        mette in bozza anche più di 2 pagine o più di 5 news nello stesso giro, e
-                         scrive le news anche se nella copia ce ne sono molte meno che in WordPress:
-                         solo se su Drupal sono state davvero spubblicate o cancellate (di solito è una
-                         copia in ricarica)
+  --accetta-bozze        mette in bozza più pagine o news del solito nello stesso giro, e scrive le
+                         news anche se nella copia ce ne sono molte meno che in WordPress (soglie in
+                         pagine-lib.php e news-lib.php): solo se su Drupal sono state davvero
+                         spubblicate o cancellate (di solito è una copia in ricarica)
   --conferma             scrive (altrimenti solo anteprima)
 Ogni esecuzione scrive un log in log/pagine-<data-ora>.log (si tengono gli ultimi ${LOG_PAGINE_TENUTI}).
 
