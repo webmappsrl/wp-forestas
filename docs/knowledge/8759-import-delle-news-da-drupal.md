@@ -16,7 +16,9 @@ con il controllo di integrità, Drupal vince sempre, `DRUPAL_SYNC`, mancanti da 
   `wpf_drupal_bundle_campo`), e riusa la stessa lettura per gli altri bundle di oc:8760.
 - **Riconoscimento.** Una news si ritrova da `_drupal_nid` e `_wpf_lingua`, mai dall'id di WordPress.
 - **Campi.** Titolo, testo filtrato come `filtered_html`, sottotitolo nel Riassunto, data del post da
-  `field_data` (ore 12:00), immagine in evidenza, `wpf_galleria`, `wpf_allegati`. In più:
+  `field_data` (all'inizio del giorno, nel fuso del sito, versionato in `config/sito.json`: con un'ora
+  del giorno una news con la data di oggi sincronizzata prima di quell'ora sarebbe «programmata»), immagine
+  in evidenza, `wpf_galleria`, `wpf_allegati`. In più:
   `wpf_in_evidenza` («1»), `wpf_collegamenti` (titolo e url, link interni riscritti come quelli del
   testo) e `_wpf_riferimenti`. `field_date` non si importa: vedi «Come ci siamo arrivati».
 - **Riferimenti salvati, non mostrati.** I 18 riferimenti di `field_references` (enti, sentieri,
@@ -53,10 +55,14 @@ con il controllo di integrità, Drupal vince sempre, `DRUPAL_SYNC`, mancanti da 
   e galleria» (`inc/pagine-statiche-admin.php`): allegati, collegamenti (righe URL e testo), galleria e
   «In evidenza», nell'ordine del form di Drupal. La categoria predefinita dei post è News: la imposta il
   giro delle news.
-- **Protezioni.** Una news spubblicata o non più nella copia va in bozza, mai cancellata. Con più di 5
+- **Protezioni.** Una news spubblicata o non più nella copia va in bozza, mai cancellata; così anche la
+  sola traduzione inglese tolta su Drupal. Con più di 5
   news da mettere in bozza nello stesso giro, o con le news pubblicate della copia sotto quelle di
   WordPress di più di 5, lo script non scrive nessuna news (le pagine sì) e si va avanti solo con
-  `--accetta-bozze`. In anteprima `WPF_NEWS_PROVA_CONTEGGIO=<n>` simula una copia con `<n>` news.
+  `--accetta-bozze`. Per provare il controllo, `WPF_NEWS_PROVA_CONTEGGIO=<n>` simula una copia con `<n>`
+  news, solo in anteprima. `bin/wordpress-config.sh` non la passa al container: va data a mano, per
+  esempio `docker exec -u www-data -e WPF_PROVA=1 -e WPF_NEWS_PROVA_CONTEGGIO=10 wordpress-<APP_NAME> wp
+  --path=/var/www/html --user=<admin> eval-file /usr/local/lib/wp-forestas/pagine.php`.
 - **File dei media.** Si scaricano dal sito pubblico di Drupal: la copia ha solo il database.
   `DRUPAL_FILES_URL` nel `.env` cambia l'indirizzo, per pagine e news.
 

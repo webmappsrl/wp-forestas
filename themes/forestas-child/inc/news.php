@@ -10,8 +10,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /*
- * Meta scritti dalla sincronizzazione delle news (costanti WPF_META_* di news-lib.php, che il tema non
- * carica). Rinominandone uno negli script va rinominato anche qui.
+ * Meta scritti dalla sincronizzazione (costanti WPF_META_* di docker/scripts/config/: news-lib.php per
+ * in evidenza e collegamenti, contenuti-lib.php per la scheda, pagine-lib.php per pulsante e griglia;
+ * il tema non le carica). Rinominandone uno negli script va rinominato anche qui.
  */
 const FORESTAS_META_IN_EVIDENZA  = 'wpf_in_evidenza';   // «1»: news in evidenza su Drupal
 const FORESTAS_META_COLLEGAMENTI = 'wpf_collegamenti';  // [ [ titolo, url ] ]
@@ -120,7 +121,7 @@ add_action(
 const FORESTAS_META_GRIGLIA = '_wpf_griglia';
 // Testo di un collegamento oltre il quale si taglia con «…», come il formatter «link» di Drupal (trim_length)
 const FORESTAS_COLLEGAMENTO_MAX = 80;
-// Term meta dei termini importati da Drupal: «<vocabolario>:<tid>» (WPF_TERM_META_DRUPAL di news-lib.php)
+// Term meta dei termini importati da Drupal: «<vocabolario>:<tid>» (WPF_TERM_META_DRUPAL di contenuti-lib.php)
 const FORESTAS_TERM_META_DRUPAL = '_drupal_chiave';
 
 /**
@@ -128,8 +129,14 @@ const FORESTAS_TERM_META_DRUPAL = '_drupal_chiave';
  * WPML (get_posts li toglie per default): la chiave è la stessa sulla pagina italiana e su quella inglese.
  */
 function forestas_pagina_per_chiave( string $chiave ): int {
+	// Una volta per richiesta e per lingua: il filtro del menu la chiede per ogni voce
+	static $trovate = [];
+	$lingua         = (string) apply_filters( 'wpml_current_language', '' );
+	if ( isset( $trovate[ $lingua ][ $chiave ] ) ) {
+		return $trovate[ $lingua ][ $chiave ];
+	}
 	$pagine = get_posts( [ 'post_type' => 'page', 'post_status' => 'publish', 'numberposts' => 1, 'meta_key' => FORESTAS_META_PAGINA, 'meta_value' => $chiave, 'fields' => 'ids', 'suppress_filters' => false ] );
-	return (int) ( $pagine[0] ?? 0 );
+	return $trovate[ $lingua ][ $chiave ] = (int) ( $pagine[0] ?? 0 );
 }
 
 /** La pagina News nella lingua corrente, o 0. */
@@ -171,17 +178,21 @@ function forestas_news_data( int $id ): string {
 add_shortcode(
 	'forestas_news',
 	function () {
+		static $in_corso = false;
 		$id = get_the_ID();
-		if ( ! $id ) {
-			return '';
+		if ( ! $id || $in_corso ) {
+			return ''; // lo shortcode dentro il testo della news: niente seconda testata
 		}
-		$tag = '';
+		$in_corso = true;
+		$tag      = '';
 		foreach ( get_the_tags( $id ) ?: [] as $t ) {
 			$tag .= '<li>' . esc_html( $t->name ) . '</li>';
 		}
 		$tag = $tag !== '' ? '<div class="forestas-news-tag"><h2 class="screen-reader-text">Tags</h2><i class="far fa-bookmark" aria-hidden="true"></i><ul role="list">' . $tag . '</ul></div>' : '';
-		return do_shortcode( '[forestas_testata]' )
+		$html     = do_shortcode( '[forestas_testata]' )
 			. '<div class="forestas-pagina-testo forestas-news-corpo">' . $tag . forestas_testo_importato( $id ) . forestas_allegati( $id ) . forestas_news_collegamenti( $id ) . forestas_galleria( $id ) . '</div>';
+		$in_corso = false;
+		return $html;
 	}
 );
 
@@ -197,7 +208,9 @@ function forestas_news_collegamenti( int $id ): string {
 		if ( empty( $c['url'] ) ) {
 			continue;
 		}
-		$testo = mb_strlen( $c['titolo'] ) > FORESTAS_COLLEGAMENTO_MAX ? mb_substr( $c['titolo'], 0, FORESTAS_COLLEGAMENTO_MAX - 1 ) . '…' : $c['titolo'];
+		// Senza testo si mostra l'indirizzo, come il formatter «link» di Drupal (e come dice il riquadro)
+		$testo = trim( (string) ( $c['titolo'] ?? '' ) ) !== '' ? (string) $c['titolo'] : (string) $c['url'];
+		$testo = mb_strlen( $testo ) > FORESTAS_COLLEGAMENTO_MAX ? mb_substr( $testo, 0, FORESTAS_COLLEGAMENTO_MAX - 1 ) . '…' : $testo;
 		$voci .= sprintf( '<li><a class="forestas-link-freccia" href="%s"><i class="fas fa-arrow-right" aria-hidden="true"></i>%s</a></li>', esc_url( $c['url'] ), esc_html( $testo ) );
 	}
 	return $voci === '' ? '' : '<section class="forestas-collegamenti"><h2 class="forestas-collegamenti-titolo">' . esc_html( forestas_testo( 'Collegamenti', 'Links' ) ) . '</h2><ul>' . $voci . '</ul></section>';

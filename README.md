@@ -141,7 +141,7 @@ in `git status` di questo repo.
 ## Configurazione versionata
 
 Theme Options di Impreza, header e footer, Home, menu (con le traduzioni WPML), lingue e impostazioni
-di WPML, titolo, permalink e home statica stanno in `config/`, così un sito ricreato da zero torna
+di WPML, titolo, permalink, fuso orario e home statica stanno in `config/`, così un sito ricreato da zero torna
 identico. Restano fuori contenuti editoriali, contenuti di esempio e uploads.
 
 ```bash
@@ -274,8 +274,8 @@ bin/wordpress-config.sh pagine --contenuti-mancanti --conferma   # ritenta solo 
   tunnel verso la copia di UAT aperto sulla 3307 del Mac (`forestas/docs/howto/copia-database-drupal.md`),
   anche `DRUPAL_DB_HOST=host.docker.internal` e `DRUPAL_DB_PORT=3307`.
 - **Log:** ogni esecuzione scrive `log/pagine-<data-ora>.log` (escluso da git; si tengono gli ultimi
-  60) con una riga per evento: `PAGINA`, `NEWS`, `TERMINE`, `MEDIA`, `LINK`, `MENU`, `MANCANTE`, `AVVISO`, `ERRORE`,
-  `RIASSUNTO`. A schermo compaiono le righe che chiedono un intervento (`ERRORE`, `MANCANTE`, `MENU`,
+  60) con una riga per evento: `PAGINA`, `NEWS`, `TERMINE`, `MEDIA`, `LINK`, `MENU`, `MANCANTE`, `REGOLE`, `AVVISO`,
+  `ERRORE`, `RIASSUNTO`. A schermo compaiono le righe che chiedono un intervento (`ERRORE`, `MANCANTE`, `MENU`,
   ogni `AVVISO`, gli avvisi ed errori di WordPress), il riassunto e i conteggi.
 - **Ciò che non riesce** (un'immagine che non si scarica, un template assente…) resta in un elenco
   sul sito, con causa e date, e `--contenuti-mancanti` ritenta solo quegli elementi. Il comando esce

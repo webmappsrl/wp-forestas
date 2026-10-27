@@ -59,21 +59,16 @@ function wpf_news_esistenti(): array {
 	return $news;
 }
 
-/** La categoria che contiene le news, creata se manca: [ 'id', 'esito', 'errore' ] come wpf_news_termine. */
+/**
+ * La categoria che contiene le news, ritrovata per slug o creata: [ 'id', 'esito', 'errore' ] come
+ * wpf_termine_ritrova_o_crea. Non viene da un termine di Drupal, quindi non ha il term meta.
+ */
 function wpf_news_categoria( bool $prova ): array {
 	$c = wpf_wpml_tutte_le_lingue( fn() => get_term_by( 'slug', WPF_NEWS_CATEGORIA, 'category' ) );
 	if ( $c ) {
 		return [ 'id' => (int) $c->term_id, 'esito' => 'ritrovato', 'errore' => null ];
 	}
-	if ( $prova ) {
-		return [ 'id' => 0, 'esito' => 'da creare', 'errore' => null ];
-	}
-	$nuovo = wpf_wpml_tutte_le_lingue( fn() => wp_insert_term( 'News', 'category', [ 'slug' => WPF_NEWS_CATEGORIA ] ) );
-	if ( is_wp_error( $nuovo ) ) {
-		return [ 'id' => 0, 'esito' => 'non creato', 'errore' => $nuovo->get_error_message() ];
-	}
-	wpf_wpml_collega( (int) $nuovo['term_id'], 'tax_category', WPF_LINGUE_WPML['it'], null );
-	return [ 'id' => (int) $nuovo['term_id'], 'esito' => 'creato', 'errore' => null ];
+	return $prova ? [ 'id' => 0, 'esito' => 'da creare', 'errore' => null ] : wpf_termine_crea( 'News', 'category', [ 'slug' => WPF_NEWS_CATEGORIA ] );
 }
 
 /**
@@ -250,7 +245,9 @@ function wpf_news_scrivi( int $nid, string $lingua, array $d, ?WP_Post $post, ?i
 			$avvisi[] = "la tipologia {$d['tipologia']} non esiste più su Drupal: la news resta senza tipologia";
 		}
 	}
-	$tag = array_map( fn( $t ) => $termini['tag'][ "{$t[1]}:{$t[0]}" ] ?? 0, $d['tag'] );
+	// Due tag di Drupal fusi in un termine solo (wpf_termine_ritrova_o_crea) darebbero lo stesso id due volte,
+	// e i termini risulterebbero cambiati a ogni giro
+	$tag = array_values( array_unique( array_map( fn( $t ) => $termini['tag'][ "{$t[1]}:{$t[0]}" ] ?? 0, $d['tag'] ) ) );
 	foreach ( $d['tag_mancanti'] as $tid ) {
 		$avvisi[] = "il tag {$tid} non esiste più su Drupal: non si importa";
 	}
@@ -262,8 +259,10 @@ function wpf_news_scrivi( int $nid, string $lingua, array $d, ?WP_Post $post, ?i
 			$avvisi[] = "riferimento al nodo {$collegato} di tipo «{$bundle}», che non è un contenuto del catasto: non si salva";
 		}
 	}
-	// Ora fissa a mezzogiorno di Roma: field_data è solo una data, e così non cambia giorno con il fuso
-	$data = $d['data'] !== '' ? "{$d['data']} 12:00:00" : null;
+	// field_data è solo una data: la news si data all'inizio di quel giorno, nel fuso del sito
+	// (timezone_string in config/sito.json). Non a un'ora del giorno: con una data di oggi e un giro prima
+	// di quell'ora WordPress la metterebbe «programmata» (future) e la mostrerebbe solo dopo
+	$data = $d['data'] !== '' ? "{$d['data']} 00:00:00" : null;
 	$r    = wpf_contenuto_scrivi(
 		[
 			'tipo'          => 'post',
@@ -391,7 +390,7 @@ function wpf_news_sincronizza( mysqli $db, array $elenco, array $dati, array $al
 			$trova_qui = $lingua === 'it'
 				? fn( int $n, string $l ) => $trova( $n, $l ) ?? ( $l !== 'it' ? $trova( $n, 'it' ) : null )
 				: fn( int $n, string $l ) => $trova( $n, $lingua ) ?? $trova( $n, $l ) ?? $trova( $n, 'it' );
-			$l                 = wpf_link_riscrivi( wpf_pagina_pulisci( $d['body'], $d['formato'] ), $alias, $trova_qui, $lingua );
+			$l                 = wpf_link_riscrivi( wpf_contenuto_pulisci( $d['body'], $d['formato'] ), $alias, $trova_qui, $lingua );
 			$d['body']         = $l['html'];
 			$c                 = wpf_news_collegamenti( $d['collegamenti'], $alias, $trova_qui, $lingua );
 			$d['collegamenti'] = $c['collegamenti'];
@@ -422,18 +421,16 @@ function wpf_news_sincronizza( mysqli $db, array $elenco, array $dati, array $al
 		}
 	}
 
-	// News che non sono più nella copia (cancellate su Drupal): in bozza, mai cancellate
+	// News, o loro traduzioni, che non sono più nella copia (cancellate su Drupal): in bozza, mai cancellate.
+	// Anche la sola traduzione inglese tolta su Drupal: il post inglese non lo aggiornerebbe più nessuno
 	if ( $solo === null ) {
 		foreach ( $esistenti as $nid => $lingue ) {
-			if ( isset( $elenco[ $nid ] ) ) {
-				continue;
-			}
 			foreach ( $lingue as $lingua => $post ) {
-				if ( $post->post_status === 'draft' ) {
+				if ( isset( $dati[ $nid ][ $lingua ] ) || $post->post_status === 'draft' ) {
 					continue;
 				}
 				$conteggi['in bozza'] = ( $conteggi['in bozza'] ?? 0 ) + 1;
-				$riga( 'NEWS', "{$nid}/{$lingua}: in bozza — non più nella copia Drupal" );
+				$riga( 'NEWS', "{$nid}/{$lingua}: in bozza — " . ( isset( $elenco[ $nid ] ) ? 'la traduzione non è più nella copia Drupal' : 'non più nella copia Drupal' ) );
 				if ( ! $prova ) {
 					wp_update_post( [ 'ID' => $post->ID, 'post_status' => 'draft' ] );
 				}

@@ -239,9 +239,9 @@ oc:8759 si condivide nei ticket interessati (richiesta del dev, 26/10).
 
 - **Scheda Eventi della pagina News** (`/news/eventi`, pulsante «Scopri tutti gli eventi»): una voce in
   `config/pagine.json` con `genitore: news`, `testata_da: news`, `scheda: 3`, `pulsante` e `griglia`.
-  Lo shortcode `[forestas_schede]` la mostra da solo; la `griglia` oggi cerca solo post della categoria
-  «news» (`forestas_news_query` in `inc/news.php`): per gli eventi serve un parametro per il tipo di
-  contenuto, e una card con la data grande del Canvas (`.uc-date`).
+  Lo shortcode `[forestas_schede]` la mostra da solo; la `griglia` accetta già `tipo` (il CPT),
+  `vocabolario` e `tassonomia` (`forestas_news_query` in `inc/news.php`). Serve invece una card degli
+  eventi, con la data grande del Canvas (`.uc-date`): `forestas_news_card` legge categorie e tag dei post.
 - **Regola di rewrite delle pagine figlie di News**: copre già `/news/eventi` se la scheda è una
   pagina figlia di News con il meta `_wpf_scheda`; lo script rigenera le regole da sé (riga `REGOLE`).
 - **Pagina d'elenco degli eventi come su Drupal**, sul modello di `/tutte-le-news` e
@@ -286,6 +286,20 @@ oc:8759 si condivide nei ticket interessati (richiesta del dev, 26/10).
   CPT di oc:8760 non finiscono sotto `/news/`.
 - **`wpf_sync_mancanti` con la provenienza:** ogni voce ha `origine` (`pagina`, `news`) ed `elemento`;
   gli eventi useranno la loro origine e il loro filtro, come le news in `pagine.php`.
+
+- **Indicazioni della seconda review per oc:8760** (architettura, non bloccanti per le news):
+  - `pagine.php` conosce le news per nome (lettura, percorsi dei link, filtro dei mancanti, chiamata,
+    riassunto): ogni tipo nuovo va aggiunto in quei cinque punti, o meglio va introdotto un elenco di
+    import da percorrere;
+  - `wpf_news_sincronizza` è il ciclo di un tipo con nid Drupal (controlli, termini, lingue, link, log,
+    mancanti, bozze): conviene renderlo generico prima di copiarlo per eventi, «Da sapere» e carte;
+  - in `drupal.php` sono generici `wpf_drupal_bundle_tabella` e `wpf_drupal_bundle_campo`; l'elenco dei
+    nodi, i riferimenti e `WPF_NEWS_TIPI_RIFERIMENTO` sono ancora delle news;
+  - nel child: la card e la testata leggono categorie e tag dei post, il riquadro e il percorso
+    distinguono solo pagina e post, il redirect `/node/<nid>` cerca solo i post,
+    `FORESTAS_PAGINE_SENZA_CONDIVIDI` è un elenco di chiavi scritto nel child;
+  - le tabelle delle news sono nel controllo di integrità comune: una tabella di un tipo vuota ferma
+    tutto il giro.
 
 ### Plugin WordPress, API `wp` e import degli enti (ticket da creare)
 
@@ -332,7 +346,8 @@ Ancora utili:
 
 - **Task 1.** `WPF_DRUPAL_FILES` resta come valore predefinito di `wpf_drupal_files_base()` invece di
   sparire. Le funzioni della pulizia del testo (`wpf_pagina_pulisci`, `wpf_pagina_link_dagli_indirizzi`)
-  sono passate in `contenuti-lib.php` con il nome di prima.
+  sono passate in `contenuti-lib.php` con il nome di prima; dopo la seconda review si chiamano
+  `wpf_contenuto_pulisci` e `wpf_contenuto_link_dagli_indirizzi`.
 - **Task 2.** Slug inglesi delle schede e degli elenchi uguali a quelli italiani: su Drupal le View hanno
   lo stesso percorso nelle due lingue (`/en/attivita-e-comunicazioni`). Testi dei pulsanti presi dalle
   View: «Vedi tutte le attività» / «View all activities» e «Tutte le news» / «All news». Le pagine senza
@@ -414,6 +429,22 @@ Ancora utili:
   non univoca, basta per ritrovarli e fonderli), e la fusione chiede anche lo stesso genitore;
   `wpf_news_sincronizza` riceve elenco, dati e mancanti già letti da `pagine.php`; le regole delle schede
   usano `pagename=<percorso>`, non `page_id`, e valgono per le due lingue perché WPML toglie `/en/`.
+
+- **Divergenze dal piano trovate dalla seconda review:** gli shortcode `[forestas_collegamenti]` e
+  `[forestas_data]` del Task 7 non esistono: sono le funzioni `forestas_news_collegamenti()` e
+  `forestas_news_data()`, chiamate da `[forestas_news]`. Le pagine figlie sono di una sola generazione:
+  `pagine.php` si ferma se un genitore ha a sua volta un genitore (il piano chiedeva solo di fermarsi
+  per un genitore che non esiste o per un ciclo).
+- **Seconda review (27/10), tutto corretto prima della chiusura:**
+  - un collegamento salvato senza testo usciva come una freccia vuota: ora mostra l'indirizzo, come Drupal;
+  - una news con la data di oggi sincronizzata la mattina diventava «programmata» (ora fissa alle 12:00):
+    ora la data è all'inizio del giorno, e il fuso `Europe/Rome`, che metteva solo il pacchetto della
+    lingua, è versionato in `config/sito.json` (`timezone_string` aggiunto a `WPF_OPZIONI_SITO`);
+  - la traduzione inglese tolta su Drupal lasciava il post inglese pubblicato: ora va in bozza;
+  - pulizia: shortcode dentro il testo che mostrano (niente seconda copia), tag fusi senza doppioni,
+    pagina News cercata una volta per richiesta, `wpf_termine_crea` comune a categoria e termini, nomi
+    della parte comune senza «pagina» (`wpf_contenuto_pulisci`, `WPF_CONTENUTO_MEDIA`,
+    `WPF_META_CONTENUTO_ALLEGATI`, `WPF_META_CONTENUTO_GALLERIA`), commenti che rimandavano al file sbagliato.
 
 ## Bug trovati
 

@@ -20,14 +20,14 @@ const WPF_META_LANGCODE = '_drupal_langcode';
 // Impronta (md5) del testo scritto dalla sincronizzazione: finché il testo del contenuto è quello, il child
 // lo mostra così com'è, senza i filtri di the_content (inc/pagine-statiche.php)
 const WPF_META_TESTO_DRUPAL = '_wpf_testo_drupal';
-const WPF_META_PAGINA_ALLEGATI = 'wpf_allegati';
-const WPF_META_PAGINA_GALLERIA = 'wpf_galleria';
+const WPF_META_CONTENUTO_ALLEGATI = 'wpf_allegati';
+const WPF_META_CONTENUTO_GALLERIA = 'wpf_galleria';
 // Media di un contenuto: elemento dei mancanti («cosa») => meta in cui si salva. Un media non scaricato non
 // alza il codice d'uscita (si ritenta al giro dopo)
-const WPF_PAGINA_MEDIA = [
+const WPF_CONTENUTO_MEDIA = [
 	'immagine' => '_thumbnail_id',
-	'allegato' => WPF_META_PAGINA_ALLEGATI,
-	'galleria' => WPF_META_PAGINA_GALLERIA,
+	'allegato' => WPF_META_CONTENUTO_ALLEGATI,
+	'galleria' => WPF_META_CONTENUTO_GALLERIA,
 ];
 // Elementi non riusciti, da ritentare con --contenuti-mancanti. Ogni voce dice da quale import viene
 // («origine»: pagina, news), così ogni import filtra e ritenta solo le sue (oc:8759)
@@ -73,7 +73,7 @@ function wpf_contenuto_per_nodo( int $nid, string $lingua ): int {
  * link. make_clickable da solo trasformava anche il testo di un link che è un indirizzo
  * («<a href="…">https://…</a>»), creando un link dentro l'altro: il browser lascia vuoto il primo.
  */
-function wpf_pagina_link_dagli_indirizzi( string $html ): string {
+function wpf_contenuto_link_dagli_indirizzi( string $html ): string {
 	$parti = preg_split( '~(<a\b[^>]*>.*?</a>)~is', $html, -1, PREG_SPLIT_DELIM_CAPTURE );
 	foreach ( $parti as $i => $parte ) {
 		if ( $i % 2 === 0 ) {
@@ -91,9 +91,9 @@ function wpf_pagina_link_dagli_indirizzi( string $html ): string {
  * script, iframe o attributi on* da un testo che su Drupal la redazione poteva scrivere senza filtri. Lo
  * script gira come amministratore, e senza questo passo wp_insert_post non filtrerebbe nulla.
  */
-function wpf_pagina_pulisci( string $html, string $formato = '' ): string {
+function wpf_contenuto_pulisci( string $html, string $formato = '' ): string {
 	if ( $formato === 'filtered_html' ) {
-		$html = wpf_pagina_link_dagli_indirizzi( wp_kses( $html, WPF_DRUPAL_FILTERED_HTML ) );
+		$html = wpf_contenuto_link_dagli_indirizzi( wp_kses( $html, WPF_DRUPAL_FILTERED_HTML ) );
 	} else {
 		$html = wp_kses_post( preg_replace( '#\s(?:style|data-entity-[a-z-]+)\s*=\s*(["\']).*?\1#is', '', $html ) );
 	}
@@ -226,7 +226,7 @@ function wpf_contenuto_differenze( ?WP_Post $post, array $voluti, array $meta, a
  *   'id_it'    => ?int, il contenuto italiano, per collegare l'inglese in WPML,
  *   'voluti'   => campi del post (post_title, post_content, post_status, post_excerpt…) senza post_name,
  *   'meta'     => [ meta => valore | null ],
- *   'media'    => [ cosa di WPF_PAGINA_MEDIA => file di Drupal ],
+ *   'media'    => [ cosa di WPF_CONTENUTO_MEDIA => file di Drupal ],
  *   'template' => id del template di Impreza (0 se non c'è sul sito),
  *   'nome_template' => chiave del template in config/post.json, per il messaggio,
  *   'termini'  => [ tassonomia => term_id[] ],
@@ -260,7 +260,7 @@ function wpf_contenuto_scrivi( array $c, bool $prova, ?array $solo = null ): arr
 		$mancanti['template'][ $c['nome_template'] ] = "template «{$c['nome_template']}» non presente sul sito (config/post.json)";
 	}
 
-	foreach ( WPF_PAGINA_MEDIA as $cosa => $chiave_meta ) {
+	foreach ( WPF_CONTENUTO_MEDIA as $cosa => $chiave_meta ) {
 		$file = $c['media'][ $cosa ] ?? [];
 		if ( ! $fa( $cosa ) ) {
 			continue;
@@ -294,7 +294,7 @@ function wpf_contenuto_scrivi( array $c, bool $prova, ?array $solo = null ): arr
 	if ( ! $tutto ) {
 		// Con --contenuti-mancanti si riscrivono solo i meta degli elementi elencati
 		$voluti  = [];
-		$meta    = array_intersect_key( $meta, array_flip( [ ...array_values( WPF_PAGINA_MEDIA ), 'us_content_id' ] ) );
+		$meta    = array_intersect_key( $meta, array_flip( [ ...array_values( WPF_CONTENUTO_MEDIA ), 'us_content_id' ] ) );
 		$termini = [];
 	}
 
@@ -400,11 +400,24 @@ function wpf_termine_ritrova_o_crea( string $vid, int $tid, string $nome, string
 	if ( $prova ) {
 		return [ 'id' => 0, 'esito' => 'da creare', 'errore' => null ];
 	}
-	$nuovo = wpf_wpml_tutte_le_lingue( fn() => wp_insert_term( $nome, $tassonomia, [ 'parent' => $parent ] ) );
+	$r = wpf_termine_crea( $nome, $tassonomia, [ 'parent' => $parent ] );
+	if ( $r['id'] ) {
+		add_term_meta( $r['id'], WPF_TERM_META_DRUPAL, "{$vid}:{$tid}" );
+	}
+	return $r;
+}
+
+/**
+ * Crea un termine in italiano, in tutte le lingue di WPML (senza che WPML lo sposti nella lingua
+ * corrente), e lo collega a WPML come italiano.
+ *
+ * @return array [ 'id' => int (0 se non creato), 'esito' => creato|non creato, 'errore' => ?string ]
+ */
+function wpf_termine_crea( string $nome, string $tassonomia, array $argomenti = [] ): array {
+	$nuovo = wpf_wpml_tutte_le_lingue( fn() => wp_insert_term( $nome, $tassonomia, $argomenti ) );
 	if ( is_wp_error( $nuovo ) ) {
 		return [ 'id' => 0, 'esito' => 'non creato', 'errore' => $nuovo->get_error_message() ];
 	}
-	add_term_meta( (int) $nuovo['term_id'], WPF_TERM_META_DRUPAL, "{$vid}:{$tid}" );
 	wpf_wpml_collega( (int) $nuovo['term_id'], "tax_{$tassonomia}", WPF_LINGUE_WPML['it'], null );
 	return [ 'id' => (int) $nuovo['term_id'], 'esito' => 'creato', 'errore' => null ];
 }

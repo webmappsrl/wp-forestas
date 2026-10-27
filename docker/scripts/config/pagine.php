@@ -243,7 +243,7 @@ foreach ( $voci as $chiave => $voce ) {
 		$trova_qui = $lingua === 'it'
 			? fn( int $nid, string $l ) => $trova( $nid, $l ) ?? ( $l !== 'it' ? $trova( $nid, 'it' ) : null )
 			: fn( int $nid, string $l ) => $trova( $nid, $lingua ) ?? $trova( $nid, $l ) ?? $trova( $nid, 'it' );
-		$l         = wpf_link_riscrivi( wpf_pagina_pulisci( $d['body'], $d['formato'] ), $alias, $trova_qui, $lingua );
+		$l         = wpf_link_riscrivi( wpf_contenuto_pulisci( $d['body'], $d['formato'] ), $alias, $trova_qui, $lingua );
 		$d['body'] = $l['html'];
 		$genitore = $voce['genitore'] ?? null;
 		$parent   = $genitore !== null ? ( $ids_pagine[ $genitore ][ $lingua ] ?? ( wpf_pagina_trova( $genitore, $lingua )->ID ?? 0 ) ) : 0;
@@ -310,7 +310,7 @@ $riga(
 // traduzione non collegata, un template assente). Un media non scaricato (sito Drupal lento) lascia pagine e
 // news a posto e si ritenta al giro dopo: avviso nel log e uscita 0, così un cron o una catena di
 // import non si ferma per questo (decisione del dev, oc:8758)
-$gravi = array_filter( array_merge( $mancanti, $previsti ), fn( $m ) => ! isset( WPF_PAGINA_MEDIA[ $m['cosa'] ] ) );
+$gravi = array_filter( array_merge( $mancanti, $previsti ), fn( $m ) => ! isset( WPF_CONTENUTO_MEDIA[ $m['cosa'] ] ) );
 if ( $gravi || $news['errore'] ) {
 	WP_CLI::halt( 1 );
 }

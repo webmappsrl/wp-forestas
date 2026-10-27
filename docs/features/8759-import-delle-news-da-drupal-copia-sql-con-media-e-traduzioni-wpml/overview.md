@@ -54,7 +54,8 @@ di Drupal.
 **Contenuti**
 - [ ] Ogni news `it`/`und` pubblicata diventa un post pubblicato, con `_drupal_nid` e `_drupal_langcode`;
       una news spubblicata su Drupal va in bozza; un secondo giro senza cambi non scrive nulla.
-- [ ] Una news che non c'è più nella copia (cancellata su Drupal) va in bozza, non si cancella.
+- [ ] Una news che non c'è più nella copia (cancellata su Drupal) va in bozza, non si cancella; lo
+      stesso vale per la sola traduzione inglese tolta su Drupal.
 - [ ] Protezione da una copia caricata a metà (il reload delle 10:00 ricarica una tabella alla
       volta, e `wpf_drupal_controlla()` verifica solo tabelle non vuote e nid di `pagine.json`):
       - soglia propria delle news: con più di 5 news da mettere in bozza nello stesso giro lo script
@@ -68,8 +69,10 @@ di Drupal.
 - [ ] Slug uguale all'ultimo pezzo dell'alias Drupal, quindi l'indirizzo resta `/news/<titolo>`
       senza bisogno di redirect. Lo slug passa da `sanitize_title` come lo salverebbe WordPress (3
       alias con accenti o apostrofi tipografici): il vecchio indirizzo porta alla news con un 301.
-- [ ] Data del post e data mostrata da `field_data` (presente in tutte le 95 news italiane), che resta
-      anche su una news in bozza (data GMT ed `edit_date` nella scrittura).
+- [ ] Data del post e data mostrata da `field_data` (presente in tutte le 95 news italiane), all'inizio
+      di quel giorno nel fuso del sito (`timezone_string` Europe/Rome, versionato in `config/sito.json`):
+      una news con la data di oggi non è mai «programmata». La data resta anche su una news in bozza
+      (data GMT ed `edit_date` nella scrittura).
 - [ ] Testo filtrato come `filtered_html` (lo stesso filtro di oc:8758). I link verso altri
       contenuti di Drupal si riscrivono con `_drupal_nid`, compresi quelli che altri contenuti
       fanno verso una news.
@@ -87,9 +90,8 @@ di Drupal.
       Drupal (es. `ente` 1044), tutti e 18, senza filtri e senza mostrarli. Lo shard ritrova ogni
       contenuto dal nid Drupal (`sardegnasentieri_id`).
 
-- [ ] L'indirizzo da cui si scaricano i file di Drupal non è più fisso nel codice
-      (`WPF_DRUPAL_FILES`, `drupal.php:22`) ma viene dal `.env` (`DRUPAL_FILES_URL`), con il sito
-      pubblico come valore predefinito. Vale per le news e per le pagine di oc:8758, che usano la
+- [ ] L'indirizzo da cui si scaricano i file di Drupal viene dal `.env` (`DRUPAL_FILES_URL`); la
+      costante `WPF_DRUPAL_FILES` di `drupal.php`, il sito pubblico, resta solo come valore predefinito. Vale per le news e per le pagine di oc:8758, che usano la
       stessa funzione (`wpf_drupal_url_file()`, `media.php:83`): un solo punto per tutti i media.
       `docs/howto/ricreare-wordpress-da-zero.md` e `.env-example` spiegano la variabile.
 
@@ -193,11 +195,12 @@ di Drupal.
   - `drupal.php`: `DRUPAL_FILES_URL`, lettura per bundle con le tabelle in memoria, query delle news,
     dei termini e dei riferimenti;
   - `media.php`: nome del file senza spazi in fondo;
+  - `comune.php`: `timezone_string` fra le impostazioni del sito versionate (`WPF_OPZIONI_SITO`);
   - `link.php`: indirizzo del sito Drupal in una costante (`WPF_SITO_DRUPAL`).
 - `config/`:
   - `pagine.json`: News a schede, scheda Attività, pagine d'elenco;
   - `post.json`: template di Impreza della news, della pagina a schede e della pagina d'elenco;
-  - `sito.json`: permalink;
+  - `sito.json`: permalink e fuso orario (`timezone_string`);
   - `wpml.json`: post e tassonomie traducibili con ripiego, `tipologia_da_sapere`.
 - `bin/wordpress-config.sh`, `cron/allinea.crontab`: testo d'aiuto, conteggi, `STATO` di `allinea`.
 - `.env-example`: `DRUPAL_FILES_URL`.

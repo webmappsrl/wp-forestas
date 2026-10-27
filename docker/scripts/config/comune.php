@@ -22,8 +22,10 @@ const WPF_META_CHIAVE    = '_wp_forestas_chiave';
 // la scrive solo il comando pagine
 const WPF_META_PAGINA    = '_wpf_pagina';
 
-// Impostazioni del sito versionate in sito.json (export) e mostrate nel ritratto
-const WPF_OPZIONI_SITO = [ 'blogname', 'blogdescription', 'permalink_structure', 'show_on_front', 'page_on_front', 'page_for_posts' ];
+// Impostazioni del sito versionate in sito.json (export) e mostrate nel ritratto. Il fuso orario lo
+// metteva solo il pacchetto della lingua italiana all'installazione: le date delle news (oc:8759)
+// dipendono da lui, e un sito ricreato senza quel pacchetto partirebbe in UTC
+const WPF_OPZIONI_SITO = [ 'blogname', 'blogdescription', 'permalink_structure', 'show_on_front', 'page_on_front', 'page_for_posts', 'timezone_string' ];
 // Opzioni di sito.json che contengono l'id di una pagina
 const WPF_OPZIONI_SITO_PAGINA = [ 'page_on_front', 'page_for_posts' ];
 

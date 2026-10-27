@@ -4,5 +4,6 @@
     "page_for_posts": 0,
     "page_on_front": "@chiave:page-home",
     "permalink_structure": "/news/%postname%/",
-    "show_on_front": "page"
+    "show_on_front": "page",
+    "timezone_string": "Europe/Rome"
 }

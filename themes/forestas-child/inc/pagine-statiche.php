@@ -258,8 +258,15 @@ function forestas_credits_immagine( int $immagine ): string {
 add_shortcode(
 	'forestas_pagina_testo',
 	function () {
+		static $in_corso = false;
 		$id = get_the_ID();
-		return $id ? '<div class="forestas-pagina-testo">' . forestas_testo_importato( $id ) . forestas_allegati( $id ) . forestas_galleria( $id ) . '</div>' : '';
+		if ( ! $id || $in_corso ) {
+			return ''; // lo shortcode dentro il testo che mostra: niente seconda copia di allegati e galleria
+		}
+		$in_corso = true;
+		$html     = '<div class="forestas-pagina-testo">' . forestas_testo_importato( $id ) . forestas_allegati( $id ) . forestas_galleria( $id ) . '</div>';
+		$in_corso = false;
+		return $html;
 	}
 );
 

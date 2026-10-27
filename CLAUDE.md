@@ -139,9 +139,9 @@ subagent.
   `wp language core list --status=active` (oc:8711)
 - Le pagine con `_wpf_pagina` e le news con `_drupal_nid` le scrive solo `bin/wordpress-config.sh
   pagine`. Per le pagine `esporta` e `applica` le saltano (le news, che sono post normali, non le
-  toccano proprio); con `DRUPAL_SYNC=on` una modifica fatta dal pannello (testo, riassunto, allegati,
-  galleria, e per le news anche collegamenti, categorie, tag e «In evidenza») si perde alla
-  sincronizzazione successiva (oc:8758, oc:8759)
+  toccano proprio); con `DRUPAL_SYNC=on` una modifica fatta dal pannello (titolo, testo, riassunto,
+  stato, immagine, allegati, galleria, e per le news anche data, collegamenti, categorie, tag e «In
+  evidenza») si perde alla sincronizzazione successiva (oc:8758, oc:8759)
 - Il testo di una pagina sincronizzata si mostra senza `the_content` finché coincide con l'impronta
   `_wpf_testo_drupal`: un filtro aggiunto a `the_content` non cambia quelle pagine, e passa solo dopo
   una modifica fatta in WordPress (oc:8758)

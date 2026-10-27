@@ -36,7 +36,7 @@ contano le scelte e i vincoli.
   child non li tocca mai.
 - **Il testo è quello che mostra Drupal.** Un body in `filtered_html` passa all'import per lo stesso
   filtro di Drupal (tag e attributi ammessi, letti da `filter.format.filtered_html`, con `wp_kses`; URL
-  nel testo resi link solo fuori dai link già presenti, con `wpf_pagina_link_dagli_indirizzi`: un
+  nel testo resi link solo fuori dai link già presenti, con `wpf_contenuto_link_dagli_indirizzi`: un
   `make_clickable` sull'HTML intero crea link annidati). Gli altri formati (`full_html`, oggi solo la
   Mappa) passano per `wp_kses_post`: lo script scrive come amministratore e `wp_insert_post` non
   filtrerebbe script né attributi `on*`. Il child lo mostra così com'è finché coincide con
