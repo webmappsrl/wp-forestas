@@ -5,10 +5,11 @@
 Uso del comando, opzioni, log e variabili: [README](../../README.md#pagine-statiche-da-drupal). Qui
 contano le scelte e i vincoli.
 
-- **Perimetro fisso:** le 14 pagine di `config/pagine.json`, quelle raggiungibili dai menu (Contatti
+- **Perimetro fisso:** le pagine di `config/pagine.json`: le 14 raggiungibili dai menu, più le schede
+  e le pagine d'elenco delle news aggiunte da oc:8759 (pagina di conoscenza 8759). Le prime 14 sono quelle raggiungibili dai menu (Contatti
   è nel perimetro anche se la voce CONTATTI porta a `/enti`, come su Drupal). Lo script
   non cerca pagine nuove su Drupal. La homepage, gli elenchi sotto le testate (View di Drupal) e le
-  pagine fuori dai menu (Eventi, Attività e comunicazioni, le 4 non pubblicate) non ne fanno parte. La
+  pagine fuori dai menu (Eventi, le 4 non pubblicate) non ne fanno parte. La
   chiave di una voce è l'identità della pagina (`_wpf_pagina`) e non si rinomina: una pagina la cui
   chiave non è più in `config/pagine.json` resta com'era, nessuno la aggiorna, e ogni giro lo segnala
   con un AVVISO.
@@ -52,8 +53,8 @@ contano le scelte e i vincoli.
 - **Un solo scrittore:** `esporta` e `applica` di `bin/wordpress-config.sh` saltano le pagine con
   `_wpf_pagina`, anche se un'opzione punta a loro: in quel caso nemmeno l'opzione si esporta (`null` in
   `sito.json`, assente dalle Theme Options), l'apply lascia il valore di ogni sito e l'export avvisa che lì va
-  impostata dal pannello dopo il comando pagine (oggi nessuna opzione lo fa; con oc:8759 la
-  pagina degli articoli potrebbe essere News). I menu invece li scrive solo l'apply: le voci del
+  impostata dal pannello dopo il comando pagine (oggi nessuna opzione lo fa: con oc:8759 la pagina
+  News non è la «pagina degli articoli» di WordPress, mostra le news con i suoi shortcode). I menu invece li scrive solo l'apply: le voci del
   perimetro in `config/menu.json` hanno `tipo: pagina` e il percorso, cioè lo slug, che va cambiato lì
   insieme a `config/pagine.json`.
 - **Meta in comune fra script e child:** gli script li hanno come costanti `WPF_META_*`, il child come
@@ -106,9 +107,11 @@ contano le scelte e i vincoli.
   copia, e un AVVISO la segnala oltre 30 giorni: la copia non registra la data del dump, ma un dump che
   non arriva più la ferma.
 - **Elenco dei mancanti sul sito, non nel log** (oc:8758): i log ruotano, e un file di testo non è un
-  elenco affidabile da cui ripartire. L'opzione (`wpf_sync_mancanti`) è delle pagine: a ogni giro si
-  tolgono le voci che non sono chiavi di `config/pagine.json`. Un altro import (oc:8759, oc:8760) che
-  volesse un elenco così deve averne uno suo, o dare alle voci la parte di provenienza.
+  elenco affidabile da cui ripartire. L'opzione (`wpf_sync_mancanti`) è comune: dal oc:8759 ogni voce
+  ha la provenienza (`origine`: `pagina`, `news`) e l'`elemento` (chiave della pagina o nid della news);
+  a ogni giro si tolgono le voci delle pagine che non sono più in `config/pagine.json` e quelle delle news
+  che non sono più nella copia. Le voci scritte prima si leggono come pagine. Un altro import (oc:8760) usa
+  una sua provenienza.
 - **Un comando per il cron, `allinea`** (oc:8758): dopo un reset l'init applica `config/` prima che le
   pagine esistano, e le voci di menu restano link per indirizzo finché un apply non le collega; un cron
   con le sole pagine non avrebbe mai chiuso il ciclo. `allinea` fa pagine, poi applica da solo le

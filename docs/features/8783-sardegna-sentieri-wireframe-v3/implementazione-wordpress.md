@@ -559,8 +559,14 @@ Stesso componente per i due moduli, con i campi dei Webform del sito attuale (`v
   (1.4.1, 2.4.8). Testo #4D4D4D.
 - Ogni scheda ha un indirizzo proprio (`/da-sapere/faq`) e serve solo la sua sezione; percorso di
   navigazione a tre livelli (Home › Da sapere › FAQ).
-- Su schermi stretti la fila scorre in orizzontale da sola (`overflow-x: auto`), senza trascinare la
-  pagina, già posizionata sulla scheda attiva.
+- Su schermi stretti la fila scorre in orizzontale da sola (`overflow: auto hidden`: con il solo
+  `overflow-x: auto` il browser mostra anche una barra verticale), senza trascinare la pagina, già
+  posizionata sulla scheda attiva.
+- **Fatto per News in oc:8759** (`themes/forestas-child/inc/news.php`, `[forestas_schede]`): la pagina
+  News è la prima scheda, «News», a `/news/`; «Attività e comunicazioni» è la seconda, a
+  `/news/attivita-e-comunicazioni/` (decisione del dev, 27/10: nel wireframe la prima era Attività, e
+  `/news/news` un indirizzo doppio). Le schede si dichiarano in `config/pagine.json` (`genitore`,
+  `scheda`, `pulsante`, `griglia`): Da sapere ed Eventi si aggiungono lì.
 - Testate alla grandezza del sito (variante layout builder di `.sase-hero`).
 - Card unica (vedi sopra); i contenuti restano quelli attuali.
 

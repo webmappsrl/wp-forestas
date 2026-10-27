@@ -1,16 +1,18 @@
 <?php
 /**
- * Sincronizzazione delle pagine statiche da Drupal (oc:8758).
+ * Sincronizzazione delle pagine statiche (oc:8758) e delle news (oc:8759) da Drupal.
  *
  * Uso: [WPF_PROVA=1] [WPF_SOLO_MANCANTI=1] [WPF_ACCETTA_BOZZE=1] wp eval-file /usr/local/lib/wp-forestas/pagine.php
  * (lo lancia bin/wordpress-config.sh pagine, che ne salva l'output nel log).
  * Scrive solo con DRUPAL_SYNC=on nel .env; con WPF_PROVA=1 mostra le differenze senza scrivere nulla.
- * Ogni riga di output comincia con un tipo: PAGINA, MEDIA, LINK, MENU, MANCANTE, AVVISO, ERRORE,
- * RIASSUNTO. Esce con 1 se c'è un errore, se restano elementi mancanti (non i soli media) o se la
+ * Ogni riga di output comincia con un tipo: PAGINA, NEWS, TERMINE, MEDIA, LINK, MENU, MANCANTE, REGOLE,
+ * AVVISO, ERRORE, RIASSUNTO. Con WPF_NEWS_PROVA_CONTEGGIO=<n>, solo in anteprima, le news pubblicate lette
+ * dalla copia contano <n>: serve a provare il controllo sulla copia caricata a metà (news-lib.php). Esce con 1 se c'è un errore, se restano elementi mancanti (non i soli media) o se la
  * sincronizzazione è spenta (DRUPAL_SYNC), anche in anteprima.
  */
 
 require_once __DIR__ . '/pagine-lib.php';
+require_once __DIR__ . '/news-lib.php';
 
 $prova         = getenv( 'WPF_PROVA' ) === '1';
 $solo_mancanti = getenv( 'WPF_SOLO_MANCANTI' ) === '1';
@@ -43,6 +45,17 @@ if ( ! is_array( $cfg['pagine'] ?? null ) ) {
 	$ferma( "{$file} mancante o non valido" );
 }
 $voci = array_column( $cfg['pagine'], null, 'chiave' );
+// Pagine figlie (oc:8759): il genitore è un'altra voce, senza genitore a sua volta, e si scrive prima
+foreach ( $voci as $chiave => $voce ) {
+	$genitore = $voce['genitore'] ?? null;
+	if ( $genitore !== null && ( ! isset( $voci[ $genitore ] ) || isset( $voci[ $genitore ]['genitore'] ) ) ) {
+		$ferma( "{$chiave}: il genitore «{$genitore}» non è in config/pagine.json o è a sua volta una pagina figlia" );
+	}
+	if ( $genitore !== null && array_diff( array_keys( $voce['slug'] ), array_keys( $voci[ $genitore ]['slug'] ) ) ) {
+		$ferma( "{$chiave}: ha lingue che il genitore «{$genitore}» non ha" );
+	}
+}
+uasort( $voci, fn( $a, $b ) => isset( $a['genitore'] ) <=> isset( $b['genitore'] ) );
 
 try {
 	$db = wpf_drupal_connessione();
@@ -81,9 +94,15 @@ try {
 					$ferma( "il nodo {$voce['nid']} ({$chiave}) non ha la lingua «{$lingua}» indicata in config/pagine.json: se la copia Drupal è in ricarica riprova più tardi; se su Drupal la traduzione è stata tolta, scrivi la nostra in config/traduzioni/{$lingua}/{$chiave}.json e .html, o togli slug.{$lingua} da config/pagine.json" );
 				}
 			} else {
-				// Pagina senza nodo (Cammini): titolo suo, testata della pagina indicata in testata_da
+				// Pagina senza nodo (Cammini, schede ed elenchi delle news): titolo suo, testata della pagina
+				// indicata in testata_da. La testata (immagine, colore) non dipende dalla lingua: se Drupal non
+				// ha la traduzione della pagina d'origine (News in inglese), vale quella italiana
 				$fonte = $voci[ $voce['testata_da'] ] ?? null;
 				$d     = $fonte ? wpf_drupal_pagina( $db, (int) $fonte['nid'], $lingua ) : null;
+				if ( $fonte && ! $d && ( $d = wpf_drupal_pagina( $db, (int) $fonte['nid'], 'it' ) ) ) {
+					// Il sottotitolo invece è testo: quello della nostra traduzione della pagina d'origine, o nessuno
+					$d['sottotitolo'] = (string) ( wpf_traduzione_leggi( $voce['testata_da'], $lingua )['sottotitolo'] ?? '' );
+				}
 				if ( ! $d ) {
 					$ferma( "{$chiave}: la pagina «" . ( $voce['testata_da'] ?? '' ) . "» da cui prende la testata non ha la lingua «{$lingua}»" );
 				}
@@ -94,6 +113,9 @@ try {
 		}
 	}
 	$alias           = wpf_drupal_alias( $db );
+	// News (oc:8759): si leggono tutte prima di scrivere, anche le pagine, che possono linkarle
+	$news_elenco     = wpf_drupal_news_elenco( $db );
+	$news_dati       = wpf_news_leggi( $db, $news_elenco );
 	$ultima_modifica = wpf_drupal_ultima_modifica( $db );
 } catch ( RuntimeException | mysqli_sql_exception $e ) {
 	$ferma( $e->getMessage() );
@@ -156,10 +178,15 @@ foreach ( $voci as $chiave => $voce ) {
 		if ( empty( $dati[ $chiave ][ $lingua ]['status'] ) ) {
 			$in_bozza_nodi[ "{$voce['nid']}|{$lingua}" ] = true;
 		} else {
-			$percorsi[ "{$voce['nid']}|{$lingua}" ] = wpf_pagina_percorso( $voce, $lingua );
+			$percorsi[ "{$voce['nid']}|{$lingua}" ] = wpf_pagina_percorso( $voce, $lingua, $voci );
 		}
 	}
 }
+// Le news che questo giro scrive (oc:8759): i link delle pagine e delle news verso una news si riscrivono
+// subito, anche se la news nasce dopo la pagina che la linka
+$news_percorsi = wpf_news_percorsi( $news_dati );
+$percorsi      = $news_percorsi['percorsi'] + $percorsi;
+$in_bozza_nodi = $news_percorsi['in_bozza'] + $in_bozza_nodi;
 $trova = function ( int $nid, string $lingua ) use ( $percorsi, $in_bozza_nodi ) {
 	if ( isset( $in_bozza_nodi[ "{$nid}|{$lingua}" ] ) ) {
 		return null;
@@ -168,16 +195,24 @@ $trova = function ( int $nid, string $lingua ) use ( $percorsi, $in_bozza_nodi )
 	return $id ? wpf_link_relativo( $id ) : ( $percorsi[ "{$nid}|{$lingua}" ] ?? null );
 };
 
-// Elementi dell'elenco dei mancanti. Uno di una pagina o di una lingua tolta da config/pagine.json non
-// si ritenterebbe mai e terrebbe l'uscita a 1 per sempre: si toglie, anche dall'anteprima
+// Elementi dell'elenco dei mancanti delle pagine (quelli di un altro import restano com'erano). Uno di una
+// pagina o di una lingua tolta da config/pagine.json non si ritenterebbe mai e terrebbe l'uscita a 1 per
+// sempre: si toglie, anche dall'anteprima
 $mancanti_prima = wpf_mancanti_leggi();
-$mancanti       = array_filter( $mancanti_prima, fn( $m ) => isset( $voci[ $m['pagina'] ]['slug'][ $m['lingua'] ] ) );
+$mancanti_altri = array_filter( $mancanti_prima, fn( $m ) => ! in_array( $m['origine'], [ 'pagina', 'news' ], true ) );
+// Quelli delle news: uno di una news non più nella copia non si ritenterebbe mai, come per le pagine
+$mancanti_news  = array_filter( $mancanti_prima, fn( $m ) => $m['origine'] === 'news' && isset( $news_dati[ (int) $m['elemento'] ][ $m['lingua'] ] ) );
+$solo_news      = [];
+foreach ( $mancanti_news as $m ) {
+	$solo_news[ (int) $m['elemento'] ][ $m['lingua'] ][] = $m['cosa'];
+}
+$mancanti       = array_filter( $mancanti_prima, fn( $m ) => $m['origine'] === 'pagina' && isset( $voci[ $m['elemento'] ]['slug'][ $m['lingua'] ] ) );
 // Elementi da trattare con --contenuti-mancanti: [ chiave ][ lingua ] => [ cosa ]
 $solo = [];
 foreach ( $mancanti as $m ) {
-	$solo[ $m['pagina'] ][ $m['lingua'] ][] = $m['cosa'];
+	$solo[ $m['elemento'] ][ $m['lingua'] ][] = $m['cosa'];
 }
-if ( $solo_mancanti && ! $solo ) {
+if ( $solo_mancanti && ! $solo && ! $solo_news ) {
 	$riga( 'RIASSUNTO', 'nessun contenuto mancante da ritentare' );
 	if ( ! $sync ) {
 		WP_CLI::halt( 1 ); // come a fine giro: con la sincronizzazione spenta non si scriverebbe
@@ -185,8 +220,9 @@ if ( $solo_mancanti && ! $solo ) {
 	return;
 }
 
-$conteggi = [];
-$ora      = gmdate( 'c' );
+$conteggi   = [];
+$ora        = gmdate( 'c' );
+$ids_pagine = []; // [ chiave ][ lingua ] => id scritto in questo giro, per il post_parent delle figlie
 // Mancanti che questo giro produrrebbe, in anteprima: contano per il codice d'uscita come col --conferma
 $previsti = [];
 foreach ( $voci as $chiave => $voce ) {
@@ -209,7 +245,10 @@ foreach ( $voci as $chiave => $voce ) {
 			: fn( int $nid, string $l ) => $trova( $nid, $lingua ) ?? $trova( $nid, $l ) ?? $trova( $nid, 'it' );
 		$l         = wpf_link_riscrivi( wpf_pagina_pulisci( $d['body'], $d['formato'] ), $alias, $trova_qui, $lingua );
 		$d['body'] = $l['html'];
-		$r = wpf_pagina_scrivi( $voce, $lingua, $d, $id_it, $template, $prova, $solo_mancanti ? $solo[ $chiave ][ $lingua ] : null );
+		$genitore = $voce['genitore'] ?? null;
+		$parent   = $genitore !== null ? ( $ids_pagine[ $genitore ][ $lingua ] ?? ( wpf_pagina_trova( $genitore, $lingua )->ID ?? 0 ) ) : 0;
+		$r        = wpf_pagina_scrivi( $voce, $lingua, $d, $id_it, $template, $prova, $solo_mancanti ? $solo[ $chiave ][ $lingua ] : null, $parent );
+		$ids_pagine[ $chiave ][ $lingua ] = $r['id'];
 		if ( $lingua === 'it' ) {
 			$id_it = $r['id'];
 		}
@@ -244,16 +283,17 @@ foreach ( $voci as $chiave => $voce ) {
 		}
 		// Gli elementi trattati in questo giro escono dall'elenco; quelli falliti ci rientrano
 		foreach ( $mancanti as $k => $m ) {
-			if ( $m['pagina'] === $chiave && $m['lingua'] === $lingua && ( $solo_mancanti ? in_array( $m['cosa'], $solo[ $chiave ][ $lingua ], true ) : true ) ) {
+			if ( $m['elemento'] === $chiave && $m['lingua'] === $lingua && ( $solo_mancanti ? in_array( $m['cosa'], $solo[ $chiave ][ $lingua ], true ) : true ) ) {
 				unset( $mancanti[ $k ] );
 			}
 		}
 		foreach ( $r['mancanti'] as $cosa => $elementi ) {
 			foreach ( $elementi as $dettaglio => $causa ) {
-				$k              = wpf_mancante_chiave( $cosa, $chiave, $lingua, (string) $dettaglio );
+				$k              = wpf_mancante_chiave( 'pagina', $cosa, $chiave, $lingua, (string) $dettaglio );
 				$mancanti[ $k ] = [
+					'origine'   => 'pagina',
 					'cosa'      => $cosa,
-					'pagina'    => $chiave,
+					'elemento'  => $chiave,
 					'lingua'    => $lingua,
 					'dettaglio' => (string) $dettaglio,
 					'causa'     => $causa,
@@ -265,16 +305,36 @@ foreach ( $voci as $chiave => $voce ) {
 	}
 }
 
+// News, dopo le pagine e con lo stesso lock (oc:8759). Un errore delle news (copia sospetta) non toglie
+// quello che le pagine hanno scritto: sono un altro perimetro
+$news = ( $solo_mancanti && ! $solo_news )
+	? [ 'conteggi' => [], 'mancanti' => $mancanti_news, 'previsti' => [], 'errore' => false ]
+	: wpf_news_sincronizza( $db, $news_elenco, $news_dati, $alias, $trova, $mancanti_news, $solo_mancanti ? $solo_news : null, $prova, $accetta_bozze, $riga );
+$mancanti = array_merge( $mancanti, $news['mancanti'] );
+$previsti = array_merge( $previsti, $news['previsti'] );
+
+// Regole di rewrite delle schede (child, inc/news.php): si rigenerano quando l'elenco delle schede
+// pubblicate cambia, se no una scheda nuova darebbe 404 (oc:8759)
+if ( ! $prova ) {
+	$schede = wpf_wpml_tutte_le_lingue( fn() => array_map( 'get_page_uri', get_posts( [ 'post_type' => 'page', 'post_status' => 'publish', 'numberposts' => -1, 'meta_key' => WPF_META_SCHEDA, 'suppress_filters' => true, 'orderby' => 'ID', 'order' => 'ASC' ] ) ) );
+	if ( get_option( 'wpf_schede_regole' ) !== $schede ) {
+		flush_rewrite_rules( false );
+		update_option( 'wpf_schede_regole', $schede, false );
+		$riga( 'REGOLE', 'rigenerate per le schede: ' . implode( ', ', array_unique( $schede ) ) );
+	}
+}
+
 // In anteprima l'elenco non cambia: si mostrano gli elementi che risultano mancanti adesso
 if ( ! $prova ) {
-	wpf_mancanti_salva( $mancanti );
+	wpf_mancanti_salva( array_merge( $mancanti_altri, $mancanti ) );
 }
 foreach ( $mancanti as $m ) {
-	$riga( 'MANCANTE', "{$m['cosa']} {$m['pagina']}/{$m['lingua']}" . ( $m['dettaglio'] !== '' ? " {$m['dettaglio']}" : '' ) . ": {$m['causa']} (dal {$m['primo']})" );
+	$riga( 'MANCANTE', "{$m['cosa']} {$m['elemento']}/{$m['lingua']}" . ( $m['dettaglio'] !== '' ? " {$m['dettaglio']}" : '' ) . ": {$m['causa']} (dal {$m['primo']})" );
 }
 $riga(
 	'RIASSUNTO',
-	( $prova ? 'anteprima, nulla scritto — ' : '' ) . implode( ', ', array_map( fn( $e, $n ) => "{$e}: {$n}", array_keys( $conteggi ), $conteggi ) )
+	( $prova ? 'anteprima, nulla scritto — ' : '' ) . 'pagine: ' . implode( ', ', array_map( fn( $e, $n ) => "{$e}: {$n}", array_keys( $conteggi ), $conteggi ) )
+	. '; news: ' . ( $news['errore'] ? 'non sincronizzate (copia sospetta)' : implode( ', ', array_map( fn( $e, $n ) => "{$e}: {$n}", array_keys( $news['conteggi'] ), $news['conteggi'] ) ) )
 	. '; mancanti: ' . count( $mancanti )
 	. '; copia Drupal: ultima modifica ' . ( $ultima_modifica ? gmdate( 'Y-m-d', $ultima_modifica ) : 'nessuna' )
 );
@@ -283,7 +343,7 @@ $riga(
 // pagine a posto e si ritenta al giro dopo: avviso nel log e uscita 0, così un cron o una catena di
 // import non si ferma per questo (decisione del dev, oc:8758)
 $gravi = array_filter( array_merge( $mancanti, $previsti ), fn( $m ) => ! isset( WPF_PAGINA_MEDIA[ $m['cosa'] ] ) );
-if ( $gravi ) {
+if ( $gravi || $news['errore'] ) {
 	WP_CLI::halt( 1 );
 }
 if ( $mancanti ) {

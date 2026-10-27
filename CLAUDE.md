@@ -137,9 +137,11 @@ subagent.
   decidere: il SIGPIPE fa fallire la pipeline anche quando il testo c'è (oc:8717)
 - `wp option get WPLANG` fallisce su un'installazione appena fatta: la lingua attiva si legge con
   `wp language core list --status=active` (oc:8711)
-- Le pagine con `_wpf_pagina` le scrive solo `bin/wordpress-config.sh pagine`: `esporta` e `applica`
-  le saltano, e con `DRUPAL_SYNC=on` una modifica fatta dal pannello (testo, riassunto, allegati,
-  galleria) si perde alla sincronizzazione successiva (oc:8758)
+- Le pagine con `_wpf_pagina` e le news con `_drupal_nid` le scrive solo `bin/wordpress-config.sh
+  pagine`. Per le pagine `esporta` e `applica` le saltano (le news, che sono post normali, non le
+  toccano proprio); con `DRUPAL_SYNC=on` una modifica fatta dal pannello (testo, riassunto, allegati,
+  galleria, e per le news anche collegamenti, categorie, tag e «In evidenza») si perde alla
+  sincronizzazione successiva (oc:8758, oc:8759)
 - Il testo di una pagina sincronizzata si mostra senza `the_content` finché coincide con l'impronta
   `_wpf_testo_drupal`: un filtro aggiunto a `the_content` non cambia quelle pagine, e passa solo dopo
   una modifica fatta in WordPress (oc:8758)
@@ -157,6 +159,11 @@ subagent.
 - La sincronizzazione non va lanciata durante il reload giornaliero della copia Drupal su UAT (alle
   10:00, crontab di `root`, circa un quarto d'ora: il 20/10 è finito alle 10:14): il controllo di integrità la ferma senza scrivere, ma il giro
   va perso; il cron va messo lontano da quell'ora (`docs/howto/cron-sincronizzazione-pagine.md`) (oc:8758)
+- Una scheda figlia della pagina News aggiunta o rinominata dal pannello dà 404 finché non gira
+  `pagine --conferma` o `wp rewrite flush`: le regole di rewrite (`inc/news.php`) si rigenerano solo
+  quando lo script vede cambiare l'elenco delle schede (riga `REGOLE`). Per la stessa precedenza una
+  news con lo slug di una scheda non si raggiunge, e lo script lo segnala con un AVVISO. Il perché sta in
+  `docs/knowledge/8759-import-delle-news-da-drupal.md` (oc:8759)
 
 ## Conoscenza
 
@@ -165,3 +172,4 @@ subagent.
 | Inizializzazione di WordPress | perché lo script lavora a passi, perché il core non sta nell'immagine, cosa succede senza GitHub o senza Impreza | [docs/knowledge/inizializzazione-wordpress.md](docs/knowledge/inizializzazione-wordpress.md) |
 | Header e footer del sito | identici al sito attuale, oggetti di Impreza scritti in codice e copiati per lingua, shortcode e font del child, menu mobile, riga compatta su desktop, loghi del footer, accessibilità | [docs/knowledge/8757-header-e-footer-di-wordpress-forestas-secondo-il-mockup.md](docs/knowledge/8757-header-e-footer-di-wordpress-forestas-secondo-il-mockup.md) |
 | Pagine editoriali da Drupal | perimetro, sincronizzazione dalla copia Drupal, media, link, traduzioni nostre, template e shortcode del child; il cron in [docs/howto/cron-sincronizzazione-pagine.md](docs/howto/cron-sincronizzazione-pagine.md) | [docs/knowledge/8758-import-delle-pagine-editoriali-da-drupal-e-ricostruzione-con-impreza-di-quelle-fatte-con-il-layout-builder.md](docs/knowledge/8758-import-delle-pagine-editoriali-da-drupal-e-ricostruzione-con-impreza-di-quelle-fatte-con-il-layout-builder.md) |
+| News da Drupal | news come post della categoria News, termini con `_drupal_chiave`, pagina News a schede, editor e protezioni sulla copia | [docs/knowledge/8759-import-delle-news-da-drupal.md](docs/knowledge/8759-import-delle-news-da-drupal.md) |

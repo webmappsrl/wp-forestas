@@ -1,13 +1,16 @@
-# Mettere in cron la sincronizzazione delle pagine statiche
+# Mettere in cron la sincronizzazione delle pagine statiche e delle news
 
 Procedura per far girare ogni giorno sul server `bin/wordpress-config.sh allinea`, che porta il
-WordPress allo stato di riferimento senza interventi: pagine statiche allineate alla copia SQL del
-database Drupal (oc:8758) e voci dei menu collegate a quelle pagine. Vale anche per un sito appena
-ricreato da zero: dopo il reset l'init applica `config/`, e il primo giro di `allinea` crea le pagine e
-collega i menu (verificato in locale il 22/10 lanciando solo `allinea`, con l'ambiente ridotto del cron:
-`STATO allineato`, ritratto identico a quello di prima del reset). Cosa fa il comando delle pagine e
+WordPress allo stato di riferimento senza interventi: pagine statiche (oc:8758) e news (oc:8759)
+allineate alla copia SQL del database Drupal e voci dei menu collegate alle pagine. Le news fanno parte
+dello stesso giro del comando delle pagine: la riga del cron è la stessa. Vale anche per un sito appena
+ricreato da zero: dopo il reset l'init applica `config/`, e il primo giro di `allinea` crea pagine e
+news e collega i menu (verificato in locale il 27/10 lanciando solo `allinea` dopo il reset: 36 pagine
+e 99 news, `STATO allineato`, ritratto identico a quello di prima del reset; il primo giro dura una
+ventina di minuti, perché scarica dal sito Drupal circa 300 file delle news). Cosa fa il comando delle pagine e
 come si legge il log: [README](../../README.md#pagine-statiche-da-drupal); le scelte e i vincoli:
-[pagina di conoscenza](../knowledge/8758-import-delle-pagine-editoriali-da-drupal-e-ricostruzione-con-impreza-di-quelle-fatte-con-il-layout-builder.md).
+[pagine](../knowledge/8758-import-delle-pagine-editoriali-da-drupal-e-ricostruzione-con-impreza-di-quelle-fatte-con-il-layout-builder.md)
+e [news](../knowledge/8759-import-delle-news-da-drupal.md).
 
 Il cron gira **sull'host**, non dentro WordPress: il comando trova da sé il container WordPress e ci
 esegue gli script. Va messo solo dove la copia Drupal c'è e Drupal è ancora la fonte dei contenuti
@@ -16,7 +19,7 @@ esegue gli script. Va messo solo dove la copia Drupal c'è e Drupal è ancora la
 **Cosa fa `allinea`, in ordine:**
 1. controlla che il sito sia pronto (WordPress installato e `config/` applicata dall'init); se non lo
    è, esce con 1 e il giro dopo riprova;
-2. `pagine --conferma`;
+2. `pagine --conferma`: pagine, poi news;
 3. guarda l'anteprima di `applica`: se le sole differenze sono nei menu (voci da collegare a pagine
    appena create o ripubblicate) le applica, con il backup in `backup/<data-ora>`; se `config/` è
    diverso dal sito anche in altro (un rilascio non ancora applicato, una modifica dal pannello) non
@@ -94,7 +97,7 @@ ferma senza scrivere, ma il giro va perso.
 
 - `cd` nella cartella del repo e `PATH` esplicito: il cron parte con un ambiente ridotto, e il comando
   usa `docker`.
-- Il file indicato nella riga raccoglie di ogni giro il riassunto delle pagine (con le righe che
+- Il file indicato nella riga raccoglie di ogni giro il riassunto di pagine e news (con le righe che
   chiedono un intervento: `ERRORE`, `MANCANTE`, `MENU`, ogni `AVVISO`) e lo `STATO`; in più l'output
   intero dell'apply quando `allinea` collega i menu, e quello della verifica quando fallisce. Il
   dettaglio delle pagine è in `wp-forestas/log/pagine-<data-ora>.log`: ogni giro di `allinea` ne scrive
@@ -109,7 +112,7 @@ ogni giro, `STATO …`:
 
 | `STATO` | Significato | Cosa fare |
 |---|---|---|
-| `allineato (pagine: …)` | sito uguale a `config/` e alla copia Drupal | niente |
+| `allineato (pagine: … ; news: …)` | sito uguale a `config/` e alla copia Drupal | niente |
 | `non allineato: config/ non ancora applicata dall'init` | sito appena ricreato, l'init non ha finito (o non è riuscito) l'apply automatico | niente se il giro dopo passa; altrimenti i log dell'init (`docker logs wordpress-<APP_NAME>`) |
 | `non allineato: config/ è diverso dal sito anche fuori dai menu` | un rilascio di `config/` non ancora applicato, o una modifica fatta dal pannello | `bin/wordpress-config.sh applica`, guardare le differenze (elencate sopra la riga), poi `applica --conferma` a mano |
 | `non allineato: il giro delle pagine è uscito con 1` o `la verifica delle pagine esce con 1` | righe `ERRORE` o `MANCANTE` del comando delle pagine, sopra nel file | la tabella qui sotto |
@@ -129,6 +132,8 @@ Le righe del comando delle pagine, sopra lo `STATO`:
 | 1, righe `MANCANTE` di pagina, traduzione o template | qualcosa che non si sistema da sé | leggere la causa nella riga `MANCANTE`, correggere, poi `--contenuti-mancanti --conferma` |
 | 1, `ERRORE copia Drupal non integra` | la copia era in ricarica o è troncata: nulla scritto | controllare l'orario del cron e il log del sync della copia |
 | 1, `ERRORE copia Drupal sospetta: N pagine da mettere in bozza` | più di 2 pagine spubblicate nello stesso giro: di solito una copia in ricarica | se la copia è a posto e su Drupal le pagine sono state spubblicate davvero, `bin/wordpress-config.sh pagine --accetta-bozze --conferma` (una volta, a mano) |
+| 1, `ERRORE copia Drupal sospetta: N news da mettere in bozza` o `… news pubblicate nella copia contro … in WordPress` | più di 5 news spubblicate o sparite nello stesso giro, o nella copia più di 5 news pubblicate in meno che in WordPress: di solito una copia in ricarica. Le pagine sono scritte, le news no | se la copia è a posto e su Drupal le news sono state tolte davvero, `bin/wordpress-config.sh pagine --accetta-bozze --conferma` (una volta, a mano) |
+| 0, `AVVISO news N/it: la tipologia … non esiste più su Drupal` o `il tag …` | la news usa un termine cancellato su Drupal (oggi le news 839 e 842) | niente: la news resta senza quel termine |
 | 1, `ERRORE nodi di config/pagine.json non trovati nella copia Drupal` | la copia è in ricarica, o su Drupal il nodo è stato cancellato | se il reload è finito e il nodo manca ancora, togliere la sua voce da `config/pagine.json`, commit; la pagina WordPress resta e il giro dopo la segnala come fuori dal perimetro |
 | 1, `ERRORE il nodo N (<chiave>) non ha la lingua «en»` | la copia è in ricarica, o su Drupal la traduzione inglese è stata tolta | se il reload è finito, scrivere la traduzione nostra in `config/traduzioni/en/<chiave>.json` e `.html`, o togliere `slug.en` da `config/pagine.json`; commit |
 | 0, `AVVISO la pagina … non è più in config/pagine.json` | voce tolta o chiave rinominata: la pagina resta com'era e nessuno la aggiorna | se va tolta, nel cestino dal pannello; una chiave non si rinomina |

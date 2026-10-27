@@ -6,11 +6,15 @@
 > corregge nello stesso lavoro.
 
 Sequenza completa per riportare il WordPress di Forestas da un volume vuoto a un sito con
-configurazione, pagine statiche, media e menu collegati. Vale in locale e su UAT; le differenze fra
+configurazione, pagine statiche, news, media e menu collegati. Vale in locale e su UAT; le differenze fra
 i due sono indicate passo per passo. **In produzione il reset non si usa**: lì i dati di WordPress
 sono permanenti.
 
-Ultima verifica dell'intero ciclo: 22/10/2026, in locale (oc:8758, dopo le review), con le 28 pagine
+Ultima verifica dell'intero ciclo: 27/10/2026, in locale (oc:8759), con `allinea` subito dopo il
+reset: 36 pagine (18 IT, 18 EN) e 99 news (95 IT, 4 EN), `STATO allineato`, ritratto identico a quello
+di prima del reset; restano 2 media mancanti, una foto di galleria che dà 404 anche sul sito Drupal
+(news 4606, in italiano e in inglese). Il giro dopo il reset dura una ventina di minuti: scarica dal
+sito Drupal circa 300 file delle news. Verifica precedente: 22/10/2026, in locale (oc:8758, dopo le review), con le 28 pagine
 (14 IT, 14 EN, sei con la nostra traduzione): passi 1-5 senza interventi a mano, nessun mancante né
 avviso, `applica` senza differenze, ritratto identico a quello di prima del reset. Il 21/10 lo stesso;
 il 20/10 cinque volte, in tutti e due gli ordini fra pagine e apply.
@@ -29,6 +33,7 @@ secondo giro senza nulla da fare. I passi qui sotto restano per guardare un pass
 | `DRUPAL_SYNC=on` nel `wp-forestas/.env` | sì, per sincronizzare le pagine | sì, finché Drupal è la fonte |
 | Copia del database Drupal | tunnel SSH verso quella di UAT; nel `.env` `DRUPAL_DB_HOST=host.docker.internal`, `DRUPAL_DB_PORT=3307`, `DRUPAL_DB_USER` e `DRUPAL_DB_PASSWORD` | container `mysql-sardegnasentieri-dump` sulla stessa macchina; nel `.env` solo `DRUPAL_DB_USER` e `DRUPAL_DB_PASSWORD` |
 | Orario | qualsiasi, ma non durante il reload della copia di UAT (dalle 10:00 per circa 15 minuti) | lo stesso |
+| File dei media (`DRUPAL_FILES_URL` nel `.env`) | vuoto: si scaricano dal sito pubblico di Drupal | lo stesso finché Drupal è acceso; dopo lo spegnimento va puntato alla copia della cartella `sites/default/files`, da chiedere prima |
 
 Il tunnel, in locale (`forestas/docs/howto/copia-database-drupal.md`, «Lavorare dal locale sulla copia
 di UAT»):
@@ -76,8 +81,8 @@ al passo 3, e il passo 4 collega le voci.
 Dalla cartella `wp-forestas`:
 
 ```bash
-bin/wordpress-config.sh pagine              # anteprima: 28 pagine «creata» (14 IT, 14 EN), media da scaricare, link
-bin/wordpress-config.sh pagine --conferma   # crea pagine, scarica media, assegna i template
+bin/wordpress-config.sh pagine              # anteprima: 36 pagine e 99 news «creata», 26 termini, media da scaricare, link
+bin/wordpress-config.sh pagine --conferma   # crea pagine, news e termini, scarica media, assegna i template
 ```
 
 Il riassunto finale dice quante pagine sono state create, quanti elementi mancano e la data dell'ultima
@@ -106,7 +111,7 @@ per indirizzo e si collegano alle pagine con un secondo `applica --conferma` dop
 
 ```bash
 bin/wordpress-config.sh applica      # → «nessuna differenza»
-bin/wordpress-config.sh pagine     # → tutte «invariata», salvo i media del passo 6
+bin/wordpress-config.sh pagine     # → tutte «invariata», salvo i media del passo 6 (la news 4606 «aggiornata (wpf_galleria)»: la sua foto manca anche su Drupal)
 bin/wordpress-config.sh ritratto   # stato del sito, da confrontare con un ritratto precedente
 ```
 
@@ -118,6 +123,10 @@ Nel browser, in italiano e inglese:
   Regione;
 - le pagine hanno testata, percorso «Home › pagina» subito sotto, «Condividi» sulle pagine di testo,
   testo e allegati; la Mappa interattiva mostra la mappa a tutta pagina con «Espandi la mappa»;
+- News: `/news/` è la scheda News (le 4 news in evidenza), `/news/attivita-e-comunicazioni/` la
+  seconda scheda; i pulsanti portano a `/attivita-e-comunicazioni/` e `/tutte-le-news/` (paginate); una news
+  sta a `/news/<titolo>/` con testata, tag, testo, allegati, collegamenti e galleria; `/node/1094` porta
+  in 301 alla news «Cos'è Sardegna-SENTIERI?»;
 - il titolo della scheda è «Pagina | Sardegna Sentieri», come su Drupal: il nome viene da `blogname`
   di `config/sito.json` (l'apply lo scrive), il separatore dal child. Se resta «Forestas» l'apply non è
   andato a buon fine.
@@ -153,5 +162,7 @@ Da qui in poi le pagine si tengono allineate a Drupal con un cron sull'host:
 | `AVVISO … template … non riuscirebbe` in anteprima, uscita 1, «Prima i template di Impreza: … applica --conferma» | i template delle pagine non ci sono: l'apply del passo 2 non è stato fatto o non è riuscito | `bin/wordpress-config.sh applica --conferma`, poi di nuovo il passo 3 |
 | `Uscita N: errore imprevisto, il giro non è finito` con la riga `Fatal error` | errore di PHP o di WP-CLI (per esempio `WP_ADMIN_USER` che non c'è più, o una funzione di WPML cambiata) | leggere la causa e il log completo; il comando non suggerisce nulla finché non è capita |
 | `MANCANTE immagine/allegato … cURL error 28` o `Service Unavailable` | il sito Drupal non serve il file | passo 6, più tardi |
+| `ERRORE copia Drupal sospetta: N news …` | più di 5 news da mettere in bozza, o nella copia più di 5 news pubblicate in meno che in WordPress: di solito la copia è in ricarica | riprovare dopo il reload; se su Drupal sono state tolte davvero, `pagine --accetta-bozze --conferma` |
+| `/news/attivita-e-comunicazioni/` dà 404 | regole degli indirizzi non rigenerate dopo una scheda nuova | un giro di `pagine --conferma` le rigenera (riga `REGOLE`); a mano `wp rewrite flush` |
 | `AVVISO aggiornamento automatico dei link di WPML non trovato` | WPML aggiornato: gli hook che rendevano assoluti i link non si chiamano più così | controllare che i link dei testi inglesi restino relativi; aggiornare `wpf_wpml_senza_link_automatici()` |
 | PHPStan di `forestas` fallisce con `Unable to create file …/build/phpstan/cache/…` | cache scritta da più processi su un volume montato da macOS | rilanciare con `--debug` (un solo processo) |

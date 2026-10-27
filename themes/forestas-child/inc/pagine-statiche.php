@@ -67,13 +67,20 @@ function forestas_sezione_pagina( int $id ): string {
 
 /*
  * Percorso di navigazione «Home › pagina», sempre subito sotto la testata (o sotto il titolo, dove la
- * testata non c'è), seguito dalla riga dei pulsanti della pagina.
+ * testata non c'è), seguito dalla riga dei pulsanti della pagina. Una pagina figlia ha in mezzo le pagine
+ * madri e una news la pagina News: «Home › News › Attività e comunicazioni», come nel Canvas (oc:8759).
  */
 function forestas_percorso( int $id ): string {
+	$sopra = get_post_type( $id ) === 'post' ? array_filter( [ forestas_pagina_news() ] ) : array_reverse( get_post_ancestors( $id ) );
+	$voci  = '';
+	foreach ( $sopra as $pagina ) {
+		$voci .= sprintf( '<a href="%s">%s</a><span aria-hidden="true">›</span>', esc_url( get_permalink( $pagina ) ), esc_html( get_the_title( $pagina ) ) );
+	}
 	return sprintf(
-		'<nav class="forestas-percorso" aria-label="%1$s"><a href="%2$s">Home</a><span aria-hidden="true">›</span><span aria-current="page">%3$s</span></nav>',
+		'<nav class="forestas-percorso" aria-label="%1$s"><a href="%2$s">Home</a><span aria-hidden="true">›</span>%3$s<span aria-current="page">%4$s</span></nav>',
 		esc_attr( forestas_testo( 'Briciole di pane', 'Breadcrumb' ) ),
 		esc_url( apply_filters( 'wpml_home_url', home_url( '/' ) ) ),
+		$voci,
 		esc_html( get_the_title( $id ) )
 	) . forestas_azioni( $id );
 }
@@ -82,14 +89,18 @@ function forestas_percorso( int $id ): string {
  * Pagine senza «Condividi»: su Drupal il blocco di condivisione (AddToAny) è nascosto su questi indirizzi
  * (block.block.addtoanysharebuttons, visibilità per percorso); Cammini segue Itinerari.
  */
-const FORESTAS_PAGINE_SENZA_CONDIVIDI = [ 'sentieri', 'itinerari', 'cammini', 'da-vedere', 'da-sapere', 'mappa-interattiva', 'news' ];
+const FORESTAS_PAGINE_SENZA_CONDIVIDI = [ 'sentieri', 'itinerari', 'cammini', 'da-vedere', 'da-sapere', 'mappa-interattiva', 'news',
+	// Le pagine d'elenco delle news, con le loro pagine successive (decisione del dev, oc:8759)
+	'attivita-e-comunicazioni', 'tutte-le-news' ];
 
 /*
  * Riga dei pulsanti sotto il percorso (.sh-actions dell'artifact «Canvas Fase 2»): per le pagine c'è solo
  * «Condividi», al posto di quello di Drupal. Niente riga se non c'è nessun pulsante.
  */
 function forestas_azioni( int $id ): string {
-	if ( in_array( (string) get_post_meta( $id, FORESTAS_META_PAGINA, true ), FORESTAS_PAGINE_SENZA_CONDIVIDI, true ) ) {
+	// Neanche le schede della pagina News (oc:8759): su Drupal erano blocchi della pagina /news
+	if ( in_array( (string) get_post_meta( $id, FORESTAS_META_PAGINA, true ), FORESTAS_PAGINE_SENZA_CONDIVIDI, true )
+		|| get_post_meta( $id, '_wpf_scheda', true ) !== '' ) {
 		return '';
 	}
 	return '<div class="forestas-azioni">' . forestas_condividi( $id ) . '</div>';
@@ -179,15 +190,20 @@ add_shortcode(
 			: '';
 		// Il Riassunto scritto, non quello che WordPress ricava dal testo quando il campo è vuoto
 		$sottotitolo = trim( (string) get_post_field( 'post_excerpt', $id ) );
+		// Una news (oc:8759) ha in più la tipologia sopra il titolo e la data sotto, come la sase-hero di Drupal
+		$news      = get_post_type( $id ) === 'post';
+		$tipologia = $news ? forestas_news_tipologia( $id ) : null;
 		return sprintf(
-			'<div class="forestas-testata forestas-sezione-%1$s%2$s">%3$s%4$s<div class="forestas-testata-testo"><span class="forestas-testata-filo" aria-hidden="true"></span><h1 class="forestas-testata-titolo">%5$s</h1>%6$s</div></div>',
-			esc_attr( forestas_sezione_pagina( $id ) ),
+			'<div class="forestas-testata forestas-sezione-%1$s%2$s">%3$s%4$s<div class="forestas-testata-testo">%7$s<span class="forestas-testata-filo" aria-hidden="true"></span><h1 class="forestas-testata-titolo">%5$s</h1>%8$s%6$s</div></div>',
+			esc_attr( $news ? 'news' : forestas_sezione_pagina( $id ) ),
 			$immagine ? '' : ' forestas-testata-senza-immagine',
 			$immagine,
 			// Argomento, non pezzo del formato: un «%» nei credits scritti dalla redazione romperebbe sprintf
 			forestas_credits_immagine( $id_immagine ),
 			esc_html( get_the_title( $id ) ),
-			$sottotitolo !== '' ? '<p class="forestas-testata-sottotitolo">' . esc_html( $sottotitolo ) . '</p>' : ''
+			$sottotitolo !== '' ? '<p class="forestas-testata-sottotitolo">' . esc_html( $sottotitolo ) . '</p>' : '',
+			$tipologia ? '<p class="forestas-testata-tipologia">' . esc_html( $tipologia->name ) . '</p>' : '',
+			$news ? '<p class="forestas-testata-data"><i class="far fa-calendar-alt" aria-hidden="true"></i> ' . forestas_news_data( $id ) . '</p>' : ''
 		) . forestas_percorso( $id );
 	}
 );
