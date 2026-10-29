@@ -10,19 +10,22 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /*
- * Meta scritti dalla sincronizzazione (costanti WPF_META_* di docker/scripts/config/: news-lib.php per
- * in evidenza e collegamenti, contenuti-lib.php per la scheda, pagine-lib.php per pulsante e griglia;
- * il tema non le carica). Rinominandone uno negli script va rinominato anche qui.
+ * Meta scritti dalla sincronizzazione (costanti WPF_META_* di docker/scripts/config/: import-lib.php per
+ * in evidenza e collegamenti, contenuti-lib.php per scheda, nid e termini, pagine-lib.php per pulsante,
+ * etichetta e griglia; il tema non le carica). Rinominandone uno negli script va rinominato anche qui; lo
+ * stesso vale per le costanti di inc/eventi.php, inc/da-sapere.php e inc/pagine-statiche.php.
  */
 const FORESTAS_META_IN_EVIDENZA  = 'wpf_in_evidenza';   // «1»: news in evidenza su Drupal
 const FORESTAS_META_COLLEGAMENTI = 'wpf_collegamenti';  // [ [ titolo, url ] ]
 const FORESTAS_META_SCHEDA       = '_wpf_scheda';       // ordine di una scheda fra le sorelle
-const FORESTAS_META_PULSANTE     = '_wpf_pulsante';     // [ testo, verso: chiave della pagina d'elenco ]
+const FORESTAS_META_PULSANTE     = '_wpf_pulsante';     // [ testo, verso: chiave della pagina d'elenco, o «vocabolario:tid» di una tipologia ]
+const FORESTAS_META_ETICHETTA    = '_wpf_etichetta';    // nome della scheda nella fila, se non è il titolo della pagina (oc:8760)
 const FORESTAS_META_NID          = '_drupal_nid';       // nodo Drupal d'origine (news e pagine con un nodo)
 // Griglia di una scheda o di una pagina d'elenco, da config/pagine.json (pagine-lib.php): tipo (tipo di
 // contenuto, «post» se manca: le news), tipologia (tid Drupal) con vocabolario e tassonomia (per le news
 // tipologia_news e category, i valori se mancano), in_evidenza, quanti (9 se manca), paginata, variante
-// (testo | evidenza | immagine). L'ordine è sempre per data, le più recenti prima
+// (testo | evidenza | immagine | evento | lista), colonne, filtri, pillole. Le più recenti prima: le news
+// per data, gli eventi per data di inizio, i «da sapere» per data di creazione su Drupal (forestas_news_query)
 const FORESTAS_META_GRIGLIA      = '_wpf_griglia';
 // Term meta dei termini importati da Drupal: «<vocabolario>:<tid>» (WPF_TERM_META_DRUPAL di contenuti-lib.php)
 const FORESTAS_TERM_META_DRUPAL  = '_drupal_chiave';
@@ -33,8 +36,8 @@ const FORESTAS_COLLEGAMENTO_MAX  = 80;
 
 /*
  * Tipologia dei contenuti «Da sapere» (vocabolario tipologia_da_sapere di Drupal): una tassonomia propria e
- * non le categorie, che sono dei post (le news). Qui c'è solo la regola: i termini e il tipo di contenuto
- * a cui si collega arrivano con oc:8760, che la aggancia con register_taxonomy_for_object_type.
+ * non le categorie, che sono dei post (le news). Il tipo da_sapere la aggancia in inc/contenuti.php
+ * (oc:8760); l'indirizzo delle sue pagine è quello di Drupal, /tipologia-da-sapere-argomenti/<termine>.
  */
 add_action(
 	'init',
@@ -46,12 +49,22 @@ add_action(
 				'labels'            => [
 					'name'          => forestas_testo( 'Tipologie «Da sapere»', '"Good to know" types' ),
 					'singular_name' => forestas_testo( 'Tipologia «Da sapere»', '"Good to know" type' ),
+					'menu_name'     => forestas_testo( 'Tipologie', 'Types' ),
+					'all_items'     => forestas_testo( 'Tutte le tipologie', 'All types' ),
+					'edit_item'     => forestas_testo( 'Modifica tipologia', 'Edit type' ),
+					'view_item'     => forestas_testo( 'Visualizza tipologia', 'View type' ),
+					'update_item'   => forestas_testo( 'Aggiorna tipologia', 'Update type' ),
+					'add_new_item'  => forestas_testo( 'Aggiungi tipologia', 'Add type' ),
+					'new_item_name' => forestas_testo( 'Nome della nuova tipologia', 'New type name' ),
+					'search_items'  => forestas_testo( 'Cerca tipologie', 'Search types' ),
+					'not_found'     => forestas_testo( 'Nessuna tipologia trovata.', 'No types found.' ),
+					'back_to_items' => forestas_testo( '← Torna alle tipologie', '← Back to types' ),
 				],
 				'hierarchical'      => false,
 				'public'            => true,
 				'show_in_rest'      => true,
 				'show_admin_column' => true,
-				'rewrite'           => [ 'slug' => 'tipologia-da-sapere' ],
+				'rewrite'           => [ 'slug' => 'tipologia-da-sapere-argomenti' ],
 			]
 		);
 	}
@@ -104,7 +117,7 @@ add_filter( 'rewrite_rules_array', fn( array $regole ) => forestas_regole_schede
  * child e dopo il salvataggio di una pagina: così vale anche dopo il lancio, con la sincronizzazione
  * spenta. Vero se le ha rigenerate.
  */
-const FORESTAS_REGOLE_VERSIONE = 2;
+const FORESTAS_REGOLE_VERSIONE = 3;
 const FORESTAS_OPZIONE_REGOLE  = 'forestas_regole_schede';
 
 function forestas_regole_aggiorna(): bool {
@@ -118,38 +131,6 @@ function forestas_regole_aggiorna(): bool {
 }
 add_action( 'admin_init', 'forestas_regole_aggiorna' );
 add_action( 'save_post_page', fn() => delete_option( FORESTAS_OPZIONE_REGOLE ) );
-
-/*
- * Vecchi indirizzi di Drupal che portano a una news (301), anche con /en/ davanti:
- * - /node/<nid>: serve soprattutto alla news 1094, che su Drupal non ha alias e sta solo lì;
- * - /news/<alias con accenti>: WordPress toglie accenti e apostrofi tipografici dallo slug (3 news, per
- *   esempio «…galtellì…» diventa «…galtelli…»).
- */
-add_action(
-	'template_redirect',
-	function () {
-		global $wp;
-		$richiesta = (string) $wp->request;
-		if ( ! is_404() ) {
-			return;
-		}
-		$cerca = [ 'post_type' => 'post', 'post_status' => 'publish', 'numberposts' => 1 ];
-		if ( preg_match( '#^node/(\d+)/?$#', $richiesta, $m ) ) {
-			$cerca += [ 'meta_key' => FORESTAS_META_NID, 'meta_value' => $m[1] ];
-		} elseif ( preg_match( '#^news/([^/]+)/?$#', $richiesta, $m ) && ( $slug = sanitize_title( rawurldecode( $m[1] ) ) ) !== $m[1] ) {
-			$cerca += [ 'name' => $slug ];
-		} else {
-			return;
-		}
-		// Prima la news nella lingua della richiesta; una news che non ha la traduzione porta all'italiano
-		$news = get_posts( $cerca + [ 'suppress_filters' => false ] ) ?: get_posts( $cerca );
-		if ( $news ) {
-			wp_safe_redirect( get_permalink( $news[0] ), 301 );
-			exit;
-		}
-	}
-);
-
 
 /**
  * Pagina del perimetro con una chiave di config/pagine.json nella lingua corrente, o 0. Con i filtri di
@@ -249,30 +230,60 @@ function forestas_news_collegamenti( int $id ): string {
  * - «compatta» (le altre accanto a quella in evidenza): foto a lato;
  * - «testo» (node--news--teaser-senza-immagine): filetto in alto;
  * - «immagine» (le pagine d'elenco): foto in alto.
+ * - «evento» (oc:8760): foto in alto con la data del Canvas sopra (.uc-date, «30 GIU»), etichetta «Evento»,
+ *   sotto il titolo la data per intero o l'intervallo.
+ * L'etichetta «In evidenza» sulla foto è solo delle news: nel Canvas la prima card di Da sapere non ce l'ha.
  * L'etichetta è la tipologia nelle card in evidenza (Canvas) e i tag nelle altre, come le anteprime di
- * Drupal nelle schede e nelle pagine d'elenco.
+ * Drupal nelle schede e nelle pagine d'elenco; per un «da sapere» è sempre la sua tipologia
+ * (node--da-sapere--teaser: field_tipo_da_sapere), e la card non ha data.
  * Tutta la card è cliccabile, con il link sul titolo.
  */
 function forestas_news_card( int $id, string $variante, int $livello = 3 ): string {
-	$immagine = $variante === 'testo' ? '' : get_the_post_thumbnail( $id, $variante === 'evidenza' ? 'large' : 'medium_large', [ 'loading' => 'lazy', 'alt' => '' ] );
-	if ( ! in_array( $variante, [ 'evidenza', 'compatta' ], true ) ) {
-		$etichetta = implode( ', ', wp_list_pluck( get_the_tags( $id ) ?: [], 'name' ) );
-	} else {
-		$tipologia = forestas_news_tipologia( $id );
-		$etichetta = $tipologia ? $tipologia->name : '';
+	// «lista» (node--da-sapere--anteprima-lista, la scheda FAQ): solo il titolo con «›», come nel wireframe
+	if ( $variante === 'lista' ) {
+		return sprintf(
+			'<article class="forestas-card forestas-card--lista"><h%3$d class="forestas-card__titolo"%4$s><a href="%1$s">%2$s<span aria-hidden="true">›</span></a></h%3$d></article>',
+			esc_url( get_permalink( $id ) ),
+			esc_html( get_the_title( $id ) ),
+			$livello,
+			forestas_attributo_lingua( $id )
+		);
 	}
-	$classi = 'forestas-card forestas-card--news forestas-card--' . $variante . ( $immagine === '' ? ' forestas-card--senza-immagine' : '' );
+	$tipo     = get_post_type( $id );
+	$immagine = $variante === 'testo' ? '' : get_the_post_thumbnail( $id, $variante === 'evidenza' ? 'large' : 'medium_large', [ 'loading' => 'lazy', 'alt' => '' ] );
+	// L'etichetta è un testo dell'interfaccia («Evento») o i nomi di termini: questi, in inglese, possono
+	// essere italiani (ripiego di WPML) e hanno allora lang="it" (WCAG 3.1.2)
+	$termini = [];
+	if ( $tipo === 'evento' ) {
+		$etichetta = forestas_testo( 'Evento', 'Event' ); // come nel Canvas (uc--evento): il tipo, non i tag
+	} else {
+		if ( $tipo === 'da_sapere' ) {
+			$termini = array_filter( [ forestas_da_sapere_tipologia( $id ) ] );
+		} elseif ( ! in_array( $variante, [ 'evidenza', 'compatta' ], true ) ) {
+			$termini = get_the_tags( $id ) ?: [];
+		} else {
+			$termini = array_filter( [ forestas_news_tipologia( $id ) ] );
+		}
+		$etichetta = implode( ', ', wp_list_pluck( $termini, 'name' ) );
+	}
+	$lingua_etichetta = $termini ? forestas_attributo_lingua_termine( reset( $termini ) ) : '';
+	$data   = match ( $tipo ) {
+		'post'   => forestas_news_data( $id ),
+		'evento' => forestas_evento_quando( $id ),
+		default  => '',
+	};
+	$classi = 'forestas-card forestas-card--' . ( [ 'evento' => 'evento', 'da_sapere' => 'da-sapere' ][ $tipo ] ?? 'news' ) . ' forestas-card--' . $variante . ( $immagine === '' ? ' forestas-card--senza-immagine' : '' );
 	$media  = $immagine !== ''
-		? '<div class="forestas-card__media">' . $immagine . ( $variante === 'evidenza' ? '<span class="forestas-card__flag">' . esc_html( forestas_testo( 'In evidenza', 'Highlighted' ) ) . '</span>' : '' ) . '</div>'
+		? '<div class="forestas-card__media">' . $immagine . ( $variante === 'evidenza' && $tipo === 'post' ? '<span class="forestas-card__flag">' . esc_html( forestas_testo( 'In evidenza', 'Highlighted' ) ) . '</span>' : '' ) . ( $tipo === 'evento' ? forestas_evento_data( $id ) : '' ) . '</div>'
 		: '';
 	return sprintf(
-		'<article class="%1$s">%2$s<div class="forestas-card__testo">%3$s<h%7$d class="forestas-card__titolo"%8$s><a href="%4$s">%5$s</a></h%7$d><p class="forestas-card__data">%6$s</p></div></article>',
+		'<article class="%1$s">%2$s<div class="forestas-card__testo">%3$s<h%7$d class="forestas-card__titolo"%8$s><a href="%4$s">%5$s</a></h%7$d>%6$s</div></article>',
 		esc_attr( $classi ),
 		$media,
-		$etichetta !== '' ? '<span class="forestas-card__tag"' . forestas_attributo_lingua( $id ) . '>' . esc_html( $etichetta ) . '</span>' : '',
+		$etichetta !== '' ? '<span class="forestas-card__tag"' . $lingua_etichetta . '>' . esc_html( $etichetta ) . '</span>' : '',
 		esc_url( get_permalink( $id ) ),
 		esc_html( get_the_title( $id ) ),
-		forestas_news_data( $id ),
+		$data !== '' ? '<p class="forestas-card__data">' . $data . '</p>' : '',
 		$livello,
 		forestas_attributo_lingua( $id )
 	);
@@ -298,6 +309,17 @@ function forestas_news_query( array $griglia, int $pagina = 1 ): WP_Query {
 	if ( $tipo === 'post' ) {
 		$args['category_name'] = FORESTAS_NEWS_CATEGORIA;
 	}
+	/*
+	 * Gli eventi per data di inizio, come lista_eventi di Drupal (field_data DESC; i passati restano): l'ordine
+	 * lo mette forestas_ordine_eventi, con un join che non esclude un evento senza data (pubblicato dalla
+	 * Modifica rapida) e lo manda in fondo. Una meta_query OR EXISTS/NOT EXISTS ordinerebbe quell'evento sul
+	 * valore di un suo meta qualsiasi (oc:8760).
+	 * I «da sapere» delle schede per data di creazione su Drupal (la data del post), come la View
+	 * sa_sapere_in_evidenza (created): «Sempre in cima» conta solo nella pagina della tipologia (inc/da-sapere.php).
+	 */
+	if ( $tipo === 'evento' ) {
+		$args['forestas_ordine_eventi'] = true;
+	}
 	if ( ! empty( $griglia['tipologia'] ) ) {
 		$tassonomia = (string) ( $griglia['tassonomia'] ?? 'category' );
 		$termine    = forestas_termine_drupal( ( $griglia['vocabolario'] ?? 'tipologia_news' ) . ':' . (int) $griglia['tipologia'], $tassonomia );
@@ -305,9 +327,214 @@ function forestas_news_query( array $griglia, int $pagina = 1 ): WP_Query {
 		$args['tax_query'] = [ [ 'taxonomy' => $tassonomia, 'field' => 'term_id', 'terms' => $termine ? [ $termine->term_id ] : [ 0 ] ] ];
 	}
 	if ( ! empty( $griglia['in_evidenza'] ) ) {
-		$args['meta_query'] = [ [ 'key' => FORESTAS_META_IN_EVIDENZA, 'value' => '1' ] ];
+		$args['meta_query'][] = [ 'key' => FORESTAS_META_IN_EVIDENZA, 'value' => '1' ];
+	}
+	// Filtri scelti nella colonna dei filtri (forestas_news_filtri): anche il controllo delle pagine oltre
+	// l'ultima passa di qui, e conta le pagine della lista filtrata
+	foreach ( forestas_news_filtri_scelti( $griglia ) as $campo => $scelto ) {
+		if ( $campo !== 'anno' ) {
+			$args['tax_query'][] = [ 'taxonomy' => $scelto->taxonomy, 'field' => 'term_id', 'terms' => [ $scelto->term_id ] ];
+		} elseif ( $tipo === 'evento' ) {
+			$args['meta_query'][] = [ 'key' => FORESTAS_META_EVENTO_INIZIO, 'value' => $scelto . '-', 'compare' => 'LIKE' ];
+		} else {
+			$args['date_query'] = [ [ 'year' => $scelto ] ];
+		}
 	}
 	return new WP_Query( $args );
+}
+
+/*
+ * Ordine degli eventi per data di inizio (forestas_news_query): join sul meta con la chiave nella
+ * condizione, così un evento senza data resta nella lista e va in fondo; a parità di data il più vecchio
+ * per id, come le altre liste.
+ */
+add_filter(
+	'posts_clauses',
+	function ( array $clausole, WP_Query $q ): array {
+		if ( ! $q->get( 'forestas_ordine_eventi' ) ) {
+			return $clausole;
+		}
+		global $wpdb;
+		$clausole['join']   .= $wpdb->prepare( " LEFT JOIN {$wpdb->postmeta} AS forestas_inizio ON ( forestas_inizio.post_id = {$wpdb->posts}.ID AND forestas_inizio.meta_key = %s )", FORESTAS_META_EVENTO_INIZIO );
+		$clausole['orderby'] = "forestas_inizio.meta_value IS NULL, forestas_inizio.meta_value DESC, {$wpdb->posts}.ID ASC";
+		return $clausole;
+	},
+	10,
+	2
+);
+
+// Voci visibili di un gruppo di filtri prima di «Mostra di più» (soft_limit delle faccette di Drupal)
+const FORESTAS_FILTRI_VISIBILI = 5;
+
+/*
+ * Filtri di una lista, come le faccette di Drupal (Search API + Facets): il campo «filtri» della griglia in
+ * config/pagine.json è l'elenco dei gruppi, ciascuno [ campo, titolo { it, en }, numeri, ordine ]:
+ * - campo: «tipologia» (nella tassonomia della griglia: la sottocategoria per le news, la tipologia per i
+ *   «da sapere»), «tag» (i tag della news o dell'evento), «anno» (della data mostrata: quella della news,
+ *   l'inizio dell'evento; su Drupal il vecchio field_date, che le news recenti e gli eventi non hanno);
+ * - numeri: false nasconde il numero di contenuti (show_numbers di Drupal, il tag di Tutte le news);
+ * - ordine: «numero» (più contenuti prima, poi per valore: count_widget_order) o «valore_desc» (per valore
+ *   decrescente: l'anno di Tutte le news).
+ * Il valore scelto sta nell'indirizzo, ?<campo>=<slug del termine o anno>; uno che non c'è non filtra.
+ */
+function forestas_news_filtri_campi( array $griglia ): array {
+	return array_values( array_filter( (array) ( $griglia['filtri'] ?? [] ), fn( $f ) => in_array( $f['campo'] ?? '', [ 'tipologia', 'tag', 'anno' ], true ) ) );
+}
+
+/** Tassonomia di un campo dei filtri: i tag, o la tassonomia delle tipologie della griglia. */
+function forestas_news_filtri_tassonomia( array $griglia, string $campo ): string {
+	return $campo === 'tag' ? 'post_tag' : (string) ( $griglia['tassonomia'] ?? 'category' );
+}
+
+/** I valori scelti nei filtri della griglia: [ campo => WP_Term o anno ]. */
+function forestas_news_filtri_scelti( array $griglia ): array {
+	$scelti = [];
+	foreach ( forestas_news_filtri_campi( $griglia ) as $f ) {
+		$campo = $f['campo'];
+		// Solo un testo: ?anno[]=… (un array) darebbe un avviso PHP a ogni richiesta e un filtro su «array»
+		$grezzo = $_GET[ $campo ] ?? ''; // phpcs:ignore WordPress.Security.NonceVerification -- filtro di sola lettura
+		$dato   = is_string( $grezzo ) ? sanitize_title( wp_unslash( $grezzo ) ) : '';
+		if ( $dato === '' ) {
+			continue;
+		}
+		if ( $campo === 'anno' ) {
+			if ( preg_match( '/^\d{4}$/', $dato ) ) {
+				$scelti['anno'] = (int) $dato;
+			}
+			continue;
+		}
+		$tassonomia = forestas_news_filtri_tassonomia( $griglia, $campo );
+		$termine    = get_term_by( 'slug', $dato, $tassonomia );
+		// Fra le categorie solo le tipologie, sottocategorie di News: la categoria News le comprende tutte
+		if ( $termine instanceof WP_Term && ( $tassonomia !== 'category' || $termine->parent ) ) {
+			$scelti[ $campo ] = $termine;
+		}
+	}
+	return $scelti;
+}
+
+/** I valori di un contenuto per un campo dei filtri: [ chiave => nome ] (un tag ne può avere più d'uno). */
+function forestas_news_filtri_valori( WP_Post $p, string $campo, string $tassonomia ): array {
+	if ( $campo === 'anno' ) {
+		$data = $p->post_type === 'evento' ? (string) get_post_meta( $p->ID, FORESTAS_META_EVENTO_INIZIO, true ) : get_the_date( 'Y', $p );
+		return $data !== '' ? [ substr( $data, 0, 4 ) => substr( $data, 0, 4 ) ] : [];
+	}
+	if ( $tassonomia === 'category' && $campo === 'tipologia' ) {
+		$termini = array_filter( [ forestas_news_tipologia( $p->ID ) ] );
+	} else {
+		$termini = get_the_terms( $p->ID, $tassonomia );
+		$termini = is_array( $termini ) ? $termini : [];
+	}
+	return array_map( 'strval', wp_list_pluck( $termini, 'name', 'slug' ) );
+}
+
+/*
+ * I numeri di ogni gruppo: [ campo => [ valore => [ nome, numero ] ] ], nell'ordine del gruppo. Un
+ * contenuto conta in un gruppo solo se passa i valori scelti negli altri gruppi: le faccette di Drupal sono
+ * in OR, e i numeri di un gruppo dicono cosa si ottiene cambiando quel valore e tenendo gli altri.
+ */
+function forestas_news_filtri_conta( array $griglia, array $campi, array $scelti ): array {
+	$base = forestas_news_query( array_merge( $griglia, [ 'filtri' => [], 'quanti' => -1 ] ) )->posts;
+	// Tag e tipologie di tutti i contenuti in una query: senza, una per contenuto e per gruppo
+	update_object_term_cache( wp_list_pluck( $base, 'ID' ), array_unique( wp_list_pluck( $base, 'post_type' ) ) );
+	$valori_di = array_map(
+		fn( $p ) => array_combine( array_column( $campi, 'campo' ), array_map( fn( $f ) => forestas_news_filtri_valori( $p, $f['campo'], forestas_news_filtri_tassonomia( $griglia, $f['campo'] ) ), $campi ) ),
+		$base
+	);
+	$scelti_chiave = array_map( fn( $s ) => $s instanceof WP_Term ? $s->slug : (string) $s, $scelti );
+	$gruppi        = [];
+	foreach ( $campi as $f ) {
+		$campo  = $f['campo'];
+		$attivo = $scelti_chiave[ $campo ] ?? '';
+		$conta  = [];
+		$nomi   = [];
+		foreach ( $valori_di as $valori ) {
+			foreach ( $scelti_chiave as $altro => $chiave ) {
+				if ( $altro !== $campo && ! isset( $valori[ $altro ][ $chiave ] ) ) {
+					continue 2;
+				}
+			}
+			foreach ( $valori[ $campo ] as $chiave => $nome ) {
+				$conta[ $chiave ] = ( $conta[ $chiave ] ?? 0 ) + 1;
+				$nomi[ $chiave ]  = $nome;
+			}
+		}
+		// Il valore scelto in fondo; poi per numero o per valore, senza distinguere maiuscole e accenti come
+		// Drupal («alert» prima di «App»)
+		$ord        = array_map( fn( $n ) => strtolower( remove_accents( $n ) ), $nomi );
+		$per_valore = ( $f['ordine'] ?? 'numero' ) === 'valore_desc';
+		uksort(
+			$conta,
+			fn( $a, $b ) => $per_valore
+				? [ (string) $a === $attivo, $ord[ $b ] ] <=> [ (string) $b === $attivo, $ord[ $a ] ]
+				: [ (string) $a === $attivo, -$conta[ $a ], $ord[ $a ] ] <=> [ (string) $b === $attivo, -$conta[ $b ], $ord[ $b ] ]
+		);
+		$gruppi[ $campo ] = array_map( fn( $chiave ) => [ $nomi[ $chiave ], $conta[ $chiave ] ], array_combine( array_keys( $conta ), array_keys( $conta ) ) );
+	}
+	return $gruppi;
+}
+
+/*
+ * Colonna dei filtri, come i blocchi delle faccette di Drupal (sase-block--facets, widget links):
+ * - ogni gruppo ha il titolo e la freccia per aprirlo e chiuderlo; all'apertura della pagina è chiuso,
+ *   tranne quello con un valore scelto (su Drupal la freccia è in su a gruppo chiuso, in giù ad aperto);
+ * - le voci sono link con il numero di contenuti in un riquadro a destra; le prime FORESTAS_FILTRI_VISIBILI,
+ *   le altre dietro «Mostra di più» (soft limit);
+ * - il valore scelto va in fondo al suo gruppo, e tutto il gruppo ha i valori in grassetto e i numeri su
+ *   fondo pieno (.facet-active di Drupal); cliccandolo si toglie.
+ */
+function forestas_news_filtri( array $griglia ): string {
+	$campi  = forestas_news_filtri_campi( $griglia );
+	$scelti = forestas_news_filtri_scelti( $griglia );
+	$gruppi = forestas_news_filtri_conta( $griglia, $campi, $scelti );
+	$html   = '';
+	foreach ( $campi as $f ) {
+		$campo = $f['campo'];
+		if ( empty( $gruppi[ $campo ] ) ) {
+			continue;
+		}
+		$attivo = isset( $scelti[ $campo ] ) ? ( $scelti[ $campo ] instanceof WP_Term ? $scelti[ $campo ]->slug : (string) $scelti[ $campo ] ) : '';
+		$numeri = $f['numeri'] ?? true;
+		$voci   = '';
+		$i      = 0;
+		foreach ( $gruppi[ $campo ] as $valore => [ $nome, $numero ] ) {
+			$scelto = (string) $valore === $attivo;
+			// Si torna alla prima pagina: la pagina corrente potrebbe non esistere nella lista filtrata
+			$url   = remove_query_arg( 'paged', $scelto ? remove_query_arg( $campo ) : add_query_arg( $campo, $valore ) );
+			$url   = preg_replace( '#/page/\d+/?#', '/', $url );
+			$voci .= sprintf(
+				'<li%4$s><a href="%1$s" rel="nofollow"%3$s><span class="forestas-filtri__valore">%5$s%2$s</span>%6$s</a></li>',
+				esc_url( $url ),
+				esc_html( $nome ),
+				$scelto ? ' aria-current="true"' : '',
+				++$i > FORESTAS_FILTRI_VISIBILI ? ' class="forestas-filtri__in-piu"' : '',
+				$scelto ? '<span class="screen-reader-text">' . esc_html( forestas_testo( 'Togli il filtro', 'Remove filter' ) ) . ': </span>' : '',
+				$numeri ? ' <span class="forestas-filtri__numero">' . (int) $numero . '<span class="screen-reader-text"> ' . esc_html( forestas_testo( 'risultati', 'results' ) ) . '</span></span>' : ''
+			);
+		}
+		$titolo = forestas_testo( (string) ( $f['titolo']['it'] ?? $campo ), (string) ( $f['titolo']['en'] ?? $f['titolo']['it'] ?? $campo ) );
+		$id     = 'forestas-filtro-' . $campo;
+		$altri  = count( $gruppi[ $campo ] ) > FORESTAS_FILTRI_VISIBILI
+			? '<button type="button" class="forestas-filtri__mostra" aria-expanded="false">' . esc_html( forestas_testo( 'Mostra di più', 'Show more' ) ) . '</button>'
+			: '';
+		$html  .= sprintf(
+			'<div class="forestas-filtri__gruppo%1$s"><div class="forestas-filtri__testata"><h3 class="forestas-filtri__titolo">%2$s</h3><button type="button" class="forestas-filtri__apri-gruppo" aria-expanded="%3$s" aria-controls="%4$s"><span class="screen-reader-text">%5$s</span><i class="far fa-chevron-down" aria-hidden="true"></i></button></div><div class="forestas-filtri__voci" id="%4$s"><ul role="list">%6$s</ul>%7$s</div></div>',
+			$attivo !== '' ? ' is-aperto is-attivo' : '',
+			esc_html( $titolo ),
+			$attivo !== '' ? 'true' : 'false',
+			esc_attr( $id ),
+			esc_html( forestas_testo( 'Espandi/collassa filtro', 'Expand/collapse filter' ) . ': ' . $titolo ),
+			$voci,
+			$altri
+		);
+	}
+	if ( $html === '' ) {
+		return '';
+	}
+	// Sotto 960px i filtri stanno dietro il pulsante «Filtri», come sase-sidebar-mobile di Drupal (assets/js/filtri.js)
+	return '<aside class="forestas-filtri" aria-labelledby="forestas-filtri-titolo">'
+		. '<button type="button" class="forestas-filtri__apri" aria-expanded="false" aria-controls="forestas-filtri-gruppi">' . esc_html( forestas_testo( 'Filtri', 'Filters' ) ) . ' <i class="far fa-filter" aria-hidden="true"></i></button>'
+		. '<div class="forestas-filtri__gruppi" id="forestas-filtri-gruppi"><h2 class="screen-reader-text" id="forestas-filtri-titolo">' . esc_html( forestas_testo( 'Filtri', 'Filters' ) ) . '</h2>' . $html . '</div></aside>';
 }
 
 /*
@@ -327,6 +554,9 @@ function forestas_news_griglia( int $pagina_id, int $livello = 3 ): string {
  * scheda (h2); h2 nelle pagine d'elenco, subito sotto il titolo della pagina (h1), senza saltare un livello.
  */
 function forestas_news_una_griglia( array $griglia, int $livello = 3 ): string {
+	if ( ! empty( $griglia['pillole'] ) ) {
+		return forestas_da_sapere_pillole( $livello ); // le tipologie, non dei contenuti (inc/da-sapere.php)
+	}
 	$paginata = ! empty( $griglia['paginata'] );
 	$q        = forestas_news_query( $griglia, $paginata ? (int) get_query_var( 'paged' ) : 1 );
 	$variante = $griglia['variante'] ?? 'immagine';
@@ -335,11 +565,11 @@ function forestas_news_una_griglia( array $griglia, int $livello = 3 ): string {
 	foreach ( $q->posts as $i => $p ) {
 		$card .= forestas_news_card( $p->ID, $variante === 'evidenza' ? ( $i === 0 ? 'evidenza' : 'compatta' ) : $variante, $livello );
 	}
-	if ( $card === '' ) {
-		return '<p class="forestas-griglia-vuota">' . esc_html( forestas_testo( 'Nessun contenuto.', 'No content.' ) ) . '</p>';
-	}
-	$html = '<div class="forestas-griglia forestas-griglia--' . esc_attr( $variante ) . '">' . $card . '</div>';
-	if ( $paginata && $q->max_num_pages > 1 ) {
+	$colonne = ! empty( $griglia['colonne'] ) ? ' forestas-griglia--colonne-' . (int) $griglia['colonne'] : '';
+	$html    = $card === ''
+		? '<p class="forestas-griglia-vuota">' . esc_html( forestas_testo( 'Nessun contenuto.', 'No content.' ) ) . '</p>'
+		: '<div class="forestas-griglia forestas-griglia--' . esc_attr( $variante ) . $colonne . '">' . $card . '</div>';
+	if ( $card !== '' && $paginata && $q->max_num_pages > 1 ) {
 		$html .= '<nav class="forestas-paginazione" aria-label="' . esc_attr( forestas_testo( 'Paginazione', 'Pagination' ) ) . '">'
 			// Le frecce con un nome per lo screen reader, che altrimenti leggerebbe «›» o niente
 			. paginate_links(
@@ -351,6 +581,11 @@ function forestas_news_una_griglia( array $griglia, int $livello = 3 ): string {
 				]
 			)
 			. '</nav>';
+	}
+	// Con i filtri: colonna dei filtri a sinistra e lista, come la griglia 3-9 della pagina di Drupal
+	if ( ! empty( $griglia['filtri'] ) ) {
+		wp_enqueue_script( 'forestas-filtri', get_stylesheet_directory_uri() . '/assets/js/filtri.js', [], forestas_versione(), [ 'in_footer' => true, 'strategy' => 'defer' ] );
+		$html = '<div class="forestas-filtrabile">' . forestas_news_filtri( $griglia ) . '<div class="forestas-filtrabile__lista">' . $html . '</div></div>';
 	}
 	return $html;
 }
@@ -378,23 +613,38 @@ add_shortcode(
 		}
 		usort( $schede, fn( $a, $b ) => (int) get_post_meta( $a, FORESTAS_META_SCHEDA, true ) <=> (int) get_post_meta( $b, FORESTAS_META_SCHEDA, true ) );
 		wp_enqueue_script( 'forestas-schede', get_stylesheet_directory_uri() . '/assets/js/schede.js', [], forestas_versione(), [ 'in_footer' => true, 'strategy' => 'defer' ] );
+		$nome = fn( int $s ) => (string) get_post_meta( $s, FORESTAS_META_ETICHETTA, true ) ?: get_the_title( $s );
 		$link = '';
 		foreach ( $schede as $s ) {
-			$link .= sprintf( '<a href="%s"%s>%s</a>', esc_url( get_permalink( $s ) ), $s === $id ? ' aria-current="page"' : '', esc_html( get_the_title( $s ) ) );
+			$link .= sprintf( '<a href="%s"%s>%s</a>', esc_url( get_permalink( $s ) ), $s === $id ? ' aria-current="page"' : '', esc_html( $nome( $s ) ) );
 		}
 		$pulsante = get_post_meta( $id, FORESTAS_META_PULSANTE, true );
-		$verso    = is_array( $pulsante ) ? forestas_pagina_per_chiave( (string) $pulsante['verso'] ) : 0;
+		$verso    = is_array( $pulsante ) ? forestas_pulsante_verso( (string) $pulsante['verso'] ) : '';
 		return sprintf(
 			'<nav class="forestas-schede forestas-sezione-%1$s" aria-label="%2$s">%3$s</nav><div class="forestas-scheda forestas-sezione-%1$s"><div class="forestas-scheda-titolo"><span aria-hidden="true"></span><h2>%4$s</h2></div>%5$s%6$s</div>',
 			esc_attr( forestas_sezione_pagina( $madre ) ),
 			esc_attr( sprintf( forestas_testo( 'Sezioni di %s', 'Sections of %s' ), get_the_title( $madre ) ) ),
 			$link,
-			esc_html( get_the_title( $id ) ),
+			esc_html( $nome( $id ) ),
 			forestas_news_griglia( $id ),
-			$verso ? '<p class="forestas-scheda-pulsante"><a class="forestas-pulsante" href="' . esc_url( get_permalink( $verso ) ) . '">' . esc_html( $pulsante['testo'] ) . '</a></p>' : ''
+			$verso !== '' ? '<p class="forestas-scheda-pulsante"><a class="forestas-pulsante" href="' . esc_url( $verso ) . '">' . esc_html( $pulsante['testo'] ) . '</a></p>' : ''
 		);
 	}
 );
+
+/*
+ * Dove porta il pulsante di una scheda: la pagina d'elenco con quella chiave di config/pagine.json, o la
+ * pagina di una tipologia («tipologia_da_sapere:4709», le schede di Da sapere, oc:8760). Vuoto se non c'è.
+ */
+function forestas_pulsante_verso( string $verso ): string {
+	if ( str_contains( $verso, ':' ) ) {
+		$termine = forestas_termine_drupal( $verso, strtok( $verso, ':' ) );
+		$link    = $termine ? get_term_link( $termine ) : '';
+		return is_string( $link ) ? $link : '';
+	}
+	$pagina = forestas_pagina_per_chiave( $verso );
+	return $pagina ? (string) get_permalink( $pagina ) : '';
+}
 
 /*
  * Pagine oltre l'ultima: /tutte-le-news/page/99/ o /news/page/2/ (le schede non sono paginate) davano 200
@@ -424,13 +674,19 @@ add_action(
 add_shortcode( 'forestas_elenco', fn() => get_the_ID() ? '<div class="forestas-elenco">' . forestas_news_griglia( (int) get_the_ID(), 2 ) . '</div>' : '' );
 
 /*
- * Sulla pagina di una news la voce del menu che porta a News è quella attiva, come sulle pagine figlie di
- * News (WordPress la segna da sé solo per le pagine, non per i post).
+ * Sulla pagina di una news o di un evento la voce del menu che porta a News è quella attiva, come sulle
+ * pagine figlie di News (WordPress la segna da sé solo per le pagine, non per i post); su quella di un «da
+ * sapere» la voce Da sapere (oc:8760).
  */
 add_filter(
 	'nav_menu_css_class',
 	function ( array $classi, $voce ) {
-		if ( is_singular( 'post' ) && (int) $voce->object_id === forestas_pagina_news() && $voce->object === 'page' ) {
+		$madre = match ( true ) {
+			is_singular( [ 'post', 'evento' ] ) => forestas_pagina_news(),
+			is_singular( 'da_sapere' )          => forestas_pagina_per_chiave( 'da-sapere' ),
+			default                             => 0,
+		};
+		if ( $madre && (int) $voce->object_id === $madre && $voce->object === 'page' ) {
 			$classi[] = 'current-menu-ancestor';
 			$classi[] = 'current-page-ancestor';
 		}

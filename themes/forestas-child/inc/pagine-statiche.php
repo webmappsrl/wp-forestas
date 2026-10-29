@@ -32,6 +32,7 @@ const FORESTAS_META_ALLEGATI     = 'wpf_allegati';
 const FORESTAS_META_GALLERIA     = 'wpf_galleria';
 const FORESTAS_META_AUTORE       = 'wpf_autore';         // dell'immagine
 const FORESTAS_META_CREDITS      = 'wpf_credits';        // dell'immagine
+const FORESTAS_META_ALIAS_DRUPAL = '_wpf_alias_drupal';  // vecchi indirizzi Drupal di contenuti e tipologie (WPF_META_ALIAS_DRUPAL di contenuti-lib.php)
 
 /** Id degli allegati salvati in un meta come elenco (allegati, galleria), nell'ordine scritto. */
 function forestas_meta_ids( int $id, string $chiave ): array {
@@ -59,6 +60,7 @@ function forestas_sezione_pagina( int $id ): string {
 		'is-poi'         => 'punti-di-interesse',
 		'is-sapere'      => 'da-sapere',
 		'is-news'        => 'news',
+		'is-event'       => 'eventi',
 	];
 	return $sezioni[ (string) get_post_meta( $id, FORESTAS_META_PAGINA, true ) ]
 		?? $colori[ (string) get_post_meta( $id, FORESTAS_META_COLORE, true ) ]
@@ -69,9 +71,16 @@ function forestas_sezione_pagina( int $id ): string {
  * Percorso di navigazione «Home › pagina», sempre subito sotto la testata (o sotto il titolo, dove la
  * testata non c'è), seguito dalla riga dei pulsanti della pagina. Una pagina figlia ha in mezzo le pagine
  * madri e una news la pagina News: «Home › News › Attività e comunicazioni», come nel Canvas (oc:8759).
+ * Un evento ha News e l'elenco degli eventi, un «da sapere» la pagina Da sapere (oc:8760).
  */
 function forestas_percorso( int $id ): string {
-	$sopra = get_post_type( $id ) === 'post' ? array_filter( [ forestas_pagina_news() ] ) : array_reverse( get_post_ancestors( $id ) );
+	$sopra = match ( get_post_type( $id ) ) {
+		'post'      => [ forestas_pagina_news() ],
+		'evento'    => [ forestas_pagina_news(), forestas_pagina_per_chiave( 'eventi' ) ],
+		'da_sapere' => [ forestas_pagina_per_chiave( 'da-sapere' ) ],
+		default     => array_reverse( get_post_ancestors( $id ) ),
+	};
+	$sopra = array_filter( $sopra );
 	$voci  = '';
 	foreach ( $sopra as $pagina ) {
 		$voci .= sprintf( '<a href="%s">%s</a><span aria-hidden="true">›</span>', esc_url( get_permalink( $pagina ) ), esc_html( get_the_title( $pagina ) ) );
@@ -100,13 +109,24 @@ function forestas_attributo_lingua( int $id ): string {
 	return ' lang="' . esc_attr( strtok( $lingua, '-' ) ) . '"';
 }
 
+/** Attributo lang per il nome di un termine mostrato in un'altra lingua (ripiego di WPML), come per i contenuti. */
+function forestas_attributo_lingua_termine( WP_Term $termine ): string {
+	$lingua = (string) apply_filters( 'wpml_element_language_code', null, [ 'element_id' => $termine->term_taxonomy_id, 'element_type' => $termine->taxonomy ] );
+	if ( $lingua === '' || $lingua === apply_filters( 'wpml_current_language', $lingua ) ) {
+		return '';
+	}
+	return ' lang="' . esc_attr( strtok( $lingua, '-' ) ) . '"';
+}
+
 /*
  * Pagine senza «Condividi»: su Drupal il blocco di condivisione (AddToAny) è nascosto su questi indirizzi
  * (block.block.addtoanysharebuttons, visibilità per percorso); Cammini segue Itinerari.
  */
 const FORESTAS_PAGINE_SENZA_CONDIVIDI = [ 'sentieri', 'itinerari', 'cammini', 'da-vedere', 'da-sapere', 'mappa-interattiva', 'news',
 	// Le pagine d'elenco delle news, con le loro pagine successive (decisione del dev, oc:8759)
-	'attivita-e-comunicazioni', 'tutte-le-news' ];
+	'attivita-e-comunicazioni', 'tutte-le-news',
+	// L'elenco degli eventi, come le pagine d'elenco delle news (oc:8760)
+	'eventi' ];
 
 /*
  * Riga dei pulsanti sotto il percorso (.sh-actions dell'artifact «Canvas Fase 2»): per le pagine c'è solo
@@ -205,19 +225,24 @@ add_shortcode(
 			: '';
 		// Il Riassunto scritto, non quello che WordPress ricava dal testo quando il campo è vuoto
 		$sottotitolo = trim( (string) get_post_field( 'post_excerpt', $id ) );
-		// Una news (oc:8759) ha in più la tipologia sopra il titolo e la data sotto, come la sase-hero di Drupal
-		$news      = get_post_type( $id ) === 'post';
-		$tipologia = $news ? forestas_news_tipologia( $id ) : null;
+		// Una news (oc:8759) ha in più la tipologia sopra il titolo e la data sotto, come la sase-hero di Drupal;
+		// un «da sapere» la sua tipologia, e un evento e un «da sapere» il colore della loro sezione (oc:8760)
+		$tipo      = get_post_type( $id );
+		$news      = $tipo === 'post';
+		$sezione   = [ 'post' => 'news', 'evento' => 'eventi', 'da_sapere' => 'da-sapere' ][ $tipo ] ?? forestas_sezione_pagina( $id );
+		$tipologia = $news ? forestas_news_tipologia( $id ) : ( $tipo === 'da_sapere' ? forestas_da_sapere_tipologia( $id ) : null );
+		// Sopra il titolo di un evento c'è «Eventi», come la sase-hero di Drupal (categoria del tipo)
+		$etichetta = $tipologia ? $tipologia->name : ( $tipo === 'evento' ? forestas_testo( 'Eventi', 'Events' ) : '' );
 		return sprintf(
 			'<div class="forestas-testata forestas-sezione-%1$s%2$s">%3$s%4$s<div class="forestas-testata-testo"%9$s>%7$s<span class="forestas-testata-filo" aria-hidden="true"></span><h1 class="forestas-testata-titolo">%5$s</h1>%8$s%6$s</div></div>',
-			esc_attr( $news ? 'news' : forestas_sezione_pagina( $id ) ),
+			esc_attr( $sezione ),
 			$immagine ? '' : ' forestas-testata-senza-immagine',
 			$immagine,
 			// Argomento, non pezzo del formato: un «%» nei credits scritti dalla redazione romperebbe sprintf
 			forestas_credits_immagine( $id_immagine ),
 			esc_html( get_the_title( $id ) ),
 			$sottotitolo !== '' ? '<p class="forestas-testata-sottotitolo">' . esc_html( $sottotitolo ) . '</p>' : '',
-			$tipologia ? '<p class="forestas-testata-tipologia">' . esc_html( $tipologia->name ) . '</p>' : '',
+			$etichetta !== '' ? '<p class="forestas-testata-tipologia"' . ( $tipologia ? forestas_attributo_lingua_termine( $tipologia ) : '' ) . '>' . esc_html( $etichetta ) . '</p>' : '',
 			$news ? '<p class="forestas-testata-data"><i class="fas fa-calendar-edit" aria-hidden="true"></i> ' . forestas_news_data( $id ) . '</p>' : '',
 			forestas_attributo_lingua( $id )
 		) . forestas_percorso( $id );
@@ -446,5 +471,42 @@ add_shortcode(
 			esc_url( FORESTAS_MAPPA_URL ),
 			esc_attr( forestas_testo( 'Mappa interattiva Sardegna Sentieri', 'Sardegna Sentieri interactive map' ) )
 		);
+	}
+);
+
+/*
+ * Vecchi indirizzi di Drupal (301), che la sincronizzazione scrive in FORESTAS_META_ALIAS_DRUPAL: di una pagina
+ * gli alias del suo nodo e dei nodi che rimpiazza (/pagina-base/privacy, /tutti-gli-eventi), di una news, un
+ * evento o un «da sapere» il suo alias, anche con accenti o senza prefisso (/gradi_difficoltà), e per tutti
+ * /node/<nid>; poi le pagine delle tipologie dei «da sapere» (/taxonomy/term/4707, FORESTAS_META_ALIAS_DRUPAL).
+ * Prima il contenuto nella lingua della richiesta; altrimenti quello di un'altra lingua, portato nella lingua
+ * corrente se ha la traduzione (oc:8760). Solo gli indirizzi che Drupal aveva: un altro 404 resta 404.
+ */
+add_action(
+	'template_redirect',
+	function () {
+		global $wp;
+		if ( ! is_404() ) {
+			return;
+		}
+		$percorso = trim( strtolower( remove_accents( rawurldecode( (string) $wp->request ) ) ), '/' );
+		if ( $percorso === '' ) {
+			return;
+		}
+		// Il meta è un array serializzato: ogni percorso vi compare fra virgolette
+		$cerca  = [ 'post_type' => [ 'page', ...FORESTAS_TIPI_IMPORTATI ], 'post_status' => 'publish', 'numberposts' => 1, 'fields' => 'ids', 'meta_query' => [ [ 'key' => FORESTAS_META_ALIAS_DRUPAL, 'value' => '"' . $percorso . '"', 'compare' => 'LIKE' ] ] ];
+		$pagine = get_posts( $cerca + [ 'suppress_filters' => false ] ) ?: get_posts( $cerca );
+		if ( ! $pagine ) {
+			// Le tipologie dei «da sapere» hanno una pagina: /taxonomy/term/<tid> e l'alias di Drupal (oc:8760)
+			$termini = get_terms( [ 'taxonomy' => 'tipologia_da_sapere', 'hide_empty' => false, 'number' => 1, 'meta_query' => [ [ 'key' => FORESTAS_META_ALIAS_DRUPAL, 'value' => '"' . $percorso . '"', 'compare' => 'LIKE' ] ] ] );
+			if ( is_array( $termini ) && $termini ) {
+				wp_safe_redirect( get_term_link( $termini[0] ), 301 );
+				exit;
+			}
+			return;
+		}
+		$id = (int) apply_filters( 'wpml_object_id', (int) $pagine[0], get_post_type( (int) $pagine[0] ), true );
+		wp_safe_redirect( get_permalink( $id ), 301 );
+		exit;
 	}
 );

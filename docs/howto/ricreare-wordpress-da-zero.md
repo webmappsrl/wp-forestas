@@ -6,7 +6,7 @@
 > corregge nello stesso lavoro.
 
 Sequenza completa per riportare il WordPress di Forestas da un volume vuoto a un sito con
-configurazione, pagine statiche, news, media e menu collegati. Vale in locale e su UAT; le differenze fra
+configurazione, pagine statiche, news, eventi, «da sapere», media e menu collegati. Vale in locale e su UAT; le differenze fra
 i due sono indicate passo per passo. **In produzione il reset non si usa**: lì i dati di WordPress
 sono permanenti.
 
@@ -18,6 +18,13 @@ sito Drupal circa 300 file delle news. Verifica precedente: 22/10/2026, in local
 (14 IT, 14 EN, sei con la nostra traduzione): passi 1-5 senza interventi a mano, nessun mancante né
 avviso, `applica` senza differenze, ritratto identico a quello di prima del reset. Il 21/10 lo stesso;
 il 20/10 cinque volte, in tutti e due gli ordini fra pagine e apply.
+
+Eventi e «da sapere» (oc:8760, 28/10/2026) non sono ancora passati da un ciclo intero dal reset: in
+locale, sul sito già allineato, il primo `pagine --conferma` ha creato 10 pagine (schede ed elenchi), 14
+eventi (11 IT, 3 EN) e 121 «da sapere» (72 IT, 49 EN), e il giro dopo li dà tutti «invariata». I conteggi
+qui sotto li comprendono. Su un sito che aveva già il lavoro di oc:8759, il primo `pagine --conferma` dopo
+oc:8760 aggiorna una volta tutte le news, gli eventi e i «da sapere» (meta `_wpf_alias_drupal` dei vecchi
+indirizzi; per i «da sapere» anche data di creazione, «Sempre in cima» e tipologie multiple): è atteso.
 
 In alternativa ai passi 3-5, dopo il reset basta `bin/wordpress-config.sh allinea`, il comando del
 cron: crea le pagine, collega i menu e verifica (`STATO allineato`). Verificato il 22/10 in locale
@@ -81,9 +88,14 @@ al passo 3, e il passo 4 collega le voci.
 Dalla cartella `wp-forestas`:
 
 ```bash
-bin/wordpress-config.sh pagine              # anteprima: 34 pagine e 99 news «creata», 26 termini, media da scaricare, link
-bin/wordpress-config.sh pagine --conferma   # crea pagine, news e termini, scarica media, assegna i template
+bin/wordpress-config.sh pagine              # anteprima: 44 pagine, 99 news, 14 eventi e 121 «da sapere» «creata», i termini, media da scaricare, link
+bin/wordpress-config.sh pagine --conferma   # crea pagine, news, eventi, «da sapere» e termini, scarica media, assegna i template
 ```
+
+Prima del primo giro i tipi `evento` e `da_sapere` devono essere traducibili in WPML (li rende tali
+l'apply del passo 2, `custom_posts_sync_option` in `config/wpml.json`): senza, le traduzioni inglesi
+nascerebbero scollegate dall'italiano. Si controlla in WPML → Impostazioni → «Traduzione dei tipi di
+post», o con `bin/wordpress-config.sh applica` che non deve mostrare differenze su `wpml`.
 
 Il riassunto finale dice quante pagine sono state create, quanti elementi mancano e la data dell'ultima
 modifica nella copia Drupal (un AVVISO se è più vecchia di 30 giorni). Il dettaglio è in `log/pagine-<data-ora>.log`. Cosa fare se qualcosa
@@ -112,6 +124,8 @@ per indirizzo e si collegano alle pagine con un secondo `applica --conferma` dop
 ```bash
 bin/wordpress-config.sh applica      # → «nessuna differenza»
 bin/wordpress-config.sh pagine     # → tutte «invariata», salvo i media del passo 6 (la news 4606 «aggiornata (wpf_galleria)»: la sua foto manca anche su Drupal)
+# AVVISO attesi a ogni giro, dati di Drupal: news 839 e 842 (tipologia 3905 e tag 3361 che non esistono più),
+# «da sapere» 326 (tipologia 372), 327 (tipologia 371, tag 4284), 368 (tag 4399)
 bin/wordpress-config.sh ritratto   # stato del sito, da confrontare con un ritratto precedente
 ```
 
@@ -127,6 +141,25 @@ Nel browser, in italiano e inglese:
   seconda scheda; i pulsanti portano a `/attivita-e-comunicazioni/` e `/tutte-le-news/` (paginate); una news
   sta a `/news/<titolo>/` con testata, tag, testo, allegati, collegamenti e galleria; `/node/1094` porta
   in 301 alla news «Cos'è Sardegna-SENTIERI?»; `/tutte-le-news/page/99/` e `/news/page/2/` danno 404;
+- Eventi (oc:8760): `/news/eventi/` è la terza scheda di News, con la data grande nelle card; il
+  pulsante porta a `/eventi/` (8 per pagina, `/eventi/page/2/` ha gli ultimi 3); un evento sta a
+  `/evento/<titolo>/` con «Dove», «Quando», testo, allegati, collegamenti e galleria; `/node/5106` porta in
+  301 a «Boschi Aperti 2025…»;
+- Da sapere (oc:8760): `/da-sapere/` è la scheda «Come organizzare l'escursione», poi
+  `/da-sapere/norme-di-comportamento/`, `/da-sapere/pillole-di-sentieristica/` (6 riquadri) e
+  `/da-sapere/faq/` (elenco di titoli); i pulsanti e le pillole portano alle pagine delle tipologie
+  (`/tipologia-da-sapere-argomenti/<tipologia>/`); `/gradi_difficoltà` porta in 301 a
+  `/da-sapere/gradi_difficolta/`;
+- la pagina di una tipologia (`/tipologia-da-sapere-argomenti/in-caso-di-pericolo/`) ha la testata con
+  l'immagine e la descrizione; `/taxonomy/term/4709` e `/tipologia-da-sapere-argomenti/caso-di-pericolo`
+  portano in 301 alla tipologia; il giro dopo il primo non riscrive più nessuna tipologia (righe
+  `TERMINE tipologia` assenti nel log);
+- i vecchi indirizzi Drupal delle pagine portano in 301 alla pagina nuova: `/pagina-base/privacy` a
+  `/privacy/`, `/tutti-gli-eventi` a `/news/eventi/`, `/pagina-attivita-e-comunicazioni` a
+  `/news/attivita-e-comunicazioni/`;
+- `/attivita-e-comunicazioni/`, `/tutte-le-news/` ed `/eventi/` hanno a sinistra i filtri «Tipologia» e «Anno»
+  (sotto 960px dietro il pulsante «Filtri»); `/attivita-e-comunicazioni/?anno=2022` lascia 3 news,
+  `/eventi/?anno=2025` 4 eventi; la lista degli eventi è a una colonna di card orizzontali;
 - il titolo della scheda è «Pagina | Sardegna Sentieri», come su Drupal: il nome viene da `blogname`
   di `config/sito.json` (l'apply lo scrive), il separatore dal child. Se resta «Forestas» l'apply non è
   andato a buon fine.
@@ -162,7 +195,7 @@ Da qui in poi le pagine si tengono allineate a Drupal con un cron sull'host:
 | `AVVISO … template … non riuscirebbe` in anteprima, uscita 1, «Prima i template di Impreza: … applica --conferma» | i template delle pagine non ci sono: l'apply del passo 2 non è stato fatto o non è riuscito | `bin/wordpress-config.sh applica --conferma`, poi di nuovo il passo 3 |
 | `Uscita N: errore imprevisto, il giro non è finito` con la riga `Fatal error` | errore di PHP o di WP-CLI (per esempio `WP_ADMIN_USER` che non c'è più, o una funzione di WPML cambiata) | leggere la causa e il log completo; il comando non suggerisce nulla finché non è capita |
 | `MANCANTE news 4606/it galleria … Not Found` o `cURL error 28` (o `MANCANTE pagina …`) o `Service Unavailable` | il sito Drupal non serve il file | passo 6, più tardi |
-| `ERRORE copia Drupal sospetta: N news …` | più di 5 news da mettere in bozza, o nella copia più di 5 news pubblicate in meno che in WordPress: di solito la copia è in ricarica | riprovare dopo il reload; se su Drupal sono state tolte davvero, `pagine --accetta-bozze --conferma` |
-| `/news/attivita-e-comunicazioni/` dà 404 | regole degli indirizzi non rigenerate dopo una scheda nuova | un giro di `pagine --conferma` le rigenera (riga `REGOLE`); a mano `wp rewrite flush` |
+| `ERRORE copia Drupal sospetta: N news …` (o `N eventi`, `N «da sapere»`) | più contenuti del solito da mettere in bozza (news 5, eventi 2, «da sapere» 5), o nella copia molti meno pubblicati che in WordPress: di solito la copia è in ricarica | riprovare dopo il reload; se su Drupal sono state tolte davvero, `pagine --accetta-bozze --conferma` |
+| `/news/attivita-e-comunicazioni/` (o `/news/eventi/`, `/da-sapere/faq/`…) dà 404 | regole degli indirizzi non rigenerate dopo una scheda nuova | un giro di `pagine --conferma` le rigenera (riga `REGOLE`); a mano `wp rewrite flush` |
 | `AVVISO aggiornamento automatico dei link di WPML non trovato` | WPML aggiornato: gli hook che rendevano assoluti i link non si chiamano più così | controllare che i link dei testi inglesi restino relativi; aggiornare `wpf_wpml_senza_link_automatici()` |
 | PHPStan di `forestas` fallisce con `Unable to create file …/build/phpstan/cache/…` | cache scritta da più processi su un volume montato da macOS | rilanciare con `--debug` (un solo processo) |

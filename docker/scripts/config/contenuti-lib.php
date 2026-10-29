@@ -20,6 +20,12 @@ const WPF_META_LANGCODE = '_drupal_langcode';
 // Impronta (md5) del testo scritto dalla sincronizzazione: finché il testo del contenuto è quello, il child
 // lo mostra così com'è, senza i filtri di the_content (inc/pagine-statiche.php)
 const WPF_META_TESTO_DRUPAL = '_wpf_testo_drupal';
+// Vecchi indirizzi di Drupal che portano al contenuto (senza «/» iniziale e senza prefisso di lingua, senza
+// accenti e in minuscolo): l'alias del suo nodo e /node/<nid>; per una pagina anche quelli dei nodi del
+// campo «sostituisce» di config/pagine.json. Il child ci manda con un 301 chi arriva da un vecchio link
+// (inc/pagine-statiche.php, FORESTAS_META_ALIAS_DRUPAL), anche quando l'alias ha accenti o apostrofi
+// tipografici che lo slug di WordPress perde («…galtellì…»), o non ha il prefisso del tipo (/gradi_difficoltà)
+const WPF_META_ALIAS_DRUPAL = '_wpf_alias_drupal';
 const WPF_META_CONTENUTO_ALLEGATI = 'wpf_allegati';
 const WPF_META_CONTENUTO_GALLERIA = 'wpf_galleria';
 // Media di un contenuto: elemento dei mancanti («cosa») => meta in cui si salva. Un media non scaricato non

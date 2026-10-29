@@ -42,6 +42,8 @@
         },
         "custom_posts_sync_option": {
             "attachment": 1,
+            "da_sapere": 2,
+            "evento": 2,
             "page": 1,
             "post": 2,
             "us_content_template": 1,
@@ -116,7 +118,7 @@
         "taxonomies_sync_option": {
             "category": 2,
             "post_tag": 2,
-            "tipologia_da_sapere": 1,
+            "tipologia_da_sapere": 2,
             "translation_priority": 1,
             "us_portfolio_category": 1,
             "us_portfolio_tag": 1,

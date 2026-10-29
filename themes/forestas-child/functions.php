@@ -321,3 +321,6 @@ add_filter( 'document_title_separator', fn() => '|' );
 require_once __DIR__ . '/inc/pagine-statiche.php';
 require_once __DIR__ . '/inc/pagine-statiche-admin.php';
 require_once __DIR__ . '/inc/news.php';
+require_once __DIR__ . '/inc/contenuti.php';
+require_once __DIR__ . '/inc/eventi.php';
+require_once __DIR__ . '/inc/da-sapere.php';

@@ -43,9 +43,10 @@ Opzioni di applica:
 
 Opzioni di pagine:
   --contenuti-mancanti   ritenta solo gli elementi non riusciti nelle esecuzioni precedenti
-  --accetta-bozze        mette in bozza più pagine o news del solito nello stesso giro, e scrive le
-                         news anche se nella copia ce ne sono molte meno che in WordPress (soglie in
-                         pagine-lib.php e news-lib.php): solo se su Drupal sono state davvero
+  --accetta-bozze        mette in bozza più pagine o contenuti (news, eventi, «da sapere») del solito
+                         nello stesso giro, e li scrive anche se nella copia ce ne sono molti meno che
+                         in WordPress (soglie in pagine-lib.php e nel tipo di ogni import, *-lib.php):
+                         solo se su Drupal sono stati davvero
                          spubblicate o cancellate (di solito è una copia in ricarica)
   --conferma             scrive (altrimenti solo anteprima)
 Ogni esecuzione scrive un log in log/pagine-<data-ora>.log (si tengono gli ultimi ${LOG_PAGINE_TENUTI}).
@@ -207,7 +208,13 @@ case "$comando" in
         grep -E '^(RIASSUNTO|ERRORE|MANCANTE|MENU|AVVISO) |^(Warning|Error): ' "$log" || true
         conta() { grep -c "^$1 " "$log" || true; }
         # Avvisi: le righe AVVISO e le MENU (voci verso pagine in bozza)
-        echo "pagine: $(conta PAGINA) · news: $(conta NEWS) · termini: $(conta TERMINE) · media: $(conta MEDIA) · link: $(conta LINK) · avvisi: $(( $(conta AVVISO) + $(conta MENU) ))"
+        # I tipi importati dopo le news (EVENTO, DA_SAPERE, …) si contano dalle righe del log, senza elencarli
+        # qui: la riga di un contenuto importato è «TIPO <nid>/<lingua>: …» (import-lib.php, oc:8760), che
+        # nessuna riga di servizio né un «PHP Warning:» ha; nell'ordine del giro
+        altri=$(grep -oE '^[A-Z_]+ [0-9]+/[a-z]+:' "$log" | cut -d ' ' -f 1 | awk '$0 != "NEWS" && !visti[$0]++' || true)
+        per_tipo=""
+        for t in $altri; do per_tipo+=" · $(echo "$t" | tr 'A-Z_' 'a-z ' ): $(conta "$t")"; done
+        echo "pagine: $(conta PAGINA) · news: $(conta NEWS)${per_tipo} · termini: $(conta TERMINE) · media: $(conta MEDIA) · link: $(conta LINK) · avvisi: $(( $(conta AVVISO) + $(conta MENU) ))"
         echo "log completo: ${log}"
         # Un giro finito arriva al RIASSUNTO; uno fermato dal comando ha una riga ERRORE. Senza nessuna
         # delle due l'uscita viene da un errore di PHP o di WP-CLI (un fatal, un WP_ADMIN_USER che non c'è),

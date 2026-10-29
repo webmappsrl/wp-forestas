@@ -20,8 +20,39 @@ add_action(
 	'add_meta_boxes_page',
 	function () {
 		add_meta_box( 'forestas-riquadro-pagina', 'Allegati e galleria', 'forestas_riquadro_pagina', 'page', 'normal', 'high' );
+		add_meta_box( 'forestas-aspetto', 'Colore e testata', 'forestas_riquadro_aspetto', 'page', 'side' );
 	}
 );
+
+/*
+ * Riquadro laterale «Colore e testata» delle pagine (oc:8760): i campi «Colore tematico» e «Layout» del form
+ * della pagina di Drupal, per una pagina creata in WordPress. Il colore (_wpf_colore, vocabolario
+ * colore_content_type di Drupal) dà il colore della barretta di una pagina fuori dal menu principale; la
+ * testata è quella con l'immagine o il solo titolo (_wpf_testata, il layout «Pagina con solo titolo
+ * centrato»). Sono nel form del riquadro principale e si salvano con forestas_riquadro_salva.
+ */
+const FORESTAS_COLORI_TEMATICI = [
+	''               => 'Nessuno',
+	'is-pathway'     => 'Sentieri',
+	'is-poi'         => 'Punti di interesse - da vedere',
+	'is-itineraries' => 'Itinerari',
+	'is-news'        => 'News',
+	'is-sapere'      => 'Da sapere',
+	'is-event'       => 'Eventi',
+];
+
+function forestas_riquadro_aspetto( WP_Post $post ): void {
+	$colore = (string) get_post_meta( $post->ID, FORESTAS_META_COLORE, true );
+	$voci   = '';
+	foreach ( FORESTAS_COLORI_TEMATICI as $valore => $nome ) {
+		$voci .= sprintf( '<option value="%1$s"%2$s>%3$s</option>', esc_attr( $valore ), selected( $colore, $valore, false ), esc_html( $nome ) );
+	}
+	printf(
+		'<input type="hidden" name="forestas_aspetto_presente" value="1"><p><label for="forestas-colore"><strong>Colore tematico</strong></label><br><select id="forestas-colore" name="forestas_colore" style="width:100%%">%1$s</select></p><p class="description">Colore della barretta della testata, se la pagina non è in una sezione del menu principale.</p><p><label for="forestas-testata"><strong>Testata</strong></label><br><select id="forestas-testata" name="forestas_testata" style="width:100%%"><option value="">Con immagine</option><option value="titolo"%2$s>Solo titolo centrato</option></select></p>',
+		$voci,
+		selected( get_post_meta( $post->ID, FORESTAS_META_TESTATA, true ), 'titolo', false )
+	);
+}
 add_action(
 	'add_meta_boxes_post',
 	function () {
@@ -29,6 +60,21 @@ add_action(
 		// «In evidenza» decide se la news compare nella pagina News: sta da solo in cima alla colonna
 		// laterale, sopra «Pubblica», perché la redazione lo veda prima di pubblicare
 		add_meta_box( 'forestas-in-evidenza', 'In evidenza', 'forestas_riquadro_in_evidenza', 'post', 'side', 'high' );
+	}
+);
+// Eventi e «da sapere» (oc:8760): gli stessi campi del form di Drupal, più date e luogo dell'evento
+add_action(
+	'add_meta_boxes_evento',
+	function () {
+		add_meta_box( 'forestas-evento', 'Date e luogo', 'forestas_riquadro_evento', 'evento', 'normal', 'high' );
+		add_meta_box( 'forestas-riquadro-pagina', 'Allegati, collegamenti e galleria', 'forestas_riquadro_pagina', 'evento', 'normal', 'high' );
+		add_meta_box( 'forestas-in-evidenza', 'In evidenza', 'forestas_riquadro_in_evidenza', 'evento', 'side', 'high' );
+	}
+);
+add_action(
+	'add_meta_boxes_da_sapere',
+	function () {
+		add_meta_box( 'forestas-riquadro-pagina', 'Allegati e galleria', 'forestas_riquadro_pagina', 'da_sapere', 'normal', 'high' );
 	}
 );
 
@@ -39,7 +85,7 @@ add_action(
 add_filter(
 	'default_hidden_meta_boxes',
 	function ( array $nascosti, WP_Screen $schermata ): array {
-		return in_array( $schermata->post_type, [ 'page', 'post' ], true ) ? array_values( array_diff( $nascosti, [ 'postexcerpt' ] ) ) : $nascosti;
+		return in_array( $schermata->post_type, [ 'page', ...FORESTAS_TIPI_IMPORTATI ], true ) ? array_values( array_diff( $nascosti, [ 'postexcerpt' ] ) ) : $nascosti;
 	},
 	10,
 	2
@@ -55,7 +101,8 @@ function forestas_sincronizzazione_accesa(): bool {
 }
 
 /*
- * Immagini delle pagine e delle news sincronizzate (in evidenza, galleria e allegati che sono immagini):
+ * Immagini delle pagine e dei contenuti sincronizzati, news, eventi e «da sapere» (in evidenza, galleria e
+ * allegati che sono immagini), e delle tipologie dei «da sapere»:
  * quelle che la sincronizzazione riallinea.
  */
 function forestas_immagini_sincronizzate(): array {
@@ -64,12 +111,17 @@ function forestas_immagini_sincronizzate(): array {
 		$ids = [];
 		$pagine = array_merge(
 			get_posts( [ 'post_type' => 'page', 'post_status' => 'any', 'numberposts' => -1, 'fields' => 'ids', 'meta_key' => FORESTAS_META_PAGINA, 'suppress_filters' => true ] ),
-			get_posts( [ 'post_type' => 'post', 'post_status' => 'any', 'numberposts' => -1, 'fields' => 'ids', 'meta_key' => FORESTAS_META_NID, 'suppress_filters' => true ] )
+			get_posts( [ 'post_type' => FORESTAS_TIPI_IMPORTATI, 'post_status' => 'any', 'numberposts' => -1, 'fields' => 'ids', 'meta_key' => FORESTAS_META_NID, 'suppress_filters' => true ] )
 		);
 		update_meta_cache( 'post', $pagine ); // i meta di tutte in una query, non tre per contenuto
 		foreach ( $pagine as $pagina ) {
 			$ids[] = (int) get_post_thumbnail_id( $pagina );
 			array_push( $ids, ...forestas_meta_ids( $pagina, FORESTAS_META_GALLERIA ), ...forestas_meta_ids( $pagina, FORESTAS_META_ALLEGATI ) );
+		}
+		// Le immagini delle tipologie dei «da sapere», che la sincronizzazione riscrive allo stesso modo (oc:8760)
+		$tipologie = get_terms( [ 'taxonomy' => 'tipologia_da_sapere', 'hide_empty' => false, 'fields' => 'ids' ] );
+		foreach ( is_array( $tipologie ) ? $tipologie : [] as $tipologia ) {
+			$ids[] = (int) get_term_meta( $tipologia, FORESTAS_TERM_META_IMMAGINE, true );
 		}
 		$ids = array_values( array_unique( array_filter( $ids ) ) );
 	}
@@ -111,24 +163,27 @@ function forestas_riquadro_collegamento( string $url, string $titolo ): string {
 
 function forestas_riquadro_pagina( WP_Post $post ): void {
 	wp_nonce_field( FORESTAS_RIQUADRO_NONCE, FORESTAS_RIQUADRO_NONCE );
-	$news = $post->post_type === 'post';
-	$da_drupal = $news ? get_post_meta( $post->ID, FORESTAS_META_NID, true ) !== '' : get_post_meta( $post->ID, FORESTAS_META_PAGINA, true ) !== '';
+	$tipo      = $post->post_type;
+	$da_drupal = $tipo === 'page' ? get_post_meta( $post->ID, FORESTAS_META_PAGINA, true ) !== '' : get_post_meta( $post->ID, FORESTAS_META_NID, true ) !== '';
 	if ( $da_drupal && forestas_sincronizzazione_accesa() ) {
+		$avvisi = [
+			'post'      => 'Questa news è ancora collegata al vecchio sito: testo, riassunto, data, immagine, categorie, tag, allegati, collegamenti, galleria e «In evidenza» vengono aggiornati da lì in automatico, e le modifiche fatte qui si perdono.',
+			'evento'    => 'Questo evento è ancora collegato al vecchio sito: testo, riassunto, date, luogo, immagine, tag, allegati, collegamenti, galleria e «In evidenza» vengono aggiornati da lì in automatico, e le modifiche fatte qui si perdono.',
+			'da_sapere' => 'Questo contenuto è ancora collegato al vecchio sito: testo, riassunto, immagine, tipologia, tag, allegati e galleria vengono aggiornati da lì in automatico, e le modifiche fatte qui si perdono.',
+		];
 		printf(
 			'<p class="notice notice-warning inline forestas-riquadro-avviso">%s</p>',
-			$news
-				? 'Questa news è ancora collegata al vecchio sito: testo, riassunto, data, immagine, categorie, tag, allegati, collegamenti, galleria e «In evidenza» vengono aggiornati da lì in automatico, e le modifiche fatte qui si perdono.'
-				: 'Questa pagina è ancora collegata al vecchio sito: testo, riassunto, allegati e galleria vengono aggiornati da lì in automatico, e le modifiche fatte qui si perdono.'
+			$avvisi[ $tipo ] ?? 'Questa pagina è ancora collegata al vecchio sito: testo, riassunto, allegati, galleria, colore e testata vengono aggiornati da lì in automatico, e le modifiche fatte qui si perdono.'
 		);
 	} elseif ( md5( $post->post_content ) === get_post_meta( $post->ID, FORESTAS_META_TESTO_DRUPAL, true ) ) {
 		// Il testo si mostra così com'è finché coincide con quello importato (forestas_testo_importato): un
 		// salvataggio dall'editor lo riscrive, e da lì passa per i filtri di WordPress
 		echo '<p class="notice notice-info inline forestas-riquadro-avviso">Il testo è ancora quello importato dal vecchio sito e si mostra così com\'è. Se un salvataggio lo cambia (anche solo per aggiungere un allegato: l\'editor può riscriverne l\'HTML), da lì passa per la formattazione di WordPress (paragrafi, virgolette): controlla il contenuto dopo aver salvato.</p>';
 	}
-	// Nell'ordine del form di Drupal: allegati, collegamenti (solo news), galleria. «In evidenza» ha un
+	// Nell'ordine del form di Drupal: allegati, collegamenti (news ed eventi), galleria. «In evidenza» ha un
 	// riquadro suo nella colonna laterale (forestas_riquadro_in_evidenza)
 	forestas_riquadro_media( $post, FORESTAS_META_ALLEGATI, 'Allegati', 'Aggiungi dalla libreria media', '', 'Documenti mostrati sotto il testo, con formato e dimensione. Si riordinano trascinandoli.' );
-	if ( $news ) {
+	if ( in_array( $tipo, [ 'post', 'evento' ], true ) ) {
 		forestas_riquadro_collegamenti( $post );
 	}
 	forestas_riquadro_media( $post, FORESTAS_META_GALLERIA, 'Galleria', 'Aggiungi immagini', 'image', 'Immagini mostrate in griglia sotto il testo. Si riordinano trascinandole.' );
@@ -140,12 +195,96 @@ function forestas_riquadro_pagina( WP_Post $post ): void {
  */
 function forestas_riquadro_in_evidenza( WP_Post $post ): void {
 	printf(
-		'<p><input type="hidden" name="%1$s_presente" value="1"><label class="forestas-in-evidenza"><input type="checkbox" name="%1$s" value="1"%2$s> Mostra nella pagina News</label></p>'
-		. '<p class="description">La pagina News mostra solo le 4 news in evidenza più recenti: senza questa spunta la news si vede solo in «Tutte le news» (e, se è un\'attività, in «Attività e comunicazioni»). Con la spunta un\'attività va anche in cima alla sua pagina.</p>',
+		'<p><input type="hidden" name="%1$s_presente" value="1"><label class="forestas-in-evidenza"><input type="checkbox" name="%1$s" value="1"%2$s> %3$s</label></p><p class="description">%4$s</p>',
 		esc_attr( FORESTAS_META_IN_EVIDENZA ),
-		checked( get_post_meta( $post->ID, FORESTAS_META_IN_EVIDENZA, true ), '1', false )
+		checked( get_post_meta( $post->ID, FORESTAS_META_IN_EVIDENZA, true ), '1', false ),
+		$post->post_type === 'evento' ? 'Evento in evidenza' : 'Mostra nella pagina News',
+		$post->post_type === 'evento'
+			// Come il campo di Drupal: oggi nessuna pagina del sito filtra gli eventi in evidenza (lo farà la homepage)
+			? 'Il campo «In evidenza» dell\'evento, come sul vecchio sito: lo useranno i blocchi in evidenza della homepage.'
+			: 'La pagina News mostra solo le 4 news in evidenza più recenti: senza questa spunta la news si vede solo in «Tutte le news» (e, se è un\'attività, in «Attività e comunicazioni»). Con la spunta un\'attività va anche in cima alla sua pagina.'
 	);
 }
+
+/*
+ * Date e luogo di un evento (oc:8760), negli stessi meta dell'import: data di inizio (obbligatoria per
+ * pubblicare, forestas_evento_data_obbligatoria), data di fine facoltativa, luogo nelle parti del modulo
+ * address di Drupal. Il nonce è quello del riquadro principale.
+ */
+function forestas_riquadro_evento( WP_Post $post ): void {
+	$luogo = (array) get_post_meta( $post->ID, FORESTAS_META_EVENTO_LUOGO, true );
+	$campo = fn( string $nome, string $etichetta, string $valore, string $tipo = 'text', string $extra = '' ) => sprintf(
+		'<p><label for="%1$s"><strong>%2$s</strong></label><br><input type="%3$s" id="%1$s" name="%1$s" value="%4$s" class="widefat"%5$s></p>',
+		esc_attr( $nome ),
+		esc_html( $etichetta ),
+		esc_attr( $tipo ),
+		esc_attr( $valore ),
+		$extra
+	);
+	echo '<input type="hidden" name="forestas_evento_presente" value="1">';
+	echo $campo( 'forestas_evento_inizio', 'Data di inizio (obbligatoria)', (string) get_post_meta( $post->ID, FORESTAS_META_EVENTO_INIZIO, true ), 'date' ); // phpcs:ignore WordPress.Security.EscapeOutput -- escapato in $campo
+	echo $campo( 'forestas_evento_fine', 'Data di fine (solo se l\'evento dura più giorni)', (string) get_post_meta( $post->ID, FORESTAS_META_EVENTO_FINE, true ), 'date' ); // phpcs:ignore WordPress.Security.EscapeOutput
+	echo '<p><strong>Luogo</strong></p>';
+	foreach ( FORESTAS_CAMPI_LUOGO as $parte => $etichetta ) {
+		echo $campo( "forestas_luogo_{$parte}", $etichetta, (string) ( $luogo[ $parte ] ?? '' ) ); // phpcs:ignore WordPress.Security.EscapeOutput
+	}
+}
+
+// Parti del luogo di un evento, nell'ordine in cui si mostrano (le chiavi del modulo address di Drupal)
+const FORESTAS_CAMPI_LUOGO = [
+	'organization'        => 'Nome del luogo',
+	'address_line1'       => 'Indirizzo',
+	'address_line2'       => 'Seconda riga',
+	'postal_code'         => 'CAP',
+	'locality'            => 'Località',
+	'administrative_area' => 'Provincia',
+];
+
+/*
+ * Un evento senza data di inizio, o con la fine prima dell'inizio, non si pubblica: resta in bozza con un
+ * avviso. Senza la data non comparirebbe al suo posto negli elenchi, ordinati per data di inizio (oc:8760).
+ */
+add_filter(
+	'wp_insert_post_data',
+	function ( array $dati, array $inviati ): array {
+		if ( $dati['post_type'] !== 'evento' || ! in_array( $dati['post_status'], [ 'publish', 'future' ], true ) ) {
+			return $dati;
+		}
+		if ( ! empty( $inviati['forestas_evento_presente'] ) ) {
+			$inizio = sanitize_text_field( (string) ( $inviati['forestas_evento_inizio'] ?? '' ) );
+			$fine   = sanitize_text_field( (string) ( $inviati['forestas_evento_fine'] ?? '' ) );
+		} elseif ( is_admin() && ! empty( $inviati['ID'] ) && ( wp_doing_ajax() || isset( $_REQUEST['bulk_edit'] ) ) ) { // phpcs:ignore WordPress.Security.NonceVerification -- la verifica la fa WordPress prima del salvataggio
+			// Modifica rapida e di massa dell'elenco, che non mandano il riquadro: valgono le date già salvate.
+			// Non l'import, che crea il post prima di scriverne i meta (e gira da WP-CLI, fuori dall'admin)
+			$inizio = (string) get_post_meta( (int) $inviati['ID'], FORESTAS_META_EVENTO_INIZIO, true );
+			$fine   = (string) get_post_meta( (int) $inviati['ID'], FORESTAS_META_EVENTO_FINE, true );
+		} else {
+			return $dati;
+		}
+		$errore = match ( true ) {
+			! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $inizio ) => 'Un evento senza data di inizio non si pubblica: è stato salvato come bozza.',
+			$fine !== '' && $fine < $inizio                 => 'La data di fine dell\'evento è prima di quella di inizio: è stato salvato come bozza.',
+			default                                         => '',
+		};
+		if ( $errore !== '' ) {
+			$dati['post_status'] = 'draft';
+			set_transient( 'forestas_evento_avviso_' . get_current_user_id(), $errore, 60 );
+		}
+		return $dati;
+	},
+	10,
+	2
+);
+add_action(
+	'admin_notices',
+	function () {
+		$avviso = get_transient( 'forestas_evento_avviso_' . get_current_user_id() );
+		if ( $avviso ) {
+			delete_transient( 'forestas_evento_avviso_' . get_current_user_id() );
+			printf( '<div class="notice notice-error"><p>%s</p></div>', esc_html( $avviso ) );
+		}
+	}
+);
 
 /* Un elenco di media del riquadro (allegati o galleria), dalla libreria media (assets/js/riquadro-pagina.js). */
 function forestas_riquadro_media( WP_Post $post, string $campo, string $titolo, string $pulsante, string $tipo, string $aiuto ): void {
@@ -204,7 +343,22 @@ function forestas_riquadro_salva( int $id ): void {
 		$ids = array_values( array_unique( array_filter( array_map( 'absint', (array) wp_unslash( $_POST[ $campo ] ?? [] ) ), fn( $a ) => get_post_type( $a ) === 'attachment' ) ) );
 		$ids ? update_post_meta( $id, $campo, $ids ) : delete_post_meta( $id, $campo );
 	}
-	if ( get_post_type( $id ) !== 'post' ) {
+	$tipo = get_post_type( $id );
+	if ( $tipo === 'page' && ! empty( $_POST['forestas_aspetto_presente'] ) ) {
+		$colore = sanitize_key( wp_unslash( (string) ( $_POST['forestas_colore'] ?? '' ) ) );
+		$colore !== '' && isset( FORESTAS_COLORI_TEMATICI[ $colore ] ) ? update_post_meta( $id, FORESTAS_META_COLORE, $colore ) : delete_post_meta( $id, FORESTAS_META_COLORE );
+		( $_POST['forestas_testata'] ?? '' ) === 'titolo' ? update_post_meta( $id, FORESTAS_META_TESTATA, 'titolo' ) : delete_post_meta( $id, FORESTAS_META_TESTATA );
+	}
+	if ( $tipo === 'evento' && ! empty( $_POST['forestas_evento_presente'] ) ) {
+		foreach ( [ FORESTAS_META_EVENTO_INIZIO => 'forestas_evento_inizio', FORESTAS_META_EVENTO_FINE => 'forestas_evento_fine' ] as $meta => $campo ) {
+			$data = sanitize_text_field( wp_unslash( (string) ( $_POST[ $campo ] ?? '' ) ) );
+			preg_match( '/^\d{4}-\d{2}-\d{2}$/', $data ) ? update_post_meta( $id, $meta, $data ) : delete_post_meta( $id, $meta );
+		}
+		$luogo = array_filter( array_map( fn( $parte ) => sanitize_text_field( wp_unslash( (string) ( $_POST[ "forestas_luogo_{$parte}" ] ?? '' ) ) ), array_combine( array_keys( FORESTAS_CAMPI_LUOGO ), array_keys( FORESTAS_CAMPI_LUOGO ) ) ) );
+		// Il paese non è fra i campi: gli eventi sono in Sardegna, come tutti gli 8 luoghi di Drupal (IT)
+		$luogo ? update_post_meta( $id, FORESTAS_META_EVENTO_LUOGO, $luogo + [ 'country_code' => 'IT' ] ) : delete_post_meta( $id, FORESTAS_META_EVENTO_LUOGO );
+	}
+	if ( ! in_array( $tipo, [ 'post', 'evento' ], true ) ) {
 		return;
 	}
 	if ( ! empty( $_POST[ FORESTAS_META_COLLEGAMENTI . '_presente' ] ) ) {
@@ -224,6 +378,8 @@ function forestas_riquadro_salva( int $id ): void {
 }
 add_action( 'save_post_page', 'forestas_riquadro_salva' );
 add_action( 'save_post_post', 'forestas_riquadro_salva' );
+add_action( 'save_post_evento', 'forestas_riquadro_salva' );
+add_action( 'save_post_da_sapere', 'forestas_riquadro_salva' );
 
 add_action(
 	'admin_enqueue_scripts',
@@ -231,7 +387,7 @@ add_action(
 		// Caselle di Autore e Credits larghe quanto gli altri campi della scheda dell'immagine, che si apre
 		// anche dalla libreria media: in tutte le pagine del pannello
 		wp_add_inline_style( 'common', '.compat-attachment-fields{width:100%}.compat-field-' . FORESTAS_META_AUTORE . ' input.text,.compat-field-' . FORESTAS_META_CREDITS . ' input.text{width:100%;min-width:30em}' );
-		if ( ! in_array( $pagina, [ 'post.php', 'post-new.php' ], true ) || ! in_array( get_current_screen()->post_type, [ 'page', 'post' ], true ) ) {
+		if ( ! in_array( $pagina, [ 'post.php', 'post-new.php' ], true ) || ! in_array( get_current_screen()->post_type, [ 'page', ...FORESTAS_TIPI_IMPORTATI ], true ) ) {
 			return;
 		}
 		wp_enqueue_media();

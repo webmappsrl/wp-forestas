@@ -5,7 +5,7 @@ Template: Impreza
 Author: Webmapp
 Author URI: https://webmapp.it/
 Description: Child theme di Impreza per Sardegna Sentieri (Forestas). Versionato nel repo wp-forestas e montato dal compose: si modifica nel repo, non dal pannello.
-Version: 1.5.8
+Version: 1.7.4
 */
 
 
@@ -52,6 +52,7 @@ Version: 1.5.8
 	--sase-sezione-da-sapere: #0F6E6A;
 	--sase-sezione-mappa: var(--sase-arancio);
 	--sase-sezione-news: #C2410C;
+	--sase-sezione-eventi: #1271B7;                          /* barretta della testata di un evento (is-event di Drupal, oc:8760) */
 	--sase-fondo-immagine: #E9F1F9;                          /* sotto un'immagine che si sta caricando (card del Canvas) */
 	--sase-terra: #CA5C30;                                    /* terra del marchio SARDEGNA: pagine senza sezione */
 
@@ -69,7 +70,8 @@ Version: 1.5.8
 	--sase-filo-spazio: 1.875rem;                            /* filo + spazio fino al titolo */
 	--sase-rientro-contenuto: max(22px, calc((100% - var(--sase-larghezza-contenuto)) / 2)); /* percorso e pulsanti allineati al logo */
 	--sase-filo-percorso: #EEEBE5;                           /* sotto percorso e pulsanti (artifact) */
-	--sase-blu-pulsante: #16497B;                            /* pulsante premuto o aperto (tema Drupal) */
+	--sase-blu-pulsante: #16497B;
+	--sase-blu-marchio: #254877;                             /* blu del marchio SARDEGNA (artifact): pannello delle FAQ, oc:8760 */                            /* pulsante premuto o aperto (tema Drupal) */
 	--sase-inchiostro: #1A1A1A;                              /* testi scuri del percorso e di Condividi (artifact) */
 	--sase-grigio-percorso: #767676;                         /* percorso e bordo del pannello Condividi (artifact) */
 	/* Caratteri del tema Drupal che ricorrono: titoli della testata, delle sezioni e degli allegati, testo */
@@ -1214,6 +1216,7 @@ Version: 1.5.8
 .forestas-sezione-punti-di-interesse { --forestas-sezione: var(--sase-sezione-punti-di-interesse); }
 .forestas-sezione-da-sapere { --forestas-sezione: var(--sase-sezione-da-sapere); }
 .forestas-sezione-news { --forestas-sezione: var(--sase-sezione-news); }
+.forestas-sezione-eventi { --forestas-sezione: var(--sase-sezione-eventi); }
 
 .forestas-testata {
 	position: relative;
@@ -1933,15 +1936,29 @@ Version: 1.5.8
  * sardegnasentieri tradotte nei valori.
  */
 
-/* Testata della news: quella delle pagine, con la tipologia sopra il filo (sase-hero__category) e la data
-   sotto il titolo (sase-hero__date) */
+/* Testata della news: quella delle pagine, con la tipologia sopra il titolo (sase-hero__category) e la
+   data sotto il titolo (sase-hero__date). La tipologia, e «Eventi» sopra un evento, ha la sua barretta
+   come sase-hero__category-text-decorated di Drupal (mixin labelDecorated): larga quanto il testo, alta
+   5px, 1em sotto il testo; al posto del filo delle pagine. Sotto, il margine di Drupal ($space * 2) più
+   il row-gap della hero (1,3rem), da cui si toglie la barretta che scende di 1em */
 .forestas-testata-tipologia {
-	margin: 0;
-	font-size: .75rem;
+	position: relative;
+	margin: 0 0 2.55rem;
+	padding-bottom: 1em;
+	font-size: var(--sase-carattere-piccolo);               /* $font-size-14px-fluid, come su Drupal */
 	font-weight: 600;
-	letter-spacing: .06em;
 	text-transform: uppercase;
 }
+.forestas-testata-tipologia::after {
+	content: "";
+	position: absolute;
+	left: 0;
+	bottom: -1em;
+	width: 100%;
+	height: 5px;
+	background: var(--forestas-sezione);
+}
+.forestas-testata-tipologia + .forestas-testata-filo { display: none; }
 .forestas-testata-data {
 	margin: .75rem 0 0;
 	font-size: var(--sase-carattere-piccolo);
@@ -2079,7 +2096,13 @@ Version: 1.5.8
 	gap: 20px;
 	grid-template-columns: repeat(3, minmax(0, 1fr));
 }
-.forestas-griglia--evidenza { grid-template-columns: 3fr 2fr; }
+/* Disposizione di sase-grid--left-highlight-column di Drupal (blocchi «in evidenza» di News, Attività e Da
+   sapere): due colonne uguali a 15px, la prima card su tre righe a sinistra, le altre tre impilate a
+   destra, alte 180px con la foto larga 207px su 640 (a 1920px) */
+.forestas-griglia--evidenza {
+	gap: 15px;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+}
 .forestas-card {
 	--c: var(--forestas-sezione, var(--sase-sezione-news));
 	position: relative;
@@ -2188,8 +2211,10 @@ Version: 1.5.8
 	text-transform: uppercase;
 }
 /* Compatta, accanto a quella in evidenza: foto a lato */
-.forestas-card--compatta { flex-direction: row; min-height: 120px; }
-.forestas-card--compatta .forestas-card__media { flex: 0 0 38%; aspect-ratio: auto; }
+.forestas-card--compatta { flex-direction: row; min-height: 180px; }
+.forestas-card--compatta .forestas-card__media { flex: 0 0 32.35%; aspect-ratio: auto; }
+/* La foto riempie l'altezza della card senza allungarla: una foto verticale la faceva crescere (Da sapere) */
+.forestas-card--compatta .forestas-card__media img { position: absolute; inset: 0; height: 100%; object-fit: cover; }
 .forestas-card--compatta .forestas-card__testo { padding: 12px 14px; }
 .l-main .forestas-card--compatta .forestas-card__titolo { font-size: .9375rem; }
 @media (max-width: 860px) {
@@ -2221,5 +2246,286 @@ Version: 1.5.8
 	color: var(--sase-inchiostro);
 	font-weight: 700;
 }
+/* Griglia a due colonne (campo «colonne» di config/pagine.json): la lista di /attivita-e-comunicazioni/,
+   come sase-grid--2 di Drupal */
+.forestas-griglia--colonne-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+/* Una colonna di card orizzontali: la lista di /eventi/, come la teaser dell'evento di Drupal
+   (sase-card--has-side-thumb-left): foto a sinistra larga 308px su 944 e alta 224, testo a destra */
+.forestas-griglia--colonne-1 { grid-template-columns: minmax(0, 1fr); }
+.forestas-griglia--colonne-1 .forestas-card { flex-direction: row; min-height: 224px; }
+.forestas-griglia--colonne-1 .forestas-card__media { flex: 0 0 32.63%; aspect-ratio: auto; }
+.forestas-griglia--colonne-1 .forestas-card__media img { position: absolute; inset: 0; height: 100%; object-fit: cover; }
+@media (max-width: 600px) {
+	.forestas-griglia--colonne-1 .forestas-card { flex-direction: column; }
+	.forestas-griglia--colonne-1 .forestas-card__media { aspect-ratio: 3 / 2; }
+}
+
+/*
+ * Lista con i filtri (campo «filtri», oc:8760): la griglia 3-9 della pagina di Drupal (sase-grid--3-9
+ * sase-grid--xl), filtri a sinistra e lista a destra a $space * 3,5. I filtri copiano le faccette di Drupal
+ * (sase-block--facets), misurate a 1512px: titolo Montserrat 18px fluido con la freccia in un pulsante di
+ * 45px; gruppi a 3px, il secondo con un filo #F0F0F0 e 15px sopra; voci a 8px, numero in un riquadro
+ * arancio a destra; «Mostra di più» centrato sotto un filo. Sotto 960px stanno sopra la lista, dietro il
+ * pulsante «Filtri».
+ */
+.forestas-filtrabile {
+	display: grid;
+	grid-template-columns: minmax(0, 3fr) minmax(0, 9fr);
+	gap: 2.1875rem;
+	align-items: start;
+	margin-top: 3.75rem;
+}
+.forestas-filtrabile .forestas-griglia { gap: .9375rem; }
+.forestas-filtri {
+	--forestas-filtro: #CA4D1C;                              /* --custom-theme-brand-color-shade-dark della sezione News */
+	color: var(--sase-testo);
+	font-size: 1rem;
+	line-height: 1.4;
+}
+.forestas-filtri__apri { display: none; }
+.forestas-filtri__gruppi { display: grid; gap: 3px; }
+.forestas-filtri__gruppo { display: grid; gap: .78125rem; }
+.forestas-filtri__gruppo + .forestas-filtri__gruppo {
+	padding-top: .9375rem;
+	border-top: 1px solid #F0F0F0;
+}
+.forestas-filtri__testata {
+	display: flex;
+	gap: 1rem;
+	align-items: baseline;
+}
+.l-main .forestas-filtri__titolo {
+	margin: 0;
+	padding: 0;
+	color: var(--sase-testo);
+	font-family: var(--sase-font-titoli);
+	font-size: clamp(1rem, .98rem + .35vw, 1.125rem);        /* $font-size-20px-fluid: arriva a 18px */
+	font-weight: 600;
+	line-height: 1.2;
+}
+.forestas-filtri__apri-gruppo {
+	flex: 0 0 45px;
+	height: 45px;
+	margin-left: auto;
+	padding: 0 6px;
+	border: 0;
+	background: none;
+	color: var(--sase-testo);
+	font-size: 1rem;
+	cursor: pointer;
+}
+/* Come su Drupal: la freccia è in su a gruppo chiuso, in giù ad aperto */
+.forestas-filtri__apri-gruppo i { transform: rotate(180deg); }
+.forestas-filtri__gruppo.is-aperto .forestas-filtri__apri-gruppo i { transform: none; }
+/* Chiuso, il contenuto resta alto 0: come su Drupal conta nella spaziatura del gruppo */
+.forestas-filtri__voci { height: 0; overflow: hidden; visibility: hidden; }
+.forestas-filtri__gruppo.is-aperto .forestas-filtri__voci { height: auto; overflow: visible; visibility: visible; }
+.forestas-filtri__voci ul {
+	display: grid;
+	gap: 8px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+.forestas-filtri__voci li { margin: 0; padding-right: .625rem; }
+.forestas-filtri__voci a {
+	display: flex;
+	align-items: center;
+	color: var(--sase-testo);
+	text-decoration: none;
+}
+.forestas-filtri__valore { padding: .25em 0; }
+.forestas-filtri__voci a:is(:hover, :focus) .forestas-filtri__valore { text-decoration: underline; }
+.forestas-filtri__numero {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: 2em;
+	margin-left: auto;
+	padding: 0 .75em;
+	border: 1px solid var(--forestas-filtro);
+	border-radius: .3em;
+	background: #FFFDFA;
+	color: var(--forestas-filtro);
+	font-size: .8em;
+	font-weight: 700;
+}
+/* Gruppo con un valore scelto: tutte le voci in grassetto e i numeri su fondo pieno (.facet-active) */
+.forestas-filtri__gruppo.is-attivo .forestas-filtri__valore { font-weight: 700; }
+.forestas-filtri__gruppo.is-attivo .forestas-filtri__numero { background: var(--forestas-filtro); color: #fff; }
+.forestas-filtri__in-piu { display: none; }
+.forestas-filtri__voci.is-tutte .forestas-filtri__in-piu { display: list-item; }
+.forestas-filtri__mostra {
+	display: flex;
+	gap: .66em;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	margin-top: 8px;
+	padding: 1rem;
+	border: 0;
+	border-top: 1px solid #F0F0F0;
+	background: none;
+	color: var(--sase-testo);
+	font: inherit;
+	font-weight: 600;
+	cursor: pointer;
+}
+.forestas-filtri__mostra::after {
+	content: "\f077";                                         /* chevron-up; chevron-down ad aperto */
+	font-family: fontawesome;                                /* il Font Awesome Pro di Impreza */
+	font-weight: 400;
+}
+.forestas-filtri__mostra[aria-expanded="true"]::after { content: "\f078"; }
+@media (max-width: 960px) {
+	.forestas-filtrabile { grid-template-columns: minmax(0, 1fr); gap: 1.25rem; }
+	.forestas-filtri__apri {
+		display: inline-flex;
+		gap: .5em;
+		align-items: center;
+		justify-self: end;
+		padding: .6em 1.2em;
+		border: 1px solid var(--sase-filo-percorso);
+		border-radius: 4px;
+		background: #fff;
+		color: var(--sase-inchiostro);
+		font: inherit;
+		font-weight: 600;
+		cursor: pointer;
+	}
+	.forestas-filtri { display: grid; }
+	.forestas-filtri__gruppi { display: none; margin-top: 1rem; }
+	.forestas-filtri.is-aperto .forestas-filtri__gruppi { display: grid; }
+}
+@media (max-width: 600px) {
+	.forestas-griglia--colonne-2 { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Pagina di una tipologia dei «da sapere» (taxonomy-tipologia_da_sapere.php): la griglia di
+   termine_tassonomia_da_sapere di Drupal, tre colonne a 15px con 70px sopra e sotto, card con la foto a
+   sinistra (134px su 421 a 1920px) alte quanto il testo, su fondo #FCFCFC */
+.forestas-griglia--tipologia { gap: 15px; }
+.forestas-elenco:has(.forestas-griglia--tipologia) { padding: 70px 0; }
+.forestas-griglia--tipologia .forestas-card--compatta { min-height: 113px; background: #FCFCFC; }
+.forestas-griglia--tipologia .forestas-card--compatta .forestas-card__media { flex-basis: 31.83%; }
+.forestas-testata-sottotitolo > p { margin: 0; }
+@media (max-width: 1024px) {
+	.forestas-griglia--tipologia { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 600px) {
+	.forestas-griglia--tipologia { grid-template-columns: minmax(0, 1fr); }
+}
+
 /* Sulle pagine a schede la fila delle schede segue subito il percorso, come nel Canvas */
 .l-main:has(.forestas-schede) .forestas-intestazione + .forestas-percorso { margin-bottom: 0; }
+
+/*
+ * Eventi e «da sapere» (oc:8760). Card dell'evento come nel Canvas (.uc--evento, .uc-date): il blu degli
+ * eventi per filetto e sottolineatura, la data in un riquadro bianco sulla foto, in alto a sinistra.
+ */
+.forestas-card--evento { --c: var(--sase-blu-pulsante); }
+.forestas-card__giorno {
+	position: absolute;
+	top: 12px;
+	left: 12px;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	min-width: 3.4em;
+	padding: .35em .5em .45em;
+	border-radius: 6px;
+	background: #fff;
+	box-shadow: 0 2px 6px rgba(0, 0, 0, .18);
+	color: var(--sase-blu-pulsante);
+	font: 600 .75rem/1 var(--sase-font-testo);
+	letter-spacing: .04em;
+	text-transform: uppercase;
+}
+.forestas-card__giorno b { margin-bottom: .15em; font: 600 1.75rem/1 var(--sase-font-titoli); letter-spacing: 0; }
+/*
+ * Scheda FAQ (wireframe, tavola 8, .faq-panel): pannello blu del marchio, titolo bianco a sinistra senza
+ * filetto, una riga per domanda con «›» a destra e un filo chiaro sotto, pulsante bianco con il testo blu.
+ * Le card «lista» sono quelle di node--da-sapere--anteprima-lista: solo il titolo
+ */
+.forestas-scheda:has(.forestas-griglia--lista) {
+	margin: 1.875rem auto 3.75rem;
+	padding: 20px 22px 22px;
+	background: var(--sase-blu-marchio);
+	color: #fff;
+}
+.forestas-scheda:has(.forestas-griglia--lista) .forestas-scheda-titolo { justify-items: start; margin-bottom: 12px; text-align: left; }
+.forestas-scheda:has(.forestas-griglia--lista) .forestas-scheda-titolo span { display: none; }
+.l-main .forestas-scheda:has(.forestas-griglia--lista) .forestas-scheda-titolo h2 { color: #fff; font-size: 1.25rem; }
+.forestas-griglia--lista { grid-template-columns: 1fr; gap: 0; margin-bottom: 16px; }
+.forestas-card--lista {
+	border-radius: 0;
+	border-bottom: 1px solid rgba(255, 255, 255, .22);
+	background: none;
+	box-shadow: none;
+}
+.forestas-card--lista:hover { box-shadow: none; transform: none; }
+.forestas-card--lista:focus-within { outline-color: #fff; }
+.l-main .forestas-card--lista .forestas-card__titolo { padding: 9px 0; color: #fff; font: 400 .9375rem/1.4 var(--sase-font-testo); }
+.forestas-card--lista .forestas-card__titolo a { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+.forestas-card--lista:hover .forestas-card__titolo a { text-decoration-color: #fff; }
+.forestas-card--lista .forestas-card__titolo span { flex: none; }
+.forestas-scheda:has(.forestas-griglia--lista) .forestas-scheda-pulsante { text-align: left; }
+.forestas-scheda:has(.forestas-griglia--lista) .forestas-pulsante { border-color: #fff; background: #fff; color: var(--sase-blu-pulsante); }
+/* Pillole di sentieristica (wireframe, tavola 8): riquadri verso le tipologie, filetto in basso */
+.forestas-pillole {
+	display: grid;
+	gap: 12px;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+.l-main .forestas-pillola { margin: 0; padding: 0; font: 500 .9375rem/1.3 var(--sase-font-testo); }
+.forestas-pillola a {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	min-height: 44px;
+	padding: 14px;
+	border-bottom: 3px solid var(--forestas-sezione);
+	background: #F7F5F1;
+	color: var(--sase-testo-scuro);
+	text-decoration: none;
+}
+.forestas-pillola a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.forestas-pillola i { color: var(--forestas-sezione); font-size: 1.1rem; }
+/*
+ * Pagina dell'evento (is-event di Drupal): frecce dei collegamenti e barretta della galleria nel blu degli
+ * eventi, icone dei file grigie. «Dove» e «Quando» come sase-content-datas: due colonne uguali divise da
+ * un filo, 30px di spazio, filo sotto; icona accanto al titolo, testo allineato al titolo, in grassetto.
+ * Il paese dell'indirizzo c'è nel markup ma Drupal non lo mostra (.country nascosto).
+ */
+.forestas-evento-corpo .forestas-link-freccia i,
+.forestas-evento-info__voce > i { color: var(--sase-blu-pulsante); }
+.forestas-evento-corpo .forestas-galleria-titolo::before { background-color: var(--sase-blu-pulsante); }
+.forestas-evento-corpo .forestas-file__icona { color: var(--sase-testo); }
+.forestas-evento-info {
+	display: flex;
+	margin-bottom: 50px;
+	padding-bottom: 30px;
+	border-bottom: 1px solid #F0F0F0;
+}
+.forestas-evento-info__voce { display: flex; flex: 1 1 0; align-items: flex-start; gap: .6rem; }
+.forestas-evento-info__voce + .forestas-evento-info__voce { margin-left: 25px; padding-left: 30px; border-left: 1px solid #F0F0F0; }
+.forestas-evento-info__voce > i { margin-top: 5px; font-size: var(--sase-titolo-piccolo); line-height: 1; }
+.l-main .forestas-evento-info__titolo {
+	margin: 0;
+	padding: 0;
+	color: var(--sase-testo);
+	font-family: var(--sase-font-titoli);
+	font-size: var(--sase-titolo-piccolo);
+	font-weight: 600;
+	line-height: 1.4;
+}
+.forestas-evento-info__testo { font-weight: 600; }
+.forestas-evento-info__paese { display: none; }
+@media (max-width: 860px) {
+	.forestas-pillole { grid-template-columns: 1fr; }
+	.forestas-evento-info { flex-direction: column; gap: 20px; }
+	.forestas-evento-info__voce + .forestas-evento-info__voce { margin-left: 0; padding-left: 0; border-left: 0; }
+}

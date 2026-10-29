@@ -13,6 +13,32 @@
         "post_type": "us_content_template"
     },
     {
+        "chiave": "template-evento",
+        "lingua": "it",
+        "menu_order": 0,
+        "meta": [],
+        "originale": null,
+        "post_content": "[vc_row height=\"auto\" width=\"full\"][vc_column][vc_column_text][forestas_evento][/vc_column_text][/vc_column][/vc_row]",
+        "post_excerpt": "",
+        "post_name": "evento",
+        "post_status": "publish",
+        "post_title": "Evento",
+        "post_type": "us_content_template"
+    },
+    {
+        "chiave": "template-da-sapere",
+        "lingua": "it",
+        "menu_order": 0,
+        "meta": [],
+        "originale": null,
+        "post_content": "[vc_row height=\"auto\" width=\"full\"][vc_column][vc_column_text][forestas_da_sapere][/vc_column_text][/vc_column][/vc_row]",
+        "post_excerpt": "",
+        "post_name": "da-sapere",
+        "post_status": "publish",
+        "post_title": "Da sapere",
+        "post_type": "us_content_template"
+    },
+    {
         "chiave": "template-pagina-elenco",
         "lingua": "it",
         "menu_order": 0,

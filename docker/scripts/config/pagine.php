@@ -1,19 +1,21 @@
 <?php
 /**
- * Sincronizzazione delle pagine statiche (oc:8758) e delle news (oc:8759) da Drupal.
+ * Sincronizzazione delle pagine statiche (oc:8758) e dei contenuti con un nodo da Drupal: news (oc:8759),
+ * eventi e «da sapere» (oc:8760), i tipi di wpf_import_tipi (import-lib.php).
  *
  * Uso: [WPF_PROVA=1] [WPF_SOLO_MANCANTI=1] [WPF_ACCETTA_BOZZE=1] wp eval-file /usr/local/lib/wp-forestas/pagine.php
  * (lo lancia bin/wordpress-config.sh pagine, che ne salva l'output nel log).
  * Scrive solo con DRUPAL_SYNC=on nel .env; con WPF_PROVA=1 mostra le differenze senza scrivere nulla.
- * Ogni riga di output comincia con un tipo: PAGINA, NEWS, TERMINE, MEDIA, LINK, MENU, MANCANTE, REGOLE,
- * AVVISO, ERRORE, RIASSUNTO. Con WPF_NEWS_PROVA_CONTEGGIO=<n>, solo in anteprima, le news pubblicate lette
- * dalla copia contano <n>: serve a provare il controllo sulla copia caricata a metà (news-lib.php).
+ * Ogni riga di output comincia con un tipo: PAGINA, quello di ogni tipo importato (NEWS, …), TERMINE, MEDIA,
+ * LINK, MENU, MANCANTE, REGOLE, AVVISO, ERRORE, RIASSUNTO. Con WPF_NEWS_PROVA_CONTEGGIO=<n> (e la variabile
+ * 'conteggio' degli altri tipi), solo in anteprima, i contenuti pubblicati letti dalla copia contano <n>:
+ * serve a provare il controllo sulla copia caricata a metà (import-lib.php).
  * Esce con 1 se c'è un errore, se restano elementi mancanti (non i soli media) o se la
  * sincronizzazione è spenta (DRUPAL_SYNC), anche in anteprima.
  */
 
 require_once __DIR__ . '/pagine-lib.php';
-require_once __DIR__ . '/news-lib.php';
+require_once __DIR__ . '/import-lib.php';
 
 $prova         = getenv( 'WPF_PROVA' ) === '1';
 $solo_mancanti = getenv( 'WPF_SOLO_MANCANTI' ) === '1';
@@ -60,7 +62,7 @@ uasort( $voci, fn( $a, $b ) => isset( $a['genitore'] ) <=> isset( $b['genitore']
 
 try {
 	$db = wpf_drupal_connessione();
-	wpf_drupal_controlla( $db, array_filter( array_column( $voci, 'nid' ) ) );
+	wpf_drupal_controlla( $db, array_merge( array_filter( array_column( $voci, 'nid' ) ), ...array_column( $voci, 'sostituisce' ) ) );
 
 	// Lettura di tutto prima di scrivere: [ chiave ][ lingua ] => dati
 	$dati   = [];
@@ -114,9 +116,19 @@ try {
 		}
 	}
 	$alias           = wpf_drupal_alias( $db );
-	// News (oc:8759): si leggono tutte prima di scrivere, anche le pagine, che possono linkarle
-	$news_elenco     = wpf_drupal_news_elenco( $db );
-	$news_dati       = wpf_news_leggi( $db, $news_elenco );
+	// Contenuti con un nodo (news, eventi, «da sapere»): si leggono tutti prima di scrivere, anche le
+	// pagine, che possono linkarli
+	$tipi = [];
+	foreach ( wpf_import_tipi() as $tipo ) {
+		// Tipi e tassonomie li registra il child: senza (tema non attivo, ordine sbagliato dei passi di
+		// ricreare-wordpress-da-zero.md) wp_insert_post creerebbe contenuti di un tipo sconosciuto, senza errori
+		$senza = array_filter( $tipo['tassonomie'], fn( $t ) => ! is_object_in_taxonomy( $tipo['post_type'], $t ) );
+		if ( ! post_type_exists( $tipo['post_type'] ) || $senza ) {
+			$ferma( "il tipo {$tipo['post_type']}" . ( $senza ? ' o le tassonomie ' . implode( ', ', $senza ) : '' ) . ' non sono registrati: il child theme forestas-child è attivo?' );
+		}
+		$elenco                     = wpf_drupal_bundle_elenco( $db, $tipo['bundle'] );
+		$tipi[ $tipo['origine'] ]   = [ 'tipo' => $tipo, 'elenco' => $elenco, 'dati' => wpf_import_leggi( $tipo, $db, $elenco ) ];
+	}
 	$ultima_modifica = wpf_drupal_ultima_modifica( $db );
 } catch ( RuntimeException | mysqli_sql_exception $e ) {
 	$ferma( $e->getMessage() );
@@ -183,11 +195,13 @@ foreach ( $voci as $chiave => $voce ) {
 		}
 	}
 }
-// Le news che questo giro scrive (oc:8759): i link delle pagine e delle news verso una news si riscrivono
-// subito, anche se la news nasce dopo la pagina che la linka
-$news_percorsi = wpf_news_percorsi( $news_dati );
-$percorsi      = $news_percorsi['percorsi'] + $percorsi;
-$in_bozza_nodi = $news_percorsi['in_bozza'] + $in_bozza_nodi;
+// I contenuti che questo giro scrive (oc:8759, oc:8760): i link verso uno di loro si riscrivono subito,
+// anche se nasce dopo la pagina o il contenuto che lo linka
+foreach ( $tipi as $t ) {
+	$p             = wpf_import_percorsi( $t['tipo'], $t['dati'] );
+	$percorsi      = $p['percorsi'] + $percorsi;
+	$in_bozza_nodi = $p['in_bozza'] + $in_bozza_nodi;
+}
 $trova = function ( int $nid, string $lingua ) use ( $percorsi, $in_bozza_nodi ) {
 	if ( isset( $in_bozza_nodi[ "{$nid}|{$lingua}" ] ) ) {
 		return null;
@@ -200,20 +214,23 @@ $trova = function ( int $nid, string $lingua ) use ( $percorsi, $in_bozza_nodi )
 // pagina o di una lingua tolta da config/pagine.json non si ritenterebbe mai e terrebbe l'uscita a 1 per
 // sempre: si toglie, anche dall'anteprima
 $mancanti_prima = wpf_mancanti_leggi();
-$mancanti_altri = array_filter( $mancanti_prima, fn( $m ) => ! in_array( $m['origine'], [ 'pagina', 'news' ], true ) );
-// Quelli delle news: uno di una news non più nella copia non si ritenterebbe mai, come per le pagine
-$mancanti_news  = array_filter( $mancanti_prima, fn( $m ) => $m['origine'] === 'news' && isset( $news_dati[ (int) $m['elemento'] ][ $m['lingua'] ] ) );
-$solo_news      = [];
-foreach ( $mancanti_news as $m ) {
-	$solo_news[ (int) $m['elemento'] ][ $m['lingua'] ][] = $m['cosa'];
+$mancanti_altri = array_filter( $mancanti_prima, fn( $m ) => ! in_array( $m['origine'], [ 'pagina', ...array_keys( $tipi ) ], true ) );
+// Quelli di ogni tipo importato: uno di un contenuto non più nella copia non si ritenterebbe mai, come per le pagine
+foreach ( $tipi as $origine => $t ) {
+	$tipi[ $origine ]['mancanti'] = array_filter( $mancanti_prima, fn( $m ) => $m['origine'] === $origine && isset( $t['dati'][ (int) $m['elemento'] ][ $m['lingua'] ] ) );
+	$tipi[ $origine ]['solo']     = [];
+	foreach ( $tipi[ $origine ]['mancanti'] as $m ) {
+		$tipi[ $origine ]['solo'][ (int) $m['elemento'] ][ $m['lingua'] ][] = $m['cosa'];
+	}
 }
+$solo_tipi = array_filter( array_column( $tipi, 'solo' ) );
 $mancanti       = array_filter( $mancanti_prima, fn( $m ) => $m['origine'] === 'pagina' && isset( $voci[ $m['elemento'] ]['slug'][ $m['lingua'] ] ) );
 // Elementi da trattare con --contenuti-mancanti: [ chiave ][ lingua ] => [ cosa ]
 $solo = [];
 foreach ( $mancanti as $m ) {
 	$solo[ $m['elemento'] ][ $m['lingua'] ][] = $m['cosa'];
 }
-if ( $solo_mancanti && ! $solo && ! $solo_news ) {
+if ( $solo_mancanti && ! $solo && ! $solo_tipi ) {
 	$riga( 'RIASSUNTO', 'nessun contenuto mancante da ritentare' );
 	if ( ! $sync ) {
 		WP_CLI::halt( 1 ); // come a fine giro: con la sincronizzazione spenta non si scriverebbe
@@ -240,6 +257,7 @@ foreach ( $voci as $chiave => $voce ) {
 		$trova_qui = wpf_link_trova_in_lingua( $trova, $lingua );
 		$l         = wpf_link_riscrivi( wpf_contenuto_pulisci( $d['body'], $d['formato'] ), $alias, $trova_qui, $lingua );
 		$d['body'] = $l['html'];
+		$d['alias_drupal'] = wpf_pagina_alias_drupal( $voce, $lingua, $alias );
 		$genitore = $voce['genitore'] ?? null;
 		$parent   = $genitore !== null ? ( $ids_pagine[ $genitore ][ $lingua ] ?? ( wpf_pagina_trova( $genitore, $lingua )->ID ?? 0 ) ) : 0;
 		$r        = wpf_pagina_scrivi( $voce, $lingua, $d, $id_it, $template, $prova, $solo_mancanti ? $solo[ $chiave ][ $lingua ] : null, $parent );
@@ -267,13 +285,16 @@ foreach ( $voci as $chiave => $voce ) {
 	}
 }
 
-// News, dopo le pagine e con lo stesso lock (oc:8759). Un errore delle news (copia sospetta) non toglie
-// quello che le pagine hanno scritto: sono un altro perimetro
-$news = ( $solo_mancanti && ! $solo_news )
-	? [ 'conteggi' => [], 'mancanti' => $mancanti_news, 'previsti' => [], 'errore' => false ]
-	: wpf_news_sincronizza( $db, $news_elenco, $news_dati, $alias, $trova, $mancanti_news, $solo_mancanti ? $solo_news : null, $prova, $accetta_bozze, $riga );
-$mancanti = array_merge( $mancanti, $news['mancanti'] );
-$previsti = array_merge( $previsti, $news['previsti'] );
+// I tipi importati, dopo le pagine e con lo stesso lock (oc:8759, oc:8760). Un errore di un tipo (copia
+// sospetta) non toglie quello che le pagine e gli altri tipi hanno scritto: sono perimetri diversi
+$esiti = [];
+foreach ( $tipi as $origine => $t ) {
+	$esiti[ $origine ] = ( $solo_mancanti && ! $t['solo'] )
+		? [ 'conteggi' => [], 'mancanti' => $t['mancanti'], 'previsti' => [], 'errore' => false ]
+		: wpf_import_sincronizza( $t['tipo'], $db, $t['elenco'], $t['dati'], $alias, $trova, $t['mancanti'], $solo_mancanti ? $t['solo'] : null, $prova, $accetta_bozze, $riga );
+	$mancanti = array_merge( $mancanti, $esiti[ $origine ]['mancanti'] );
+	$previsti = array_merge( $previsti, $esiti[ $origine ]['previsti'] );
+}
 
 // Regole di rewrite del child (inc/news.php, forestas_regole_aggiorna): si rigenerano quando cambia l'elenco
 // delle schede figlie pubblicate, se no una scheda nuova darebbe 404, o la versione delle regole del child
@@ -291,20 +312,20 @@ foreach ( $mancanti as $m ) {
 $riga(
 	'RIASSUNTO',
 	( $prova ? 'anteprima, nulla scritto — ' : '' ) . 'pagine: ' . implode( ', ', array_map( fn( $e, $n ) => "{$e}: {$n}", array_keys( $conteggi ), $conteggi ) )
-	. '; news: ' . ( $news['errore'] ? 'non sincronizzate (copia sospetta)' : implode( ', ', array_map( fn( $e, $n ) => "{$e}: {$n}", array_keys( $news['conteggi'] ), $news['conteggi'] ) ) )
+	. implode( '', array_map( fn( $o, $e ) => "; {$tipi[ $o ]['tipo']['plurale']}: " . ( $e['errore'] ? "non {$tipi[ $o ]['tipo']['genere'][4]} (copia sospetta)" : implode( ', ', array_map( fn( $k, $n ) => "{$k}: {$n}", array_keys( $e['conteggi'] ), $e['conteggi'] ) ) ), array_keys( $esiti ), $esiti ) )
 	. '; mancanti: ' . count( $mancanti )
 	. '; copia Drupal: ultima modifica ' . ( $ultima_modifica ? gmdate( 'Y-m-d', $ultima_modifica ) : 'nessuna' )
 );
-// Codice d'uscita: 1 solo se manca qualcosa che non si sistema da sé (una pagina o una news non salvata, una
+// Codice d'uscita: 1 solo se manca qualcosa che non si sistema da sé (una pagina o un contenuto non salvato, una
 // traduzione non collegata, un template assente). Un media non scaricato (sito Drupal lento) lascia pagine e
-// news a posto e si ritenta al giro dopo: avviso nel log e uscita 0, così un cron o una catena di
+// contenuti a posto e si ritenta al giro dopo: avviso nel log e uscita 0, così un cron o una catena di
 // import non si ferma per questo (decisione del dev, oc:8758)
 $gravi = array_filter( array_merge( $mancanti, $previsti ), fn( $m ) => ! isset( WPF_CONTENUTO_MEDIA[ $m['cosa'] ] ) );
-if ( $gravi || $news['errore'] ) {
+if ( $gravi || array_filter( array_column( $esiti, 'errore' ) ) ) {
 	WP_CLI::halt( 1 );
 }
 if ( $mancanti ) {
-	$riga( 'AVVISO', count( $mancanti ) . ' media non scaricati: pagine e news sono aggiornate, si ritentano al prossimo giro o con --contenuti-mancanti' );
+	$riga( 'AVVISO', count( $mancanti ) . ' media non scaricati: pagine e contenuti sono aggiornati, si ritentano al prossimo giro o con --contenuti-mancanti' );
 }
 // Con la sincronizzazione spenta anche l'anteprima esce con 1: chi la lancia (o un cron) sa che non
 // scriverebbe, anche se le differenze sono quelle di sempre

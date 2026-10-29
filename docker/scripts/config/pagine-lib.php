@@ -24,6 +24,9 @@ const WPF_META_PULSANTE = '_wpf_pulsante';
 // Le news che una scheda o una pagina d'elenco mostra, dal campo «griglia» di config/pagine.json: il child
 // le legge così, senza nomi di View nel codice (inc/news.php)
 const WPF_META_GRIGLIA = '_wpf_griglia';
+// Nome di una scheda nella fila delle schede, quando non è il titolo della pagina: la prima scheda di Da
+// sapere è la pagina «Da sapere» ma si chiama «Come organizzare l'escursione» (oc:8760)
+const WPF_META_ETICHETTA = '_wpf_etichetta';
 // Più pagine di così da mettere in bozza nello stesso giro: copia Drupal sospetta, ci si ferma
 const WPF_PAGINE_SOGLIA_BOZZE = 2;
 
@@ -119,6 +122,8 @@ function wpf_pagina_scrivi( array $voce, string $lingua, array $dati, ?int $id_i
 				WPF_META_SCHEDA       => isset( $voce['scheda'] ) ? (string) $voce['scheda'] : null,
 				WPF_META_PULSANTE     => isset( $voce['pulsante'] ) ? [ 'testo' => $voce['pulsante'][ $lingua ], 'verso' => $voce['pulsante']['verso'] ] : null,
 				WPF_META_GRIGLIA      => isset( $voce['griglia'] ) ? $voce['griglia'] : null,
+				WPF_META_ETICHETTA    => isset( $voce['etichetta'] ) ? $voce['etichetta'][ $lingua ] : null,
+				WPF_META_ALIAS_DRUPAL => ( $dati['alias_drupal'] ?? [] ) ?: null,
 			],
 			'media'         => [
 				'immagine' => $dati['immagine'] ? [ $dati['immagine'] ] : [],
@@ -131,6 +136,26 @@ function wpf_pagina_scrivi( array $voce, string $lingua, array $dati, ?int $id_i
 		$prova,
 		$solo
 	);
+}
+
+/**
+ * Vecchi indirizzi di Drupal di una pagina in una lingua (WPF_META_ALIAS_DRUPAL): gli alias dei nodi nid e
+ * «sostituisce» della voce in quella lingua, e /node/<nid>, in ordine alfabetico.
+ *
+ * @param array $alias da wpf_drupal_alias
+ */
+function wpf_pagina_alias_drupal( array $voce, string $lingua, array $alias ): array {
+	$nodi = array_map( 'intval', array_filter( [ $voce['nid'] ?? null, ...( $voce['sostituisce'] ?? [] ) ] ) );
+	$percorsi = array_map( fn( $nid ) => "node/{$nid}", $nodi );
+	foreach ( $alias as $percorso => $nodo ) {
+		if ( $nodo['lingua'] === $lingua && in_array( $nodo['nid'], $nodi, true ) ) {
+			$percorso   = $lingua === 'it' ? (string) $percorso : substr( (string) $percorso, strlen( "/{$lingua}" ) );
+			$percorsi[] = ltrim( wpf_drupal_normalizza_alias( $percorso ), '/' );
+		}
+	}
+	$percorsi = array_values( array_unique( $percorsi ) );
+	sort( $percorsi );
+	return $percorsi;
 }
 
 /** Voci di menu che portano a una pagina, con il loro menu: [ «menu: voce» ]. */

@@ -96,8 +96,24 @@ function wpf_media_importa( array $file, bool $prova ) {
 	add_filter( 'fallback_intermediate_image_sizes', '__return_empty_array' );
 	// Titolo dell'allegato: per i documenti il testo del link che mostra Drupal (descrizione o nome del file)
 	$titolo = ! str_starts_with( $file['mime'], 'image/' ) ? $file['titolo'] : pathinfo( $file['nome'], PATHINFO_FILENAME );
-	// Il nome senza spazi in fondo: «….pdf » non ha un'estensione che WordPress riconosca (oc:8759, fid 1768)
-	$id     = media_handle_sideload( [ 'name' => trim( $file['nome'] ), 'tmp_name' => $tmp ], 0, $titolo );
+	// Il nome senza spazi in fondo: «….pdf » non ha un'estensione che WordPress riconosca (oc:8759, fid 1768).
+	// Alcuni file vecchi hanno come nome una descrizione senza estensione («Zaino da escursione (foto da
+	// wikipedia)», fid 1036): allora vale il nome del file nell'uri (Rucksack1.jpg), che ce l'ha (oc:8760)
+	$nome = trim( $file['nome'] );
+	if ( ! wp_check_filetype( $nome )['ext'] ) {
+		$nome = wp_basename( $file['uri'] );
+	}
+	// I KML (tracce e aree per Google Earth, allegati di due «da sapere») non sono fra i tipi che WordPress
+	// accetta: si accettano solo in questo import, non dal pannello (oc:8760)
+	$kml   = fn( array $tipi ) => $tipi + [ 'kml' => 'application/vnd.google-earth.kml+xml' ];
+	$xml   = fn( array $dati, $f, string $nome_file ) => str_ends_with( strtolower( $nome_file ), '.kml' )
+		? [ 'ext' => 'kml', 'type' => 'application/vnd.google-earth.kml+xml', 'proper_filename' => false ]
+		: $dati;
+	add_filter( 'upload_mimes', $kml );
+	add_filter( 'wp_check_filetype_and_ext', $xml, 10, 3 );
+	$id = media_handle_sideload( [ 'name' => $nome, 'tmp_name' => $tmp ], 0, $titolo );
+	remove_filter( 'upload_mimes', $kml );
+	remove_filter( 'wp_check_filetype_and_ext', $xml, 10 );
 	remove_filter( 'fallback_intermediate_image_sizes', '__return_empty_array' );
 	if ( is_wp_error( $id ) ) {
 		@unlink( $tmp );
