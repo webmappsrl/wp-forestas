@@ -10,7 +10,12 @@ configurazione, pagine statiche, news, eventi, «da sapere», media e menu colle
 i due sono indicate passo per passo. **In produzione il reset non si usa**: lì i dati di WordPress
 sono permanenti.
 
-Ultima verifica dell'intero ciclo: 27/10/2026, in locale (oc:8759), dopo le tre review, con `allinea`
+Ultima verifica dell'intero ciclo: 29/10/2026, in locale (oc:8760), dopo le due review, passi 1-5:
+44 pagine (22 IT, 22 EN), 99 news (95 IT, 4 EN), 14 eventi (11 IT, 3 EN) e 121 «da sapere» (72 IT, 49 EN),
+tutte le traduzioni inglesi collegate in WPML, nessuna riga orfana; il giro dopo tutto «invariato» salvo la
+news 4606 (2 media mancanti, sotto); ritratto identico a quello di prima del reset; i 406 vecchi
+indirizzi Drupal dei contenuti pubblicati (alias e `/node/<nid>`) danno 301 verso una pagina 200. Il
+primo `pagine --conferma` dura circa 11 minuti (500 media), l'anteprima 2. Verifica precedente: 27/10/2026, in locale (oc:8759), dopo le tre review, con `allinea`
 lanciato subito dopo il reset con l'ambiente ridotto del cron, due volte di fila: 34 pagine (17 IT, 17 EN) e 99 news (95 IT, 4 EN), `STATO allineato`, ritratto identico a quello
 di prima del reset; restano 2 media mancanti, una foto di galleria che dà 404 anche sul sito Drupal
 (news 4606, in italiano e in inglese). Il giro dopo il reset dura una ventina di minuti: scarica dal
@@ -19,10 +24,7 @@ sito Drupal circa 300 file delle news. Verifica precedente: 22/10/2026, in local
 avviso, `applica` senza differenze, ritratto identico a quello di prima del reset. Il 21/10 lo stesso;
 il 20/10 cinque volte, in tutti e due gli ordini fra pagine e apply.
 
-Eventi e «da sapere» (oc:8760, 28/10/2026) non sono ancora passati da un ciclo intero dal reset: in
-locale, sul sito già allineato, il primo `pagine --conferma` ha creato 10 pagine (schede ed elenchi), 14
-eventi (11 IT, 3 EN) e 121 «da sapere» (72 IT, 49 EN), e il giro dopo li dà tutti «invariata». I conteggi
-qui sotto li comprendono. Su un sito che aveva già il lavoro di oc:8759, il primo `pagine --conferma` dopo
+Su un sito che aveva già il lavoro di oc:8759, il primo `pagine --conferma` dopo
 oc:8760 aggiorna una volta tutte le news, gli eventi e i «da sapere» (meta `_wpf_alias_drupal` dei vecchi
 indirizzi; per i «da sapere» anche data di creazione, «Sempre in cima» e tipologie multiple): è atteso.
 
@@ -112,7 +114,9 @@ bin/wordpress-config.sh applica               # anteprima: i 6 menu, con voci da
 bin/wordpress-config.sh applica --conferma    # backup in backup/<data-ora>, poi applica
 ```
 
-Atteso nell'output: `menu: 17 voci rimaste senza menu cancellate`. È normale. Quando l'apply ricrea i
+Atteso nell'output: `menu: 17 voci rimaste senza menu cancellate`. È normale. Dopo il primo giro del
+passo 3 è atteso anche `wpml: stato del wizard: 'diverso' → 'come nel repo'` (29/10, oc:8760): lo cambia
+la creazione dei contenuti, non un giro che non scrive nulla. Quando l'apply ricrea i
 menu italiani, WPML stacca dai menu inglesi le traduzioni delle voci vecchie; i menu inglesi vengono
 ricreati subito dopo, e le voci staccate si cancellano (oc:8758).
 

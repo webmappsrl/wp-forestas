@@ -11,12 +11,14 @@
  *   'nome'         come il log chiama un contenuto («news 4606/it: …»)
  *   'plurale'      come i messaggi chiamano più contenuti («5 news in bozza»)
  *   'questo'       come l'avviso dello slug chiama il contenuto («la news non si raggiunge»)
- *   'genere'       accordo dei messaggi sui contenuti: [ nessuno, pubblicati, tolti, accettati, sincronizzati ]
- *                  («nessuna news scritta», «pubblicate», «state tolte», «accettate», «sincronizzate»)
+ *   'genere'       accordo dei messaggi sui contenuti, con le chiavi di WPF_IMPORT_GENERE («nessuno» =>
+ *                  «nessuna news scritta», «pubblicati» => «pubblicate», «tolti» => «state tolte»,
+ *                  «accettati» => «accettate», «sincronizzati» => «sincronizzate»)
  *   'post_type'    tipo di contenuto WordPress
  *   'tassonomie'   tassonomie in cui scrive i termini: con il tipo, devono essere registrate (dal child) prima
  *                  del giro, se no i contenuti nascerebbero di un tipo sconosciuto e senza termini
- *   'prefisso'     primo pezzo dell'indirizzo (/news/<slug>/, /evento/<slug>/)
+ *   'prefisso'     primo pezzo dell'indirizzo (/news/<slug>/): se manca, lo slug del rewrite del tipo
+ *                  registrato dal child (/evento/<slug>/, /da-sapere/<slug>/), letto da wpf_import_tipi
  *   'schede'       chiave in config/pagine.json della pagina le cui schede figlie stanno sotto il prefisso
  *                  (null se nessuna): uno slug uguale a quello di una scheda non si raggiunge
  *   'pagina'       nome di quella pagina nell'avviso («della pagina News»)
@@ -29,11 +31,14 @@
  *   'scrivi'       fn( int $nid, string $lingua, array $d, ?WP_Post, ?int $id_it, array $termini,
  *                      int $template, bool $prova, ?array $solo ): array come wpf_contenuto_scrivi + 'avvisi'
  *   'template'     chiave in config/post.json del template di Impreza
+ *
+ * L'elenco dei tipi è in import-tipi.php.
  */
 
-require_once __DIR__ . '/news-lib.php';
-require_once __DIR__ . '/eventi-lib.php';
-require_once __DIR__ . '/da-sapere-lib.php';
+require_once __DIR__ . '/contenuti-lib.php';
+
+// Chiavi di 'genere' nel descrittore di un tipo
+const WPF_IMPORT_GENERE = [ 'nessuno', 'pubblicati', 'tolti', 'accettati', 'sincronizzati' ];
 
 // «In evidenza» di Drupal (field_in_evidenza): «1» o assente. Le griglie «in evidenza» filtrano su questo
 const WPF_META_IN_EVIDENZA = 'wpf_in_evidenza';
@@ -49,11 +54,6 @@ const WPF_TIPI_RIFERIMENTO = [
 	'itinerario'               => 'itinerario',
 	'poi'                      => 'poi',
 ];
-
-/** I tipi importati, nell'ordine del giro. */
-function wpf_import_tipi(): array {
-	return [ wpf_news_tipo(), wpf_eventi_tipo(), wpf_da_sapere_tipo() ];
-}
 
 /**
  * Termini di Drupal ritrovati, fusi o creati in WordPress (wpf_termine_ritrova_o_crea), con il nome italiano.
@@ -244,7 +244,7 @@ function wpf_import_controlla( array $tipo, array $dati, array $esistenti, bool 
 	$pubblicate_wp    = count( array_filter( $esistenti, fn( $l ) => isset( $l['it'] ) && $l['it']->post_status === 'publish' ) );
 	$pubblicate_copia = $conteggio ?? count( array_filter( $dati, fn( $l ) => ! empty( $l['it']['status'] ) ) );
 	$plurale          = $tipo['plurale'];
-	[ $nessuno, $pubblicati, $tolti ] = $tipo['genere'];
+	[ 'nessuno' => $nessuno, 'pubblicati' => $pubblicati, 'tolti' => $tolti ] = $tipo['genere'];
 	$errore           = null;
 	if ( ! $accetta_bozze && count( $in_bozza ) > $tipo['soglia_bozze'] ) {
 		$errore = 'copia Drupal sospetta: ' . count( $in_bozza ) . " {$plurale} da mettere in bozza nello stesso giro (" . implode( ', ', array_keys( $in_bozza ) ) . '), più di ' . $tipo['soglia_bozze'];
@@ -300,7 +300,7 @@ function wpf_import_sincronizza( array $tipo, mysqli $db, array $elenco, array $
 			return [ 'conteggi' => [], 'mancanti' => $mancanti, 'previsti' => [], 'errore' => true ];
 		}
 		if ( count( $controllo['in_bozza'] ) > $tipo['soglia_bozze'] ) {
-			$riga( 'AVVISO', count( $controllo['in_bozza'] ) . " {$tipo['plurale']} in bozza nello stesso giro, {$tipo['genere'][3]} con --accetta-bozze" );
+			$riga( 'AVVISO', count( $controllo['in_bozza'] ) . " {$tipo['plurale']} in bozza nello stesso giro, {$tipo['genere']['accettati']} con --accetta-bozze" );
 		}
 	}
 

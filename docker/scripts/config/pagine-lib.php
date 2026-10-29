@@ -21,8 +21,8 @@ const WPF_PREFISSO_TEMPLATE = 'template-pagina-';
 // Pulsante di una scheda verso la pagina d'elenco completa ([ testo, verso: chiave della voce ], un array:
 // in JSON update_post_meta toglierebbe le «\» degli accenti), dal campo «pulsante» di config/pagine.json
 const WPF_META_PULSANTE = '_wpf_pulsante';
-// Le news che una scheda o una pagina d'elenco mostra, dal campo «griglia» di config/pagine.json: il child
-// le legge così, senza nomi di View nel codice (inc/news.php)
+// I contenuti che una scheda o una pagina d'elenco mostra, dal campo «griglia» di config/pagine.json: il
+// child li legge così, senza nomi di View nel codice (inc/griglie.php)
 const WPF_META_GRIGLIA = '_wpf_griglia';
 // Nome di una scheda nella fila delle schede, quando non è il titolo della pagina: la prima scheda di Da
 // sapere è la pagina «Da sapere» ma si chiama «Come organizzare l'escursione» (oc:8760)

@@ -1,7 +1,7 @@
 <?php
 /**
  * Sincronizzazione delle pagine statiche (oc:8758) e dei contenuti con un nodo da Drupal: news (oc:8759),
- * eventi e «da sapere» (oc:8760), i tipi di wpf_import_tipi (import-lib.php).
+ * eventi e «da sapere» (oc:8760), i tipi di wpf_import_tipi (import-tipi.php).
  *
  * Uso: [WPF_PROVA=1] [WPF_SOLO_MANCANTI=1] [WPF_ACCETTA_BOZZE=1] wp eval-file /usr/local/lib/wp-forestas/pagine.php
  * (lo lancia bin/wordpress-config.sh pagine, che ne salva l'output nel log).
@@ -15,7 +15,7 @@
  */
 
 require_once __DIR__ . '/pagine-lib.php';
-require_once __DIR__ . '/import-lib.php';
+require_once __DIR__ . '/import-tipi.php';
 
 $prova         = getenv( 'WPF_PROVA' ) === '1';
 $solo_mancanti = getenv( 'WPF_SOLO_MANCANTI' ) === '1';
@@ -126,6 +126,8 @@ try {
 		if ( ! post_type_exists( $tipo['post_type'] ) || $senza ) {
 			$ferma( "il tipo {$tipo['post_type']}" . ( $senza ? ' o le tassonomie ' . implode( ', ', $senza ) : '' ) . ' non sono registrati: il child theme forestas-child è attivo?' );
 		}
+		// Per il riassunto di bin/wordpress-config.sh: il tipo delle righe dei contenuti e come chiamarli
+		$riga( 'TIPO', "{$tipo['riga']} {$tipo['plurale']}" );
 		$elenco                     = wpf_drupal_bundle_elenco( $db, $tipo['bundle'] );
 		$tipi[ $tipo['origine'] ]   = [ 'tipo' => $tipo, 'elenco' => $elenco, 'dati' => wpf_import_leggi( $tipo, $db, $elenco ) ];
 	}
@@ -312,7 +314,7 @@ foreach ( $mancanti as $m ) {
 $riga(
 	'RIASSUNTO',
 	( $prova ? 'anteprima, nulla scritto — ' : '' ) . 'pagine: ' . implode( ', ', array_map( fn( $e, $n ) => "{$e}: {$n}", array_keys( $conteggi ), $conteggi ) )
-	. implode( '', array_map( fn( $o, $e ) => "; {$tipi[ $o ]['tipo']['plurale']}: " . ( $e['errore'] ? "non {$tipi[ $o ]['tipo']['genere'][4]} (copia sospetta)" : implode( ', ', array_map( fn( $k, $n ) => "{$k}: {$n}", array_keys( $e['conteggi'] ), $e['conteggi'] ) ) ), array_keys( $esiti ), $esiti ) )
+	. implode( '', array_map( fn( $o, $e ) => "; {$tipi[ $o ]['tipo']['plurale']}: " . ( $e['errore'] ? "non {$tipi[ $o ]['tipo']['genere']['sincronizzati']} (copia sospetta)" : implode( ', ', array_map( fn( $k, $n ) => "{$k}: {$n}", array_keys( $e['conteggi'] ), $e['conteggi'] ) ) ), array_keys( $esiti ), $esiti ) )
 	. '; mancanti: ' . count( $mancanti )
 	. '; copia Drupal: ultima modifica ' . ( $ultima_modifica ? gmdate( 'Y-m-d', $ultima_modifica ) : 'nessuna' )
 );

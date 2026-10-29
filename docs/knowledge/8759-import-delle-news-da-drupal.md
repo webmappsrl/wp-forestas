@@ -28,8 +28,9 @@ con il controllo di integrità, Drupal vince sempre, `DRUPAL_SYNC`, mancanti da 
 - **Termini.** Categoria «News» (slug `news`) con le 6 tipologie di `tipologia_news` come figlie; i tag
   di `tag_news` e `tags` sono `post_tag`, creati solo se una news li usa. Ogni termine ha il term meta
   `_drupal_chiave` = `<vocabolario>:<tid>`, **non univoco**: un termine che ne fonde due porta tutte le
-  coppie. Un import successivo (oc:8760) ritrova i termini da lì. La tassonomia `tipologia_da_sapere` è
-  registrata nel child, senza termini e senza tipo di contenuto: li porta oc:8760.
+  coppie. Gli import di eventi e «da sapere» (oc:8760) ritrovano i termini da lì. La tassonomia
+  `tipologia_da_sapere` è registrata nel child; termini e tipo di contenuto sono di oc:8760 (pagina di
+  conoscenza 8760).
 - **Lingue.** Le 4 news tradotte su Drupal hanno il post inglese collegato in WPML. Post, categorie e
   tag sono in WPML «traducibili, con ripiego»: sul sito inglese le altre news si vedono in italiano, e
   i termini, che su Drupal non hanno traduzioni, restano quelli italiani.
@@ -94,7 +95,7 @@ con il controllo di integrità, Drupal vince sempre, `DRUPAL_SYNC`, mancanti da 
 ## Perché così
 
 - **Post e non un tipo di contenuto proprio:** le news sono il blog del sito, e WordPress dà ai post
-  categorie, tag, archivi e WPML senza codice. I tipi propri arrivano con oc:8760 (eventi, Da sapere).
+  categorie, tag, archivi e WPML senza codice. Eventi e «da sapere» sono tipi propri (oc:8760).
 - **Riferimenti non mostrati:** sono contenuti del catasto che vivono nello shard. WordPress non girerà
   sulla stessa macchina di Laravel e li leggerà con le API (call con Giuseppe del 27/10); il dato si
   salva ora perché la copia SQL di Drupal sparirà.

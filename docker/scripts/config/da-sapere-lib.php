@@ -1,6 +1,6 @@
 <?php
 /**
- * «Da sapere» da Drupal (oc:8760): il tipo «da_sapere» del giro di import (import-lib.php). Ogni «da sapere»
+ * «Da sapere» da Drupal (oc:8760): il tipo «da_sapere» del giro di import (import-lib.php, import-tipi.php). Ogni «da sapere»
  * it/und di Drupal è un post del tipo da_sapere (registrato dal child, inc/contenuti.php) con la sua
  * tipologia (tipologia_da_sapere) e i tag; le traduzioni inglesi sono collegate in WPML.
  *
@@ -10,10 +10,11 @@
  * lingue, come le categorie delle news.
  */
 
-require_once __DIR__ . '/contenuti-lib.php';
+require_once __DIR__ . '/import-lib.php';
 
 // Più «da sapere» (o traduzioni) di così da mettere in bozza nello stesso giro: copia Drupal sospetta
 const WPF_DA_SAPERE_SOGLIA_BOZZE = 5;
+// Più di così fra i «da sapere» pubblicati in WordPress e nella copia (72): copia a metà
 const WPF_DA_SAPERE_SCARTO_COPIA = 5;
 // Term meta della tipologia: «1» se Drupal la mostra fra le pillole (field_mostra_in_lista_da_sapere_), e il
 // peso del termine su Drupal (l'ordine delle pillole)
@@ -35,9 +36,8 @@ function wpf_da_sapere_tipo(): array {
 		'nome'         => 'da sapere',
 		'plurale'      => '«da sapere»',
 		'questo'       => 'il contenuto',
-		'genere'       => [ 'nessun «da sapere» scritto', 'pubblicati', 'stati tolti', 'accettati', 'sincronizzati' ],
+		'genere'       => [ 'nessuno' => 'nessun «da sapere» scritto', 'pubblicati' => 'pubblicati', 'tolti' => 'stati tolti', 'accettati' => 'accettati', 'sincronizzati' => 'sincronizzati' ],
 		'post_type'    => 'da_sapere',
-		'prefisso'     => 'da-sapere',
 		'schede'       => 'da-sapere',
 		'pagina'       => 'Da sapere',
 		'soglia_bozze' => WPF_DA_SAPERE_SOGLIA_BOZZE,

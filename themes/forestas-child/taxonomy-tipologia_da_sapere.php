@@ -48,7 +48,7 @@ get_header();
 					echo '<div class="forestas-griglia forestas-griglia--compatta forestas-griglia--tipologia">';
 					while ( have_posts() ) {
 						the_post();
-						echo forestas_news_card( get_the_ID(), 'compatta', 3 ); // phpcs:ignore WordPress.Security.EscapeOutput -- card già escapata
+						echo forestas_card( get_the_ID(), 'compatta', 3 ); // phpcs:ignore WordPress.Security.EscapeOutput -- card già escapata
 					}
 					echo '</div>';
 					the_posts_pagination(

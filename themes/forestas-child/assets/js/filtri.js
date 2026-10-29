@@ -1,5 +1,5 @@
 /*
- * Colonna dei filtri di una lista (oc:8760, forestas_news_filtri in inc/news.php), come le faccette di
+ * Colonna dei filtri di una lista (oc:8760, forestas_filtri in inc/griglie.php), come le faccette di
  * Drupal: la freccia apre e chiude un gruppo; «Mostra di più» apre le voci oltre la quinta e diventa
  * «Mostra meno»; sotto 960px il pulsante «Filtri» apre e chiude la colonna (sase-sidebar-mobile).
  */

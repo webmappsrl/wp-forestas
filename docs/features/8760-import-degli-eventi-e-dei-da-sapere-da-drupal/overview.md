@@ -52,104 +52,104 @@ arriveranno con il plugin (descrizione del ticket, «Perché carte e zone sono e
 ## Requisiti
 
 ### Import generico
-- [ ] `pagine.php` percorre un elenco di import invece di conoscere le news per nome (lettura,
+- [x] `pagine.php` percorre un elenco di import invece di conoscere le news per nome (lettura,
       percorsi dei link, filtro dei mancanti, chiamata, riassunto)
-- [ ] `wpf_news_sincronizza` diventa un ciclo generico per i tipi con nid Drupal; le news ne usano
+- [x] Il ciclo delle news (`wpf_news_sincronizza`) diventa il ciclo generico `wpf_import_sincronizza` per i tipi con nid Drupal; le news ne usano
       la versione generica con la loro parte specifica (categoria News, riferimenti, `post`)
-- [ ] I media del contenuto restano nella costante `WPF_CONTENUTO_MEDIA`: eventi e «da sapere» hanno gli
+- [x] I media del contenuto restano nella costante `WPF_CONTENUTO_MEDIA`: eventi e «da sapere» hanno gli
       stessi tre media di news e pagine (notes.md, task 2)
-- [ ] Il riassunto di `bin/wordpress-config.sh` conta i tipi di riga senza elencarli a mano
-- [ ] Le tabelle Drupal di eventi e «da sapere» entrano nel controllo di integrità comune
-- [ ] Non regressione: un giro di `pagine` in prova dopo il refactoring dà tutte le news
+- [x] Il riassunto di `bin/wordpress-config.sh` conta i tipi di riga senza elencarli a mano
+- [x] Le tabelle Drupal di eventi e «da sapere» entrano nel controllo di integrità comune
+- [x] Non regressione: un giro di `pagine` in prova dopo il refactoring dà tutte le news
       «invariate»; in più, sul WordPress locale e mai su UAT, prima e dopo il refactoring: news
       messa in bozza a mano (il giro la ripubblica), news cancellata (il giro la ricrea), giro con
       `--contenuti-mancanti`, contatore dei mancanti; output confrontato riga per riga
-- [ ] La soglia delle bozze è un parametro di ciascun tipo nell'elenco di import
-- [ ] `evento` e `da_sapere` traducibili in `config/wpml.json` (`custom_posts_sync_option`, stesso
+- [x] La soglia delle bozze è un parametro di ciascun tipo nell'elenco di import
+- [x] `evento` e `da_sapere` traducibili in `config/wpml.json` (`custom_posts_sync_option`, stesso
       valore di `post`); l'howto verifica che lo siano prima del primo giro di `pagine`
-- [ ] `FORESTAS_REGOLE_VERSIONE` alzata: le regole dei CPT si rigenerano al primo giro o alla prima
+- [x] `FORESTAS_REGOLE_VERSIONE` alzata: le regole dei CPT si rigenerano al primo giro o alla prima
       pagina del pannello dopo il deploy
 
 ### Eventi
-- [ ] CPT evento con indirizzo come su Drupal (alias `evento/<titolo>`), traducibile con WPML,
+- [x] CPT evento con indirizzo come su Drupal (alias `evento/<titolo>`), traducibile con WPML,
       `post_tag` associato
-- [ ] Importati titolo, testo, sottotitolo, data di inizio e di fine, luogo (indirizzo, località,
+- [x] Importati titolo, testo, sottotitolo, data di inizio e di fine, luogo (indirizzo, località,
       due righe di testo), immagine principale, allegati, galleria, collegamenti, «In evidenza», tag,
       traduzioni inglesi
-- [ ] `field_tag_evento` si importa in `post_tag` (sono termini dei vocabolari `tags` e `tag_eventi`:
+- [x] `field_tag_evento` si importa in `post_tag` (sono termini dei vocabolari `tags` e `tag_eventi`:
       il «5016» dell'evento 5106 è il tag «eventi», non l'itinerario — notes.md, task 5)
-- [ ] I link dei testi verso contenuti che non esistono in WordPress restano verso Drupal «in
+- [x] I link dei testi verso contenuti che non esistono in WordPress restano verso Drupal «in
       attesa», con origine propria in `wpf_sync_mancanti`
-- [ ] Scheda «Eventi» della pagina News (`/news/eventi`) con il pulsante «Scopri tutti gli eventi»
-- [ ] Pagina d'elenco `/eventi`: ordine per data di inizio dal più recente, 8 per pagina, paginata;
+- [x] Scheda «Eventi» della pagina News (`/news/eventi`) con il pulsante «Scopri tutti gli eventi»
+- [x] Pagina d'elenco `/eventi`: ordine per data di inizio dal più recente, 8 per pagina, paginata;
       come su Drupal mostra anche gli eventi passati
-- [ ] Nell'editor la data di inizio è obbligatoria (senza, l'evento resta in bozza con un avviso) e
+- [x] Nell'editor la data di inizio è obbligatoria (senza, l'evento resta in bozza con un avviso) e
       la data di fine non può precedere l'inizio; le query degli elenchi non escludono un evento senza
       data, che va in fondo
-- [ ] Card con la data grande (variante della card unica) e pagina dell'evento come su Drupal
+- [x] Card con la data grande (variante della card unica) e pagina dell'evento come su Drupal
       (`evento--full`): luogo, date, testo, allegati, collegamenti, galleria
 
 ### Da sapere
-- [ ] CPT «da sapere» con indirizzo come su Drupal (alias `da-sapere/<titolo>`), traducibile con
+- [x] CPT «da sapere» con indirizzo come su Drupal (alias `da-sapere/<titolo>`), traducibile con
       WPML, con `tipologia_da_sapere` e `post_tag` associati
-- [ ] Importati titolo, testo, sottotitolo, tipologie (tutte: un contenuto può averne più d'una), tag,
+- [x] Importati titolo, testo, sottotitolo, tipologie (tutte: un contenuto può averne più d'una), tag,
       data di creazione e «Sempre in cima», immagine principale (dal media: il legacy ha solo doppioni),
       allegati, galleria, traduzioni inglesi; importati i 9 termini di `tipologia_da_sapere`, uno per le
       due lingue (ripiego di WPML: su Drupal solo «F.A.Q.» è tradotta, con lo stesso nome; notes.md,
       task 6), con descrizione, immagine, spunta e peso
-- [ ] In inglese tipologia e pagina della tipologia si mostrano con il ripiego di WPML; un contenuto
+- [x] In inglese tipologia e pagina della tipologia si mostrano con il ripiego di WPML; un contenuto
       italiano senza traduzione resta marcato `lang="it"`
-- [ ] Pagina `/da-sapere` a 4 schede come nel wireframe: la prima scheda è la pagina stessa, le
+- [x] Pagina `/da-sapere` a 4 schede come nel wireframe: la prima scheda è la pagina stessa, le
       altre stanno in `/da-sapere/norme-di-comportamento/`, `/da-sapere/pillole-di-sentieristica/`,
       `/da-sapere/faq/`; ogni scheda ha il pulsante del wireframe verso la pagina della tipologia
-- [ ] Le schede riprendono i blocchi della pagina Drupal (nid 1083): «Come organizzare
+- [x] Le schede riprendono i blocchi della pagina Drupal (nid 1083): «Come organizzare
       l'escursione» = tipologia 4709 (`sa_sapere_in_evidenza`); «Norme di comportamento» = tipologia
       4705; «Pillole di sentieristica» = le tipologie con la spunta «Mostra in lista Da sapere»
       (`da_sapere_le_altre_categorie`), in ordine di peso; «FAQ» = tipologia 4710
-- [ ] La spunta «Mostra in lista Da sapere» (`field_mostra_in_lista_da_sapere_`) si importa come term
+- [x] La spunta «Mostra in lista Da sapere» (`field_mostra_in_lista_da_sapere_`) si importa come term
       meta di `tipologia_da_sapere`, modificabile dalla schermata del termine: le pillole non sono un
       elenco fisso (oggi la spunta è sulle 6 tipologie del wireframe)
-- [ ] Pagina d'elenco per ciascuna delle 9 tipologie, come le pagine dei termini di Drupal
-- [ ] Pagina del «da sapere» come su Drupal (template predefinito del nodo, non ha un `--full` suo)
-- [ ] I 4 «da sapere» linkati dalle pagine statiche (nid 1418, 1041, 1414, 1491) non sono più «in
+- [x] Pagina d'elenco per ciascuna delle 9 tipologie, come le pagine dei termini di Drupal
+- [x] Pagina del «da sapere» come su Drupal (template predefinito del nodo, non ha un `--full` suo)
+- [x] I 4 «da sapere» linkati dalle pagine statiche (nid 1418, 1041, 1414, 1491) non sono più «in
       attesa» dopo l'import
 
 ### Comune
-- [ ] Redirect `/node/<nid>` e dei vecchi alias anche verso eventi e «da sapere», solo per gli indirizzi
+- [x] Redirect `/node/<nid>` e dei vecchi alias anche verso eventi e «da sapere», solo per gli indirizzi
       che Drupal aveva (meta `_wpf_alias_drupal` di ogni contenuto): un altro 404 resta 404
-- [ ] Redirect 301 dai vecchi indirizzi Drupal di tutte le pagine pubblicate (`/pagina-base/…`,
+- [x] Redirect 301 dai vecchi indirizzi Drupal di tutte le pagine pubblicate (`/pagina-base/…`,
       `/node/<nid>`), anche delle schede di News costruite in WordPress senza nodo:
       `/tutti-gli-eventi` → `/news/eventi/`, `/pagina-attivita-e-comunicazioni` →
       `/news/attivita-e-comunicazioni/` (campo `sostituisce` di `config/pagine.json`)
-- [ ] Filtri come le faccette di Drupal a sinistra della lista, su `/attivita-e-comunicazioni/` (Tipologia,
+- [x] Filtri come le faccette di Drupal a sinistra della lista, su `/attivita-e-comunicazioni/` (Tipologia,
       Anno; lista a due colonne senza foto), `/tutte-le-news/` (Tipologia = tag, senza numeri; Anno) ed
       `/eventi/` (Tipologia = tag; Anno; lista a una colonna di card orizzontali): campi `filtri` e `colonne`
       di `config/pagine.json`
-- [ ] Ogni pagina d'elenco o a schede confrontata con Drupal online su filtri, disposizione, contenuti e
+- [x] Ogni pagina d'elenco o a schede confrontata con Drupal online su filtri, disposizione, contenuti e
       ordine, indirizzi, testata e stile (elenco in `notes.md`, «Confronto con Drupal»)
-- [ ] Pagina della tipologia come su Drupal: testata con immagine e descrizione della tipologia, percorso
+- [x] Pagina della tipologia come su Drupal: testata con immagine e descrizione della tipologia, percorso
       con la sola «Home», griglia di card con la foto a sinistra su tre colonne; i vecchi indirizzi
       (`/taxonomy/term/<tid>`) portano lì; immagine e ordine si cambiano dalla schermata della tipologia
-- [ ] Ogni campo dei moduli di Drupal per news, eventi, «da sapere», pagine, media e tipologie si importa e
+- [x] Ogni campo dei moduli di Drupal per news, eventi, «da sapere», pagine, media e tipologie si importa e
       si compila nell'editor di WordPress, salvo le eccezioni in `notes.md`
-- [ ] Le pagine hanno nell'editor «Colore tematico» e «Testata» (riquadro «Colore e testata»), come i campi
+- [x] Le pagine hanno nell'editor «Colore tematico» e «Testata» (riquadro «Colore e testata»), come i campi
       «Colore tematico» e «Layout» del form della pagina di Drupal
-- [ ] Riquadro dell'editor, percorso, testata e card riconoscono i due CPT: la redazione può creare
+- [x] Riquadro dell'editor, percorso, testata e card riconoscono i due CPT: la redazione può creare
       un evento (date, luogo, allegati, galleria, collegamenti) e un «da sapere» (tipologia, tag,
       allegati, galleria) nuovi, salvati negli stessi meta dell'import
-- [ ] Le protezioni sulla copia valgono anche per i due CPT: con `DRUPAL_SYNC=on` una modifica dal
+- [x] Le protezioni sulla copia valgono anche per i due CPT: con `DRUPAL_SYNC=on` una modifica dal
       pannello a un contenuto importato si perde al giro successivo, come per le news
-- [ ] Testi dell'interfaccia in italiano e inglese con `forestas_testo()` (il child non ha file di
+- [x] Testi dell'interfaccia in italiano e inglese con `forestas_testo()` (il child non ha file di
       traduzione); date nel formato della lingua (`30 giu` / `30 Jun`)
-- [ ] `docs/howto/ricreare-wordpress-da-zero.md` aggiornato con i passi, gli avvisi attesi e la data
+- [x] `docs/howto/ricreare-wordpress-da-zero.md` aggiornato con i passi, gli avvisi attesi e la data
       di verifica
-- [ ] [UX] La data grande della card è decorativa (`aria-hidden`, il giorno di inizio come nel Canvas);
+- [x] [UX] La data grande della card è decorativa (`aria-hidden`, il giorno di inizio come nel Canvas);
       la data completa, o l'intervallo di un evento su più giorni, è un `<time datetime>` sotto il titolo,
       ed è quella che legge il lettore di schermo
-- [ ] [UX] Schede come link in un `<nav>` con `aria-current="page"`, scheda attiva non indicata dal
+- [x] [UX] Schede come link in un `<nav>` con `aria-current="page"`, scheda attiva non indicata dal
       solo colore; card con un solo link sul titolo e immagine decorativa; titoli senza salti di
       livello (stesse regole di oc:8759)
-- [ ] [UX] `#0F6E6A` solo su filetti e elementi grafici (6,07:1 sul bianco); il testo resta
+- [x] [UX] `#0F6E6A` solo su filetti e elementi grafici (6,07:1 sul bianco); il testo resta
       `#4D4D4D`
 
 ## Rischi
@@ -194,6 +194,8 @@ dev).
 
 - `docker/scripts/config/pagine.php` — elenco di import, vecchi indirizzi delle pagine
 - `docker/scripts/config/import-lib.php` — nuovo: ciclo generico, termini e tag comuni
+- `docker/scripts/config/import-tipi.php` — nuovo: elenco dei tipi e controllo dei descrittori
+- `docker/scripts/config/contenuti-lib.php` — meta dei vecchi indirizzi, termini nell'ordine per le tassonomie con `sort`
 - `docker/scripts/config/news-lib.php` — parte specifica delle news
 - `docker/scripts/config/eventi-lib.php`, `docker/scripts/config/da-sapere-lib.php` — nuovi (con
   descrizione, immagine e indirizzi delle tipologie)
@@ -205,9 +207,10 @@ dev).
 - `config/pagine.json` — scheda Eventi, pagina `/eventi`, schede di Da sapere, nodi Drupal rimpiazzati
   dalle schede di News (`sostituisce`), filtri e colonne delle liste
 - `config/post.json`, `config/wpml.json` — template e traducibilità dei due CPT
+- `config/impreza.json` — template di Impreza dei due CPT anche per i contenuti creati dal pannello
 - `themes/forestas-child/` — CPT (`inc/contenuti.php`), eventi (`inc/eventi.php`), «da sapere» e
-  tipologie (`inc/da-sapere.php`, `taxonomy-tipologia_da_sapere.php`), card, griglie e filtri
-  (`inc/news.php`, `assets/js/filtri.js`), testata, percorso e redirect (`inc/pagine-statiche.php`),
+  tipologie (`inc/da-sapere.php`, `taxonomy-tipologia_da_sapere.php`), card e corpo comuni
+  (`inc/contenuti.php`), griglie e filtri (`inc/griglie.php`, `assets/js/filtri.js`), schede (`inc/news.php`), testata, percorso e redirect (`inc/pagine-statiche.php`),
   riquadri dell'editor (`inc/pagine-statiche-admin.php`), CSS
 - `themes/forestas-child/functions.php` — carica i file nuovi
 - `docs/howto/ricreare-wordpress-da-zero.md`, `docs/howto/cron-sincronizzazione-pagine.md`,

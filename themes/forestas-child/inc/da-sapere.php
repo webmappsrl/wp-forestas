@@ -16,16 +16,21 @@ const FORESTAS_TERM_META_IMMAGINE = 'wpf_immagine';        // id dell'immagine d
 // Contenuti per pagina della pagina di una tipologia (termine_tassonomia_da_sapere di Drupal: 10)
 const FORESTAS_TIPOLOGIA_PER_PAGINA = 10;
 
-/** Tipologia di un «da sapere», o null. */
-function forestas_da_sapere_tipologia( int $id ): ?WP_Term {
-	$termini = get_the_terms( $id, 'tipologia_da_sapere' );
-	return is_array( $termini ) && $termini ? $termini[0] : null;
+/**
+ * Tipologie di un «da sapere», nell'ordine di Drupal (il delta di field_tipo_da_sapere, che l'import scrive
+ * in term_order: la tassonomia ha «sort»). Drupal le mostra tutte, nella card e nella testata.
+ *
+ * @return WP_Term[]
+ */
+function forestas_da_sapere_tipologie( int $id ): array {
+	$termini = wp_get_object_terms( $id, 'tipologia_da_sapere', [ 'orderby' => 'term_order' ] );
+	return is_array( $termini ) ? $termini : [];
 }
 
 /*
  * Pagina del «da sapere»: su Drupal il tipo non ha un template suo, quindi il layout predefinito del nodo
- * dentro la testata delle pagine (core.entity_view_display.node.da_sapere.full): tag, testo, allegati,
- * galleria. Come per le news, i tag stanno sopra il testo.
+ * dentro la testata delle pagine (core.entity_view_display.node.da_sapere.full): testo, allegati, galleria.
+ * I tag non si mostrano: in quel layout field_tag non c'è.
  */
 add_shortcode(
 	'forestas_da_sapere',
@@ -36,8 +41,7 @@ add_shortcode(
 			return '';
 		}
 		$in_corso = true;
-		$html     = do_shortcode( '[forestas_testata]' )
-			. '<div class="forestas-pagina-testo forestas-news-corpo"' . forestas_attributo_lingua( $id ) . '>' . forestas_testo_importato( $id ) . forestas_allegati( $id ) . forestas_galleria( $id ) . '</div>';
+		$html     = do_shortcode( '[forestas_testata]' ) . forestas_corpo_contenuto( $id );
 		$in_corso = false;
 		return $html;
 	}

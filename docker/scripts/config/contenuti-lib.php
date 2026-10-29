@@ -177,11 +177,17 @@ function wpf_contenuto_media( array $file, bool $prova ): array {
 	return [ 'ids' => $scaricare ? null : $ids, 'scaricare' => $scaricare, 'scaricati' => $scaricati, 'riusati' => $riusati, 'aggiornati' => $aggiornati, 'errori' => $errori ];
 }
 
-/** Termini di un contenuto in una tassonomia, in tutte le lingue di WPML: id ordinati. */
+/**
+ * Termini di un contenuto in una tassonomia, in tutte le lingue di WPML: id ordinati, o nell'ordine scritto
+ * se la tassonomia lo tiene («sort», come tipologia_da_sapere: l'ordine di Drupal, oc:8760).
+ */
 function wpf_contenuto_termini( int $id, string $tassonomia ): array {
-	$ids = wpf_wpml_tutte_le_lingue( fn() => wp_get_object_terms( $id, $tassonomia, [ 'fields' => 'ids' ] ) );
-	$ids = is_wp_error( $ids ) ? [] : array_map( 'intval', $ids );
-	sort( $ids );
+	$ordinati = ! empty( get_taxonomy( $tassonomia )->sort );
+	$ids      = wpf_wpml_tutte_le_lingue( fn() => wp_get_object_terms( $id, $tassonomia, [ 'fields' => 'ids', 'orderby' => $ordinati ? 'term_order' : 'name' ] ) );
+	$ids      = is_wp_error( $ids ) ? [] : array_map( 'intval', $ids );
+	if ( ! $ordinati ) {
+		sort( $ids );
+	}
 	return $ids;
 }
 
@@ -206,8 +212,10 @@ function wpf_contenuto_differenze( ?WP_Post $post, array $voluti, array $meta, a
 		}
 	}
 	foreach ( $termini as $tassonomia => $ids ) {
-		$voluti_ids = array_map( 'intval', $ids );
-		sort( $voluti_ids );
+		$voluti_ids = array_map( 'intval', array_values( $ids ) );
+		if ( empty( get_taxonomy( $tassonomia )->sort ) ) {
+			sort( $voluti_ids );
+		}
 		if ( wpf_contenuto_termini( $post->ID, $tassonomia ) !== $voluti_ids ) {
 			$campi[] = $tassonomia;
 		}

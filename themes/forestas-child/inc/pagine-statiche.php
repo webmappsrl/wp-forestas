@@ -118,6 +118,21 @@ function forestas_attributo_lingua_termine( WP_Term $termine ): string {
 	return ' lang="' . esc_attr( strtok( $lingua, '-' ) ) . '"';
 }
 
+/**
+ * Nomi di più termini in un'etichetta, già escapati: il nome di un termine in un'altra lingua (ripiego di
+ * WPML) sta in uno span con il suo lang (WCAG 3.1.2).
+ *
+ * @param WP_Term[] $termini
+ */
+function forestas_nomi_termini( array $termini, string $separatore ): string {
+	$nomi = [];
+	foreach ( $termini as $termine ) {
+		$lingua = forestas_attributo_lingua_termine( $termine );
+		$nomi[] = $lingua !== '' ? '<span' . $lingua . '>' . esc_html( $termine->name ) . '</span>' : esc_html( $termine->name );
+	}
+	return implode( esc_html( $separatore ), $nomi );
+}
+
 /*
  * Pagine senza «Condividi»: su Drupal il blocco di condivisione (AddToAny) è nascosto su questi indirizzi
  * (block.block.addtoanysharebuttons, visibilità per percorso); Cammini segue Itinerari.
@@ -230,9 +245,10 @@ add_shortcode(
 		$tipo      = get_post_type( $id );
 		$news      = $tipo === 'post';
 		$sezione   = [ 'post' => 'news', 'evento' => 'eventi', 'da_sapere' => 'da-sapere' ][ $tipo ] ?? forestas_sezione_pagina( $id );
-		$tipologia = $news ? forestas_news_tipologia( $id ) : ( $tipo === 'da_sapere' ? forestas_da_sapere_tipologia( $id ) : null );
+		// Di un «da sapere» tutte le tipologie, separate da uno spazio come in field--node--field-tipo-da-sapere--da-sapere--full
+		$tipologie = $news ? array_filter( [ forestas_news_tipologia( $id ) ] ) : ( $tipo === 'da_sapere' ? forestas_da_sapere_tipologie( $id ) : [] );
 		// Sopra il titolo di un evento c'è «Eventi», come la sase-hero di Drupal (categoria del tipo)
-		$etichetta = $tipologia ? $tipologia->name : ( $tipo === 'evento' ? forestas_testo( 'Eventi', 'Events' ) : '' );
+		$etichetta = $tipologie ? forestas_nomi_termini( $tipologie, ' ' ) : ( $tipo === 'evento' ? esc_html( forestas_testo( 'Eventi', 'Events' ) ) : '' );
 		return sprintf(
 			'<div class="forestas-testata forestas-sezione-%1$s%2$s">%3$s%4$s<div class="forestas-testata-testo"%9$s>%7$s<span class="forestas-testata-filo" aria-hidden="true"></span><h1 class="forestas-testata-titolo">%5$s</h1>%8$s%6$s</div></div>',
 			esc_attr( $sezione ),
@@ -242,7 +258,7 @@ add_shortcode(
 			forestas_credits_immagine( $id_immagine ),
 			esc_html( get_the_title( $id ) ),
 			$sottotitolo !== '' ? '<p class="forestas-testata-sottotitolo">' . esc_html( $sottotitolo ) . '</p>' : '',
-			$etichetta !== '' ? '<p class="forestas-testata-tipologia"' . ( $tipologia ? forestas_attributo_lingua_termine( $tipologia ) : '' ) . '>' . esc_html( $etichetta ) . '</p>' : '',
+			$etichetta !== '' ? '<p class="forestas-testata-tipologia">' . $etichetta . '</p>' : '',
 			$news ? '<p class="forestas-testata-data"><i class="fas fa-calendar-edit" aria-hidden="true"></i> ' . forestas_news_data( $id ) . '</p>' : '',
 			forestas_attributo_lingua( $id )
 		) . forestas_percorso( $id );
@@ -481,6 +497,8 @@ add_shortcode(
  * /node/<nid>; poi le pagine delle tipologie dei «da sapere» (/taxonomy/term/4707, FORESTAS_META_ALIAS_DRUPAL).
  * Prima il contenuto nella lingua della richiesta; altrimenti quello di un'altra lingua, portato nella lingua
  * corrente se ha la traduzione (oc:8760). Solo gli indirizzi che Drupal aveva: un altro 404 resta 404.
+ * Priorità 9, prima di redirect_canonical: per un alias che finisce con una punteggiatura
+ * (/da-sapere/vestiti-“-cipolla”) il core toglierebbe l'ultimo carattere e manderebbe a un altro 404.
  */
 add_action(
 	'template_redirect',
@@ -490,7 +508,9 @@ add_action(
 			return;
 		}
 		$percorso = trim( strtolower( remove_accents( rawurldecode( (string) $wp->request ) ) ), '/' );
-		if ( $percorso === '' ) {
+		// Gli alias di Drupal non hanno estensione né il prefisso wp-: un file statico mancante (immagine,
+		// .xml, .php) o un indirizzo di WordPress non fa le tre ricerche sui meta
+		if ( $percorso === '' || strlen( $percorso ) > 255 || str_starts_with( $percorso, 'wp-' ) || preg_match( '/\.[a-z0-9]{1,5}$/', $percorso ) ) {
 			return;
 		}
 		// Il meta è un array serializzato: ogni percorso vi compare fra virgolette
@@ -508,5 +528,6 @@ add_action(
 		$id = (int) apply_filters( 'wpml_object_id', (int) $pagine[0], get_post_type( (int) $pagine[0] ), true );
 		wp_safe_redirect( get_permalink( $id ), 301 );
 		exit;
-	}
+	},
+	9
 );

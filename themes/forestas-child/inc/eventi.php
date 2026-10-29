@@ -95,9 +95,7 @@ add_shortcode(
 			$info .= forestas_evento_info( 'fa-calendar-edit', forestas_testo( 'Quando', 'When' ), $quando );
 		}
 		$html     = do_shortcode( '[forestas_testata]' )
-			. '<div class="forestas-pagina-testo forestas-news-corpo forestas-evento-corpo"' . forestas_attributo_lingua( $id ) . '>'
-			. ( $info !== '' ? '<div class="forestas-evento-info">' . $info . '</div>' : '' )
-			. forestas_testo_importato( $id ) . forestas_allegati( $id ) . forestas_news_collegamenti( $id ) . forestas_galleria( $id ) . '</div>';
+			. forestas_corpo_contenuto( $id, $info !== '' ? '<div class="forestas-evento-info">' . $info . '</div>' : '', 'forestas-evento-corpo' );
 		$in_corso = false;
 		return $html;
 	}

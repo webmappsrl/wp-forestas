@@ -5,7 +5,7 @@ Template: Impreza
 Author: Webmapp
 Author URI: https://webmapp.it/
 Description: Child theme di Impreza per Sardegna Sentieri (Forestas). Versionato nel repo wp-forestas e montato dal compose: si modifica nel repo, non dal pannello.
-Version: 1.7.4
+Version: 1.7.5
 */
 
 
@@ -71,7 +71,7 @@ Version: 1.7.4
 	--sase-rientro-contenuto: max(22px, calc((100% - var(--sase-larghezza-contenuto)) / 2)); /* percorso e pulsanti allineati al logo */
 	--sase-filo-percorso: #EEEBE5;                           /* sotto percorso e pulsanti (artifact) */
 	--sase-blu-pulsante: #16497B;
-	--sase-blu-marchio: #254877;                             /* blu del marchio SARDEGNA (artifact): pannello delle FAQ, oc:8760 */                            /* pulsante premuto o aperto (tema Drupal) */
+	--sase-blu-marchio: #254877;                             /* blu del marchio SARDEGNA (artifact): pannello delle FAQ, oc:8760 */
 	--sase-inchiostro: #1A1A1A;                              /* testi scuri del percorso e di Condividi (artifact) */
 	--sase-grigio-percorso: #767676;                         /* percorso e bordo del pannello Condividi (artifact) */
 	/* Caratteri del tema Drupal che ricorrono: titoli della testata, delle sezioni e degli allegati, testo */
@@ -1714,7 +1714,7 @@ Version: 1.7.4
 .forestas-file__icona {
 	color: var(--sase-arancio);
 }
-.forestas-news-corpo .forestas-file__icona {
+.forestas-corpo-contenuto .forestas-file__icona {
 	color: var(--sase-sezione-news);
 }
 /* Galleria: sezione sase-padding-v-8 (2,5rem sopra e sotto) con 1,875rem fra titolo e griglia
@@ -1965,8 +1965,8 @@ Version: 1.7.4
 	font-weight: 600;
 }
 .forestas-testata-data i { margin-right: .35em; color: var(--sase-sezione-news); }
-.forestas-news-corpo { padding-top: 2.5rem; }
-.forestas-news-corpo > .forestas-collegamenti { margin-top: 3.125rem; }
+.forestas-corpo-contenuto { padding-top: 2.5rem; }
+.forestas-corpo-contenuto > .forestas-collegamenti { margin-top: 3.125rem; }
 /* Tag: sase-tag del tema Drupal. Segnalibro «light» nel colore della sezione News (#C2410C concordato
    al posto del #F67745 di Drupal, come la data, i file e la freccia dei collegamenti), voci in maiuscolo
    separate da «-» */
@@ -2287,7 +2287,7 @@ Version: 1.7.4
 .forestas-filtri__gruppo { display: grid; gap: .78125rem; }
 .forestas-filtri__gruppo + .forestas-filtri__gruppo {
 	padding-top: .9375rem;
-	border-top: 1px solid #F0F0F0;
+	border-top: 1px solid var(--sase-bordo);
 }
 .forestas-filtri__testata {
 	display: flex;
@@ -2364,7 +2364,7 @@ Version: 1.7.4
 	margin-top: 8px;
 	padding: 1rem;
 	border: 0;
-	border-top: 1px solid #F0F0F0;
+	border-top: 1px solid var(--sase-bordo);
 	background: none;
 	color: var(--sase-testo);
 	font: inherit;
@@ -2508,10 +2508,10 @@ Version: 1.7.4
 	display: flex;
 	margin-bottom: 50px;
 	padding-bottom: 30px;
-	border-bottom: 1px solid #F0F0F0;
+	border-bottom: 1px solid var(--sase-bordo);
 }
 .forestas-evento-info__voce { display: flex; flex: 1 1 0; align-items: flex-start; gap: .6rem; }
-.forestas-evento-info__voce + .forestas-evento-info__voce { margin-left: 25px; padding-left: 30px; border-left: 1px solid #F0F0F0; }
+.forestas-evento-info__voce + .forestas-evento-info__voce { margin-left: 25px; padding-left: 30px; border-left: 1px solid var(--sase-bordo); }
 .forestas-evento-info__voce > i { margin-top: 5px; font-size: var(--sase-titolo-piccolo); line-height: 1; }
 .l-main .forestas-evento-info__titolo {
 	margin: 0;

@@ -12,7 +12,7 @@
  * traduzioni, e WPML li mostra come sono (ripiego anche sulle tassonomie).
  */
 
-require_once __DIR__ . '/contenuti-lib.php';
+require_once __DIR__ . '/import-lib.php';
 
 // Più news (o traduzioni) di così da mettere in bozza nello stesso giro: copia Drupal sospetta, ci si ferma
 const WPF_NEWS_SOGLIA_BOZZE = 5;
@@ -33,7 +33,7 @@ function wpf_news_tipo(): array {
 		'nome'         => 'news',
 		'plurale'      => 'news',
 		'questo'       => 'la news',
-		'genere'       => [ 'nessuna news scritta', 'pubblicate', 'state tolte', 'accettate', 'sincronizzate' ],
+		'genere'       => [ 'nessuno' => 'nessuna news scritta', 'pubblicati' => 'pubblicate', 'tolti' => 'state tolte', 'accettati' => 'accettate', 'sincronizzati' => 'sincronizzate' ],
 		'post_type'    => 'post',
 		'prefisso'     => WPF_NEWS_PREFISSO,
 		'schede'       => 'news',

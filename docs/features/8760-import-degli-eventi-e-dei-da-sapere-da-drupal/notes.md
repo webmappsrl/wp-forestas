@@ -34,8 +34,11 @@ Moduli di Drupal letti sullo staging Acquia, confrontati con l'import e con l'ed
 | Tipologia da sapere | nome, descrizione, **immagine**, mostra in lista, peso | tutti (descrizione e immagine aggiunte qui) | tutti (immagine e ordine aggiunti qui) |
 | Tipologia news, tag | nome, descrizione | nome | nome e descrizione (nativi) |
 
-Non si importano, perché non servono: autore, «Authored on» (eventi e «da sapere» hanno la data
-dell'import), «Promosso»/«Sempre in cima», layout dei «da sapere» (nessuno lo usa) e:
+Non si importano, perché non servono: autore, «Authored on» degli eventi (hanno la data dell'import: gli
+elenchi ordinano per data di inizio), «Promosso», «Sempre in cima» di news ed eventi, layout dei «da sapere»
+(nessuno lo usa) e:
+- dei «da sapere» invece «Authored on» e «Sempre in cima» si importano (data del post e `menu_order`, dalla
+  review del 29/10): le loro View ordinano per sticky e created;
 - **commenti**: in tutta la copia ce n'è uno, «Commento di prova» del 2013 su un itinerario (tipo non
   importato); su news, eventi, «da sapere» e pagine zero, e il sito Drupal non mostra il modulo dei commenti;
 - **messaggio di revisione**: nota interna dello storico delle versioni, non si vede sul sito; c'è su 535
@@ -104,8 +107,8 @@ in «Bug trovati».
 
 Il piano (interfacce del task 7) ordinava gli eventi con una `meta_query` `OR` (`EXISTS` / `NOT
 EXISTS`). Nella review del 29/10 si è visto che così un evento senza data veniva ordinato sul valore di un
-meta qualsiasi e finiva in cima: `forestas_news_query` mette la query var `forestas_ordine_eventi` e un
-filtro `posts_clauses` (`inc/news.php`) fa un `LEFT JOIN` su `wpf_evento_inizio` con la chiave nella
+meta qualsiasi e finiva in cima: `forestas_griglia_query` (`inc/griglie.php`) mette la query var `forestas_ordine_eventi` e un
+filtro `posts_clauses` (oggi in `inc/griglie.php`) fa un `LEFT JOIN` su `wpf_evento_inizio` con la chiave nella
 condizione, così l'evento senza data va in fondo.
 
 ### Task 7 e 8 pagine allineate a Drupal dopo il piano
@@ -125,7 +128,31 @@ Il piano prevedeva un descrittore con le callable `leggi`, `esistenti`, `prepara
 `tassonomie`: esistenti, slug e collegamenti si sono rivelati uguali per tutti i tipi e stanno nel ciclo.
 `scarto_copia` (news 5, eventi 2, «da sapere» 5) è il controllo «copia a metà» che le news avevano già,
 reso un parametro: gli eventi sono 11, e uno scarto di 5 non segnalerebbe una copia a metà. Chi aggiunge un
-tipo segue il commento di `import-lib.php`, non il piano.
+tipo segue il commento di `import-lib.php` e lo aggiunge a `import-tipi.php`, non il piano (pagina di
+conoscenza 8760).
+
+### Task 2 nomi delle funzioni e dei file
+
+Il piano nomina `wpf_news_sincronizza`, `wpf_news_percorsi` e `wpf_drupal_news_elenco`, che non esistono
+più: il ciclo è `wpf_import_sincronizza` con `wpf_import_percorsi` (`import-lib.php`), l'elenco dei nodi
+`wpf_drupal_bundle_elenco` (`drupal.php`). Dalla seconda review (29/10) l'elenco dei tipi sta in
+`import-tipi.php` (pagine.php lo include, ogni `*-lib.php` include `import-lib.php`), e nel child le funzioni
+comuni a tutti i tipi hanno un nome neutro: `forestas_card`, `forestas_corpo_contenuto` e
+`forestas_collegamenti` in `inc/contenuti.php`, `forestas_griglia`, `forestas_griglie_pagina`,
+`forestas_griglia_query` e `forestas_filtri*` in `inc/griglie.php` (erano `forestas_news_*` in
+`inc/news.php`); la classe del corpo è `forestas-corpo-contenuto` (era `forestas-news-corpo`).
+
+### Commit in uno solo
+
+Il piano chiude ogni task con un commit del dev; il lavoro è stato committato in uno solo (`7c5ba28`,
+29/10), su istruzione del dev.
+
+### Riquadro «Colore e testata» delle pagine
+
+Non era nel piano: è stato aggiunto il 29/10 dopo il controllo dei campi dei moduli Drupal (sezione
+«Controllo dei campi di inserimento»), su richiesta del dev, ed è fra i requisiti dell'overview. Vale per
+tutte le pagine (`inc/pagine-statiche-admin.php`), come su Drupal i campi «Colore tematico» e «Layout»
+della Pagina base.
 
 ### Task 6 immagine legacy
 
@@ -133,12 +160,13 @@ Il piano voleva anche `node__field_immagine_principale` (legacy) come ripiego. S
 il legacy hanno tutti anche il media, con lo stesso file: si legge solo il media (commento in
 `wpf_drupal_da_sapere`).
 
-### Task 10 ciclo da zero non rifatto
+### Task 10 ciclo da zero rifatto dopo le review
 
-Il ciclo completo dal reset (task 10, passo 2) non è stato rifatto dopo le modifiche del 29/10: la
-procedura lo dice («Eventi e «da sapere» … non sono ancora passati da un ciclo intero dal reset»). Le
-verifiche sono giri di `pagine` sul sito esistente, idempotenti (il giro dopo il `--conferma` dà tutto
-«invariato»).
+Il ciclo dal reset (task 10, passo 2) non era stato rifatto dopo le modifiche del 29/10. Rifatto il 29/10
+dopo la seconda review, su richiesta del dev, seguendo `ricreare-wordpress-da-zero.md` passi 1-5: nessun
+intervento a mano, conteggi e avvisi attesi scritti nell'howto («Ultima verifica»). L'unico scostamento
+dall'howto: al passo 4 `applica --conferma` cambia anche lo stato del wizard di WPML dopo il primo giro
+che crea i contenuti; un giro che non scrive nulla non lo cambia. Ora è fra gli avvisi attesi.
 
 ### Task 2 media e avviso
 
@@ -179,7 +207,35 @@ Dalla review del 29/10 (`wm-review-ticket`, 5 finder), tutti corretti e verifica
 - Classi dei filtri rinominate (`__in-piu`, `__mostra` al posto di `__altro`, `__altri`) in CSS e
   `assets/js/filtri.js`. Child 1.7.4.
 
-Prima della review:
+Dalla seconda review (29/10, sessione di review sul commit `7c5ba28`), tutti corretti e verificati in
+locale:
+- **Template di Impreza assente su un evento o un «da sapere» creato dal pannello**: il template lo
+  scriveva solo l'import (`us_content_id`). Ora `config/impreza.json` ha `content_evento_id` e
+  `content_da_sapere_id` (`@chiave:template-evento`, `@chiave:template-da-sapere`), applicati in locale.
+  Provato creando un evento e un «da sapere» senza import: testata, Dove/Quando e corpo ci sono; poi
+  cancellati, nessuna riga orfana in `icl_translations`.
+- **Vecchio indirizzo di «Vestiti "a cipolla"» a 404**: `redirect_canonical` del core girava prima e
+  toglieva la virgoletta finale. Il redirect ora è a priorità 9. Riprovati tutti i 406 vecchi indirizzi
+  (alias e `/node/<nid>` di pagine, contenuti e tipologie pubblicati): tutti 301 verso una pagina 200.
+- **Una sola tipologia mostrata**: card e testata ne mostravano la prima in ordine alfabetico. Ora tutte,
+  separate da uno spazio come in `field--node--field-tipo-da-sapere--teaser` e `--full`, nell'ordine di
+  Drupal (delta): la tassonomia ha `sort`, l'import confronta i termini nell'ordine e li scrive in
+  `term_order`. Primo giro: 4 «da sapere» aggiornati (1102, 2336, 3996 it ed en), il giro dopo tutto
+  «invariato». Il 2336 mostra «Norme di comportamento Come organizzare l'escursione Il fai-da-te
+  dell'escursionista»; in inglese ogni nome italiano ha il suo `lang="it"`.
+- Cleanup: card dell'evento senza immagine con il riquadro vuoto e la data (come il `thumb-placeholder` di
+  `node--evento--teaser`); corpo delle pagine in un helper (`forestas_corpo_contenuto`); nomi neutri e file
+  nuovi (sezione «Task 2 nomi delle funzioni e dei file»); termini degli eventi in una funzione con nome
+  (`wpf_eventi_termini`); `genere` del descrittore a chiavi con nome e descrittore controllato da
+  `wpf_import_tipi`; prefisso di eventi e «da sapere» letto dal rewrite del tipo; riassunto di
+  `bin/wordpress-config.sh` dai tipi che `pagine.php` elenca (righe `TIPO`); un 404 con estensione o con
+  `wp-` non cerca nei meta degli alias; token `--sase-bordo` al posto di `#F0F0F0`; commenti corretti in
+  `style.css` e `inc/da-sapere.php`. Child 1.7.5.
+- Verifiche: `pagine` in anteprima dopo il `--conferma` tutto «invariato» (news 97 + 2 della 4606, media
+  mancante); prova dei filtri 0 errori; pagine principali 200, `?anno[]=x` 200; nessun avviso di PHP nel
+  log del container.
+
+Prima delle review:
 
 - **Media senza estensione e KML** (28/10): 13 «da sapere» non avevano tutti i media, perché alcuni file
   Drupal hanno come nome una descrizione senza estensione e due allegati sono KML, che WordPress rifiuta.
@@ -277,8 +333,9 @@ Prima della review:
 
 ## Follow-up
 
-- **Debito di architettura (review del 29/10, non bloccante):** `inc/news.php` è diventato il modulo di
-  card, griglie, query e filtri di tutti i tipi, con rami per tipo; la tassonomia delle tipologie è
+- **Debito di architettura (review del 29/10, non bloccante):** card, griglie, query e filtri di tutti i
+  tipi non sono più in `inc/news.php` (seconda review: `inc/contenuti.php` e `inc/griglie.php`), ma
+  hanno ancora rami per tipo; la tassonomia delle tipologie è
   registrata in `inc/news.php` e agganciata al tipo in `inc/contenuti.php`; le costanti dei meta sono
   scritte due volte (script e child, con il rimando nei commenti); i filtri caricano tutta la lista a ogni
   richiesta, senza cache. Da riprendere quando arrivano homepage e plugin del catasto.
@@ -294,8 +351,9 @@ Prima della review:
 ## Info per altri ticket
 
 - **Campi dei moduli Drupal (staging Acquia, 29/10).** I moduli «Aggiungi contenuto» di News, Evento, Da Sapere
-  e Pagina base hanno gli stessi campi della copia UAT, e l'import li legge tutti tranne autore, «Authored on»,
-  «Promosso»/«Sempre in cima», commenti (vuoti) e messaggio di revisione.
+  e Pagina base hanno gli stessi campi della copia UAT, e l'import li legge tutti tranne autore, «Promosso»,
+  commenti (vuoti) e messaggio di revisione; «Authored on» e «Sempre in cima» solo per i «da sapere», dove
+  ordinano gli elenchi.
 - **Campo «Layout» delle pagine (`layout_selection`).** L'import legge solo il layout personalizzato
   (`layout_builder__layout`), non la tendina dei layout predefiniti. La usano 4 pagine: Home (nid 52,
   `homepage`: per il ticket della homepage), News (1084) e Attività e comunicazioni (1086), entrambe

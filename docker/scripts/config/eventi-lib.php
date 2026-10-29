@@ -8,7 +8,7 @@
  * (future) e WordPress non lo mostrerebbe. Gli elenchi ordinano per la data di inizio (WPF_META_EVENTO_INIZIO).
  */
 
-require_once __DIR__ . '/contenuti-lib.php';
+require_once __DIR__ . '/import-lib.php';
 
 // Più eventi (o traduzioni) di così da mettere in bozza nello stesso giro: copia Drupal sospetta (11 eventi)
 const WPF_EVENTI_SOGLIA_BOZZE = 2;
@@ -31,9 +31,8 @@ function wpf_eventi_tipo(): array {
 		'nome'         => 'evento',
 		'plurale'      => 'eventi',
 		'questo'       => 'l\'evento',
-		'genere'       => [ 'nessun evento scritto', 'pubblicati', 'stati tolti', 'accettati', 'sincronizzati' ],
+		'genere'       => [ 'nessuno' => 'nessun evento scritto', 'pubblicati' => 'pubblicati', 'tolti' => 'stati tolti', 'accettati' => 'accettati', 'sincronizzati' => 'sincronizzati' ],
 		'post_type'    => 'evento',
-		'prefisso'     => 'evento',
 		'schede'       => null,
 		'pagina'       => null,
 		'soglia_bozze' => WPF_EVENTI_SOGLIA_BOZZE,
@@ -41,11 +40,16 @@ function wpf_eventi_tipo(): array {
 		'conteggio'    => 'WPF_EVENTO_PROVA_CONTEGGIO',
 		'bundle'       => 'evento',
 		'nodo'         => 'wpf_drupal_evento',
-		'termini'      => fn( mysqli $db, array $dati, bool $prova ) => wpf_import_tag( $db, $dati, $prova ),
+		'termini'      => 'wpf_eventi_termini',
 		'scrivi'       => 'wpf_eventi_scrivi',
 		'template'     => WPF_TEMPLATE_EVENTO,
 		'tassonomie'   => [ 'post_tag' ],
 	];
+}
+
+/** Termini degli eventi: i soli tag (field_tag_evento, vocabolario tags), come wpf_import_tag. */
+function wpf_eventi_termini( mysqli $db, array $dati, bool $prova ): array {
+	return wpf_import_tag( $db, $dati, $prova );
 }
 
 /**
