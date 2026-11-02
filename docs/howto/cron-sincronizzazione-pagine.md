@@ -87,6 +87,13 @@ finché un apply successivo non la collega: per questo l'apply va prima e dopo. 
 volta, o quando cambia `config/`. Una seconda anteprima deve dire «invariata» per tutte le pagine e
 «nessuna differenza» per l'apply.
 
+Fa eccezione un contenuto con un media che non si scarica (una riga `MANCANTE`): l'anteprima lo
+ripropone ogni volta come «aggiornato», perché il file risulta ancora da scaricare, mentre il
+`--conferma` lo dà «invariato». Non è un errore di allineamento: il criterio è l'esito del `--conferma`.
+Succede alla news Drupal 4606, la cui foto «Panorama lungo il sentiero 410 - Armungia.jpg» risponde
+«Not Found»: su UAT il 27/10 e in locale il 29/10, anteprima «news: aggiornata: 2» (italiano e
+inglese), `--conferma` «news: invariata: 99» (oc:8759).
+
 ## 3. La riga del crontab
 
 La riga è versionata in [`cron/allinea.crontab`](../../cron/allinea.crontab), l'unico posto in cui è

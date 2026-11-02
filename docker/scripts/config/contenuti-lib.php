@@ -20,6 +20,12 @@ const WPF_META_LANGCODE = '_drupal_langcode';
 // Impronta (md5) del testo scritto dalla sincronizzazione: finché il testo del contenuto è quello, il child
 // lo mostra così com'è, senza i filtri di the_content (inc/pagine-statiche.php)
 const WPF_META_TESTO_DRUPAL = '_wpf_testo_drupal';
+// Vecchi indirizzi di Drupal che portano al contenuto (senza «/» iniziale e senza prefisso di lingua, senza
+// accenti e in minuscolo): l'alias del suo nodo e /node/<nid>; per una pagina anche quelli dei nodi del
+// campo «sostituisce» di config/pagine.json. Il child ci manda con un 301 chi arriva da un vecchio link
+// (inc/pagine-statiche.php, FORESTAS_META_ALIAS_DRUPAL), anche quando l'alias ha accenti o apostrofi
+// tipografici che lo slug di WordPress perde («…galtellì…»), o non ha il prefisso del tipo (/gradi_difficoltà)
+const WPF_META_ALIAS_DRUPAL = '_wpf_alias_drupal';
 const WPF_META_CONTENUTO_ALLEGATI = 'wpf_allegati';
 const WPF_META_CONTENUTO_GALLERIA = 'wpf_galleria';
 // Media di un contenuto: elemento dei mancanti («cosa») => meta in cui si salva. Un media non scaricato non
@@ -171,11 +177,17 @@ function wpf_contenuto_media( array $file, bool $prova ): array {
 	return [ 'ids' => $scaricare ? null : $ids, 'scaricare' => $scaricare, 'scaricati' => $scaricati, 'riusati' => $riusati, 'aggiornati' => $aggiornati, 'errori' => $errori ];
 }
 
-/** Termini di un contenuto in una tassonomia, in tutte le lingue di WPML: id ordinati. */
+/**
+ * Termini di un contenuto in una tassonomia, in tutte le lingue di WPML: id ordinati, o nell'ordine scritto
+ * se la tassonomia lo tiene («sort», come tipologia_da_sapere: l'ordine di Drupal, oc:8760).
+ */
 function wpf_contenuto_termini( int $id, string $tassonomia ): array {
-	$ids = wpf_wpml_tutte_le_lingue( fn() => wp_get_object_terms( $id, $tassonomia, [ 'fields' => 'ids' ] ) );
-	$ids = is_wp_error( $ids ) ? [] : array_map( 'intval', $ids );
-	sort( $ids );
+	$ordinati = ! empty( get_taxonomy( $tassonomia )->sort );
+	$ids      = wpf_wpml_tutte_le_lingue( fn() => wp_get_object_terms( $id, $tassonomia, [ 'fields' => 'ids', 'orderby' => $ordinati ? 'term_order' : 'name' ] ) );
+	$ids      = is_wp_error( $ids ) ? [] : array_map( 'intval', $ids );
+	if ( ! $ordinati ) {
+		sort( $ids );
+	}
 	return $ids;
 }
 
@@ -200,8 +212,10 @@ function wpf_contenuto_differenze( ?WP_Post $post, array $voluti, array $meta, a
 		}
 	}
 	foreach ( $termini as $tassonomia => $ids ) {
-		$voluti_ids = array_map( 'intval', $ids );
-		sort( $voluti_ids );
+		$voluti_ids = array_map( 'intval', array_values( $ids ) );
+		if ( empty( get_taxonomy( $tassonomia )->sort ) ) {
+			sort( $voluti_ids );
+		}
 		if ( wpf_contenuto_termini( $post->ID, $tassonomia ) !== $voluti_ids ) {
 			$campi[] = $tassonomia;
 		}

@@ -12,8 +12,9 @@ versionata»). Ciò che Impreza non sa fare sta nel child theme.
 Header e footer sono **identici a quelli di sardegnasentieri.it** (tema Drupal «sardegnasentieri»,
 copia del repository su UAT: `CLAUDE.md`, «Regole del repo»),
 tranne le differenze concordate col cliente nel wireframe di oc:8783 (call del 16/10/2026): logo
-senza «Beta», voci CAMMINI e PUNTI DI INTERESSE, barre del menu nei colori delle entità, «Open Data»
-fra i link di servizio, riga compatta su desktop, sette loghi solo nel footer, «Preferenze cookie».
+senza «Beta», voci CAMMINI e PUNTI DI INTERESSE, barre del menu nei colori delle entità, «Sentieri per
+tutti» e «Open Data» fra i link di servizio, riga compatta su desktop, sette loghi solo nel footer, su
+due righe, e nella striscia del copyright solo il copyright (wireframe v105, oc:8760).
 Misure, colori e font sono
 nelle variabili `--sase-*` di `style.css`, con i valori del tema Drupal; anche colori e tipografia
 delle Theme Options (`config/impreza.json`) vengono da lì. Un ritocco va confrontato col sito in
@@ -28,8 +29,7 @@ produzione: ogni differenza va concordata col cliente (capitolato, scrum del 14/
   possono salvare in locale senza registrare WPML (oc:8757, `notes.md`).
 - **Shortcode del child** (`functions.php`), usati dentro header e footer:
   `[forestas_logo]`, `[forestas_anno]`, `[forestas_lingue]` (IT EN da WPML, codice breve),
-  `[forestas_loghi_footer]` (i sette loghi del footer), `[forestas_preferenze_cookie]` (il link
-  della striscia del copyright, oggi a `#`, finché il gestore dei cookie non è scelto). Le immagini
+  `[forestas_loghi_footer]` (i sette loghi del footer). Le immagini
   stanno in `themes/forestas-child/assets/img/`, non negli uploads.
 - **Font:** Montserrat e Work Sans del sito attuale, in `themes/forestas-child/assets/fonts/` con
   le licenze OFL, solo 400 e 600 come in produzione, usati anche dalle Theme Options per tutto il
@@ -40,8 +40,10 @@ produzione: ogni differenza va concordata col cliente (capitolato, scrum del 14/
 - **Desktop (da 1025px):** due righe, contenuto largo al massimo 1294px. Servizio (36px più 5px sopra
   e sotto), logo e menu (fra 1 e 2,5rem sopra e sotto). Al passaggio del mouse, al focus e sulla voce
   attiva compare sotto la voce una barra di 3,3px sul bordo della riga, nel colore dell'entità,
-  scelto dalla classe della voce (`tipo-sentiero`, …). «Open Data», ultima voce di servizio, ha la
-  classe `forestas-open-data`, che le dà l'icona provvisoria (`assets/img/open-data.svg` come
+  scelto dalla classe della voce (`tipo-sentiero`, …). «Sentieri per tutti» (per ora a `#`: la pagina
+  è da creare) e «Open Data», ultime voci di servizio, hanno le classi `forestas-sentieri-per-tutti`
+  e `forestas-open-data`, che danno le icone provvisorie di 15 e 13px (`assets/img/sentieri-per-tutti.svg`,
+  il marchio a un colore, e `assets/img/open-data.svg`, come
   maschera, nel colore del testo, in linea col testo: un link `inline-flex` prenderebbe la linea di
   base dall'icona vuota e il testo salirebbe sopra le altre voci); il pannello mobile copia le classi
   delle voci di servizio. Con
@@ -78,13 +80,15 @@ produzione: ogni differenza va concordata col cliente (capitolato, scrum del 14/
   pagina bloccata.
 - **Footer:** in cima la riga dei sette loghi: i primi quattro sono i loghi del blocco istituzionale
   FESR, ritagliati uno per uno dal file ufficiale «versione 2» con la stessa scala
-  (`assets/img/loghi-footer/`), poi Forestas Sentieristica, CAI e Sardegna Sentieri per tutti. Da
-  768px stanno su una riga e la disposizione copia anche il `clearfix` del campo Drupal, il cui
-  `::after` vuoto è un elemento in più della riga flex; sotto, una griglia di 12 colonne li mette in
-  due righe, quattro finanziatori e tre enti, e il `::after` si toglie. Poi il filo arancio di 5px,
+  (`assets/img/loghi-footer/`), poi Forestas Sentieristica, CAI e Sardegna Sentieri per tutti. Una
+  griglia di 12 colonne li mette in due righe centrate, come nel wireframe v105: quattro finanziatori
+  larghi al massimo il 18% della finestra (259px) e tre enti al massimo il 15% (216px), spazi del 2,2%
+  e del 3,3% (fino a 32 e 48px); sotto i 768px spazi di 18 e 12px e caselle larghe quanto le colonne.
+  Poi il filo arancio di 5px,
   logo e contatti a sinistra, social e link istituzionali a destra, e la striscia grigio scuro con
-  l'anno corrente e «Preferenze cookie»; sotto la striscia 88px (80 sotto i 600px) per i pulsanti
-  fissi nell'angolo, oggi il «torna su» di Impreza, che altrimenti coprirebbe il link.
+  l'anno corrente e il copyright: le preferenze dei cookie le riaprirà il pulsante di iubenda.
+  Sotto la striscia 88px (80 sotto i 600px) per i pulsanti fissi nell'angolo, oggi il «torna su» di
+  Impreza, poi anche iubenda e gli strumenti di accessibilità, che altrimenti coprirebbero il testo.
 - **Accessibilità** (Linee guida AgID: EN 301 549, WCAG 2.1 AA): link «Vai al contenuto» da
   `wp_body_open`, primo elemento raggiungibile da tastiera per chi non è loggato (per chi lo è viene
   dopo «Vai alla barra degli strumenti» di WordPress); per chi è loggato compare sotto la barra di
@@ -123,7 +127,7 @@ Vincoli:
 - **rilascio e rollback toccano sempre insieme child e `config/`:** il child arriva con il pull,
   header e footer solo con l'apply. Con il solo child il sito mostra header e footer demo con il CSS
   nuovo; con la sola configurazione (o tornando indietro solo sul child) mostra gli shortcode
-  `[forestas_logo]`, `[forestas_loghi_footer]`, `[forestas_preferenze_cookie]`, `[forestas_lingue]`,
+  `[forestas_logo]`, `[forestas_loghi_footer]`, `[forestas_lingue]`,
   `[forestas_anno]` come testo. Il
   rollback, a passi:
   1. riporta il sito alla configurazione precedente con `bin/wordpress-config.sh applica --da

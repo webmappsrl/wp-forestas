@@ -308,6 +308,23 @@
                 {
                     "attr_title": "",
                     "classi": [
+                        "forestas-sentieri-per-tutti"
+                    ],
+                    "descrizione": "",
+                    "destinazione": {
+                        "tipo": "custom",
+                        "url": "#"
+                    },
+                    "genitore": null,
+                    "meta": [],
+                    "originale": null,
+                    "target": "",
+                    "titolo": "Sentieri per tutti",
+                    "xfn": ""
+                },
+                {
+                    "attr_title": "",
+                    "classi": [
                         "forestas-open-data"
                     ],
                     "descrizione": "",
@@ -632,7 +649,7 @@
                 {
                     "attr_title": "",
                     "classi": [
-                        "forestas-open-data"
+                        "forestas-sentieri-per-tutti"
                     ],
                     "descrizione": "",
                     "destinazione": {
@@ -642,6 +659,23 @@
                     "genitore": null,
                     "meta": [],
                     "originale": 4,
+                    "target": "",
+                    "titolo": "Trails for everyone",
+                    "xfn": ""
+                },
+                {
+                    "attr_title": "",
+                    "classi": [
+                        "forestas-open-data"
+                    ],
+                    "descrizione": "",
+                    "destinazione": {
+                        "tipo": "custom",
+                        "url": "#"
+                    },
+                    "genitore": null,
+                    "meta": [],
+                    "originale": 5,
                     "target": "",
                     "titolo": "Open Data",
                     "xfn": ""
