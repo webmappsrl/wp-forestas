@@ -545,3 +545,14 @@ Nessuno nel codice esistente. Dati di Drupal da sapere:
   mancanti (non ferma il giro) e l'anteprima segnala la news 4606 «aggiornata (wpf_galleria)»;
 - le news 839 e 842 hanno la tipologia 3905 e il tag 3361, che su Drupal non esistono più: AVVISO nel
   log, restano senza.
+
+## Messa in opera su UAT (27/10)
+
+- **Codice:** forestas su UAT in `/var/www/html/forestas`, branch `main` (5719276), submodule wp-forestas
+  al gitlink 5c152c6; `git pull` e `git submodule update`, poi `scripts/wordpress-up.sh`.
+- **`bin/wordpress-config.sh applica --conferma`:** 7 modifiche, backup in
+  `wp-forestas/backup/2026-10-27-175700`.
+- **`bin/wordpress-config.sh pagine --conferma`:** uscita 0, 34 pagine, 99 news, 294 media.
+- **Accessibilità:** axe-core, 0 violazioni sulle 4 pagine controllate di UAT.
+- **News 4606:** «aggiornata» in anteprima e «invariata» in scrittura, per la foto di galleria che non
+  si scarica; non è un errore di allineamento (`docs/howto/cron-sincronizzazione-pagine.md`, sezione 2).

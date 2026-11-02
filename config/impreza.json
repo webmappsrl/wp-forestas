@@ -211,6 +211,8 @@
     "columns_stacking_width": "600px",
     "content_archive_id": "",
     "content_author_id": "__defaults__",
+    "content_da_sapere_id": "@chiave:template-da-sapere",
+    "content_evento_id": "@chiave:template-evento",
     "content_id": "",
     "content_order_id": "",
     "content_poi_id": "__defaults__",
