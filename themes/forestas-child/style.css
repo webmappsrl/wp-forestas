@@ -5,7 +5,7 @@ Template: Impreza
 Author: Webmapp
 Author URI: https://webmapp.it/
 Description: Child theme di Impreza per Sardegna Sentieri (Forestas). Versionato nel repo wp-forestas e montato dal compose: si modifica nel repo, non dal pannello.
-Version: 1.7.5
+Version: 1.7.6
 */
 
 
@@ -16,9 +16,9 @@ Version: 1.7.5
  * CLAUDE.md), con il prefisso del tema, «sase». Non vanno «migliorati»: ogni differenza dal sito
  * attuale va concordata col cliente. Le differenze concordate sono quelle del wireframe oc:8783
  * (call del 16/10/2026): logo senza «Beta», voce CAMMINI, «DA VEDERE» che diventa «PUNTI DI INTERESSE»,
- * barre del menu nei colori delle entità del committente, «Open Data» fra i link di servizio, riga
- * compatta che resta in alto su desktop, sette loghi solo nel footer (nell'header non ce ne sono più)
- * e «Preferenze cookie» nella striscia del copyright.
+ * barre del menu nei colori delle entità del committente, «Sentieri per tutti» e «Open Data» fra i
+ * link di servizio, riga compatta che resta in alto su desktop, sette loghi solo nel footer, su due
+ * righe (nell'header non ce ne sono più), e nella striscia del copyright solo il copyright.
  *
  * I colori che il sito attuale usa anche fuori da header e footer stanno nelle Theme Options di Impreza
  * (config/impreza.json, con gli stessi valori): qui rimandano alle loro variabili, così si cambiano in
@@ -241,7 +241,7 @@ Version: 1.7.5
    database alta 13px, da sostituire con quella ufficiale dei dati aperti. L'icona è una maschera, così
    prende il colore del testo; è decorativa, il nome del link è il testo */
 /* L'icona sta in linea col testo, non in un flex: il link resta sulla linea di base delle altre voci */
-:is(.forestas-servizio .forestas-open-data > a, .forestas-pannello-servizio a.forestas-open-data)::before {
+:is(.forestas-servizio :is(.forestas-open-data, .forestas-sentieri-per-tutti) > a, .forestas-pannello-servizio :is(a.forestas-open-data, a.forestas-sentieri-per-tutti))::before {
 	content: "";
 	display: inline-block;
 	width: 13px;
@@ -251,6 +251,15 @@ Version: 1.7.5
 	background: currentColor;
 	-webkit-mask: url("assets/img/open-data.svg") center / contain no-repeat;
 	mask: url("assets/img/open-data.svg") center / contain no-repeat;
+}
+/* «Sentieri per tutti», prima di «Open Data» (wireframe oc:8783 v105): icona provvisoria di 15px, il
+   marchio «Sentieri per tutti» a un colore, senza il giallo. Decorativa come quella di Open Data */
+:is(.forestas-servizio .forestas-sentieri-per-tutti > a, .forestas-pannello-servizio a.forestas-sentieri-per-tutti)::before {
+	width: 15px;
+	height: 15px;
+	vertical-align: -3px;
+	-webkit-mask-image: url("assets/img/sentieri-per-tutti.svg");
+	mask-image: url("assets/img/sentieri-per-tutti.svg");
 }
 
 /* Link testuali di header e footer: il colore non cambia, al passaggio del mouse si sottolineano */
@@ -900,10 +909,11 @@ Version: 1.7.5
  * Contenuto largo il 90%, al massimo 1294px.
  */
 
-/* Riga dei loghi ([forestas_loghi_footer]): caselle larghe al massimo 170px; da 768px tutte su una
-   riga, distribuite, sotto in due righe (più in basso). La riga dei loghi del sito attuale
-   ha 1.875rem sopra e sotto e 1.25rem ai lati, che spariscono quando la finestra supera 1294px più
-   i due margini */
+/* Riga dei loghi ([forestas_loghi_footer]), come nel wireframe oc:8783 (v105): sette loghi su due righe
+   di una griglia di 12 colonne, centrati. Sopra i quattro finanziatori (tre colonne ciascuno, al massimo
+   il 18% della finestra, 259px a 1440px), sotto i tre enti della rete (quattro colonne, al massimo il
+   15%, 216px). Spazi del 2,2% in verticale e del 3,3% in orizzontale, fino a 32px e 48px. Sopra e sotto
+   1.875rem, ai lati 1.25rem, che spariscono quando la finestra supera 1294px più i due margini */
 .l-section.forestas-footer-loghi {
 	padding-left: 0;
 	padding-right: 0;
@@ -917,62 +927,40 @@ Version: 1.7.5
 	margin: 0;
 }
 .forestas-loghi-footer {
-	display: flex;
-	flex-wrap: wrap;
+	display: grid;
+	grid-template-columns: repeat(12, minmax(0, 1fr));
+	justify-items: center;
 	align-items: center;
-	justify-content: center;
-	gap: clamp(1.875rem, 10vw, 3.125rem);
+	gap: min(2.2vw, 32px) min(3.3vw, 48px);
 	width: 100%;
 	max-width: var(--sase-larghezza-contenuto);
 	margin: 0 auto;
 	padding: 1.875rem 1.25rem;
 }
-/* Sul sito attuale la riga ha il clearfix di Drupal: il suo ::after vuoto è un elemento in più della
-   riga flex, che aggiunge uno spazio fra le caselle. Qui lo stesso elemento, per avere la stessa
-   disposizione (anche nel wireframe oc:8783) */
-.forestas-loghi-footer::after {
-	content: "";
-	display: table;
-}
 .forestas-logo-ente {
-	flex: 0 0 auto;
-	width: 25%;
-	max-width: 170px;
+	grid-column: span 3;
+	width: 100%;
+	max-width: min(18vw, 259px);
 }
-/* Immagini in linea come sul sito attuale: la casella è alta quanto la riga di testo che le contiene */
+.forestas-logo-ente:nth-child(n+5) {
+	grid-column: span 4;
+	max-width: min(15vw, 216px);
+}
 .forestas-logo-ente img {
+	display: block;
 	width: 100%;
 	max-width: 100%;
 	height: auto;
 }
-@media (min-width: 768px) {
-	.forestas-loghi-footer {
-		flex-wrap: nowrap;
-		justify-content: space-between;
-	}
-	.forestas-logo-ente {
-		flex: 1;
-	}
-}
-/* Sotto i 768px due righe, come nel wireframe oc:8783 (Rubens 19/10, opzione B): i quattro finanziatori,
-   più piccoli, e i tre enti della rete, così nessun logo resta da solo. Griglia di 12 colonne: tre per
-   ogni finanziatore, quattro per ogni ente. Il clearfix qui sarebbe una cella in più, e si toglie */
+/* Sotto i 768px la stessa griglia con spazi fissi e le caselle larghe quanto le colonne: quattro
+   finanziatori sulla prima riga, tre enti sulla seconda, così nessun logo resta da solo */
 @media (max-width: 767px) {
 	.forestas-loghi-footer {
-		display: grid;
-		grid-template-columns: repeat(12, minmax(0, 1fr));
 		gap: 18px 12px;
 	}
-	.forestas-loghi-footer::after {
-		content: none;
-	}
-	.forestas-logo-ente {
-		grid-column: span 3;
-		width: auto;
-		max-width: none;
-	}
+	.forestas-logo-ente,
 	.forestas-logo-ente:nth-child(n+5) {
-		grid-column: span 4;
+		max-width: none;
 	}
 }
 @media (min-width: 1334px) {
@@ -1075,8 +1063,8 @@ Version: 1.7.5
 	width: 90%;
 	max-width: var(--sase-larghezza-contenuto);
 	/* Sotto, spazio per i pulsanti fissi nell'angolo dello schermo (oggi il «torna su» di Impreza, in
-	   futuro widget di accessibilità e gestore dei cookie), come nel wireframe oc:8783: in fondo alla
-	   pagina si appoggiano lì e non coprono «Preferenze cookie» (WCAG 2.4.11) */
+	   futuro il pulsante delle preferenze di iubenda e quello dell'accessibilità), come nel wireframe
+	   oc:8783: in fondo alla pagina si appoggiano lì e non coprono il copyright (WCAG 2.4.11) */
 	padding: .625rem 0 calc(.625rem + 88px);
 }
 @media (max-width: 600px) {
@@ -1092,23 +1080,6 @@ Version: 1.7.5
 	margin: 0;
 	font-size: .75rem;
 	line-height: 1.3;
-}
-/* «Preferenze cookie» a destra del copyright, come nel wireframe oc:8783: bianco su #333 (12,6:1),
-   sottolineato come link, contorno bianco al focus perché l'azzurro del sito non si vede sul fondo scuro */
-.forestas-preferenze-cookie {
-	margin-left: auto;
-	color: var(--sase-testo-su-scuro);
-	text-decoration: underline;
-	text-underline-offset: 2px;
-}
-.no-touch .forestas-footer-bar .forestas-preferenze-cookie:hover {
-	color: var(--sase-testo-su-scuro);
-	text-decoration-thickness: 2px;
-}
-.l-footer .forestas-footer-bar .forestas-preferenze-cookie:focus-visible {
-	outline: 3px solid var(--sase-testo-su-scuro);
-	outline-offset: 2px;
-	box-shadow: none;
 }
 /* Da 768px le due colonne stanno affiancate, distanti 2.5rem, e i link istituzionali su una riga */
 @media (min-width: 768px) {

@@ -192,6 +192,9 @@ arriveranno con il plugin (descrizione del ticket, «Perché carte e zone sono e
 Tutto nel submodule `wp-forestas` (in `forestas` cambia solo il puntatore del submodule, a cura del
 dev).
 
+- `config/menu.json`, `config/post.json`, `themes/forestas-child/style.css`, `functions.php`,
+  `assets/img/sentieri-per-tutti.svg` — header e footer come nel wireframe v105 (02/11, `notes.md`):
+  «Sentieri per tutti» fra i link di servizio, loghi del footer su due righe, niente «Preferenze cookie»
 - `docker/scripts/config/pagine.php` — elenco di import, vecchi indirizzi delle pagine
 - `docker/scripts/config/import-lib.php` — nuovo: ciclo generico, termini e tag comuni
 - `docker/scripts/config/import-tipi.php` — nuovo: elenco dei tipi e controllo dei descrittori

@@ -140,18 +140,6 @@ add_shortcode(
 );
 
 /*
- * Link «Preferenze cookie» nella striscia del copyright, a destra (wireframe oc:8783). Riapre le scelte
- * sui cookie: per ora porta a «#», perché il gestore dei cookie non è ancora scelto. Quando ci sarà, qui
- * va il suo link o la sua classe (con iubenda, «iubenda-cs-preferences-link»).
- */
-add_shortcode(
-	'forestas_preferenze_cookie',
-	function () {
-		return '<a class="forestas-preferenze-cookie" href="#">' . esc_html( forestas_testo( 'Preferenze cookie', 'Cookie preferences' ) ) . '</a>';
-	}
-);
-
-/*
  * Voce aggiunta in coda al menu principale per il pannello mobile, nascosta su desktop (oc:8757).
  */
 function forestas_voce_pannello( string $classe, string $contenuto ): string {

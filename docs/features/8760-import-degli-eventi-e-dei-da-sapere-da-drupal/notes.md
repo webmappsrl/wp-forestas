@@ -331,6 +331,16 @@ Prima delle review:
     senza foto, pillole su fondo `#F7F5F1`, FAQ in un pannello blu `#254877` con «›» e pulsante bianco;
   - le pillole seguono l'ordine dei pesi di Drupal, non quello del wireframe.
 
+- **Header e footer come nel wireframe v105 (02/11, intervento chiesto dal dev in questo ticket).**
+  Prima del rilascio: «Sentieri per tutti» fra i link di servizio, prima di «Open Data», con l'icona
+  provvisoria di 15px (il marchio a un colore) e a `#` finché la pagina non c'è; in inglese
+  «Trails for everyone», confermata dal dev il 02/11 (il wireframe non la dà). I sette loghi del footer su due righe
+  centrate e più grandi (259px i finanziatori, 216px gli enti a 1440px). Tolto «Preferenze cookie»
+  dalla striscia del copyright, con il suo shortcode e il suo CSS: le preferenze le riapre il
+  pulsante di iubenda. Valori dall'agente di oc:8783 sul wireframe. Child 1.7.6. Verifica in locale:
+  `applica` con 4 differenze e poi nessuna, voce nell'header IT/EN e nel pannello mobile, loghi
+  misurati a 1440 e sotto i 768px; non verificato da loggato sotto i 600px.
+
 ## Follow-up
 
 - **Debito di architettura (review del 29/10, non bloccante):** card, griglie, query e filtri di tutti i
