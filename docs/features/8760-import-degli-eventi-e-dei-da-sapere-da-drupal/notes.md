@@ -358,6 +358,44 @@ Prima delle review:
 - Homepage con i blocchi «in evidenza» di eventi e «da sapere»: ticket separato.
 - Carte e zone geografiche: ticket separato (descrizione del ticket).
 
+- **Cron di `allinea` installato su UAT (02/11), da riportare nel codice al prossimo lavoro.** La riga di
+  `cron/allinea.crontab` è nel crontab di `root` di UAT dalle 20:02 del 02/11: alle 11, dopo il reload
+  della copia Drupal delle 10. Prima di modificare il crontab ne ho salvato una copia in
+  `/root/crontab-backup-20261102200200`. Il log è in
+  `/var/www/html/forestas/storage/logs/wordpress-pagine-cron.log`. La prova a mano con l'ambiente del cron
+  (`env -i … bin/wordpress-config.sh allinea`) ha chiuso con `STATO allineato`, uscita 0. Il dev ha chiesto
+  di lasciare l'aggiornamento del codice al prossimo agente che lavora su wp-forestas:
+  - `cron/allinea.crontab`: la riga «STATO: non ancora installata» diventa «installata su UAT il
+    02/11/2026, crontab di root»;
+  - `CLAUDE.md`, trappola del cron: «oggi non installata su nessun server» va aggiornato allo stesso modo;
+  - `docs/howto/cron-sincronizzazione-pagine.md`: titolo e introduzione citano solo pagine e news, vanno
+    estesi a eventi e «da sapere» (oc:8760).
+
+  **Aggiornamento del 06/11 (oc:8947):** i primi due punti sono fatti. La riga `STATO` del crontab dice
+  UAT dal 02/11 e dev dal 06/11; la trappola del `CLAUDE.md` e la howto del cron rimandano a quello stato
+  invece di ripeterlo. Resta da fare il terzo: titolo e introduzione della howto del cron.
+
+- **Falso «STATO non allineato» quando l'import crea contenuti nuovi (02/11, da verificare e correggere).**
+  Creare contenuti cambia l'opzione `WPML(setup)`, cioè lo stato del wizard di WPML, quindi
+  l'anteprima di `applica` mostra `wpml: stato del wizard: 'diverso' → 'come nel repo'` (howto
+  `ricreare-wordpress-da-zero.md`, passo 3). `allinea` applica da solo solo le differenze che
+  cominciano con `menu` (`bin/wordpress-config.sh`, passo 3, `grep -vqE '^menu[ :]'`): quella del wizard
+  la considera un rilascio da fare a mano, e il giro chiude con `STATO non allineato`, uscita 1.
+  - **Effetto:** i contenuti nuovi arrivano lo stesso sul sito, ma la riga finale dà un allarme. Resta
+    così, giro dopo giro, finché qualcuno non lancia `applica --conferma`. Diventerebbe un falso allarme
+    a ogni contenuto nuovo su Drupal.
+  - **Visto su UAT il 02/11:** dopo l'import dei 145 eventi e «da sapere», il primo `allinea` ha chiuso
+    così; un `applica --conferma` a mano (backup `backup/2026-11-02-200131`) ha riportato `STATO allineato`.
+    Non è ancora provato su un giro con un solo contenuto nuovo.
+  - **Prova:** in locale cancellare un evento con `wpf_wpml_cancella_post` e lanciare `allinea`, che lo
+    ricrea. Se esce `STATO non allineato` per il wizard, il caso è confermato.
+  - **Correzione proposta:** in `allinea` trattare la riga `wpml: stato del wizard` come quelle dei menu,
+    cioè una differenza che il giro applica da solo, con il backup. È uno stato da raggiungere, non
+    un'impostazione esportata (commento in `docker/scripts/config/wpml.php`), quindi applicarla non
+    sovrascrive scelte fatte dal pannello. In alternativa si cerca perché la creazione dei contenuti
+    cambia `WPML(setup)` e la si evita alla fonte. Dopo la correzione vanno aggiornati la trappola del
+    cron in `CLAUDE.md`, l'howto del cron e quello di ricreazione (passo 3).
+
 ## Info per altri ticket
 
 - **Campi dei moduli Drupal (staging Acquia, 29/10).** I moduli «Aggiungi contenuto» di News, Evento, Da Sapere

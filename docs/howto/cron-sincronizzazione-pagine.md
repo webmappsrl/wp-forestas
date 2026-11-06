@@ -16,8 +16,8 @@ come si legge il log: [README](../../README.md#pagine-statiche-da-drupal); le sc
 e [news](../knowledge/8759-import-delle-news-da-drupal.md).
 
 Il cron gira **sull'host**, non dentro WordPress: il comando trova da sé il container WordPress e ci
-esegue gli script. Va messo solo dove la copia Drupal c'è e Drupal è ancora la fonte dei contenuti
-(UAT; produzione fino al lancio).
+esegue gli script. Va messo solo dove la copia Drupal si raggiunge e Drupal è ancora la fonte dei contenuti
+(UAT; dev, che legge la copia di UAT dal tunnel; produzione fino al lancio).
 
 **Cosa fa `allinea`, in ordine:**
 1. controlla che il sito sia pronto (WordPress installato e `config/` applicata dall'init); se non lo
@@ -98,8 +98,10 @@ inglese), `--conferma` «news: invariata: 99» (oc:8759).
 
 La riga è versionata in [`cron/allinea.crontab`](../../cron/allinea.crontab), l'unico posto in cui è
 scritta: si copia da lì nel crontab di `root` (`crontab -e`). Il file dice anche lo stato
-dell'installazione (oggi: non installata su nessun server); quando la si mette in un crontab, si
-aggiorna quello stato nello stesso commit.
+dell'installazione; quando la si mette o la si toglie da un crontab, si aggiorna quello stato nello
+stesso commit. Su dev la riga è la seconda del file, alle 05:00 UTC (oc:8947): di giorno su dev
+`pagine` e `applica` si lanciano a mano, e con un giro a mano in corso quello del cron esce
+(«un'altra sincronizzazione», tabella sotto) e chiude non allineato.
 
 L'orario è **lontano dalle 10:00**, ora in cui la copia di UAT si ricarica
 (`forestas/docs/howto/copia-database-drupal.md`, «La copia su UAT»): durante il reload il comando si
