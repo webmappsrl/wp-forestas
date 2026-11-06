@@ -1,9 +1,10 @@
 # Riga del crontab per tenere il WordPress di Forestas allineato (oc:8758; le news dal oc:8759).
 #
-# STATO: non ancora installata su nessun server (22/10/2026). Quando la si mette in un crontab,
-# aggiornare questa riga di stato (server, data) nello stesso commit.
+# STATO: installata su UAT il 02/11/2026 (alle 11:00) e su dev il 06/11/2026 (alle 05:00 UTC, oc:8947).
+# Quando la si mette o la si toglie da un crontab, aggiornare questa riga di stato (server, data)
+# nello stesso commit.
 #
-# Dove: nel crontab di root dell'host che fa girare lo shard (UAT; produzione fino al lancio), con
+# Dove: nel crontab di root dell'host che fa girare lo shard (UAT; dev; produzione fino al lancio), con
 # `crontab -e`. Non viene installata da nessuno script: si copia a mano la riga qui sotto.
 # Prima: `.env` di wp-forestas con DRUPAL_SYNC=on, DRUPAL_DB_USER, DRUPAL_DB_PASSWORD, poi
 # scripts/wordpress-up.sh di forestas; una prova a mano dello stesso comando deve chiudere con
@@ -17,3 +18,10 @@
 # Al lancio in produzione la riga si toglie, insieme a DRUPAL_SYNC=off (howto, «Al lancio»).
 
 0 11 * * * cd /var/www/html/forestas/wp-forestas && PATH=/usr/local/bin:/usr/bin:/bin bin/wordpress-config.sh allinea >> /var/www/html/forestas/storage/logs/wordpress-pagine-cron.log 2>&1
+
+# Host di dev (oc:8947): stesso comando alle 05:00 UTC (l'ora dell'host), al posto della riga sopra.
+# Su dev pagine e applica si lanciano a mano di giorno, e prendono un blocco: se uno è in corso, quello
+# del cron esce con «un'altra sincronizzazione» e il giro chiude non allineato. Di notte non succede.
+# Legge la copia Drupal di UAT dal tunnel (DRUPAL_DB_HOST e DRUPAL_DB_PORT del .env, vedi
+# forestas/docs/howto/copia-database-drupal.md), quella ricaricata alle 10:00 del giorno prima.
+# 0 5 * * * cd /var/www/html/forestas/wp-forestas && PATH=/usr/local/bin:/usr/bin:/bin bin/wordpress-config.sh allinea >> /var/www/html/forestas/storage/logs/wordpress-pagine-cron.log 2>&1

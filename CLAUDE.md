@@ -153,7 +153,7 @@ subagent.
   e la traduzione va rifatta prima di aggiornare `sorgente`; se Drupal aggiunge la sua traduzione,
   vince quella (oc:8758)
 - Il cron usa `bin/wordpress-config.sh allinea`, con la riga versionata in `cron/allinea.crontab`
-  (lì anche lo stato: oggi non installata su nessun server, da aggiornare quando la si installa). Applica
+  (lì anche lo stato dell'installazione, da aggiornare quando la si installa o la si toglie). Applica
   da solo solo le differenze dei menu: un rilascio di `config/` (header, footer, Theme Options…) va
   applicato a mano con `applica --conferma`, altrimenti ogni giro chiude con `STATO non allineato` (oc:8758)
 - La sincronizzazione non va lanciata durante il reload giornaliero della copia Drupal su UAT (alle

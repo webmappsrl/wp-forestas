@@ -27,6 +27,7 @@ provarlo.
 | `backup/` | backup creati da `applica --conferma` (esclusi da git) |
 | `themes/forestas-child/` | child theme di Impreza, montato in `wp-content/themes/forestas-child` |
 | `docker/uat/` | virtual host di riferimento per l'Apache dell'host di UAT |
+| `docker/dev/` | virtual host di riferimento per l'Apache dell'host di dev (oc:8947) |
 
 ## Avvio dentro forestas
 
