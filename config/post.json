@@ -130,6 +130,19 @@
         "post_type": "us_content_template"
     },
     {
+        "chiave": "template-pagina-ricerca",
+        "lingua": "it",
+        "menu_order": 0,
+        "meta": [],
+        "originale": null,
+        "post_content": "[vc_row height=\"auto\" width=\"full\"][vc_column][vc_column_text][forestas_search][/vc_column_text][/vc_column][/vc_row]",
+        "post_excerpt": "",
+        "post_name": "pagina-ricerca",
+        "post_status": "publish",
+        "post_title": "Pagina ricerca",
+        "post_type": "us_content_template"
+    },
+    {
         "chiave": "template-pagina-testo",
         "lingua": "it",
         "menu_order": 0,

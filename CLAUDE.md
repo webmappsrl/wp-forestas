@@ -41,9 +41,12 @@ subagent.
 
 ## Trappole
 
-- La cartella del plugin `wp-geohub` deve chiamarsi `wm-package`: il plugin ha il percorso
-  `wp-content/plugins/wm-package/shortcodes` scritto nel codice e con un altro nome l'attivazione
-  lancia un'eccezione (oc:8711)
+- `wp-package` arriva dall'init a un commit fisso (`WP_PACKAGE_REF`) e si riscarica solo quando
+  quel commit è diverso da quello scritto in `wp-content/plugins/wp-package/.wpf-ref`: un aggiornamento
+  del plugin vuole il nuovo hash in `init-wordpress.sh`, poi `scripts/wordpress-up.sh` di `forestas`, che ricostruisce
+  l'immagine con l'init nuovo. In locale invece la
+  cartella è un link simbolico al clone montato in sola lettura (`compose.local.yml`): `wp i18n` e ogni
+  comando che scrive nel plugin vanno lanciati su una copia, non lì (oc:8952)
 - MariaDB crea utente e database solo al primo avvio su un volume vuoto: avviata senza password
   inizializzerebbe l'utente senza password e ignorerebbe il `.env` creato dopo. Per questo esce se
   manca `WP_DB_PASSWORD` — non togliere quel controllo (oc:8711)

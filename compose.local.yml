@@ -1,0 +1,8 @@
+# Solo in locale: incluso da local.compose.yml di forestas dopo compose.yml (oc:8952). Monta in sola lettura
+# il clone di sviluppo di wp-package, che init-wordpress.sh collega nella cartella dei plugin con un link
+# simbolico. Il compose dei server (compose.yml di forestas) non lo include. Senza WP_PACKAGE_DIR si monta
+# una cartella vuota del repo e l'init si comporta come sui server.
+services:
+  wordpress:
+    volumes:
+      - ${WP_PACKAGE_DIR:-./docker/wp-package-empty}:/opt/wp-forestas/wp-package-dev:ro
