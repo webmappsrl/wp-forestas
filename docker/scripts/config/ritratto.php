@@ -27,7 +27,7 @@ $righe[] = 'core: ' . implode( '.', array_slice( explode( '.', $wp_version ), 0,
 $righe[] = 'tema attivo: ' . get_stylesheet();
 $righe[] = 'versione Impreza: ' . ( wpf_versione_tema( 'Impreza' ) ?? 'assente' );
 $righe[] = 'versione forestas-child: ' . ( wpf_versione_tema( 'forestas-child' ) ?? 'assente' );
-foreach ( array_merge( [ 'us-core', 'wm-package' ], $commerciali ) as $cartella ) {
+foreach ( array_merge( [ 'us-core', 'wp-package' ], $commerciali ) as $cartella ) {
 	$righe[] = "versione {$cartella}: " . $plugin( $cartella );
 }
 

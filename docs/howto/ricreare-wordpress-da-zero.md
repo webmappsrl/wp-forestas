@@ -10,7 +10,12 @@ configurazione, pagine statiche, news, eventi, «da sapere», media e menu colle
 i due sono indicate passo per passo. **In produzione il reset non si usa**: lì i dati di WordPress
 sono permanenti.
 
-Ultima verifica dell'intero ciclo: 29/10/2026, in locale (oc:8760), dopo le due review, passi 1-5:
+Ultima verifica dell'intero ciclo: 10/11/2026, in locale (oc:8952), con la ricerca unica e il plugin
+`wp-package` collegato al clone (`WP_PACKAGE_DIR`), passi 1-5: 46 pagine (23 IT, 23 EN, comprese le due
+`/cerca-nel-sito`), 99 news, 14 eventi e 121 «da sapere», come prima del reset anche nei 774 allegati; mancanti
+solo i 2 media della news 4606; il giro dopo tutto «invariata» salvo la news 4606; `applica` senza differenze;
+ritratto identico a quello di prima del reset; la ricerca dà per «perda liana» 42 percorsi e 4 contenuti in
+italiano e in inglese. Il primo `pagine --conferma` è durato 12 minuti. Verifica precedente: 29/10/2026, in locale (oc:8760), dopo le due review, passi 1-5:
 44 pagine (22 IT, 22 EN), 99 news (95 IT, 4 EN), 14 eventi (11 IT, 3 EN) e 121 «da sapere» (72 IT, 49 EN),
 tutte le traduzioni inglesi collegate in WPML, nessuna riga orfana; il giro dopo tutto «invariato» salvo la
 news 4606 (2 media mancanti, sotto); ritratto identico a quello di prima del reset; i 406 vecchi
@@ -42,6 +47,7 @@ secondo giro senza nulla da fare. I passi qui sotto restano per guardare un pass
 | `DRUPAL_SYNC=on` nel `wp-forestas/.env` | sì, per sincronizzare le pagine | sì, finché Drupal è la fonte |
 | Copia del database Drupal | tunnel SSH verso quella di UAT; nel `.env` `DRUPAL_DB_HOST=host.docker.internal`, `DRUPAL_DB_PORT=3307`, `DRUPAL_DB_USER` e `DRUPAL_DB_PASSWORD` | container `mysql-sardegnasentieri-dump` sulla stessa macchina; nel `.env` solo `DRUPAL_DB_USER` e `DRUPAL_DB_PASSWORD` |
 | Orario | qualsiasi, ma non durante il reload della copia di UAT (dalle 10:00 per circa 15 minuti) | lo stesso |
+| Plugin della ricerca `wp-package` (oc:8952) | `WP_PACKAGE_SHARD=forestasdev`, `WP_PACKAGE_APP_ID=1`; per sviluppare il plugin anche `WP_PACKAGE_DIR` con il percorso del clone | `WP_PACKAGE_SHARD` e `WP_PACKAGE_APP_ID` dello shard di UAT; `WP_PACKAGE_DIR` vuoto |
 | File dei media (`DRUPAL_FILES_URL` nel `.env`) | vuoto: si scaricano dal sito pubblico di Drupal | lo stesso finché Drupal è acceso; dopo lo spegnimento va puntato alla copia della cartella `sites/default/files`, da chiedere prima |
 
 Il tunnel, in locale (`forestas/docs/howto/copia-database-drupal.md`, «Lavorare dal locale sulla copia
@@ -80,7 +86,12 @@ docker logs -f wordpress-<APP_NAME>     # fino a «[init-wordpress] WordPress pr
 docker exec -u www-data wordpress-<APP_NAME> wp --path=/var/www/html option get wp_forestas_config_applicata
 ```
 
-L'opzione contiene la data dell'apply riuscito. **Avvisi attesi** a questo punto: per ogni voce di
+L'opzione contiene la data dell'apply riuscito. Nei log del plugin della ricerca: «scarico
+wp-package al commit …» (in locale con `WP_PACKAGE_DIR`: «collego wp-package al clone di
+sviluppo»), «attivo il plugin wp-package», «imposto wmwp_shard dal .env» e «imposto wmwp_app_id dal
+.env». Finché il repo GitHub del plugin non esiste, al loro posto c'è l'avviso atteso «AVVISO:
+wp-package non ancora pubblicato, nessun download», e `/cerca-nel-sito` mostra il campo di ricerca
+semplice. **Avvisi attesi** a questo punto: per ogni voce di
 menu che porta a una pagina statica,
 `menu …: page «sentieri» non c'è su questo sito, la voce è un link a /sentieri/`. Le pagine arrivano
 al passo 3, e il passo 4 collega le voci.
@@ -90,7 +101,7 @@ al passo 3, e il passo 4 collega le voci.
 Dalla cartella `wp-forestas`:
 
 ```bash
-bin/wordpress-config.sh pagine              # anteprima: 44 pagine, 99 news, 14 eventi e 121 «da sapere» «creata», i termini, media da scaricare, link
+bin/wordpress-config.sh pagine              # anteprima: 46 pagine, 99 news, 14 eventi e 121 «da sapere» «creata», i termini, media da scaricare, link
 bin/wordpress-config.sh pagine --conferma   # crea pagine, news, eventi, «da sapere» e termini, scarica media, assegna i template
 ```
 
@@ -114,7 +125,8 @@ bin/wordpress-config.sh applica               # anteprima: i 6 menu, con voci da
 bin/wordpress-config.sh applica --conferma    # backup in backup/<data-ora>, poi applica
 ```
 
-Atteso nell'output: `menu: 17 voci rimaste senza menu cancellate`. È normale. Dopo il primo giro del
+Atteso nell'output: `menu: 18 voci rimaste senza menu cancellate` (10/11; il 29/10 erano 17, e `config/menu.json` è
+cambiato il 02/11 con oc:8760). È normale. Dopo il primo giro del
 passo 3 è atteso anche `wpml: stato del wizard: 'diverso' → 'come nel repo'` (29/10, oc:8760): lo cambia
 la creazione dei contenuti, non un giro che non scrive nulla. Quando l'apply ricrea i
 menu italiani, WPML stacca dai menu inglesi le traduzioni delle voci vecchie; i menu inglesi vengono
@@ -164,6 +176,19 @@ Nel browser, in italiano e inglese:
 - `/attivita-e-comunicazioni/`, `/tutte-le-news/` ed `/eventi/` hanno a sinistra i filtri «Tipologia» e «Anno»
   (sotto 960px dietro il pulsante «Filtri»); `/attivita-e-comunicazioni/?anno=2022` lascia 3 news,
   `/eventi/?anno=2025` 4 eventi; la lista degli eventi è a una colonna di card orizzontali;
+- ricerca (oc:8952): `/cerca-nel-sito/?search_api_fulltext=perda+liana` ha i tab «Tutti», «Percorsi» e
+  «Contenuti del sito» con i numeri (il 09/11 e il 10/11 in locale 42 e 4; in inglese «All», «Trails», «Site
+  content») e i gruppi con le prime card; il tab
+  «Percorsi» ha i filtri a sinistra (Validazione catastale, Tipo di percorso, Attività, Difficoltà, Area,
+  Provincia, Comune) e una casella su ogni riga: scegliendo due percorsi compare in fondo la barra «2 percorsi
+  selezionati» e «Scarica 2 percorsi in GPX» scarica `sardegna-sentieri-percorsi-2.gpx`; «Mappa», accanto al
+  totale, mostra gli stessi percorsi su una mappa con «Inquadratura sul riquadro che contiene tutti i risultati» in
+  basso e l'indirizzo con `vista=mappa` (il 10/11 in locale, senza testo, 769 percorsi in circa 7 secondi); `/?s=oliena` porta
+  in 302 a `/cerca-nel-sito/?search_api_fulltext=oliena`, `/en/?s=trail` a `/en/cerca-nel-sito/`; un vecchio
+  link di Drupal `…?f%5B0%5D=cerca_contenuto_nel_sito%3Asentiero` porta in 302 al tab «Percorsi» con il filtro
+  del tipo (`?tipo=percorsi&percorso=route-type-trail`); fra i «Contenuti del sito» di tipo pagina ci sono 14
+  pagine, le 13 venute da Drupal più la «Pagina di esempio» che WordPress crea all'installazione (da togliere
+  dall'installazione, oc:8952);
 - il titolo della scheda è «Pagina | Sardegna Sentieri», come su Drupal: il nome viene da `blogname`
   di `config/sito.json` (l'apply lo scrive), il separatore dal child. Se resta «Forestas» l'apply non è
   andato a buon fine.
@@ -193,6 +218,7 @@ Da qui in poi le pagine si tengono allineate a Drupal con un cron sull'host:
 | nei log dell'init, dopo «installo WordPress»: `Warning: Undefined array key "HTTP_HOST" in …/wp-includes/functions.php` | `wp core install` gira da WP-CLI, senza una richiesta web | niente: l'installazione riesce; è un avviso atteso |
 | `ERRORE copia Drupal non integra: tabella … non leggibile` o `… vuota` | la copia di UAT si sta ricaricando (cron delle 10:00, circa 15 minuti) | aspettare la fine (`ssh uat.forestas 'tail -n 5 /var/www/html/forestas/storage/logs/drupal-dump-sync.log'` mostra «fine (uscita 0)») e rilanciare |
 | `ERRORE copia Drupal non raggiungibile su host.docker.internal:3307` | tunnel caduto (in locale) | riaprire il tunnel |
+| `ERRORE: nessun container WordPress avviato monta …/themes/forestas-child` con il container avviato | `bin/wordpress-config.sh` lanciato da un percorso diverso da quello che il container monta: per esempio da `/Volumes/WebmappDev/Sites/…` quando il compose è partito da `~/Sites/…`, che è un link simbolico alla stessa cartella; lo script confronta i percorsi, non le cartelle (10/11) | lanciarlo dal percorso del mount (`docker inspect wordpress-<APP_NAME>`, mount di `forestas-child`), o con `WPF_CONTAINER=wordpress-<APP_NAME>` |
 | `ERRORE sincronizzazione da Drupal spenta in questo ambiente` | `DRUPAL_SYNC` non è `on`, o il container non ha riletto il `.env` | `.env`, poi `scripts/wordpress-up.sh` |
 | `ERRORE DRUPAL_DB_USER e DRUPAL_DB_PASSWORD mancano nel .env di wp-forestas` | credenziali della copia non impostate (non hanno valori predefiniti), o container non riavviato | aggiungerle al `wp-forestas/.env`, poi `scripts/wordpress-up.sh` |
 | `ERRORE un'altra sincronizzazione delle pagine è in corso` | un giro sta già girando, o ne è rimasto il blocco dopo un container fermato a metà | aspettare la fine del giro; un blocco rimasto lo toglie l'avvio del container (solo con l'init nuovo, dopo `scripts/wordpress-up.sh`) o scade dopo 2 ore |
@@ -201,5 +227,7 @@ Da qui in poi le pagine si tengono allineate a Drupal con un cron sull'host:
 | `MANCANTE news 4606/it galleria … Not Found` o `cURL error 28` (o `MANCANTE pagina …`) o `Service Unavailable` | il sito Drupal non serve il file | passo 6, più tardi |
 | `ERRORE copia Drupal sospetta: N news …` (o `N eventi`, `N «da sapere»`) | più contenuti del solito da mettere in bozza (news 5, eventi 2, «da sapere» 5), o nella copia molti meno pubblicati che in WordPress: di solito la copia è in ricarica | riprovare dopo il reload; se su Drupal sono state tolte davvero, `pagine --accetta-bozze --conferma` |
 | `/news/attivita-e-comunicazioni/` (o `/news/eventi/`, `/da-sapere/faq/`…) dà 404 | regole degli indirizzi non rigenerate dopo una scheda nuova | un giro di `pagine --conferma` le rigenera (riga `REGOLE`); a mano `wp rewrite flush` |
+| `AVVISO: wp-package non ancora pubblicato, nessun download` nei log dell'init; `/cerca-nel-sito` con il solo campo di ricerca | `WP_PACKAGE_REF` vuoto in `init-wordpress.sh`: il repo GitHub del plugin non c'era quando l'immagine è stata costruita | atteso finché il repo non esiste; dopo, l'hash in `WP_PACKAGE_REF` e `scripts/wordpress-up.sh` di forestas (oc:8952) |
+| Tab «Percorsi (—)» e «Questi risultati non sono disponibili» in `/cerca-nel-sito` | il plugin non raggiunge l'API Elasticsearch: shard o app id sbagliati o vuoti (Impostazioni → WP Package), o lo shard non risponde | controllare le opzioni `wmwp_shard`/`wmwp_app_id` e l'URL mostrato nella pagina delle impostazioni (oc:8952) |
 | `AVVISO aggiornamento automatico dei link di WPML non trovato` | WPML aggiornato: gli hook che rendevano assoluti i link non si chiamano più così | controllare che i link dei testi inglesi restino relativi; aggiornare `wpf_wpml_senza_link_automatici()` |
 | PHPStan di `forestas` fallisce con `Unable to create file …/build/phpstan/cache/…` | cache scritta da più processi su un volume montato da macOS | rilanciare con `--debug` (un solo processo) |

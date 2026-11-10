@@ -16,6 +16,7 @@
         { "chiave": "news-eventi", "nid": null, "sostituisce": [ 1085 ], "genitore": "news", "testata_da": "news", "scheda": 3, "pulsante": { "it": "Scopri tutti gli eventi", "en": "See all events", "verso": "eventi" }, "titolo": { "it": "Eventi", "en": "Events" }, "template": "scheda", "griglia": { "tipo": "evento", "quanti": 3, "variante": "evento" }, "slug": { "it": "eventi", "en": "eventi" } },
         { "chiave": "eventi", "nid": null, "testata_da": "news", "titolo": { "it": "Eventi", "en": "Events" }, "template": "elenco", "griglia": { "tipo": "evento", "quanti": 8, "paginata": true, "variante": "evento", "colonne": 1, "filtri": [ { "campo": "tag", "titolo": { "it": "Tipologia", "en": "Type" } }, { "campo": "anno", "titolo": { "it": "Anno", "en": "Year" } } ] }, "slug": { "it": "eventi", "en": "eventi" } },
         { "chiave": "mappa-interattiva", "nid": 1093, "titolo": { "en": "Interactive map" }, "template": "mappa", "slug": { "it": "mappa-interattiva", "en": "interactive-map" } },
+        { "chiave": "cerca-nel-sito", "nid": null, "testata_da": "sentieri", "titolo": { "it": "Cerca nel sito", "en": "Search in our website" }, "template": "ricerca", "slug": { "it": "cerca-nel-sito", "en": "cerca-nel-sito" } },
         { "chiave": "contatti", "nid": 1, "template": "testo", "slug": { "it": "contatti", "en": "contacts" } },
         { "chiave": "faq", "nid": 86, "template": "testo", "slug": { "it": "faq", "en": "faq" } },
         { "chiave": "app", "nid": 1486, "template": "testo", "slug": { "it": "app", "en": "app" } },

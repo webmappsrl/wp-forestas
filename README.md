@@ -1,8 +1,9 @@
 # wp-forestas
 
 WordPress dello shard Forestas: sostituisce la parte editoriale (news, post) del sito Drupal di
-Sardegna Sentieri e riceve sentieri e POI dallo shard tramite il plugin
-[`wp-geohub`](https://github.com/webmappsrl/wp-geohub).
+Sardegna Sentieri e riceve i percorsi dallo shard tramite il plugin
+[`wp-package`](https://github.com/webmappsrl/wp-package) (ricerca unica, oc:8952), che dal
+oc:8952 sostituisce [`wp-geohub`](https://github.com/webmappsrl/wp-geohub).
 
 Il repo è un **submodule di [`forestas`](https://github.com/webmappsrl/forestas)**: i servizi di
 `compose.yml` sono inclusi dai compose dello shard e partono con lui. Da solo serve solo per
@@ -56,20 +57,20 @@ APP_NAME=prova docker compose down -v     # per buttare via tutto
 
 A ogni avvio del container `init-wordpress.sh` controlla, nell'ordine: variabili presenti,
 database raggiungibile, core, `wp-config.php` e costanti d'ambiente, installazione, `.htaccess` dei
-permalink, lingua `it_IT`, plugin `wp-geohub` (a un commit fisso), tema Impreza, UpSolution Core,
+permalink, lingua `it_IT`, plugin `wp-package` (a un commit fisso), tema Impreza, UpSolution Core,
 plugin commerciali, child theme `forestas-child`, licenza Impreza, configurazione di `config/`,
 proprietario dei file. Esegue solo i passi che mancano e non cancella mai contenuti né
 configurazione di un'installazione esistente. Su un sito esistente agisce solo così: allinea alle
 voci del `.env` le costanti di `wp-config.php` (`DISALLOW_FILE_MODS`, site key di WPML) e la licenza
 di Impreza, crea `.htaccess` se manca, toglie il blocco lasciato da un apply interrotto, riattiva
-UpSolution Core se è spento (wp-geohub e i plugin commerciali solo se la loro attivazione automatica
+UpSolution Core se è spento (wp-package e i plugin commerciali solo se la loro attivazione automatica
 era fallita: spenti dal pannello restano spenti) e installa ciò che manca.
 
 - Se MariaDB non risponde entro un minuto, o rifiuta utente e password del `.env`, l'init si ferma e il
   container riparte: proseguire farebbe scambiare un sito esistente per uno da installare.
-- I passi che vanno in rete (wp-geohub, licenza di Impreza, apply automatico) hanno un tempo massimo:
+- I passi che vanno in rete (wp-package, licenza di Impreza, apply automatico) hanno un tempo massimo:
   Apache parte solo alla fine dell'inizializzazione, e un servizio lento non deve tenere giù il sito.
-- WP-CLI è a una versione fissa (`WP_CLI_VERSION` nel Dockerfile), come wp-geohub (`GEOHUB_REF`).
+- WP-CLI è a una versione fissa (`WP_CLI_VERSION` nel Dockerfile), come wp-package (`WP_PACKAGE_REF`).
 
 `init-wordpress.sh` sta nell'immagine: dopo una sua modifica va ricostruita (`scripts/wordpress-up.sh`
 di `forestas`). Gli script PHP della configurazione invece sono montati dal repo e valgono subito; l'init
@@ -80,11 +81,20 @@ WordPress parte lo stesso, con un AVVISO, senza `.htaccess`, licenza e apply.
   `.env`.
 - I valori del `.env` (URL, utente amministratore) contano **solo alla prima installazione**: per
   cambiarli dopo si usa il pannello o WP-CLI.
-- `wp-geohub` si installa nella cartella `wp-content/plugins/wm-package`: il plugin si chiama «WM
-  Package» e cerca i propri file in quel percorso, quindi la cartella non va rinominata.
-- `wp-geohub` si scarica dal repo pubblico a un commit fisso (`GEOHUB_REF` in `init-wordpress.sh`,
-  da aggiornare a mano); se GitHub non risponde il sito parte lo stesso e il plugin arriva al
-  riavvio successivo.
+- `wp-package` si scarica dal repo pubblico a un commit fisso (`WP_PACKAGE_REF` in
+  `init-wordpress.sh`, da aggiornare a mano) nella cartella `wp-content/plugins/wp-package`, e il commit
+  scaricato resta scritto in `.wpf-ref`: quando `WP_PACKAGE_REF` cambia, il riavvio dopo
+  `scripts/wordpress-up.sh` lo riscarica, anche su un sito che non si azzera. Finché il repo GitHub non
+  esiste `WP_PACKAGE_REF` è vuoto e i log dicono «AVVISO: wp-package non ancora pubblicato»; se
+  GitHub non risponde il sito parte lo stesso e il plugin arriva al riavvio successivo. Senza plugin la
+  pagina `/cerca-nel-sito` mostra un campo di ricerca semplice verso `?s=`.
+- Shard e app id della ricerca vengono da `WP_PACKAGE_SHARD` e `WP_PACKAGE_APP_ID` del `.env` (dev:
+  `forestasdev` e 1): l'init li scrive nelle opzioni del plugin solo se sono vuote, poi valgono le
+  impostazioni del pannello (Impostazioni → WP Package).
+- **In locale, per sviluppare il plugin:** `WP_PACKAGE_DIR` nel `.env` con il percorso del clone di
+  `wp-package`. `compose.local.yml`, incluso solo da `local.compose.yml` di forestas, lo monta in sola
+  lettura in `/opt/wp-forestas/wp-package-dev`, e l'init collega la cartella del plugin con un link
+  simbolico: ogni modifica nel clone vale subito. Il compose dei server non ha questo mount.
 - **Impreza** è un tema commerciale: lo zip si scarica dall'account Webmapp su ThemeForest e non va
   mai committato. Se lo zip manca il sito usa il tema di default; se lo aggiungi dopo, si installa
   al riavvio successivo. La **licenza** si riattiva da sola all'avvio con `IMPREZA_LICENSE_SECRET`
