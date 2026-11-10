@@ -869,6 +869,48 @@ risposta dello scarico annullato cancelli quello nuovo).
 - forestas, howto UAT «Tornare indietro»: l'header manda sempre a `?s=`, ed è il 302 del child a portarlo alla
   ricerca; overview allineata. Il «301» rimasto in queste note è diventato 302.
 
+## Messa in opera su dev del 10/11
+
+Rubens, 10/11: «puoi fare tutto e allineare i branch develop di wp-forestas e forestas, il plugin puoi mettere già su
+main», poi «chiaramente segui la regola del team con pr e merge».
+
+**Repo e PR:**
+- `wp-package`: push di `main`, `develop` e del branch del ticket sul repo vuoto (`main` branch predefinito,
+  pubblico); PR #1 verso `develop` con squash (`d4b643f`), PR #2 da `develop` a `main` con merge commit («Merge
+  branch 'develop'», `9537a61`), `develop` allineato a `main` con un fast-forward. Il submodule `map/wm-package` è
+  entrato nello squash insieme al lavoro: era nato con il plugin in questo ticket, in un commit suo del branch;
+- `WP_PACKAGE_REF=9537a61d9beedaa1ee7c51b9c5d4e785775a7698` in `init-wordpress.sh`, provato in locale senza
+  `WP_PACKAGE_DIR` (piano, Task 12 passo 3);
+- `wp-forestas`: PR #18 verso `develop` con squash (`8eb2aa0`);
+- `forestas`: PR #47 (documenti e `local.compose.yml`) e PR #48 (solo il puntatore di `wp-forestas`, come #40 di
+  oc:8760), tutte e due con squash; `develop` a `121d167`. La CI `laravel-tests` di #47 è fallita prima dei test,
+  all'avvio del container Postgres (`postgis/postgis:17-3.5-alpine`, «invalid character in extension owner»):
+  è un errore dell'ambiente della CI, lo stesso delle PR #46 e #44 mergiate prima.
+
+**Sul server dev** (`ssh dev.forestas`, `/var/www/html/forestas`, solo pull):
+1. `git pull --ff-only origin develop` e `git submodule update --init --recursive`: si è spostato solo
+   `wp-forestas` (`wm-package` era già al puntatore di `develop`);
+2. copia del `.env` di wp-forestas (`.env.bak-oc8952-<data>`) e del database (`backup/prima-oc8952-<data>.sql`,
+   `chmod 600`), poi nel `.env` `WP_PACKAGE_SHARD=forestasdev`, `WP_PACKAGE_APP_ID=1`, `WP_PACKAGE_DIR=`;
+3. `scripts/wordpress-up.sh`: «scarico wp-package al commit 9537a61…», «attivo il plugin wp-package», «imposto
+   wmwp_shard dal .env», «imposto wmwp_app_id dal .env»; cartella del plugin `755`, `.wpf-ref` giusto;
+4. `applica --conferma`: una sola differenza, `template-pagina-ricerca` creato; dopo, «nessuna differenza»;
+5. `pagine --conferma`: 2 pagine create (`/cerca-nel-sito` in italiano e in inglese), il resto invariato;
+6. `wm-package` (wp-geohub) disattivato e cancellato, dopo aver controllato che nessun contenuto usa i suoi
+   shortcode (`wm_grid_poi`, `wm_grid_track`, `wm_single_poi`, `wm_single_track`).
+
+**Verifica su `https://wp.forestas.dev.maphub.it`** (Playwright e curl, 10/11):
+- `/cerca-nel-sito/` e `/en/cerca-nel-sito/` 200; `/?s=oliena` e `/en/?s=trail` in 302 alla ricerca; il vecchio
+  link di Drupal dei sentieri in 302 a `?tipo=percorsi&percorso=route-type-trail`; `?tipo=percorsi&pagina=2` 200;
+- «perda liana»: 42 percorsi e 4 contenuti, in inglese «All», «Trails (42)», «Site content (4)»; stati in inglese;
+- mappa e scarico insieme: 37 tracce, nessuna doppia; annullamento; errori dell'API; 14 pagine fra i contenuti;
+- mappa da tastiera e tooltip; barra della selezione a 1440, 1280, 1100, 768, 390 e 320px, con il «torna su» mai
+  sopra la barra;
+- servite le versioni giuste: child `1.8.25`, plugin `0.1.0.<data del file>`.
+
+Restano da fare a mano, da Rubens: il confronto con la tavola 2 del wireframe e la prova con uno screen reader vero
+(VoiceOver o NVDA). La «Pagina di esempio» c'è ancora anche su dev («Da fare dopo questo ticket»).
+
 ## Ciclo da zero del 10/11
 
 Rubens, 10/11: «hai provato a fare un test dove si riparte da zero con la crezione del wordpress inclusa questa

@@ -270,7 +270,9 @@ Le decisioni prese nel dialogo, con le fonti, sono in [notes.md](notes.md), sezi
 
 - [ ] La pagina è verificata sul WordPress di dev (`wp.forestas.dev.maphub.it`) con lo shard dev: confronto
   con la tavola 2 del wireframe, tastiera e screen reader (VoiceOver o NVDA veri: l'audit del 10/11 ha usato l'albero
-  di accessibilità di Chromium), italiano e inglese. Il repo GitHub c'è dal 10/11; si fa
+  di accessibilità di Chromium), italiano e inglese. *10/11: messa in opera fatta e prove automatiche su dev passate
+  (Playwright: ricerca, filtri, mappa da tastiera, scarico, barra, redirect, inglese; notes, «Messa in opera su dev
+  del 10/11»). Restano da fare a mano il confronto con la tavola 2 e la prova con uno screen reader vero.* Il repo GitHub c'è dal 10/11; si fa
   dopo il push e il merge (Task 12, passo 4), come chiesto da Giuseppe il 10/11 («buttala in dev»).
 - [x] In locale, con il plugin disattivato, `/cerca-nel-sito` mostra il campo di ricerca semplice e il log non
   ha errori PHP.

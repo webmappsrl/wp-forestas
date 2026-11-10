@@ -552,6 +552,8 @@ risultati».
   temporanea (700) sulla cartella del plugin, ora `chmod 755`. Poi `WP_PACKAGE_DIR` rimesso. Attenzione nelle prove:
   `scripts/wordpress-up.sh` senza modifiche non riavvia il container, quindi l'init non riparte; serve `docker
   restart`.*
-- [ ] **Passo 4: dev** (dopo push e puntatore, su istruzione dell'utente): sul server `git submodule update --init
+- [x] **Passo 4: dev** (dopo push e puntatore, su istruzione dell'utente): sul server `git submodule update --init
   --recursive`, `.env` con `WP_PACKAGE_SHARD`/`APP_ID`, `scripts/wordpress-up.sh`, `wm-package` tolto a mano,
-  `applica --conferma` e `pagine --conferma`; verifica su `wp.forestas.dev.maphub.it` come al passo 1.
+  `applica --conferma` e `pagine --conferma`; verifica su `wp.forestas.dev.maphub.it` come al passo 1. *Fatto il
+  10/11 su istruzione di Rubens; esito in notes, «Messa in opera su dev del 10/11». Restano a mano il confronto con
+  la tavola 2 e la prova con uno screen reader vero (overview, «Fine del lavoro»).*
