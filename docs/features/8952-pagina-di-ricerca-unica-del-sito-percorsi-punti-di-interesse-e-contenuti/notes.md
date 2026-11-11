@@ -28,8 +28,9 @@
 - **Tag di Orchestrator**: la fase dei tag è stata saltata su indicazione del dev (09/11).
 - **I filtri del tab «Percorsi» sono guidati dai conteggi della risposta** (Rubens, 09/11): si preparano tutti
   quelli del wireframe, e ognuno compare solo quando l'API ne restituisce i conteggi; in WordPress restano
-  nomi e ordine. La percorribilità, che la tavola 2 mette visibile ma spenta (nota 1), non compare: un
-  filtro che non filtra non si mostra (review-gate, 09/11, sezione «Niente filtro «Percorribilità»»). I
+  nomi e ordine. La percorribilità, che la tavola 2 mette visibile ma spenta (nota 1), prima non compariva (review-gate,
+  09/11); dall'11/11 si ricava dallo stato di validazione (sezione «Filtro «Percorribilità» dallo stato di
+  validazione»). I
   filtri che aspettano l'API sono tracciati in «Filtri in attesa dell'API».
 - **Selezione e scarico di più sentieri restano fuori da questo ticket, per ora** (Rubens, 09/11; poi entrati nel
   review-gate, sezione «Selezione e scarico di più percorsi»): caselle,
@@ -354,7 +355,7 @@ dei conteggi, perché il filtro compaia da solo: da comunicare alla sessione di 
 | Validazione catastale | non è nell'indice (nello shard c'è per 750 percorsi) | `stato_validazione` nell'indice, filtrabile e con i conteggi | da concordare |
 | Comune, provincia | mescolati con aree e settori CAI in `taxonomyWheres`, conteggi solo dei primi 10 | luoghi distinti per tipo e tutti i conteggi | da concordare |
 | Area geografica (34 zone) | non c'è nello shard | arriva con oc:8932, poi nell'indice con i conteggi | da concordare |
-| Percorribilità (0–5 e «temporaneamente interrotto») | il dato non esiste; il filtro non compare | dato nuovo, deciso nel wm-package (tag 692): ticket da creare, vedi «Da fare dopo questo ticket» | da concordare |
+| Percorribilità (0–5 e «temporaneamente interrotto») | la scala non esiste; il filtro legge lo stato di validazione (11/11) | dato nuovo, deciso nel wm-package (tag 692): ticket da creare, vedi «Da fare dopo questo ticket» | da concordare |
 | Area territoriale | da decidere quale griglia | punto aperto 1 del ticket | da concordare |
 | Servizio territoriale | non c'è | da decidere (punto aperto 4 di oc:8932) | da concordare |
 | Carta | non c'è | da decidere (punto aperto 3 di oc:8932) | da concordare |
@@ -441,8 +442,11 @@ dell'API, che non ha suffisso (`grid-track-filters.js:734-736`).
     semaforo, la mette fra «Deciso, da sviluppare» e fra «Deve fornirlo Forestas», e lascia aperto il
     modello (stato, data, chi, nota).
 
-  Per questa pagina, quando il dato arriva nell'API: il filtro va primo in `forestas_search_track_facets()`
-  del child; la tavola 2 lo vuole preselezionato su «4 · Percorribile», dichiarato e disattivabile.
+  Per questa pagina, quando il dato arriva nell'API: il filtro è già primo in `forestas_search_track_facets()`
+  del child e legge lo stato di validazione (11/11); cambiano solo `field` e i valori dei `groups`. La tavola 2
+  lo vuole preselezionato su «4 · Percorribile», dichiarato e disattivabile: oggi non è preselezionato.
+  Va chiarito con Giuseppe se la scala separata chiesta da Forestas resta un requisito, visto lo scrum
+  dell'11/11 (sezione «Filtro «Percorribilità» dallo stato di validazione»).
 
   Altre informazioni per quel ticket (verificate il 09/11):
   - il verbale n. 1 del 12/08 (§4.1, riga «Percorribilità») chiede «fra i filtri anche i sentieri percorribili ma
@@ -1011,6 +1015,12 @@ soglie.
 - **L'OR dentro la stessa faccetta in osm2cai è stato aggirato nel browser**: più chiamate a Elasticsearch,
   una per valore, unite in JS (`grid-track-filters.js` 265-299, non committato). È la stessa lacuna dell'API
   segnata nel ticket.
+- **Percorribilità: stato di validazione o scala separata?** (11/11) Nello scrum dell'11/11 Giuseppe ricava la
+  percorribilità dallo stato di validazione del catasto (livello 4 «Percorribile» e superiori), senza toccare
+  Elastic. `docs/features/8783-sardegna-sentieri-wireframe-v3/decisioni.md` invece la definisce come scala 0–5
+  separata, chiesta da Forestas e pianificata in oc:8932 sul modello `HikingRoute` di osm2cai2. Le due cose
+  convivono: il filtro di questa pagina legge oggi `terms.validation-status`, e con la scala separata cambia solo
+  il campo letto. Comunicato all'agente di OC:8916 l'11/11.
 - **La mappa nei dettagli di track, POI e layer** (oc:8952, 10/11): il plugin ha già il componente. In una pagina
   basta lo shortcode `[wmwp_map tracks="<id>"]` (tracce dello shard per id) o `[wmwp_map geojson="<url>"]`; da JS,
   `window.wmWpMap.mount()` dopo aver accodato `wmwp-map`. Il profilo altimetrico del componente si accende con
@@ -1257,7 +1267,46 @@ della source `tracks` nel child è «%s percorso / %s percorsi» (inglese «trai
 10 euristiche di usabilità, «Consistency and standards». La tavola 2 scrive «28 sentieri» in un esempio in cui i
 risultati erano tutti sentieri.
 
+### Filtro «Percorribilità» dallo stato di validazione (scrum, 11/11)
+
+Supera la sezione «Niente filtro «Percorribilità»» qui sotto. Nello scrum dell'11/11 (09:46) Giuseppe ha segnalato la
+mancanza del filtro come difetto: «mettiti nei panni di uno che deve andarsi a fare un'escursione», da mettere «tra i
+primi… se non il primo», anche se il cliente non l'ha chiesto. Il dato: «quel percorribile lo prendi da qua… te lo dà
+elastic»; «non devi modificare elastic, devi semplicemente aggiungere questo filtro a quello che già fai filtrare per
+validation status». Riferimento: osm2cai, stati 1–4, il 4 è percorribile.
+
+Fatto nel child (`forestas_search_track_facets()`), primo filtro, `field` `terms.validation-status` con le voci del
+semaforo della home di oc:8783: Percorribili («Percorribile» + «Validato» + «Certificato»), In revisione o parzialmente percorribili
+(«In revisione-validazione» + «In pre-accatastamento o manutenzione»), Non percorribili («Non percorribile»); «Non
+verificato» (livello 0) fuori, come nel semaforo. Nessuna modifica al plugin né a Elastic. Non preselezionato: la
+tavola 2 lo vuole su «4 · Percorribile», ma cambierebbe il totale di partenza della pagina; da decidere a parte.
+
+Perché «Validato» sta fra i percorribili (verificato l'11/11 sul documento originale): è una regola di Forestas.
+Nelle «Osservazioni finali a CANVAS CLAUDE fase 2» (Google Doc di Alessio Saba,
+`1wbCgmHo8Z2RmDelUsLfCZlhFHHdwk9fL_ip073ei0BE`), «SOLUZIONE FORESTAS»: il valore di Drupal «sarà riversato sia su
+percorribilità che su validazione», «tal quale (valore 3)»; la barra «diventa verde quando supera la soglia minima
+(4 tacchette per la percorribilità, 4 per la validazione)». Nello shard i livelli sono quelli di
+`ConfigureTaxonomyTermsCommand`: 4 Percorribile, 5 Validato, 6 Certificato; quindi verde = 4–6. Mancava
+«Certificato» (livello 6, nessun percorso sul dev): aggiunto a «Percorribili», alla fascia «Avanzato» della
+validazione (che lo dichiarava 5–6 ma elencava solo «Validato») e ai nomi dei termini (`term_labels`).
+
+**Da riportare nelle note di sviluppo del ticket** (Rubens, 11/11), all'aggiornamento finale su Orchestrator: il
+filtro e la sua origine (scrum dell'11/11), la regola di Forestas con la fonte qui sopra, «Certificato» aggiunto, e
+che la scala di percorribilità separata resta un requisito di Forestas, rimandato (oc:8783, oc:8932).
+
+Le etichette restano scritte nel child: quando Ale chiude il lavoro sulle tassonomie nella configurazione dell'app
+(`taxonomy label`), si prendono da lì per tutti i filtri insieme (scrum dell'11/11; per Giuseppe quelle a mano «possono
+anche andar bene»).
+
+Verificato in locale: 769 percorsi senza filtro; Percorribili 260, In revisione o parzialmente percorribili 432, Non
+percorribili 41; con «Percorribili» il totale è 260, l'indirizzo diventa `percorribilita=percorribili`, «Validazione
+catastale» mostra Avanzato 45 e Intermedio 215, i badge delle card sono solo «Percorribile» e «Validato»; pagina inglese
+«Walkability» con gli stessi numeri; nessun errore JS. Nessuna modifica di CSS o JS, quindi `Version` del child
+invariata.
+
 ### Niente filtro «Percorribilità» (review-gate, 09/11)
+
+> Superata l'11/11: vedi la sezione precedente.
 
 Rubens: «intanto nascondi il filtro se non fa niente per adesso». La tavola 2 lo mette primo, visibile e spento con
 «Dato in arrivo» (nota 1); il dato non esiste e nessun ticket lo sviluppa (sezione «Da fare dopo questo ticket»). Tolto

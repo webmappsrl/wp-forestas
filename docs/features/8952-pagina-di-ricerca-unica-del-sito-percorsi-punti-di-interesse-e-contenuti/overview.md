@@ -80,8 +80,8 @@ Le decisioni prese nel dialogo, con le fonti, sono in [notes.md](notes.md), sezi
     risposta (`taxonomyWheres`, `taxonomyActivities`, `terms`, `layers`), quindi un clic su un filtro non
     riscarica niente (decisione da rivalutare quando l'API darà i conteggi giusti, vedi [notes.md](notes.md));
   - filtri guidati dai dati: ognuno compare solo quando i percorsi ne portano il campo; in WordPress restano
-    nomi e ordine; la percorribilità, primo filtro della tavola 2, non compare finché il dato non c'è:
-    è un dato nuovo, da sviluppare con un ticket a parte (review-gate, 09/11);
+    nomi e ordine; la percorribilità, primo filtro della tavola 2, si ricava dallo stato di validazione
+    finché non c'è una scala separata (scrum dell'11/11, vedi [notes.md](notes.md));
   - tutti i valori di un filtro, non solo i 10 più frequenti; i valori a zero nascosti e «Mostra altro» dopo i
     primi 5, come Drupal (`min_count: 1`, `soft_limit: 5`); i valori attivi sempre visibili e deselezionabili,
     anche a zero risultati;
@@ -145,9 +145,14 @@ Le decisioni prese nel dialogo, con le fonti, sono in [notes.md](notes.md), sezi
   accetta nomi che sono query var di WordPress: con il suo predefinito di allora, `page`, il redirect canonico
   toglieva il parametro e `?page=2` tornava alla pagina 1; ora il predefinito è `pg` (review di wp-package del
   10/11; Forestas usa `pagina` e non ne era toccato).
-- [x] Filtro «Validazione catastale» per fasce, primo filtro finché la percorribilità non c'è (dopo di lei quando
-  arriverà), da `terms.validation-status`: Avanzato 5–6
-  («Validato»), Intermedio 2–4 («In revisione-validazione», «In pre-accatastamento o manutenzione», «Percorribile»),
+- [x] Filtro «Percorribilità» primo, da `terms.validation-status` (scrum dell'11/11, Giuseppe): Percorribili
+  («Percorribile», «Validato», «Certificato»: livelli 4–6, regola di Forestas, vedi notes.md), In revisione o parzialmente percorribili («In
+  revisione-validazione», «In pre-accatastamento o manutenzione»), Non percorribili («Non percorribile»); «Non
+  verificato» resta fuori, come nel semaforo della home di oc:8783; nell'indirizzo `percorribilita=percorribili`…
+  Non preselezionato.
+- [x] Filtro «Validazione catastale» per fasce, secondo dopo la percorribilità, da `terms.validation-status`:
+  Avanzato 5–6
+  («Validato», «Certificato»), Intermedio 2–4 («In revisione-validazione», «In pre-accatastamento o manutenzione», «Percorribile»),
   Base 0–1 («Non verificato» e «Non percorribile», supposto livello 1); nell'indirizzo `validazione=avanzato`…
 - [x] Filtro «Tipo di percorso» prima di «Attività», da `terms.route-type` (Sentiero, Itinerario, Cammino;
   nell'indirizzo `percorso=route-type-walk`…).
@@ -333,7 +338,8 @@ Le decisioni prese nel dialogo, con le fonti, sono in [notes.md](notes.md), sezi
 - La grafica di base della ricerca nel plugin, con le variabili CSS (Giuseppe, 10/11): prossimo ticket (Rubens,
   10/11); oggi l'aspetto sta nel child (notes.md, «Da fare dopo questo ticket»).
 - Il link al dettaglio della traccia nel popup della mappa: arriva con il dettaglio (`link_template`).
-- La percorribilità come filtro: dato nuovo, ticket a parte (notes.md, «Da fare dopo questo ticket»).
+- La scala di percorribilità separata (0–5 e «temporaneamente interrotto», oc:8783 e oc:8932): dato nuovo, ticket a
+  parte; fino ad allora il filtro legge lo stato di validazione (notes.md, «Da fare dopo questo ticket»).
 
 ## Moduli toccati
 
