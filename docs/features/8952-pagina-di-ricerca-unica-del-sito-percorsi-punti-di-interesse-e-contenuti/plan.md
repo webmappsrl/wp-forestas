@@ -391,7 +391,8 @@ Comportamento richiesto (overview, sezioni plugin e accessibilità):
 
 ### Task 9: Shortcode del child, source, parametri, pagina e redirect
 
-> ⚠️ L'implementazione ha deviato da questo task: [notes.md](notes.md#niente-filtro-percorribilità-review-gate-0911)
+> ⚠️ L'implementazione ha deviato da questo task: [notes.md](notes.md#niente-filtro-percorribilità-review-gate-0911),
+> poi [notes.md](notes.md#filtro-percorribilità-dallo-stato-di-validazione-scrum-1111) (11/11)
 
 **File:**
 - Modifica: `themes/forestas-child/inc/search.php`; crea `themes/forestas-child/assets/js/search.js`

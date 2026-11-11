@@ -213,6 +213,7 @@ function forestas_search_route_type_labels(): array {
 function forestas_search_term_labels(): array {
 	return forestas_search_route_type_labels() + [
 		'validation-status-validated'        => forestas_testo( 'Validato', 'Validated' ),
+		'validation-status-certified'        => forestas_testo( 'Certificato', 'Certified' ),
 		'validation-status-under-review'     => forestas_testo( 'In revisione-validazione', 'Under review' ),
 		'validation-status-pre-registration' => forestas_testo( 'In pre-accatastamento o manutenzione', 'Pre-registration or maintenance' ),
 		'validation-status-walkable'         => forestas_testo( 'Percorribile', 'Walkable' ),
@@ -222,11 +223,40 @@ function forestas_search_term_labels(): array {
 }
 
 /**
- * Filtri dei percorsi di Forestas, nell'ordine della tavola 2 del wireframe di oc:8952. Manca il primo, la
- * percorribilità: il dato non esiste ancora e un filtro che non filtra non si mostra (Rubens, 09/11).
+ * Filtri dei percorsi di Forestas, nell'ordine della tavola 2 del wireframe di oc:8952.
  */
 function forestas_search_track_facets(): array {
 	return [
+		[
+			'key'    => 'percorribilita',
+			'label'  => forestas_testo( 'Percorribilità', 'Walkability' ),
+			'type'   => 'terms',
+			// Dallo stato di validazione del catasto (scrum dell'11/11, Giuseppe). Regola di Forestas («Osservazioni
+			// finali a CANVAS CLAUDE fase 2»): il valore unico di Drupal si copia tal quale anche sulla
+			// percorribilità, verde da 4 in su; i livelli sono quelli di ConfigureTaxonomyTermsCommand dello shard
+			// (4 Percorribile, 5 Validato, 6 Certificato). Voci del semaforo della home (oc:8783, decisioni.md):
+			// verde 4–6, giallo 2–3, rosso 1; «Non verificato» (0) fuori. Se arriva la scala di percorribilità
+			// separata (oc:8783, oc:8932) cambiano solo campo e valori
+			'field'  => 'terms.validation-status',
+			'groups' => [
+				[
+					'id'     => 'percorribili',
+					'label'  => forestas_testo( 'Percorribili', 'Walkable' ),
+					'values' => [ 'validation-status-walkable', 'validation-status-validated', 'validation-status-certified' ],
+				],
+				[
+					'id'     => 'parziali',
+					'label'  => forestas_testo( 'In revisione o parzialmente percorribili', 'Under review or partly walkable' ),
+					'values' => [ 'validation-status-under-review', 'validation-status-pre-registration' ],
+				],
+				[
+					'id'     => 'non-percorribili',
+					'label'  => forestas_testo( 'Non percorribili', 'Not walkable' ),
+					'values' => [ 'validation-status-not-walkable' ],
+				],
+			],
+			'order'  => [ 'percorribili', 'parziali', 'non-percorribili' ],
+		],
 		[
 			'key'    => 'validazione',
 			'label'  => forestas_testo( 'Validazione catastale', 'Trail registry validation' ),
@@ -238,7 +268,7 @@ function forestas_search_track_facets(): array {
 				[
 					'id'     => 'avanzato',
 					'label'  => forestas_testo( 'Avanzato · 5–6', 'Advanced · 5–6' ),
-					'values' => [ 'validation-status-validated' ],
+					'values' => [ 'validation-status-validated', 'validation-status-certified' ],
 				],
 				[
 					'id'     => 'intermedio',
