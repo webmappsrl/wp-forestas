@@ -62,9 +62,8 @@ wmwp_template_header();
 	</div>
 
 	<div class="forestas-azioni wm-actions">
-		<button type="button" class="forestas-pulsante" aria-disabled="true" aria-describedby="wm-non-disp"><?php echo esc_html( forestas_testo( 'Stampa', 'Print' ) ); ?></button>
+		<button type="button" class="forestas-pulsante" aria-disabled="true"><?php echo esc_html( forestas_testo( 'Stampa', 'Print' ) ); ?></button>
 		<?php echo forestas_condividi( [ 'url' => (string) $detail['url'], 'titolo' => $nome ] ); // phpcs:ignore WordPress.Security.EscapeOutput -- markup già escapato ?>
-		<span class="wm-actions__nota" id="wm-non-disp"><?php echo esc_html( forestas_testo( 'La stampa non è ancora disponibile.', 'Print is not yet available.' ) ); ?></span>
 	</div>
 
 	<div class="wm-cols">

@@ -90,6 +90,35 @@ $check( '<p>First</p>' === forestas_dettaglio_testo( $completa['feature']['prope
 $check( 'Solo' === forestas_dettaglio_testo( [ 'it' => 'Solo', 'en' => ' ' ], 'en' ), 'inglese vuoto → italiano' );
 $check( '' === forestas_dettaglio_testo( null, 'it' ), 'niente → stringa vuota' );
 
+// 2b. Blocchi Dettaglio (`config_detail`, oc:8959): le righe dei blocchi `info` in un solo elenco, come le mostra la
+// webapp; titolo e testo nella lingua con ripiego sull'italiano; righe senza testo e altri tipi di blocco si saltano
+$blocchi_p = [
+	'config_detail' => [
+		[
+			'box_type' => 'info',
+			'items'    => [
+				[ 'title' => [ 'it' => 'Tappa 1', 'en' => 'Stage 1' ], 'content' => [ 'it' => '<p>Lasciata Nuxis</p>', 'en' => '<p>Leaving Nuxis</p>' ] ],
+				[ 'title' => [ 'it' => 'Tappa 2' ], 'content' => [ 'it' => '<p>Ritornati sulla strada</p>' ] ],
+				[ 'title' => [ 'it' => 'Vuota' ], 'content' => [ 'it' => ' ' ] ],
+			],
+		],
+		[ 'box_type' => 'graph', 'items' => [ [ 'title' => [ 'it' => 'No' ], 'content' => [ 'it' => '<p>No</p>' ] ] ] ],
+		[ 'box_type' => 'info', 'items' => [ [ 'title' => [ 'it' => 'Da sapere' ], 'content' => [ 'it' => '<p>Acqua</p>' ] ] ] ],
+	],
+];
+$check(
+	[
+		[ 'titolo' => 'Tappa 1', 'testo' => '<p>Lasciata Nuxis</p>' ],
+		[ 'titolo' => 'Tappa 2', 'testo' => '<p>Ritornati sulla strada</p>' ],
+		[ 'titolo' => 'Da sapere', 'testo' => '<p>Acqua</p>' ],
+	] === forestas_dettaglio_blocchi( $blocchi_p, 'it' ),
+	'blocchi info in un solo elenco, righe vuote e altri tipi saltati'
+);
+$inglese = forestas_dettaglio_blocchi( $blocchi_p, 'en' );
+$check( 'Stage 1' === ( $inglese[0]['titolo'] ?? '' ) && '<p>Leaving Nuxis</p>' === ( $inglese[0]['testo'] ?? '' ), 'blocchi in inglese' );
+$check( 'Tappa 2' === ( $inglese[1]['titolo'] ?? '' ), 'riga senza inglese → italiano' );
+$check( [] === forestas_dettaglio_blocchi( [], 'it' ) && [] === forestas_dettaglio_blocchi( [ 'config_detail' => 'x' ], 'it' ), 'senza config_detail, nessun blocco' );
+
 // 3. Enti: formato nuovo, in ordine gestore, manutentore, rilevatore…
 $enti = forestas_dettaglio_enti( $completa['feature']['properties'] );
 $check( 2 === count( $enti ), 'due enti' );

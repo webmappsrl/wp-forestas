@@ -71,12 +71,13 @@ di sicai), ma leggono le API dello shard e non il database: gran parte del detta
 - [ ] Testata con foto (`feature_image`), fascia scura al 60%, riga del tipo e dell'area, nome,
       bandierina con il codice (`ref`), voto e numero di recensioni come segnaposto.
 - [ ] Riga di azioni: **Scarica GPX** funzionante (`forestas.downloads`), **Condividi** con
-      `forestas_condividi()`, **Stampa** e **Segnala** visibili ma non attivi, con l'indicazione che
-      non sono ancora disponibili.
+      `forestas_condividi()`, **Stampa** e **Segnala** visibili ma disattivati (`aria-disabled`), senza
+      una nota che lo ripeta: si capisce dai pulsanti (Rubens, 12/11).
 - [ ] Avviso del sentiero e fascia della percorribilità come segnaposto (i dati non esistono ancora).
 - [ ] Tre indicatori a tacche: validazione (dal termine `validation-status`), percorribilità
       (segnaposto), accessibilità (da `forestas.inclusivity`), ciascuno con la «i» della legenda.
-- [ ] «Il sentiero in breve», «Descrizione tappe (roadbook)» (`forestas.roadbook`), «Attività e
+- [ ] «Il sentiero in breve», «Descrizione tappe (roadbook)» (dai Blocchi Dettaglio, `config_detail`: una riga per
+      tappa con il titolo «Tappa N» dei dati, oc:8959), «Attività e
       avvertenze» (tassonomie di difficoltà per attività e `warnings`), informazioni utili
       (`forestas.useful_info`), galleria con lightbox (`image_gallery` con i crediti di
       `forestas.image_credits`), allegati e video (`forestas.attachments`, `forestas.videos`).

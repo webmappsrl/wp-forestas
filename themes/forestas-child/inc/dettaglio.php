@@ -96,6 +96,35 @@ function forestas_dettaglio_testo( $valore, ?string $lingua = null ): string {
 }
 
 /**
+ * Righe dei Blocchi Dettaglio della traccia (`properties.config_detail`, campo «Detail Blocks» del package): le righe
+ * di tutti i blocchi `info` in un solo elenco, come le mostra la webapp. Oggi l'unico blocco è il roadbook, che l'import
+ * scrive con una riga per tappa («Tappa 1», «Tappa 2»…, oc:8959); i blocchi aggiunti in Nova seguono. Titolo e testo
+ * nella lingua, con ripiego sull'italiano come il resto della pagina; le righe senza testo si saltano.
+ *
+ * @param array<string, mixed> $p Proprietà della traccia.
+ * @return list<array{titolo: string, testo: string}>
+ */
+function forestas_dettaglio_blocchi( array $p, ?string $lingua = null ): array {
+	$righe = [];
+	foreach ( is_array( $p['config_detail'] ?? null ) ? $p['config_detail'] : [] as $blocco ) {
+		if ( ! is_array( $blocco ) || 'info' !== ( $blocco['box_type'] ?? null ) || ! is_array( $blocco['items'] ?? null ) ) {
+			continue;
+		}
+		foreach ( $blocco['items'] as $riga ) {
+			$testo = is_array( $riga ) ? forestas_dettaglio_testo( $riga['content'] ?? null, $lingua ) : '';
+			if ( '' === wp_strip_all_tags( $testo ) ) {
+				continue;
+			}
+			$righe[] = [
+				'titolo' => forestas_dettaglio_testo( $riga['title'] ?? null, $lingua ),
+				'testo'  => $testo,
+			];
+		}
+	}
+	return $righe;
+}
+
+/**
  * Tipo del dettaglio: `sentiero`, `itinerario`, `cammino` (dal `route-type`; senza, il sentiero) o `poi`.
  *
  * @param array<string, mixed> $detail wmwp_detail_current().

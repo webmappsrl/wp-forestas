@@ -44,7 +44,7 @@ e `notes.md` di questo repo; la parte generica è nell'overview e nel piano di `
 - **Tipo dal `route-type`:** `route-type-trail` → sentiero, `route-type-itinerary` → itinerario,
   `route-type-walk` → cammino. Senza `route-type` si usa il template del sentiero.
 - **Chiavi dello shard lette in un solo punto** (`inc/dettaglio.php`):
-  - per le tracce: `properties.forestas.{useful_info, roadbook, videos, attachments, registry_code, survey_date, inclusivity, organizations, nearby_tracks, downloads}`,
+  - per le tracce: `properties.forestas.{useful_info, roadbook (divergenza: ora `properties.config_detail`, vedi notes), videos, attachments, registry_code, survey_date, inclusivity, organizations, nearby_tracks, downloads}`,
     `properties.taxonomies` e `related_pois`;
   - gli enti stanno in `organizations` (ruolo → `[{id, name, slug}]`) e, finché arriva, in
     `entities` (`[{id, roles}]`, senza nome).

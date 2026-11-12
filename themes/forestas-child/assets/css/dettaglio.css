@@ -55,7 +55,6 @@
 /* Azioni: riga e pulsanti delle pagine statiche (.forestas-azioni, .forestas-pulsante); qui solo i pulsanti non ancora attivi */
 .l-main .wm-actions .forestas-pulsante[aria-disabled="true"],
 .l-main .wm-actions .forestas-pulsante[aria-disabled="true"]:hover { color: #6B6B6B; border-color: #9A9A9A; background-color: #F5F5F5; cursor: not-allowed; }
-.wm-actions__nota { flex-basis: 100%; font-size: 13px; color: var(--wm-ink-3); }
 
 /* Percorribilità */
 .wm-state { margin: 16px var(--wm-rientro) 0; padding: 13px 15px; border-left: 4px solid #9A9A9A; background: #F5F5F5; }

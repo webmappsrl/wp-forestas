@@ -177,6 +177,14 @@ ricostruzione dell'indice (da scrivere nel README).
   Verificato in locale dopo `wm:resync-taxonomy-where --app=1 --outputs-only`: il child mostra i nomi in italiano e in
   inglese senza modifiche (le chiavi erano già quelle). La lettura di `entities` in `forestas_dettaglio_enti()` resta
   come ripiego finché il cambio non è su tutti gli ambienti. Nome del cammino e dettaglio del POI ancora da arrivare.
+- **12/11, roadbook nei Blocchi Dettaglio** (Alessandro, oc:8959, 198fdae): l'import scrive il roadbook in
+  `properties.config_detail`, un blocco `info` con una riga per tappa, titolo «Tappa N» («Stage N» in inglese) e il
+  paragrafo di Drupal; titolo e testo solo nelle lingue in cui la tappa ha un testo. `forestas.roadbook` non esce più.
+  Il child legge le righe di tutti i blocchi `info` in un solo elenco (`forestas_dettaglio_blocchi()`, come la
+  webapp), con i titoli dei dati al posto di «Tratto N»; testo nella lingua con ripiego sull'italiano, come il resto
+  della pagina. Provato in locale aggiungendo il blocco al file della traccia 680 con un mu-plugin temporaneo, poi
+  tolto: i dati locali non hanno ancora `config_detail`, che arriva con l'import nuovo (su dev e UAT al reset
+  notturno dopo il deploy di 8959). Restano da Alessandro il nome del cammino e la distanza fra i sentieri correlati.
 
 ## Bug trovati dopo la review
 
@@ -185,6 +193,13 @@ ricostruzione dell'indice (da scrivere nel README).
   quel calcolo. Il filtro `icl_ls_languages` ora ricava gli indirizzi dal percorso della richiesta e dall'indice
   (`wmwp_detail_request_urls()`), senza leggere il JSON; una guardia evita il rientro, perché `wpml_permalink` richiama
   il selettore (la prima versione esauriva la memoria). Test in `tests/php/detail-sitemap.php`.
+
+- **Mappe senza le tile Webmapp in locale** (Rubens, 12/11), nel dettaglio e nella ricerca unica: il config.json
+  dell'app (da cui vengono carta e colori dei layer) il plugin lo chiedeva all'indirizzo del browser
+  (`localhost:8000`), che dal container WordPress non risponde; la mappa ripiegava su OpenStreetMap e la risposta
+  vuota restava in cache un'ora. Ora passa da `wmwp_server_url()` come indice e dettagli. Su dev, UAT e produzione il
+  server raggiunge lo shard con lo stesso indirizzo del browser, quindi lì il problema non c'era. Test in
+  `tests/php/map-tiles.php`.
 
 ## Allineamento alle pagine statiche (Rubens, 12/11)
 
@@ -210,6 +225,10 @@ bordo; Stampa e Segnala grigi perché non attivi. Il primario blu del wireframe 
   `directions`; gli enti del POI in «Il punto in breve». Card e griglia sono ora `forestas_dettaglio_card()` e
   `forestas_dettaglio_griglia()`, comuni a tracce e POI. I POI correlati delle tracce si calcolano per vicinanza (entro
   1 km). Il fix fac57345 del package (download GPX/KML) fa rispondere 200 a `…/download/<id>.gpx`.
+
+- **Niente nota sotto le azioni** (Rubens, 12/11): tolta la riga «Stampa e segnalazioni non sono ancora
+  disponibili.» (nel POI «La stampa non è ancora disponibile.»), che si capisce già dai pulsanti disattivati. I
+  pulsanti restano con `aria-disabled="true"`, che il lettore di schermo annuncia come non disponibili.
 
 ## Consulenza SEO (Fable, 12/11)
 

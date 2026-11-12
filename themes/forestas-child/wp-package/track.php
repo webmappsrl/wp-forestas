@@ -120,12 +120,11 @@ wmwp_template_header();
 		<?php if ( '' !== $gpx ) : ?>
 			<a class="forestas-pulsante" href="<?php echo esc_url( $gpx ); ?>" download><?php echo esc_html( forestas_testo( 'Scarica GPX', 'Download GPX' ) ); ?></a>
 		<?php endif; ?>
-		<button type="button" class="forestas-pulsante" aria-disabled="true" aria-describedby="wm-non-disp"><?php echo esc_html( forestas_testo( 'Stampa', 'Print' ) ); ?></button>
+		<button type="button" class="forestas-pulsante" aria-disabled="true"><?php echo esc_html( forestas_testo( 'Stampa', 'Print' ) ); ?></button>
 		<?php echo forestas_condividi( [ 'url' => (string) $detail['url'], 'titolo' => $nome ] ); // phpcs:ignore WordPress.Security.EscapeOutput -- markup già escapato ?>
 		<?php if ( 'itinerario' !== $tipo ) : ?>
-			<button type="button" class="forestas-pulsante" aria-disabled="true" aria-describedby="wm-non-disp"><?php echo esc_html( forestas_testo( 'Segnala', 'Report' ) ); ?><span class="screen-reader-text"> <?php echo esc_html( forestas_testo( 'un problema', 'a problem' ) ); ?></span></button>
+			<button type="button" class="forestas-pulsante" aria-disabled="true"><?php echo esc_html( forestas_testo( 'Segnala', 'Report' ) ); ?><span class="screen-reader-text"> <?php echo esc_html( forestas_testo( 'un problema', 'a problem' ) ); ?></span></button>
 		<?php endif; ?>
-		<span class="wm-actions__nota" id="wm-non-disp"><?php echo esc_html( forestas_testo( 'Stampa e segnalazioni non sono ancora disponibili.', 'Print and reports are not yet available.' ) ); ?></span>
 	</div>
 
 	<?php if ( 'itinerario' !== $tipo ) : ?>
@@ -232,22 +231,18 @@ wmwp_template_header();
 			<?php endif; ?>
 
 			<?php
-			$roadbook = $forestas['roadbook'][ forestas_dettaglio_lingua() ] ?? $forestas['roadbook']['it'] ?? [];
-			$roadbook = array_values( array_filter( array_map( 'trim', array_filter( (array) $roadbook, 'is_string' ) ) ) );
+			// Roadbook dai Blocchi Dettaglio (`config_detail`): una riga per tappa con il titolo dei dati, «Tappa N» (oc:8959)
+			$tappe = forestas_dettaglio_blocchi( $p );
 			?>
-			<?php if ( $roadbook ) : ?>
+			<?php if ( $tappe ) : ?>
 				<section class="wm-sec" aria-labelledby="wm-roadbook">
 					<?php echo $titolo( forestas_testo( 'Descrizione tappe (roadbook)', 'Stage description (roadbook)' ), 'wm-roadbook' ); // phpcs:ignore ?>
-					<?php if ( 1 === count( $roadbook ) ) : ?>
-						<?php echo $espandibile( $roadbook[0], 'wm-roadbook-testo' ); // phpcs:ignore ?>
-					<?php else : ?>
-						<div class="wm-rb">
-							<?php foreach ( $roadbook as $i => $tratto ) : ?>
-								<h3 class="wm-rb__h"><button type="button" class="wm-rb__btn" aria-expanded="<?php echo 0 === $i ? 'true' : 'false'; ?>" aria-controls="wm-rb-<?php echo (int) $i; ?>"><?php echo esc_html( sprintf( forestas_testo( 'Tratto %d', 'Section %d' ), $i + 1 ) ); ?></button></h3>
-								<div class="wm-rb__p" id="wm-rb-<?php echo (int) $i; ?>" <?php echo 0 === $i ? '' : 'hidden'; ?>><?php echo wp_kses_post( $tratto ); ?></div>
-							<?php endforeach; ?>
-						</div>
-					<?php endif; ?>
+					<div class="wm-rb">
+						<?php foreach ( $tappe as $i => $tappa ) : ?>
+							<h3 class="wm-rb__h"><button type="button" class="wm-rb__btn" aria-expanded="<?php echo 0 === $i ? 'true' : 'false'; ?>" aria-controls="wm-rb-<?php echo (int) $i; ?>"><?php echo esc_html( '' !== $tappa['titolo'] ? $tappa['titolo'] : sprintf( forestas_testo( 'Tappa %d', 'Stage %d' ), $i + 1 ) ); ?></button></h3>
+							<div class="wm-rb__p" id="wm-rb-<?php echo (int) $i; ?>" <?php echo 0 === $i ? '' : 'hidden'; ?>><?php echo wp_kses_post( $tappa['testo'] ); ?></div>
+						<?php endforeach; ?>
+					</div>
 				</section>
 			<?php endif; ?>
 
