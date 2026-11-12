@@ -163,10 +163,10 @@
                     ],
                     "descrizione": "",
                     "destinazione": {
-                        "percorso": "da-vedere",
+                        "percorso": "punti-di-interesse",
                         "post_type": "page",
                         "tipo": "pagina",
-                        "url": "/da-vedere/"
+                        "url": "/punti-di-interesse/"
                     },
                     "genitore": null,
                     "meta": [],
@@ -504,10 +504,10 @@
                     ],
                     "descrizione": "",
                     "destinazione": {
-                        "percorso": "da-vedere",
+                        "percorso": "punti-di-interesse",
                         "post_type": "page",
                         "tipo": "pagina",
-                        "url": "/en/da-vedere/"
+                        "url": "/en/punti-di-interesse/"
                     },
                     "genitore": null,
                     "meta": [],
