@@ -84,6 +84,19 @@ $check( 'poi' === forestas_dettaglio_tipo( $poi ), 'POI' );
 $check( [ 'colore' => '#1A416F', 'fascia' => '#E8ECF1' ] === forestas_dettaglio_colori( 'cammino' ), 'colori del cammino' );
 $check( '#B7127F' === forestas_dettaglio_colori( 'poi' )['colore'], 'colore del POI' );
 
+// 1b. Nome del cammino nella testata: il layer di tipologia (`layer_name`, oc:8959), solo per i cammini
+$check( [ 'testo' => 'Cammini di Sardegna', 'lingua' => 'it' ] === forestas_dettaglio_nome_cammino( [ 'layer_name' => [ 'it' => 'Cammini di Sardegna', 'en' => ' ' ] ], 'cammino', 'en' ), 'nome del cammino, con la lingua del ripiego' );
+$check( '' === forestas_dettaglio_nome_cammino( [ 'layer_name' => [ 'it' => 'Sentieri' ] ], 'sentiero', 'it' )['testo'], 'sentiero: il layer è solo il nome del tipo' );
+$check( '' === forestas_dettaglio_nome_cammino( [], 'cammino', 'it' )['testo'], 'cammino senza layer_name' );
+
+// 1c. Chiave stabile dei dettagli per il plugin (filtro wmwp_detail_source): il nid di Drupal, che non cambia con il
+// reset notturno degli id dello shard
+$check( '137' === forestas_dettaglio_nid( '', 'poi', [ 'forestas' => [ 'sardegnasentieri_id' => '137' ] ] ), 'nid dal forestas del dettaglio' );
+$check( '4076' === forestas_dettaglio_nid( '', 'track', [ 'sardegnasentieri_id' => 4076 ] ), 'nid piatto dell\'indice Elasticsearch' );
+$check( '5646' === forestas_dettaglio_nid( '5646', 'poi', [ 'out_source_feature_id' => '5646' ] ), 'pois.geojson prima del reimport: resta out_source_feature_id' );
+$check( '' === forestas_dettaglio_nid( '', 'track', [ 'forestas' => [ 'sardegnasentieri_id' => null ] ] ), 'traccia che non viene da Drupal' );
+$check( false !== has_filter( 'wmwp_detail_source', 'forestas_dettaglio_nid' ), 'filtro wmwp_detail_source agganciato' );
+
 // 2. Testi nella lingua con ripiego; le liste di blocchi si uniscono
 $check( "<p>Primo tratto</p>\n<p>Secondo tratto</p>" === forestas_dettaglio_testo( $completa['feature']['properties']['forestas']['roadbook'], 'it' ), 'roadbook italiano' );
 $check( '<p>First</p>' === forestas_dettaglio_testo( $completa['feature']['properties']['forestas']['roadbook'], 'en' ), 'roadbook inglese' );
@@ -108,16 +121,26 @@ $blocchi_p = [
 ];
 $check(
 	[
-		[ 'titolo' => 'Tappa 1', 'testo' => '<p>Lasciata Nuxis</p>' ],
-		[ 'titolo' => 'Tappa 2', 'testo' => '<p>Ritornati sulla strada</p>' ],
-		[ 'titolo' => 'Da sapere', 'testo' => '<p>Acqua</p>' ],
+		[ 'titolo' => 'Tappa 1', 'lingua' => 'it', 'testo' => '<p>Lasciata Nuxis</p>' ],
+		[ 'titolo' => 'Tappa 2', 'lingua' => 'it', 'testo' => '<p>Ritornati sulla strada</p>' ],
+		[ 'titolo' => 'Da sapere', 'lingua' => 'it', 'testo' => '<p>Acqua</p>' ],
 	] === forestas_dettaglio_blocchi( $blocchi_p, 'it' ),
 	'blocchi info in un solo elenco, righe vuote e altri tipi saltati'
 );
 $inglese = forestas_dettaglio_blocchi( $blocchi_p, 'en' );
 $check( 'Stage 1' === ( $inglese[0]['titolo'] ?? '' ) && '<p>Leaving Nuxis</p>' === ( $inglese[0]['testo'] ?? '' ), 'blocchi in inglese' );
-$check( 'Tappa 2' === ( $inglese[1]['titolo'] ?? '' ), 'riga senza inglese → italiano' );
+$check( 'Tappa 2' === ( $inglese[1]['titolo'] ?? '' ) && 'it' === ( $inglese[1]['lingua'] ?? '' ) && '<div lang="it"><p>Ritornati sulla strada</p></div>' === ( $inglese[1]['testo'] ?? '' ), 'riga senza inglese → italiano, marcato lang="it"' );
 $check( [] === forestas_dettaglio_blocchi( [], 'it' ) && [] === forestas_dettaglio_blocchi( [ 'config_detail' => 'x' ], 'it' ), 'senza config_detail, nessun blocco' );
+
+// 2c. Accessibilità dei testi ricchi: titoli rinumerati sotto quello del blocco (h4 in giù, senza salti, WCAG 1.3.1)
+// e lingua vera sul testo che ripiega su un'altra lingua (WCAG 3.1.2)
+$ricco = forestas_dettaglio_ricco( [ 'it' => '<h4>Uno</h4><p>a</p><h3 class="x">Due</h3><h5>Tre</h5><h4>Quattro</h4><h6>Cinque</h6>' ], 'it' );
+$check( '<h4>Uno</h4><p>a</p><h4 class="x">Due</h4><h5>Tre</h5><h5>Quattro</h5><h6>Cinque</h6>' === $ricco, 'titoli rinumerati da h4, senza salti: ' . $ricco );
+$check( '<h4>Solo</h4>' === forestas_dettaglio_ricco( [ 'it' => '<h1>Solo</h1>' ], 'it' ), 'un h1 nel testo diventa h4' );
+$check( '<div lang="it"><p>Ciao</p></div>' === forestas_dettaglio_ricco( [ 'it' => '<p>Ciao</p>' ], 'en' ), 'testo italiano su pagina inglese: lang="it"' );
+$check( '<p>Hello</p>' === forestas_dettaglio_ricco( [ 'it' => '<p>Ciao</p>', 'en' => '<p>Hello</p>' ], 'en' ), 'testo nella lingua della pagina: senza lang' );
+$check( '' === forestas_dettaglio_ricco( null, 'it' ), 'niente testo, stringa vuota' );
+$check( [ 'testo' => 'Ciao', 'lingua' => 'it' ] === forestas_dettaglio_testo_lingua( [ 'it' => 'Ciao' ], 'en' ), 'lingua usata dal ripiego' );
 
 // 3. Enti: formato nuovo, in ordine gestore, manutentore, rilevatore…
 $enti = forestas_dettaglio_enti( $completa['feature']['properties'] );
@@ -134,9 +157,34 @@ $check( [] === forestas_dettaglio_enti( $vuota['feature']['properties'] ), 'ness
 $ind = forestas_dettaglio_indicatori( $completa['feature']['properties'] );
 $check( 'validation-status-validated' === ( $ind['validazione']['chiave'] ?? '' ), 'validazione dal termine' );
 $check( null === $ind['percorribilita'], 'percorribilità: dato che non esiste ancora' );
-$check( 'A1' === ( $ind['accessibilita']['classe'] ?? '' ), 'accessibilità dalla classe di inclusività' );
+// Accessibilità = grado AT · AE · AEE (inclusivity-difficulty) e tipologie di disabilità (wireframe Tavola 3, nota 10)
+$acc_p = [
+	'taxonomies' => [
+		'inclusivity-difficulty'   => [ [ 'identifier' => 'inclusivity-difficulty-ae', 'name' => [ 'it' => 'AE' ] ] ],
+		'inclusivity-disabilities' => [ [ 'identifier' => 'inclusivity-disabilities-sensory' ], [ 'identifier' => 'inclusivity-disabilities-physical' ] ],
+	],
+];
+$acc   = forestas_dettaglio_indicatori( $acc_p )['accessibilita'];
+$check( 'AE' === ( $acc['grado'] ?? '' ) && 2 === ( $acc['livello'] ?? 0 ) && 'Accessibile Escursionistico' === ( $acc['nome'] ?? '' ), 'grado AE, livello 2 su 3, con il nome' );
+$check( [ 'motoria' => true, 'sensoriale' => true, 'cognitiva' => false ] === ( $acc['disabilita'] ?? [] ), 'tipologie di disabilità accese e spente' );
+// Icone dal set dello shard: il nome da `icon_name` del termine; per le tipologie spente, che nel JSON non ci sono, il
+// nome delle icone di Forestas nel set (txn-disability-*)
+$acc_p['taxonomies']['inclusivity-disabilities'][0]['icon_name'] = 'txn-occhio-nuovo';
+$icone = forestas_dettaglio_accessibilita( $acc_p )['icone'] ?? [];
+$check( [ 'motoria' => 'txn-disability-motor', 'sensoriale' => 'txn-occhio-nuovo', 'cognitiva' => 'txn-disability-cognitive' ] === $icone, 'icone: icon_name del termine, altrimenti quelle di Forestas' );
+$senza = forestas_dettaglio_indicatori( [] )['accessibilita'];
+$check( null === $senza['grado'] && 0 === $senza['livello'] && [ 'motoria' => false, 'sensoriale' => false, 'cognitiva' => false ] === $senza['disabilita'], 'non classificato: tre gradi spenti, icone spente' );
+
+// «Sentiero per tutti»: classe, tacche della classe, due testi e tre punteggi riproporzionati su sei tacche (nota 11)
+$spt = forestas_dettaglio_inclusivita( [ 'forestas' => [ 'inclusivity' => [ 'physical' => 41, 'aids' => 13, 'digital' => 11, 'score' => 65, 'class' => 'A2', 'independent_use' => 'Fondo stabile', 'assistance' => 'Joelette' ] ] ] );
+$check( 'A2' === ( $spt['classe'] ?? '' ) && 5 === ( $spt['tacche'] ?? 0 ) && 'Turistico-accessibile' === ( $spt['nome'] ?? '' ), 'classe A2: cinque tacche e nome' );
+$check( 'Fondo stabile' === ( $spt['autonomia'] ?? '' ) && 'Joelette' === ( $spt['assistenza'] ?? '' ), 'due testi del redattore' );
+$check( [ 4, 3, 3 ] === array_column( $spt['punteggi'] ?? [], 'tacche' ), 'fisica 41, ausili 13, digitale 11 → 4, 3, 3 tacche (esempi del wireframe)' );
+$estremi = forestas_dettaglio_inclusivita( [ 'forestas' => [ 'inclusivity' => [ 'physical' => 55, 'aids' => 1, 'digital' => 22, 'class' => 'A1' ] ] ] );
+$check( [ 6, 0, 6 ] === array_column( $estremi['punteggi'] ?? [], 'tacche' ) && 6 === ( $estremi['tacche'] ?? 0 ), 'al minimo nessuna tacca, al massimo sei; A1 sei tacche' );
+$check( null === forestas_dettaglio_inclusivita( [ 'forestas' => [ 'inclusivity' => [ 'physical' => 30 ] ] ] ) && null === forestas_dettaglio_inclusivita( [] ), 'senza classe il blocco non c\'è' );
 $ind = forestas_dettaglio_indicatori( $vuota['feature']['properties'] );
-$check( null === $ind['validazione'] && null === $ind['accessibilita'], 'indicatori vuoti' );
+$check( null === $ind['validazione'] && null === $ind['accessibilita']['grado'], 'indicatori vuoti' );
 
 // 5. Tabelle: i valori assenti sono il trattino
 $tabelle = forestas_dettaglio_tabelle( $vuota['feature']['properties'], 'sentiero' );
@@ -148,8 +196,41 @@ foreach ( $tabelle as $tabella ) {
 	}
 }
 $check( [] !== $valori && [ '—' ] === array_values( array_unique( $valori ) ), 'traccia vuota: tutti trattini' );
+// Gruppi come le tavole: sentiero Percorso, Misure, Catasto (Tavola 3); itinerario Percorso e Misure (Tavola 4);
+// cammino Misure e Stato (Tavola 5). In Misure il grado di difficoltà, con l'attività davanti
+$titoli  = fn( array $t ) => array_column( $t, 'titolo' );
+$riga    = function ( array $t, string $gruppo, string $etichetta ) {
+	foreach ( $t as $tabella ) {
+		if ( $gruppo === $tabella['titolo'] ) {
+			foreach ( $tabella['righe'] as $r ) {
+				if ( $etichetta === $r[0] ) {
+					return $r;
+				}
+			}
+		}
+	}
+	return null;
+};
+$check( [ 'Percorso', 'Misure', 'Catasto' ] === $titoli( forestas_dettaglio_tabelle( [], 'sentiero' ) ), 'sentiero: Percorso, Misure, Catasto' );
+$check( [ 'Percorso', 'Misure' ] === $titoli( forestas_dettaglio_tabelle( [], 'itinerario' ) ), 'itinerario: Percorso e Misure' );
 $tabelle = forestas_dettaglio_tabelle( $completa['feature']['properties'], 'cammino' );
-$check( 1 === count( $tabelle ), 'cammino: una tabella' );
+$check( [ 'Misure', 'Stato' ] === $titoli( $tabelle ), 'cammino: Misure e Stato' );
+$check( 'Validato' === ( $riga( $tabelle, 'Stato', 'Stato di validazione' )[1] ?? null ), 'cammino: stato di validazione in Stato' );
+$diff_p  = [ 'taxonomies' => [ 'hiking-difficulty' => [ [ 'name' => [ 'it' => 'E' ] ] ], 'inclusivity-difficulty' => [ [ 'name' => [ 'it' => 'AT' ] ] ] ] ];
+$check( 'Escursionismo: E; Accessibilità: AT' === ( $riga( forestas_dettaglio_tabelle( $diff_p, 'sentiero' ), 'Misure', 'Grado di difficoltà' )[1] ?? null ), 'grado di difficoltà in Misure, con l\'attività' );
+$check( '—' === ( $riga( forestas_dettaglio_tabelle( [], 'itinerario' ), 'Misure', 'Grado di difficoltà' )[1] ?? null ), 'senza difficoltà: trattino' );
+
+// «Maggiori info» accanto al grado di difficoltà e alla validazione, come su Drupal: il «da sapere» dei gradi (nodo
+// 1102) e le Note legali (nodo 87), che spiegano i livelli 0-6. Solo se la pagina c'è
+$link_diff = forestas_dettaglio_pagina_drupal( '1102' );
+$link_val  = forestas_dettaglio_pagina_drupal( '87' );
+$check( '' === forestas_dettaglio_pagina_drupal( '999999999' ), 'nodo che non c\'è: niente link' );
+$r = $riga( forestas_dettaglio_tabelle( [], 'sentiero' ), 'Misure', 'Grado di difficoltà' );
+$check( ( '' === $link_diff && ! isset( $r[3] ) ) || ( $link_diff === ( $r[3]['url'] ?? '' ) && 'sui gradi di difficoltà' === ( $r[3]['nascosto'] ?? '' ) ), 'link ai gradi di difficoltà' );
+$r = $riga( forestas_dettaglio_tabelle( [], 'sentiero' ), 'Catasto', 'Stato di validazione' );
+$check( ( '' === $link_val && ! isset( $r[3] ) ) || ( $link_val === ( $r[3]['url'] ?? '' ) && 'sui livelli di validazione' === ( $r[3]['nascosto'] ?? '' ) ), 'link ai livelli di validazione' );
+$gr = forestas_dettaglio_gruppo( 'g', 'Misure', [ [ 'Grado di difficoltà', 'E', false, [ 'url' => 'http://x/gradi/', 'nascosto' => 'sui gradi di difficoltà' ] ] ], true );
+$check( false !== strpos( $gr, '<td>E <a class="wm-dt__mi" href="http://x/gradi/">Maggiori info<span class="screen-reader-text"> sui gradi di difficoltà</span></a></td>' ), 'link «Maggiori info» nella riga, con il testo nascosto per lo screen reader' );
 
 // 6. Correlati
 $correlati = forestas_dettaglio_correlati( $completa['feature']['properties'] );
@@ -243,9 +324,103 @@ $check( '<p>Da Santadi</p>' === $nuovo['come_arrivare'], 'come arrivare da direc
 $check( 2 === count( $nuovo['percorsi'] ) && 11 === $nuovo['percorsi_totale'], 'percorsi vicini e totale' );
 $check( 'a 49 m' === $nuovo['percorsi'][0]['distanza'] && 'a 1,5 km' === $nuovo['percorsi'][1]['distanza'], 'distanza dal POI in m e km' );
 $check( false !== strpos( forestas_dettaglio_card( $nuovo['percorsi'][0], 'percorso' ), 'a 49 m' ), 'la card mostra la distanza' );
+// Card unica del sito (forestas-card, la .uc del wireframe), come quelle dei post e della ricerca: filetto nel colore del
+// menu del tipo (percorso: sentiero, itinerario, cammino; POI: punti di interesse), titolo h3 con il link
+$card = forestas_dettaglio_card( [ 'id' => 1, 'nome' => 'Monte', 'tipo' => 'Itinerario', 'tipo_id' => 'route-type-itinerary', 'immagine' => 'http://x/t.jpg', 'lunghezza' => '12,4 km', 'url' => 'http://x/itinerario/monte/' ], 'percorso' );
+$check( false !== strpos( $card, '<li class="forestas-card forestas-card--immagine forestas-card--itinerario">' ), 'card del percorso con la classe del suo tipo: ' . $card );
+$check( false !== strpos( $card, '<span class="forestas-card__tag">Itinerario</span>' ) && false !== strpos( $card, '<h3 class="forestas-card__titolo"><a href="http://x/itinerario/monte/">Monte</a></h3>' ) && false !== strpos( $card, '<p class="forestas-card__data">12,4 km</p>' ), 'etichetta, titolo con link e dati come la card dei post' );
+$check( false !== strpos( $card, '<div class="forestas-card__media"><img src="http://x/t.jpg" alt="" loading="lazy" decoding="async"></div>' ), 'foto in alto' );
+$poi_card = forestas_dettaglio_card( [ 'id' => 2, 'nome' => 'Nuraghe', 'tipo' => 'Nuraghi', 'url' => null ], 'poi' );
+$check( false !== strpos( $poi_card, 'forestas-card--poi' ) && false !== strpos( $poi_card, 'forestas-card__media forestas-card__media--segnaposto' ) && false !== strpos( $poi_card, '<h3 class="forestas-card__titolo">Nuraghe</h3>' ), 'POI senza foto né link: segnaposto e titolo senza link' );
+$check( false !== strpos( forestas_dettaglio_card( [ 'id' => 4, 'nome' => 'Biancone' ], 'poi' ), '<span class="forestas-card__tag">Punto di interesse</span>' ), 'POI senza tipologia: etichetta «Punto di interesse»' );
+$check( false !== strpos( forestas_dettaglio_card( [ 'id' => 3, 'nome' => 'X', 'tipo_id' => null ], 'percorso' ), 'forestas-card--sentiero' ), 'percorso senza tipo: colore dei sentieri' );
 $check( [] === forestas_dettaglio_poi( [] )['percorsi'] && 0 === forestas_dettaglio_poi( [] )['percorsi_totale'], 'POI senza percorsi vicini' );
 
+// Mappa del dettaglio (Tavola 3 e Tavola 7 del wireframe): tracce, punti e legenda dal JSON
+$p_mappa = [
+	'ref'          => 'C 104 A',
+	'related_pois' => [
+		[ 'geometry' => [ 'type' => 'Point', 'coordinates' => [ 9.52, 39.87 ] ], 'properties' => [ 'id' => 401, 'name' => [ 'it' => 'Tavolo' ] ] ],
+		[ 'geometry' => [ 'type' => 'Point', 'coordinates' => [ 9.53, 39.88 ] ], 'properties' => [ 'id' => 402, 'name' => [ 'it' => 'Incrocio' ] ] ],
+		[ 'geometry' => null, 'properties' => [ 'id' => 403, 'name' => [ 'it' => 'Senza punto' ] ] ],
+		[ 'geometry' => [ 'type' => 'Point', 'coordinates' => [ 9.54, 39.89 ] ], 'properties' => [ 'id' => 404, 'name' => [ 'it' => 'Panoramico' ] ] ],
+		[ 'geometry' => [ 'type' => 'Point', 'coordinates' => [ 9.55, 39.9 ] ], 'properties' => [ 'id' => 405, 'name' => [ 'it' => 'Quarto' ] ] ],
+	],
+	'forestas'     => [
+		'nearby_tracks' => [
+			[ 'id' => 265, 'ref' => 'C 104', 'name' => [ 'it' => 'Monte' ], 'route_type' => [ 'identifier' => 'route-type-trail' ] ],
+			[ 'id' => 318, 'ref' => null, 'name' => [ 'it' => 'Bosco' ], 'route_type' => [ 'identifier' => 'route-type-trail' ] ],
+		],
+	],
+];
+$mappa = forestas_dettaglio_mappa( $p_mappa, 'sentiero', 344 );
+$check( [ 265, 318, 344 ] === array_column( $mappa['tracks'], 'id' ), 'mappa del sentiero: prima i collegati, poi la traccia della scheda' );
+$check( true === ( $mappa['tracks'][0]['context'] ?? false ) && [ 7, 5 ] === ( $mappa['tracks'][0]['dash'] ?? [] ) && '#5B7A99' === ( $mappa['tracks'][0]['color'] ?? '' ), 'collegati tratteggiati e di sfondo' );
+$check( '#DE1B0D' === ( $mappa['tracks'][2]['color'] ?? '' ) && 4 === ( $mappa['tracks'][2]['width'] ?? 0 ) && empty( $mappa['tracks'][2]['context'] ), 'traccia della scheda nel colore del sentiero' );
+$check( [ '1', '2', '3' ] === array_column( $mappa['points'], 'number' ) && [ 9.54, 39.89 ] === ( $mappa['points'][2]['coordinates'] ?? null ), 'i primi tre POI con la posizione, numerati' );
+$check( '#B7127F' === ( $mappa['points'][0]['color'] ?? '' ) && 'Tavolo' === ( $mappa['points'][0]['tooltip'] ?? '' ), 'POI magenta con il nome' );
+$check(
+	[
+		[ 'tipo' => 'linea', 'colore' => '#DE1B0D', 'testo' => 'C 104 A · sentiero della scheda' ],
+		[ 'tipo' => 'partenza', 'colore' => '#1F8F35', 'testo' => 'Partenza' ],
+		[ 'tipo' => 'arrivo', 'colore' => '#1A1A1A', 'testo' => 'Arrivo' ],
+		[ 'tipo' => 'tratteggio', 'colore' => '#5B7A99', 'testo' => 'Percorsi correlati: C 104, Bosco' ],
+		[ 'tipo' => 'punto', 'colore' => '#B7127F', 'testo' => 'Tavolo', 'numero' => '1' ],
+		[ 'tipo' => 'punto', 'colore' => '#B7127F', 'testo' => 'Incrocio', 'numero' => '2' ],
+		[ 'tipo' => 'punto', 'colore' => '#B7127F', 'testo' => 'Panoramico', 'numero' => '3' ],
+	] === $mappa['legenda'],
+	'legenda del sentiero come la tavola'
+);
+// Partenza e arrivo sulla traccia della scheda (cerchio verde e bandiera a scacchi, come la mappa di GeoHub di Drupal)
+$check( [ 'start' => 'Partenza', 'end' => 'Arrivo' ] === ( $mappa['tracks'][2]['ends'] ?? null ) && ! isset( $mappa['tracks'][0]['ends'] ), 'partenza e arrivo solo sulla traccia della scheda' );
+$anello = forestas_dettaglio_mappa( [ 'ref' => null ], 'sentiero', 9, [ 'type' => 'LineString', 'coordinates' => [ [ 9, 40 ], [ 9.01, 40.01 ], [ 9.0002, 40.0002 ] ] ] );
+$check( [ 'partenza' ] === array_values( array_intersect( array_column( $anello['legenda'], 'tipo' ), [ 'partenza', 'arrivo' ] ) ), 'anello: in legenda solo la partenza' );
+$lineare = forestas_dettaglio_mappa( [ 'ref' => null ], 'sentiero', 9, [ 'type' => 'MultiLineString', 'coordinates' => [ [ [ 9, 40 ], [ 9.01, 40.01 ] ], [ [ 9.02, 40.02 ], [ 9.05, 40.05 ] ] ] ] );
+$check( [ 'partenza', 'arrivo' ] === array_values( array_intersect( array_column( $lineare['legenda'], 'tipo' ), [ 'partenza', 'arrivo' ] ) ), 'percorso lineare: partenza e arrivo' );
+$cammino = forestas_dettaglio_mappa( [ 'ref' => null ], 'cammino', 9 );
+$check( [ 9 ] === array_column( $cammino['tracks'], 'id' ) && [] === $cammino['points'] && '#1A416F' === ( $cammino['tracks'][0]['color'] ?? '' ), 'cammino senza collegati né POI' );
+$check( [ [ 'tipo' => 'linea', 'colore' => '#1A416F', 'testo' => 'Cammino della scheda' ], [ 'tipo' => 'partenza', 'colore' => '#1F8F35', 'testo' => 'Partenza' ], [ 'tipo' => 'arrivo', 'colore' => '#1A1A1A', 'testo' => 'Arrivo' ] ] === $cammino['legenda'], 'legenda senza codice' );
+
+$poi_mappa = forestas_dettaglio_mappa(
+	[
+		'name'     => [ 'it' => 'Perda Liana' ],
+		'forestas' => [
+			'nearby_tracks' => [
+				[ 'id' => 74, 'ref' => null, 'name' => [ 'it' => 'Itinerario' ], 'route_type' => [ 'identifier' => 'route-type-itinerary' ] ],
+				[ 'id' => 183, 'ref' => 'C 1', 'name' => [ 'it' => 'Sentiero' ], 'route_type' => [ 'identifier' => 'route-type-trail' ] ],
+			],
+		],
+	],
+	'poi',
+	1,
+	[ 'type' => 'Point', 'coordinates' => [ 9.4, 39.9 ] ]
+);
+$check( [ 74, 183 ] === array_column( $poi_mappa['tracks'], 'id' ) && '#58810B' === ( $poi_mappa['tracks'][0]['color'] ?? '' ) && '#DE1B0D' === ( $poi_mappa['tracks'][1]['color'] ?? '' ), 'POI: percorsi vicini nel colore del loro tipo' );
+$check( 1 === count( $poi_mappa['points'] ) && '#1A1A1A' === ( $poi_mappa['points'][0]['color'] ?? '' ) && ! isset( $poi_mappa['points'][0]['number'] ), 'POI: il punto nero, senza numero' );
+$check( [ [ 'tipo' => 'linea', 'colore' => '#DE1B0D', 'testo' => 'Sentieri' ], [ 'tipo' => 'linea', 'colore' => '#58810B', 'testo' => 'Itinerari' ] ] === $poi_mappa['legenda'], 'POI: legenda dei tipi presenti, nell\'ordine sentieri, itinerari, cammini' );
+
+// Mappa interattiva con il focus (oc:8969): il pulsante del dettaglio porta a /mappa-interattiva/?track=<id> o ?poi=<id>,
+// e la pagina mette nell'iframe la webapp dello shard con l'elemento a fuoco (wmwp_webapp_url() del plugin)
+$html_mappa = forestas_dettaglio_mappa_html( [ 'tracks' => [ [ 'id' => 344 ] ], 'points' => [], 'legenda' => [] ], 'Mappa', 300, 'track', 344 );
+$check( (bool) preg_match( '#href="[^"]*mappa-interattiva/\?track=344"#', $html_mappa ), 'pulsante con ?track=<id>' );
+$html_poi = forestas_dettaglio_mappa_html( [ 'tracks' => [], 'points' => [ [ 'coordinates' => [ 9, 40 ] ] ], 'legenda' => [] ], 'Mappa', 300, 'poi', 7 );
+$check( (bool) preg_match( '#href="[^"]*mappa-interattiva/\?poi=7"#', $html_poi ), 'pulsante con ?poi=<id>' );
+$check( wmwp_webapp_url( 'track', 312 ) === forestas_mappa_url( [ 'track' => '312' ] ), 'pagina della mappa con ?track: webapp con il focus' );
+$check( wmwp_webapp_url( 'poi', 7 ) === forestas_mappa_url( [ 'poi' => '7' ] ), 'pagina della mappa con ?poi' );
+$check( wmwp_webapp_url() === forestas_mappa_url( [ 'track' => 'x' ] ) && wmwp_webapp_url() === forestas_mappa_url( [] ), 'senza parametri validi: la mappa intera' );
+
 restore_error_handler();
+// Gruppi dei dati (Percorso, Misure, Enti…): titolo h3 che dettaglio.js trasforma in pulsante, tabella con il nome dal
+// titolo; senza JavaScript tutto aperto. Lo stato iniziale sta in data-wm-gr
+$gr = forestas_dettaglio_gruppo( 'wm-gr-0', 'Percorso & tappe', [ [ 'Partenza', 'Bivio <A>' ], [ 'Gestore', 'Dato non ancora disponibile', true ] ], false );
+$check( false !== strpos( $gr, '<h3 class="wm-gr__h" id="wm-gr-0">Percorso &amp; tappe</h3>' ), 'titolo h3 del gruppo con l\'id' );
+$check( false !== strpos( $gr, 'data-wm-gr="chiuso"' ) && false !== strpos( forestas_dettaglio_gruppo( 'x', 'Enti', [ [ 'a', 'b' ] ], true ), 'data-wm-gr="aperto"' ), 'stato iniziale chiuso o aperto' );
+$check( false !== strpos( $gr, '<div class="wm-gr__p" id="wm-gr-0-p">' ) && false === strpos( $gr, ' hidden' ), 'pannello aperto senza JavaScript' );
+$check( false !== strpos( $gr, '<table class="wm-dt" aria-labelledby="wm-gr-0">' ) && false === strpos( $gr, '<caption' ), 'tabella con il nome dal titolo, senza didascalia ripetuta' );
+$check( false !== strpos( $gr, '<th scope="row">Partenza</th><td>Bivio &lt;A&gt;</td>' ), 'righe con i valori escapati' );
+$check( false !== strpos( $gr, '<td class="wm-segnaposto">Dato non ancora disponibile</td>' ), 'segnaposto' );
+$check( '' === forestas_dettaglio_gruppo( 'y', 'Vuoto', [], false ), 'gruppo senza righe: niente' );
+
 if ( $failures ) {
 	echo 'FAIL: ' . implode( '; ', $failures ) . "\n";
 	exit( 1 );

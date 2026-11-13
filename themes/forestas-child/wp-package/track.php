@@ -60,15 +60,16 @@ wmwp_template_header();
 
 	<?php // Avviso del sentiero: il dato non esiste ancora nello shard ?>
 	<?php if ( 'itinerario' !== $tipo ) : ?>
-		<div class="wm-avviso wm-segnaposto" role="note">
-			<span class="wm-avviso__tag"><?php echo esc_html( forestas_testo( 'Avvisi', 'Notices' ) ); ?></span>
-			<span><?php echo esc_html( $non_disp ); ?></span>
+		<div class="wm-avviso" role="note">
+			<span class="wm-avviso__tag"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3 2 21h20L12 3z" fill="none" stroke="#fff" stroke-width="2.2" stroke-linejoin="round"/><path d="M12 10v5" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/><circle cx="12" cy="18" r="1.3" fill="#fff"/></svg><?php echo esc_html( forestas_testo( 'Avviso', 'Notice' ) ); ?></span>
+			<span class="wm-segnaposto"><?php echo esc_html( $non_disp ); ?></span>
 		</div>
 	<?php endif; ?>
 
 	<header class="wm-hero" data-wm-hero>
 		<?php if ( '' !== $foto ) : ?>
-			<img class="wm-hero__img" src="<?php echo esc_url( $foto ); ?>" alt="" fetchpriority="high">
+			<?php // Testo alternativo dalla didascalia della foto, se c'è (specifica di oc:8783, «Testata con foto»); senza, è decorativa ?>
+			<img class="wm-hero__img" src="<?php echo esc_url( $foto ); ?>" alt="<?php echo esc_attr( wp_strip_all_tags( forestas_dettaglio_testo( $p['feature_image']['caption'] ?? null ) ) ); ?>" fetchpriority="high">
 		<?php endif; ?>
 		<?php
 		// «Credits foto» come nella testata delle pagine statiche, con autore e credits della foto dello shard
@@ -84,7 +85,13 @@ wmwp_template_header();
 		<div class="wm-hero__scrim<?php echo '' !== $credits_foto ? ' wm-hero__scrim--credits' : ''; ?>">
 			<p class="wm-hero__occ">
 				<span class="wm-tipo"><?php echo esc_html( $tipo_nome ); ?></span>
-				<?php if ( $luoghi['aree'] ) : ?>
+				<?php
+				// Il cammino porta il suo nome al posto delle aree (Tavola 5), con la lingua vera se ripiega
+				$cammino = forestas_dettaglio_nome_cammino( $p, $tipo );
+				?>
+				<?php if ( '' !== $cammino['testo'] ) : ?>
+					<span<?php echo null !== $cammino['lingua'] && forestas_dettaglio_lingua() !== $cammino['lingua'] ? ' lang="' . esc_attr( $cammino['lingua'] ) . '"' : ''; ?>><?php echo esc_html( $cammino['testo'] ); ?></span>
+				<?php elseif ( $luoghi['aree'] ) : ?>
 					<span><?php echo esc_html( forestas_testo( 'Aree geografiche', 'Geographic areas' ) . ' ' . implode( ', ', $luoghi['aree'] ) ); ?></span>
 				<?php endif; ?>
 			</p>
@@ -134,47 +141,137 @@ wmwp_template_header();
 			<p><?php echo esc_html( $non_disp ); ?></p>
 		</div>
 
-		<div class="wm-ind">
-			<?php
-			$livello = $indicatori['validazione'] ? forestas_dettaglio_livello_validazione( $indicatori['validazione']['chiave'] ) : 0;
-			?>
+		<?php
+		$livello       = $indicatori['validazione'] ? forestas_dettaglio_livello_validazione( $indicatori['validazione']['chiave'] ) : 0;
+		$accessibilita = $indicatori['accessibilita'];
+		$spt           = forestas_dettaglio_inclusivita( $p );
+		$approfondisci = forestas_dettaglio_link_approfondimento();
+		$su            = forestas_testo( 'su', 'of' );
+		// Legenda dietro la «i»: titolo, livelli e il link all'articolo di approfondimento (wireframe, nota 12)
+		$legenda = function ( string $id, string $titolo_legenda, array $livelli, string $nota = '' ) use ( $approfondisci ): string {
+			$html = '<div class="wm-ind__leg" id="' . esc_attr( $id ) . '" hidden><p class="wm-ind__lt">' . esc_html( $titolo_legenda ) . '</p><ol>';
+			foreach ( $livelli as $chiave => $nome ) {
+				$html .= '<li><b>' . esc_html( (string) $chiave ) . '</b> ' . esc_html( $nome ) . '</li>';
+			}
+			$html .= '</ol>' . ( '' !== $nota ? '<p class="wm-ind__nota">' . esc_html( $nota ) . '</p>' : '' );
+			if ( '' !== $approfondisci ) {
+				$html .= '<a href="' . esc_url( $approfondisci ) . '">' . esc_html( forestas_testo( "Leggi l'articolo di approfondimento", 'Read the in-depth article' ) ) . '</a>';
+			}
+			return $html . '</div>';
+		};
+		$pulsante = function ( string $id, string $etichetta ): string {
+			return '<button type="button" class="wm-ind__info" aria-expanded="false" aria-controls="' . esc_attr( $id ) . '" aria-label="' . esc_attr( $etichetta ) . '">i</button>';
+		};
+		?>
+		<div class="wm-ind<?php echo $spt ? ' wm-ind--spt' : ''; ?>">
 			<div class="wm-ind__i wm-ind__i--val">
-				<p class="wm-ind__k"><?php echo esc_html( forestas_testo( 'Validazione catastale', 'Trail register validation' ) ); ?>
-					<button type="button" class="wm-ind__info" aria-expanded="false" aria-controls="wm-leg-val" aria-label="<?php echo esc_attr( forestas_testo( 'Legenda: livelli di validazione catastale', 'Legend: validation levels' ) ); ?>">i</button></p>
-				<span class="wm-tac" role="img" aria-label="<?php echo esc_attr( $indicatori['validazione'] ? sprintf( forestas_testo( 'Validazione catastale: livello %1$d su %2$d', 'Validation: level %1$d of %2$d' ), $livello, 6 ) : $non_disp ); ?>"><?php echo $tacche( $livello, 6 ); // phpcs:ignore ?></span>
-				<p class="wm-ind__v"><?php echo esc_html( $indicatori['validazione'] ? $livello . ' ' . forestas_testo( 'su', 'of' ) . ' 6 · ' . $indicatori['validazione']['etichetta'] : $non_disp ); ?></p>
-				<div class="wm-ind__leg" id="wm-leg-val" hidden>
-					<p><?php echo esc_html( forestas_testo( 'Validazione catastale, da 0 a 6', 'Trail register validation, from 0 to 6' ) ); ?></p>
-					<ol>
-						<?php
-						foreach ( forestas_search_term_labels() as $chiave => $etichetta ) {
-							if ( 0 === strpos( $chiave, 'validation-status-' ) ) {
-								$ordine[ forestas_dettaglio_livello_validazione( $chiave ) ] = $etichetta;
-							}
-						}
-						ksort( $ordine );
-						foreach ( $ordine as $n => $etichetta ) {
-							printf( '<li><b>%d</b> %s</li>', (int) $n, esc_html( $etichetta ) );
-						}
-						?>
-					</ol>
-				</div>
-			</div>
-			<div class="wm-ind__i wm-ind__i--per wm-segnaposto">
-				<p class="wm-ind__k"><?php echo esc_html( forestas_testo( 'Percorribilità', 'Walkability' ) ); ?></p>
-				<span class="wm-tac" role="img" aria-label="<?php echo esc_attr( $non_disp ); ?>"><?php echo $tacche( 0, 5 ); // phpcs:ignore ?></span>
-				<p class="wm-ind__v"><?php echo esc_html( $non_disp ); ?></p>
-			</div>
-			<div class="wm-ind__i wm-ind__i--acc<?php echo $indicatori['accessibilita'] ? '' : ' wm-segnaposto'; ?>">
-				<p class="wm-ind__k"><?php echo esc_html( forestas_testo( 'Accessibilità', 'Accessibility' ) ); ?></p>
+				<div class="wm-ind__k"><?php echo esc_html( forestas_testo( 'Validazione catastale', 'Trail register validation' ) ); ?> <?php echo $pulsante( 'wm-leg-val', forestas_testo( 'Legenda: livelli di validazione catastale', 'Legend: validation levels' ) ); // phpcs:ignore ?></div>
+				<span class="wm-tac" role="img" aria-label="<?php echo esc_attr( $indicatori['validazione'] ? sprintf( forestas_testo( 'Validazione catastale: livello %1$d su %2$d', 'Validation: level %1$d of %2$d' ), $livello, 6 ) : forestas_testo( 'Validazione catastale: ', 'Validation: ' ) . $non_disp ); ?>"><?php echo $tacche( $livello, 6 ); // phpcs:ignore ?></span>
+				<div class="wm-ind__v<?php echo $indicatori['validazione'] ? '' : ' wm-segnaposto'; ?>"><?php echo esc_html( $indicatori['validazione'] ? $livello . ' ' . $su . ' 6 · ' . $indicatori['validazione']['etichetta'] : $non_disp ); ?></div>
 				<?php
-				$classi = [ 'A6', 'A5', 'A4', 'A3', 'A2', 'A1' ];
-				$acceso = $indicatori['accessibilita'] ? (int) array_search( $indicatori['accessibilita']['classe'], $classi, true ) + 1 : 0;
+				$ordine = [];
+				foreach ( forestas_search_term_labels() as $chiave => $etichetta ) {
+					if ( 0 === strpos( $chiave, 'validation-status-' ) ) {
+						$ordine[ forestas_dettaglio_livello_validazione( $chiave ) ] = $etichetta;
+					}
+				}
+				ksort( $ordine );
+				echo $legenda( 'wm-leg-val', forestas_testo( 'Validazione catastale, da 0 a 6', 'Trail register validation, from 0 to 6' ), $ordine ); // phpcs:ignore
 				?>
-				<span class="wm-tac" role="img" aria-label="<?php echo esc_attr( $indicatori['accessibilita'] ? forestas_testo( 'Classe di inclusività ', 'Inclusivity class ' ) . $indicatori['accessibilita']['classe'] : $non_disp ); ?>"><?php echo $tacche( $acceso, 6 ); // phpcs:ignore ?></span>
-				<p class="wm-ind__v"><?php echo esc_html( $indicatori['accessibilita'] ? forestas_testo( 'Classe ', 'Class ' ) . $indicatori['accessibilita']['classe'] : $non_disp ); ?></p>
+			</div>
+			<div class="wm-ind__i wm-ind__i--per">
+				<div class="wm-ind__k"><?php echo esc_html( forestas_testo( 'Percorribilità', 'Walkability' ) ); ?> <?php echo $pulsante( 'wm-leg-per', forestas_testo( 'Legenda: livelli di percorribilità', 'Legend: walkability levels' ) ); // phpcs:ignore ?></div>
+				<span class="wm-tac" role="img" aria-label="<?php echo esc_attr( forestas_testo( 'Percorribilità: ', 'Walkability: ' ) . $non_disp ); ?>"><?php echo $tacche( 0, 5 ); // phpcs:ignore ?></span>
+				<div class="wm-ind__v wm-segnaposto"><?php echo esc_html( $non_disp ); ?></div>
+				<?php
+				echo $legenda( // phpcs:ignore
+					'wm-leg-per',
+					forestas_testo( 'Percorribilità, da 0 a 5', 'Walkability, from 0 to 5' ),
+					[
+						'0'   => forestas_testo( 'Sconosciuta o non verificata', 'Unknown or not verified' ),
+						'1'   => forestas_testo( 'Non percorribile', 'Not walkable' ),
+						'2–3' => forestas_testo( 'In revisione o semplicemente percorribile', 'Under review or simply walkable' ),
+						'4'   => forestas_testo( 'Percorribile', 'Walkable' ),
+						'5'   => forestas_testo( 'Controllato con roadbook e punti tappa', 'Checked with roadbook and stage points' ),
+					]
+				);
+				?>
+			</div>
+			<div class="wm-ind__i wm-ind__i--acc">
+				<div class="wm-ind__k"><?php echo esc_html( forestas_testo( 'Accessibilità', 'Accessibility' ) ); ?> <?php echo $pulsante( 'wm-leg-acc', forestas_testo( 'Legenda: gradi di accessibilità', 'Legend: accessibility grades' ) ); // phpcs:ignore ?></div>
+				<span class="wm-tac" role="img" aria-label="<?php echo esc_attr( $accessibilita['grado'] ? forestas_testo( 'Accessibilità: grado ', 'Accessibility: grade ' ) . $accessibilita['grado'] : forestas_testo( 'Accessibilità: non classificato', 'Accessibility: not classified' ) ); ?>"><?php echo $tacche( $accessibilita['livello'], 3 ); // phpcs:ignore ?></span>
+				<div class="wm-tac-l" aria-hidden="true"><span>AT</span><span>AE</span><span>AEE</span></div>
+				<div class="wm-ind__v<?php echo $accessibilita['grado'] ? '' : ' wm-segnaposto'; ?>"><?php echo esc_html( $accessibilita['grado'] ? $accessibilita['grado'] . ' · ' . $accessibilita['nome'] : forestas_testo( 'Non classificato', 'Not classified' ) ); ?></div>
+				<ul class="wm-acc-tip" aria-label="<?php echo esc_attr( forestas_testo( 'Tipologie di disabilità', 'Types of disability' ) ); ?>">
+					<?php
+					$icone = [
+						'motoria'    => [ forestas_testo( 'Motoria', 'Motor' ), '<circle cx="11" cy="3.8" r="1.7"/><path d="M11 7v6h5l2.5 5.5M11 10h4.5"/><path d="M8 11.2a5.2 5.2 0 1 0 7.4 6.4"/>' ],
+						'sensoriale' => [ forestas_testo( 'sensoriale', 'sensory' ), '<path d="M3 14s3.5-5 9-5 9 5 9 5-3.5 5-9 5-9-5-9-5z"/><circle cx="12" cy="14" r="2.4"/><path d="M12 3.5V6M6.6 5.2l1.4 2.1M17.4 5.2 16 7.3"/>' ],
+						'cognitiva'  => [ forestas_testo( 'psichica cognitiva', 'cognitive' ), '<path d="M12 5.5v13M12 5.5a3 3 0 0 0-5.6 1.2 3 3 0 0 0-1.9 5.1 3 3 0 0 0 1.4 4.5A3 3 0 0 0 12 18.5M12 5.5a3 3 0 0 1 5.6 1.2 3 3 0 0 1 1.9 5.1 3 3 0 0 1-1.4 4.5A3 3 0 0 1 12 18.5"/>' ],
+					];
+					foreach ( $icone as $chiave => [ $nome_tipo, $disegno ] ) {
+						$accesa = $accessibilita['disabilita'][ $chiave ];
+						// L'icona del set dello shard, se c'è; altrimenti il disegno a tratto del wireframe
+						$dal_set = function_exists( 'wmwp_icon_svg' ) ? wmwp_icon_svg( $accessibilita['icone'][ $chiave ] ) : '';
+						printf(
+							'<li%1$s><span class="wm-acc-tip__ab">%2$s</span>%3$s<span class="screen-reader-text">: %4$s</span></li>',
+							$accesa ? ' class="on"' : '',
+							esc_html( $nome_tipo ),
+							'' !== $dal_set ? $dal_set : '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">' . $disegno . '</svg>', // phpcs:ignore WordPress.Security.EscapeOutput -- SVG del plugin (path escapati) o disegno fisso
+							esc_html( $accesa ? forestas_testo( 'sì', 'yes' ) : forestas_testo( 'non certificato', 'not certified' ) )
+						);
+					}
+					?>
+				</ul>
+				<?php
+				$gradi = [];
+				foreach ( forestas_dettaglio_gradi_accessibilita() as $sigla => $grado ) {
+					$gradi[ $sigla ] = $grado['nome'];
+				}
+				$gradi['★ – ★★★'] = forestas_testo( 'dotazioni in più: bagni accessibili, Joelette, visite guidate, informazioni accessibili', 'extra facilities: accessible toilets, Joëlette, guided tours, accessible information' );
+				echo $legenda( // phpcs:ignore
+					'wm-leg-acc',
+					forestas_testo( 'Accessibilità dei sentieri (Allegato H)', 'Trail accessibility (Annex H)' ),
+					$gradi,
+					forestas_testo( 'Il grado è uno solo per sentiero. Le icone dicono per quali disabilità è accessibile — motoria, sensoriale (anche sordità), psichica cognitiva: verde se sì, grigia e tratteggiata se no.', 'There is one grade per trail. The icons show which disabilities it is accessible for — motor, sensory (including deafness), cognitive: green if yes, grey and dashed if not.' )
+				);
+				?>
 			</div>
 		</div>
+		<?php if ( $spt ) : ?>
+			<?php // «Sentiero per tutti»: unito alla colonna Accessibilità a forma di L rovesciata (wireframe, nota 11) ?>
+			<section class="wm-spt" aria-labelledby="wm-spt-h">
+				<h2 class="wm-spt__h" id="wm-spt-h"><?php echo esc_html( forestas_testo( 'Sentiero per tutti', 'Trail for everyone' ) ); ?></h2>
+				<div class="wm-spt__c">
+					<div class="wm-spt__badge" aria-hidden="true"><?php echo esc_html( $spt['classe'] ); ?></div>
+					<div>
+						<div class="wm-ind__k"><?php echo esc_html( forestas_testo( 'Punteggio di inclusività', 'Inclusivity score' ) ); ?> <?php echo $pulsante( 'wm-leg-spt', forestas_testo( 'Legenda: classi del punteggio di inclusività', 'Legend: inclusivity score classes' ) ); // phpcs:ignore ?></div>
+						<span class="wm-tac" role="img" aria-label="<?php echo esc_attr( sprintf( forestas_testo( 'Punteggio di inclusività, classe %1$s: %2$d su 6', 'Inclusivity score, class %1$s: %2$d of 6' ), $spt['classe'], $spt['tacche'] ) ); ?>"><?php echo $tacche( $spt['tacche'], 6 ); // phpcs:ignore ?></span>
+						<div class="wm-ind__v"><?php echo esc_html( $spt['classe'] . ' · ' . $spt['nome'] ); ?></div>
+						<?php if ( '' !== $spt['frase'] ) : ?>
+							<div class="wm-ind__n"><?php echo esc_html( $spt['frase'] ); ?></div>
+						<?php endif; ?>
+					</div>
+					<?php
+					$classi_legenda = [];
+					foreach ( forestas_dettaglio_classi_inclusivita() as $sigla => $classe ) {
+						$classi_legenda[ $sigla ] = $classe['nome'] . ' · ' . $classe['intervallo'];
+					}
+					echo $legenda( 'wm-leg-spt', forestas_testo( 'Punteggio di inclusività: le sei classi (Allegato H)', 'Inclusivity score: the six classes (Annex H)' ), $classi_legenda ); // phpcs:ignore
+					?>
+				</div>
+				<table class="wm-spt__tab">
+					<caption class="screen-reader-text"><?php echo esc_html( forestas_testo( 'Dettaglio del punteggio di inclusività', 'Inclusivity score breakdown' ) ); ?></caption>
+					<tbody>
+						<tr><th scope="row"><?php echo esc_html( forestas_testo( 'Fruibilità in autonomia', 'Independent use' ) ); ?></th><td><?php echo esc_html( forestas_dettaglio_valore( $spt['autonomia'] ) ); ?></td></tr>
+						<tr><th scope="row"><?php echo esc_html( forestas_testo( 'Disponibilità di assistenza', 'Assistance available' ) ); ?></th><td><?php echo esc_html( forestas_dettaglio_valore( $spt['assistenza'] ) ); ?></td></tr>
+						<?php foreach ( $spt['punteggi'] as $punteggio ) : ?>
+							<tr><th scope="row"><?php echo esc_html( $punteggio['etichetta'] ); ?></th><td><span class="wm-tac" role="img" aria-label="<?php echo esc_attr( $punteggio['etichetta'] . ': ' . $punteggio['tacche'] . ' ' . $su . ' 6' ); ?>"><?php echo $tacche( $punteggio['tacche'], 6 ); // phpcs:ignore ?></span><span class="wm-spt__tv"><?php echo esc_html( $punteggio['tacche'] . ' ' . $su . ' 6' ); ?></span></td></tr>
+						<?php endforeach; ?>
+					</tbody>
+				</table>
+			</section>
+		<?php endif; ?>
 	<?php endif; ?>
 
 	<div class="wm-cols">
@@ -195,8 +292,9 @@ wmwp_template_header();
 					?>
 				</dl>
 				<?php
-				$descrizione = forestas_dettaglio_testo( $p['description'] ?? null );
-				$info        = forestas_dettaglio_testo( $forestas['useful_info'] ?? null );
+				// Testi ricchi: titoli rinumerati sotto quello del blocco e lingua vera se ripiegano (forestas_dettaglio_ricco)
+				$descrizione = forestas_dettaglio_ricco( $p['description'] ?? null );
+				$info        = forestas_dettaglio_ricco( $forestas['useful_info'] ?? null );
 				?>
 				<?php if ( '' !== $descrizione ) : ?>
 					<div class="wm-blk"><h3><?php echo esc_html( forestas_testo( 'Descrizione', 'Description' ) ); ?></h3><?php echo $espandibile( $descrizione, 'wm-descrizione' ); // phpcs:ignore ?></div>
@@ -239,7 +337,11 @@ wmwp_template_header();
 					<?php echo $titolo( forestas_testo( 'Descrizione tappe (roadbook)', 'Stage description (roadbook)' ), 'wm-roadbook' ); // phpcs:ignore ?>
 					<div class="wm-rb">
 						<?php foreach ( $tappe as $i => $tappa ) : ?>
-							<h3 class="wm-rb__h"><button type="button" class="wm-rb__btn" aria-expanded="<?php echo 0 === $i ? 'true' : 'false'; ?>" aria-controls="wm-rb-<?php echo (int) $i; ?>"><?php echo esc_html( '' !== $tappa['titolo'] ? $tappa['titolo'] : sprintf( forestas_testo( 'Tappa %d', 'Stage %d' ), $i + 1 ) ); ?></button></h3>
+							<h3 class="wm-rb__h"><button type="button" class="wm-rb__btn" aria-expanded="<?php echo 0 === $i ? 'true' : 'false'; ?>" aria-controls="wm-rb-<?php echo (int) $i; ?>"><?php
+							$titolo_tappa = '' !== $tappa['titolo'] ? $tappa['titolo'] : sprintf( forestas_testo( 'Tappa %d', 'Stage %d' ), $i + 1 );
+							// Titolo in un'altra lingua (ripiego): con la sua lingua per lo screen reader (WCAG 3.1.2)
+							echo '' !== $tappa['titolo'] && null !== $tappa['lingua'] && $tappa['lingua'] !== forestas_dettaglio_lingua() ? '<span lang="' . esc_attr( $tappa['lingua'] ) . '">' . esc_html( $titolo_tappa ) . '</span>' : esc_html( $titolo_tappa );
+							?></button></h3>
 							<div class="wm-rb__p" id="wm-rb-<?php echo (int) $i; ?>" <?php echo 0 === $i ? '' : 'hidden'; ?>><?php echo wp_kses_post( $tappa['testo'] ); ?></div>
 						<?php endforeach; ?>
 					</div>
@@ -302,28 +404,16 @@ wmwp_template_header();
 			<?php endif; ?>
 
 			<section class="wm-sec" aria-labelledby="wm-dati">
-				<?php echo $titolo( 'sentiero' === $tipo ? forestas_testo( 'Dati catastali e altimetrici', 'Register and elevation data' ) : forestas_testo( 'Dati del percorso', 'Route data' ), 'wm-dati' ); // phpcs:ignore ?>
+				<?php echo $titolo( [ 'sentiero' => forestas_testo( 'Dati catastali e altimetrici', 'Register and elevation data' ), 'itinerario' => forestas_testo( "Dati dell'itinerario", 'Itinerary data' ), 'cammino' => forestas_testo( 'Dati del cammino', 'Walk data' ) ][ $tipo ] ?? forestas_testo( 'Dati del percorso', 'Route data' ), 'wm-dati' ); // phpcs:ignore ?>
 				<div class="wm-dt-wrap">
-					<?php foreach ( forestas_dettaglio_tabelle( $p, $tipo ) as $tabella ) : ?>
-						<table class="wm-dt">
-							<caption><?php echo esc_html( $tabella['titolo'] ); ?></caption>
-							<tbody>
-								<?php foreach ( $tabella['righe'] as [ $etichetta, $valore ] ) : ?>
-									<tr><th scope="row"><?php echo esc_html( $etichetta ); ?></th><td><?php echo esc_html( $valore ); ?></td></tr>
-								<?php endforeach; ?>
-							</tbody>
-						</table>
-					<?php endforeach; ?>
-					<?php if ( $enti ) : ?>
-						<table class="wm-dt">
-							<caption><?php echo esc_html( forestas_testo( 'Enti', 'Organisations' ) ); ?></caption>
-							<tbody>
-								<?php foreach ( $enti as $ente ) : ?>
-									<tr><th scope="row"><?php echo esc_html( $ente['etichetta'] ); ?></th><td<?php echo null === $ente['nome'] ? ' class="wm-segnaposto"' : ''; ?>><?php echo esc_html( $ente['nome'] ?? $non_disp ); ?></td></tr>
-								<?php endforeach; ?>
-							</tbody>
-						</table>
-					<?php endif; ?>
+					<?php
+					// Gruppi chiusi, da aprire uno per uno; gli enti restano aperti se ce n'è uno solo (Rubens, 13/11)
+					foreach ( forestas_dettaglio_tabelle( $p, $tipo ) as $n => $tabella ) {
+						echo forestas_dettaglio_gruppo( 'wm-gr-' . (int) $n, $tabella['titolo'], $tabella['righe'], false ); // phpcs:ignore WordPress.Security.EscapeOutput -- markup già escapato
+					}
+					$righe_enti = array_map( fn( $ente ) => [ $ente['etichetta'], $ente['nome'] ?? $non_disp, null === $ente['nome'] ], $enti );
+					echo forestas_dettaglio_gruppo( 'wm-gr-enti', forestas_testo( 'Enti', 'Organisations' ), $righe_enti, 1 === count( $enti ) ); // phpcs:ignore WordPress.Security.EscapeOutput -- markup già escapato
+					?>
 				</div>
 			</section>
 
@@ -337,14 +427,16 @@ wmwp_template_header();
 			<?php endif; ?>
 			<?php if ( $correlati['percorsi'] ) : ?>
 				<section class="wm-sec" aria-labelledby="wm-correlati">
-					<?php echo $titolo( 'sentiero' === $tipo ? forestas_testo( 'Sentieri correlati', 'Related trails' ) : forestas_testo( 'Percorsi correlati', 'Related routes' ), 'wm-correlati' ); // phpcs:ignore ?>
+					<?php // «Percorsi correlati» per tutti i tipi: fra i correlati di un sentiero ci sono anche itinerari e cammini (Rubens, 13/11) ?>
+					<?php echo $titolo( forestas_testo( 'Percorsi correlati', 'Related routes' ), 'wm-correlati' ); // phpcs:ignore ?>
 					<?php echo forestas_dettaglio_griglia( $correlati['percorsi'], 'percorso', 'wm-correlati-percorsi' ); // phpcs:ignore ?>
 				</section>
 			<?php endif; ?>
 		</div>
 
-		<aside class="wm-aside" aria-label="<?php echo esc_attr( forestas_testo( 'Mappa del percorso', 'Route map' ) ); ?>">
-			<?php echo do_shortcode( '[wmwp_map tracks="' . (int) $detail['id'] . '" height="460" label="' . esc_attr( forestas_testo( 'Mappa del percorso', 'Route map' ) ) . '"]' ); ?>
+		<?php // Senza nome: lo porta già la mappa che contiene («Mappa del percorso»), che lo screen reader annuncerebbe due volte ?>
+		<aside class="wm-aside">
+			<?php echo forestas_dettaglio_mappa_html( forestas_dettaglio_mappa( $p, $tipo, (int) $detail['id'], (array) ( $detail['feature']['geometry'] ?? [] ) ), forestas_testo( 'Mappa del percorso', 'Route map' ), 460, 'track', (int) $detail['id'] ); // phpcs:ignore WordPress.Security.EscapeOutput -- markup già escapato ?>
 		</aside>
 	</div>
 

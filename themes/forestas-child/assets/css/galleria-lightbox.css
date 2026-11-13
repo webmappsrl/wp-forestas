@@ -36,3 +36,69 @@
 :lang(en) .slick-lightbox-slick-caption .auth.has-value::before {
 	content: "Photo by: ";
 }
+
+/*
+ * Frecce e chiusura (components/_slick-slider.scss, «SLICK GALLERY»): cerchi trasparenti con bordo e icona bianchi,
+ * arancio sotto il mouse. Senza queste regole le frecce restavano cerchi grigi vuoti: l'icona di Slick (slick-theme.css)
+ * su Drupal non si carica, la mette il tema con Font Awesome (oc:8969). Drupal usa «Font Awesome 6 Pro»; qui il
+ * Font Awesome Pro regular di Impreza, che ha gli stessi codici (\f053, \f054, \f00d).
+ */
+.slick-lightbox {
+	--_freccia-bordo: 2px;
+	--_freccia-misura: calc(3em - (var(--_freccia-bordo) * 2));
+}
+.slick-lightbox .slick-lightbox-close,
+.slick-lightbox .slick-arrow {
+	width: var(--_freccia-misura);
+	height: var(--_freccia-misura);
+	padding: 0;
+	border: var(--_freccia-bordo) solid var(--sase-testo-su-scuro, #FFFFFF);
+	border-radius: 50%;
+	background-color: transparent;
+	overflow: hidden;
+	color: transparent;
+	font-size: 1rem;
+}
+.slick-lightbox .slick-lightbox-close::before,
+.slick-lightbox .slick-arrow::before {
+	display: flex;
+	width: 100%;
+	height: 100%;
+	align-items: center;
+	justify-content: center;
+	opacity: 1;
+	color: var(--sase-testo-su-scuro, #FFFFFF);
+	font-family: "fontawesome" !important;
+	font-size: 1rem;
+	font-style: normal;
+	font-weight: 400;
+	line-height: 1;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+.slick-lightbox .slick-lightbox-close::before {
+	content: "\f00d";
+}
+.slick-lightbox .slick-prev::before {
+	content: "\f053";
+}
+.slick-lightbox .slick-next::before {
+	content: "\f054";
+}
+/* Arancio sotto il mouse solo sulla chiusura, come su Drupal (--custom-theme-color-text-hover) */
+.slick-lightbox .slick-lightbox-close:hover,
+.slick-lightbox .slick-lightbox-close:focus {
+	border-color: var(--sase-arancio-hover, #D63D00);
+}
+.slick-lightbox .slick-lightbox-close:hover::before,
+.slick-lightbox .slick-lightbox-close:focus::before {
+	color: var(--sase-arancio-hover, #D63D00);
+}
+.slick-lightbox .slick-lightbox-close:focus-visible,
+.slick-lightbox .slick-arrow:focus-visible {
+	outline: 3px solid var(--sase-focus, #0089C7);
+}
+.slick-lightbox .slick-lightbox-close:focus:not(:focus-visible),
+.slick-lightbox .slick-arrow:focus:not(:focus-visible) {
+	outline: none;
+}

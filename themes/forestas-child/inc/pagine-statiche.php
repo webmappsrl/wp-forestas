@@ -471,11 +471,31 @@ function forestas_galleria_lightbox(): void {
 }
 
 /*
- * Indirizzo della mappa: quello scritto nel blocco di Drupal (MappaInterattivaBlock), non l'iframe del
- * testo della pagina, che su Drupal non si mostra. Il cambio di mappa con ?id= (sentiero, itinerario o
- * punto di interesse) arriverà con le loro pagine.
+ * Indirizzo della mappa di ripiego, quello scritto nel blocco di Drupal (MappaInterattivaBlock): si usa solo se il plugin
+ * wp-package non dà la webapp dello shard (plugin spento o shard non configurato).
  */
 const FORESTAS_MAPPA_URL = 'https://32.app.webmapp.it/#/map';
+
+/**
+ * Indirizzo dell'iframe della pagina «Mappa interattiva» (oc:8969): la webapp dello shard configurato nel plugin
+ * (`wmwp_webapp_url()`: su dev `https://1.forestasdev.webmapp.it/`, su UAT `https://1.forestasuat.webmapp.it/`), con il
+ * focus sull'elemento se l'indirizzo della pagina ha `?track=<id>` o `?poi=<id>` (id dello shard, dal pulsante «Vedi sulla
+ * mappa interattiva» del dettaglio), come `/mappa-interattiva?id=<nid>` di Drupal.
+ *
+ * @param array<string, mixed> $parametri Parametri della richiesta ($_GET).
+ */
+function forestas_mappa_url( array $parametri ): string {
+	if ( ! function_exists( 'wmwp_webapp_url' ) || '' === wmwp_webapp_url() ) {
+		return FORESTAS_MAPPA_URL;
+	}
+	foreach ( [ 'track', 'poi' ] as $tipo ) {
+		$id = isset( $parametri[ $tipo ] ) && is_scalar( $parametri[ $tipo ] ) && ctype_digit( (string) $parametri[ $tipo ] ) ? (int) $parametri[ $tipo ] : 0;
+		if ( $id > 0 ) {
+			return wmwp_webapp_url( $tipo, $id );
+		}
+	}
+	return wmwp_webapp_url();
+}
 
 /*
  * Mappa interattiva come su Drupal (oc:8758): il percorso, il titolo della pagina nascosto alla vista, poi
@@ -492,10 +512,14 @@ add_shortcode(
 		wp_enqueue_script( 'forestas-mappa', get_stylesheet_directory_uri() . '/assets/js/mappa.js', [], forestas_versione(), [ 'in_footer' => true, 'strategy' => 'defer' ] );
 		$titolo = get_the_title( $id );
 		return sprintf(
-			'%1$s<h1 class="screen-reader-text">%2$s</h1>'
+			// Il pulsante che allarga la mappa sta nella riga del percorso, non in una barra sopra la mappa come su
+			// Drupal: la barra toglieva 88px alla mappa (oc:8969). La barra resta per la mappa a schermo intero.
+			'<h1 class="screen-reader-text">%2$s</h1>'
+			. '<div class="forestas-mappa-testa">%1$s'
+			. '<button type="button" id="mapExpander" class="forestas-pulsante forestas-pulsante--icona is-map-expander"><span>%4$s</span><i aria-hidden="true" class="far fa-expand-arrows forestas-pulsante__icona"></i></button>'
+			. '</div>'
 			. '<div class="forestas-mappa is-shrinked"><h2 class="screen-reader-text">%3$s</h2>'
 			. '<div class="forestas-mappa__barra">'
-			. '<button type="button" id="mapExpander" class="forestas-pulsante forestas-pulsante--icona is-map-expander"><span>%4$s</span><i aria-hidden="true" class="far fa-expand-arrows forestas-pulsante__icona"></i></button>'
 			. '<button type="button" id="mapShrinker" class="forestas-pulsante forestas-pulsante--icona is-map-shrinker"><span>%5$s</span><i aria-hidden="true" class="far fa-compress-arrows-alt forestas-pulsante__icona"></i></button>'
 			. '</div>'
 			. '<div><iframe src="%6$s" scrolling="no" frameborder="0" marginheight="0px" marginwidth="0px" height="100%%" width="100%%" allowfullscreen="" title="%7$s"></iframe></div>'
@@ -505,7 +529,7 @@ add_shortcode(
 			esc_html( forestas_testo( "Mappa interattiva: cerca sentieri, itinerari, punti d'interesse", 'Interactive map: search for trails, routes, Point of Interest' ) ),
 			esc_html( forestas_testo( 'Espandi la mappa', 'Expand map' ) ),
 			esc_html( forestas_testo( 'Esci dalla modalità mappa a schermo intero', 'Minimize fullscreen map' ) ),
-			esc_url( FORESTAS_MAPPA_URL ),
+			esc_url( forestas_mappa_url( $_GET ) ), // phpcs:ignore WordPress.Security.NonceVerification -- solo lettura, id numerici
 			esc_attr( forestas_testo( 'Mappa interattiva Sardegna Sentieri', 'Sardegna Sentieri interactive map' ) )
 		);
 	}

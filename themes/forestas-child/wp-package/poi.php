@@ -17,7 +17,6 @@ $nome     = (string) $detail['name'];
 $foto     = $p['feature_image']['sizes']['1440x500'] ?? $p['feature_image']['url'] ?? '';
 $galleria = forestas_dettaglio_galleria( $p );
 $non_disp = forestas_testo( 'Dato non ancora disponibile', 'Not yet available' );
-$origin   = function_exists( 'wmwp_configured_api_urls' ) ? wmwp_configured_api_urls()['origin'] : '';
 
 $titolo = function ( string $testo, string $id ): string {
 	return sprintf( '<h2 class="wm-sec__h" id="%s">%s</h2>', esc_attr( $id ), esc_html( $testo ) );
@@ -29,7 +28,8 @@ wmwp_template_header();
 
 	<header class="wm-hero" data-wm-hero>
 		<?php if ( '' !== $foto ) : ?>
-			<img class="wm-hero__img" src="<?php echo esc_url( $foto ); ?>" alt="" fetchpriority="high">
+			<?php // Testo alternativo dalla didascalia della foto, se c'è (specifica di oc:8783, «Testata con foto»); senza, è decorativa ?>
+			<img class="wm-hero__img" src="<?php echo esc_url( $foto ); ?>" alt="<?php echo esc_attr( wp_strip_all_tags( forestas_dettaglio_testo( $p['feature_image']['caption'] ?? null ) ) ); ?>" fetchpriority="high">
 		<?php endif; ?>
 		<?php
 		// «Credits foto» come nella testata delle pagine statiche, con autore e credits della foto dello shard
@@ -96,7 +96,8 @@ wmwp_template_header();
 			</section>
 
 			<?php
-			$descrizione = forestas_dettaglio_testo( $p['description'] ?? null );
+			// Testi ricchi: titoli rinumerati sotto quello del blocco e lingua vera se ripiegano (forestas_dettaglio_ricco)
+			$descrizione = forestas_dettaglio_ricco( $p['description'] ?? null );
 			?>
 			<?php if ( '' !== $descrizione || '' !== $dati['come_arrivare'] ) : ?>
 				<section class="wm-sec" aria-labelledby="wm-punto">
@@ -139,12 +140,9 @@ wmwp_template_header();
 			<?php endif; ?>
 		</div>
 
-		<aside class="wm-aside" aria-label="<?php echo esc_attr( forestas_testo( 'Mappa del punto di interesse', 'Point of interest map' ) ); ?>">
-			<?php
-			if ( '' !== $origin ) {
-				echo do_shortcode( '[wmwp_map geojson="' . esc_url( $origin . '/api/ec/poi/' . (int) $detail['id'] . '.geojson' ) . '" height="380" label="' . esc_attr( forestas_testo( 'Mappa del punto di interesse', 'Point of interest map' ) ) . '"]' );
-			}
-			?>
+		<?php // Senza nome: lo porta già la mappa che contiene, che lo screen reader annuncerebbe due volte ?>
+		<aside class="wm-aside">
+			<?php echo forestas_dettaglio_mappa_html( forestas_dettaglio_mappa( $p, 'poi', (int) $detail['id'], (array) ( $detail['feature']['geometry'] ?? [] ) ), forestas_testo( 'Mappa del punto di interesse', 'Point of interest map' ), 380, 'poi', (int) $detail['id'] ); // phpcs:ignore WordPress.Security.EscapeOutput -- markup già escapato ?>
 		</aside>
 	</div>
 </main>

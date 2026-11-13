@@ -88,8 +88,40 @@
 		});
 	});
 
-	// Fisarmonica del roadbook e legende: un pulsante con aria-controls apre e chiude il suo pannello
-	root.querySelectorAll('.wm-rb__btn, .wm-ind__info').forEach(function (button) {
+	// Legende degli indicatori dietro la «i» (wireframe, nota 12): una aperta per volta, Esc chiude e torna al pulsante
+	var info = root.querySelectorAll('.wm-ind__info[aria-controls]');
+	info.forEach(function (button) {
+		var panel = document.getElementById(button.getAttribute('aria-controls'));
+		if (!panel) {
+			return;
+		}
+		function imposta(aperto) {
+			button.setAttribute('aria-expanded', aperto ? 'true' : 'false');
+			panel.hidden = !aperto;
+		}
+		button.addEventListener('click', function () {
+			var apri = button.getAttribute('aria-expanded') !== 'true';
+			info.forEach(function (altro) {
+				var altroPanel = document.getElementById(altro.getAttribute('aria-controls'));
+				if (altro !== button && altroPanel) {
+					altro.setAttribute('aria-expanded', 'false');
+					altroPanel.hidden = true;
+				}
+			});
+			imposta(apri);
+		});
+		[button, panel].forEach(function (el) {
+			el.addEventListener('keydown', function (e) {
+				if (e.key === 'Escape' && button.getAttribute('aria-expanded') === 'true') {
+					imposta(false);
+					button.focus();
+				}
+			});
+		});
+	});
+
+	// Fisarmonica del roadbook: un pulsante con aria-controls apre e chiude il suo pannello
+	root.querySelectorAll('.wm-rb__btn').forEach(function (button) {
 		var panel = document.getElementById(button.getAttribute('aria-controls'));
 		if (!panel) {
 			return;
@@ -100,4 +132,72 @@
 			panel.hidden = aperto;
 		});
 	});
+
+	// Gruppi dei dati del percorso (Percorso, Misure, Enti…): il titolo h3 diventa un pulsante che apre e chiude la tabella,
+	// come il roadbook. Senza JavaScript restano aperti. Dove il browser lo sa fare, un testo cercato con Ctrl+F dentro un
+	// gruppo chiuso lo apre (hidden="until-found", evento beforematch)
+	var trovaChiusi = 'onbeforematch' in document.body;
+	root.querySelectorAll('[data-wm-gr]').forEach(function (gruppo) {
+		var titolo = gruppo.querySelector('.wm-gr__h');
+		var pannello = gruppo.querySelector('.wm-gr__p');
+		if (!titolo || !pannello) {
+			return;
+		}
+		var pulsante = document.createElement('button');
+		pulsante.type = 'button';
+		pulsante.className = 'wm-gr__btn';
+		pulsante.setAttribute('aria-controls', pannello.id);
+		while (titolo.firstChild) {
+			pulsante.appendChild(titolo.firstChild);
+		}
+		titolo.appendChild(pulsante);
+		var imposta = function (aperto) {
+			pulsante.setAttribute('aria-expanded', aperto ? 'true' : 'false');
+			if (aperto) {
+				pannello.removeAttribute('hidden');
+			} else if (trovaChiusi) {
+				pannello.setAttribute('hidden', 'until-found');
+			} else {
+				pannello.hidden = true;
+			}
+		};
+		imposta(gruppo.getAttribute('data-wm-gr') !== 'chiuso');
+		pulsante.addEventListener('click', function () {
+			imposta(pulsante.getAttribute('aria-expanded') !== 'true');
+		});
+		pannello.addEventListener('beforematch', function () {
+			imposta(true);
+		});
+	});
+
+	// Su mobile la mappa (con legenda e «Vedi sulla mappa interattiva») viene subito dopo i pulsanti Scarica, Stampa,
+	// Condividi, Segnala, non in fondo alla colonna (oc:8969). Si sposta nel DOM, non solo a vista, così l'ordine del
+	// Tab e dello screen reader resta quello che si vede. Senza JavaScript resta in fondo, dove la mette il template.
+	var aside = root.querySelector('.wm-aside');
+	var azioni = root.querySelector('.wm-actions');
+	if (aside && azioni && window.matchMedia) {
+		var posto = document.createComment(' posto della mappa da 768px ');
+		aside.parentNode.insertBefore(posto, aside);
+		var mobile = window.matchMedia('(max-width: 767px)');
+		var spostaMappa = function () {
+			var su = mobile.matches;
+			if (su === aside.classList.contains('wm-aside--su')) {
+				return;
+			}
+			if (su) {
+				azioni.parentNode.insertBefore(aside, azioni.nextSibling);
+			} else {
+				posto.parentNode.insertBefore(aside, posto.nextSibling);
+			}
+			aside.classList.toggle('wm-aside--su', su);
+			// La mappa ricalcola le sue misure nel posto nuovo
+			window.dispatchEvent(new Event('resize'));
+		};
+		spostaMappa();
+		if (mobile.addEventListener) {
+			mobile.addEventListener('change', spostaMappa);
+		} else {
+			mobile.addListener(spostaMappa);
+		}
+	}
 })();

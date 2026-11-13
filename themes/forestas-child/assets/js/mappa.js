@@ -3,8 +3,9 @@
  * che il CSS sottrae per avere la mappa alta quanto lo spazio sotto il percorso (header-navigation.js e
  * scripts.js del tema: --vh, --header-height, --breadcrumb-height). Poi i pulsanti per allargarla a
  * tutto schermo e riportarla com'era, che si chiude anche con Esc o uscendo dalla mappa col Tab
- * (scripts.js, «HERO MAP EXPAND/SHRINK» e «KEYBOARD MANAGEMENT»). Unica differenza voluta: aperta, il
- * fuoco va sul pulsante che la richiude; su Drupal il fuoco si perde e il Tab successivo la richiude.
+ * (scripts.js, «HERO MAP EXPAND/SHRINK» e «KEYBOARD MANAGEMENT»). Differenze volute: aperta, il fuoco va
+ * sul pulsante che la richiude (su Drupal si perde e il Tab successivo la richiude); il pulsante che la
+ * allarga sta nella riga del percorso, che qui si misura al posto del solo percorso (oc:8969).
  */
 (function () {
 	'use strict';
@@ -19,7 +20,7 @@
 
 	function misura() {
 		var header = document.querySelector('.l-header');
-		var percorso = document.querySelector('.forestas-percorso');
+		var percorso = document.querySelector('.forestas-mappa-testa') || document.querySelector('.forestas-percorso');
 		radice.style.setProperty('--forestas-vh', window.innerHeight + 'px');
 		radice.style.setProperty('--forestas-mappa-header', (header ? header.offsetHeight : 0) + 'px');
 		radice.style.setProperty('--forestas-mappa-percorso', (percorso ? percorso.offsetHeight : 0) + 'px');

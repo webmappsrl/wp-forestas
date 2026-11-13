@@ -20,6 +20,9 @@ solo sulle pagine di dettaglio.
 **Tecnologie:** child di Impreza 9.4, WPML, `forestas_testo()` per i testi, test con `wp eval-file`,
 verifica nel browser (Playwright o Chrome) in locale.
 
+**Stato al 13/11:** Task 1-5 fatti; i loro commit sono stati raggruppati in due (d9ca844, 2cd79fb) invece di uno per
+task. Task 6 e Task 7 (lavoro aggiunto dopo il piano) da chiudere: il lavoro dopo 2cd79fb non è ancora committato.
+
 **Spec:** `docs/features/8969-pagine-di-dettaglio-di-percorsi-e-punti-di-interesse-sul-sito-wordpress/overview.md`
 e `notes.md` di questo repo; la parte generica è nell'overview e nel piano di `wp-package`.
 
@@ -98,19 +101,19 @@ e `notes.md` di questo repo; la parte generica è nell'overview e nel piano di `
   letto con `get_posts`, così nel database non resta un id scritto a mano.
 - `forestas_dettaglio_pagina_poi(): int` → quell'id, oppure 0.
 
-- [ ] **Passo 1:** applica slug e menu in locale con `bin/wordpress-config.sh pagine --conferma` e
+- [x] **Passo 1:** applica slug e menu in locale con `bin/wordpress-config.sh pagine --conferma` e
   `applica --conferma`. Verifica:
   - `curl -sI localhost:8080/punti-di-interesse/` → 200;
   - `curl -sI localhost:8080/en/punti-di-interesse/` → 200;
   - `curl -sI localhost:8080/da-vedere/` → 301 verso `/punti-di-interesse/`, grazie al redirect degli
     alias di Drupal in `inc/pagine-statiche.php:503`. Se non funziona, aggiungi l'alias `da-vedere` alla
     pagina nello stesso meta (`FORESTAS_META_ALIAS_DRUPAL`), non un secondo redirect.
-- [ ] **Passo 2:** aggiungi i filtri `pre_option_*`. Verifica che
+- [x] **Passo 2:** aggiungi i filtri `pre_option_*`. Verifica che
   `curl -sI localhost:8080/?wmwp_detail=poi\&wmwp_id=9` dia 301 verso `/punti-di-interesse/<slug>/`, e
   che `?wmwp_detail=track&wmwp_id=311` dia 301 verso `/cammino/<slug>/`.
-- [ ] **Passo 3:** controlla i menu nelle due lingue nel browser: la voce «Da vedere» porta a
+- [x] **Passo 3:** controlla i menu nelle due lingue nel browser: la voce «Da vedere» porta a
   `/punti-di-interesse/`.
-- [ ] **Passo 4 (commit):** `feat(oc:8969): pagina «Punti di interesse» e basi dei dettagli`.
+- [x] **Passo 4 (commit):** `feat(oc:8969): pagina «Punti di interesse» e basi dei dettagli`.
 
 ### Task 2: dati del dettaglio in un solo punto
 
@@ -141,7 +144,7 @@ e `notes.md` di questo repo; la parte generica è nell'overview e nel piano di `
 - `forestas_condividi( int|array $origine ): string`: con un id si comporta come oggi; con
   `[ 'url' => …, 'titolo' => … ]` usa quei valori. Così vale anche per le pagine senza post.
 
-- [ ] **Passo 1: test che fallisce**, con due Feature costruite nel test:
+- [x] **Passo 1: test che fallisce**, con due Feature costruite nel test:
   - **completa:** route-type walk, `organizations` con gestore e rilevatore, `nearby_tracks` con 2 card;
   - **vuota:** solo `id`, `name` e `geometry`.
 
@@ -153,10 +156,10 @@ e `notes.md` di questo repo; la parte generica è nell'overview e nel piano di `
   - `forestas_dettaglio_tabelle( vuota, 'sentiero' )` ha tutti i valori `'—'`;
   - `forestas_dettaglio_correlati( vuota ) === [ 'poi' => [], 'percorsi' => [] ]`;
   - nessun avviso PHP (`set_error_handler` che fa fallire il test).
-- [ ] **Passo 2:** verifica che dia `FAIL`.
-- [ ] **Passo 3:** implementa.
-- [ ] **Passo 4:** verifica che dia `PASS`.
-- [ ] **Passo 5 (commit):** `feat(oc:8969): dati del dettaglio di percorsi e POI`.
+- [x] **Passo 2:** verifica che dia `FAIL`.
+- [x] **Passo 3:** implementa.
+- [x] **Passo 4:** verifica che dia `PASS`.
+- [x] **Passo 5 (commit):** `feat(oc:8969): dati del dettaglio di percorsi e POI`.
 
 ### Task 3: dettaglio del sentiero (Tavola 3)
 
@@ -175,9 +178,9 @@ e `notes.md` di questo repo; la parte generica è nell'overview e nel piano di `
 - Il colore arriva dal `body` come variabili CSS: `--dettaglio-colore` e `--dettaglio-fascia`.
 - La galleria riusa `assets/js/galleria-lightbox.js` e `assets/css/galleria-lightbox.css`.
 
-- [ ] **Passo 1:** leggi la Tavola 3 dal markup del wireframe e annota in `notes.md` gli elementi con
+- [x] **Passo 1:** leggi la Tavola 3 dal markup del wireframe e annota in `notes.md` gli elementi con
   nota numerata da chiarire con Rubens prima di costruirli.
-- [ ] **Passo 2:** costruisci le parti nell'ordine della tavola:
+- [x] **Passo 2:** costruisci le parti nell'ordine della tavola:
   - testata con foto e fascia scura al 60%;
   - riga di azioni: GPX da `forestas.downloads`; Condividi; Stampa e Segnala disattivati;
   - avviso e percorribilità come segnaposto;
@@ -190,13 +193,13 @@ e `notes.md` di questo repo; la parte generica è nell'overview e nel piano di `
   - correlati in card a tre colonne;
   - «Opinioni e recensioni» come segnaposto;
   - testata compatta.
-- [ ] **Passo 3:** CSS e JS:
+- [x] **Passo 3:** CSS e JS:
   - mappa agganciata nella colonna destra da 1025 px;
   - testata compatta che compare dopo la testata grande;
   - `scroll-padding-top` aggiornato all'altezza vera.
 
   Alza `Version` in `style.css`.
-- [ ] **Passo 4:** verifica nel browser `localhost:8080/sentiero/<slug>/`, scegliendo una traccia del
+- [x] **Passo 4:** verifica nel browser `localhost:8080/sentiero/<slug>/`, scegliendo una traccia del
   dev con foto, enti e correlati. A 1440 e a 390 px, da loggato e non, prima e dopo uno scorrimento,
   controlla:
   - contrasto dei testi sulla foto e sulle fasce (≥ 4,5:1);
@@ -207,7 +210,7 @@ e `notes.md` di questo repo; la parte generica è nell'overview e nel piano di `
   - una traccia con pochi dati (segnaposto e nessun titolo vuoto).
 
   Salva le schermate nello scratchpad e confrontale con la tavola.
-- [ ] **Passo 5 (commit):** `feat(oc:8969): dettaglio del sentiero secondo la tavola 3`.
+- [x] **Passo 5 (commit):** `feat(oc:8969): dettaglio del sentiero secondo la tavola 3`.
 
 ### Task 4: differenze di itinerario e cammino (Tavole 4 e 5)
 
@@ -229,15 +232,15 @@ e `notes.md` di questo repo; la parte generica è nell'overview e nel piano di `
   - tabella «Dati del cammino»;
   - blu.
 
-- [ ] **Passo 1:** leggi le Tavole 4 e 5 dal markup e annota le differenze rispetto alla 3. Le note
+- [x] **Passo 1:** leggi le Tavole 4 e 5 dal markup e annota le differenze rispetto alla 3. Le note
   numerate vanno chiarite con Rubens.
-- [ ] **Passo 2:** implementa le differenze, usando `forestas_dettaglio_tipo()` nei template e non le
+- [x] **Passo 2:** implementa le differenze, usando `forestas_dettaglio_tipo()` nei template e non le
   classi CSS da sole.
-- [ ] **Passo 3:** verifica nel browser:
+- [x] **Passo 3:** verifica nel browser:
   - un itinerario (`/itinerario/<slug>/`) e un cammino (`/cammino/<slug>/`) del dev;
   - le stesse pagine in inglese (`/en/itinerary/…`, `/en/walk/…`);
   - a 1440 e a 390 px.
-- [ ] **Passo 4 (commit):** `feat(oc:8969): dettaglio di itinerario e cammino`.
+- [x] **Passo 4 (commit):** `feat(oc:8969): dettaglio di itinerario e cammino`.
 
 ### Task 5: dettaglio del punto di interesse (Tavola 7)
 
@@ -258,13 +261,13 @@ e `notes.md` di questo repo; la parte generica è nell'overview e nel piano di `
 - Il `forestas` dei POI ha ancora le chiavi vecchie (`allegati`, `come_arrivare`, `zona_geografica`):
   le legge solo `inc/dettaglio.php`.
 
-- [ ] **Passo 1:** leggi la Tavola 7 dal markup; note numerate a Rubens.
-- [ ] **Passo 2:** implementa.
-- [ ] **Passo 3:** verifica nel browser:
+- [x] **Passo 1:** leggi la Tavola 7 dal markup; note numerate a Rubens.
+- [x] **Passo 2:** implementa.
+- [x] **Passo 3:** verifica nel browser:
   - `localhost:8080/punti-di-interesse/<slug>/` e la pagina inglese;
   - a 1440 e a 390 px;
   - un POI senza foto.
-- [ ] **Passo 4 (commit):** `feat(oc:8969): dettaglio del punto di interesse secondo la tavola 7`.
+- [x] **Passo 4 (commit):** `feat(oc:8969): dettaglio del punto di interesse secondo la tavola 7`.
 
 ### Task 6: giro completo e documentazione
 
@@ -284,3 +287,19 @@ e `notes.md` di questo repo; la parte generica è nell'overview e nel piano di `
 - [ ] **Passo 3:** aggiorna `notes.md` (deviazioni, decisioni) e la howto, se la sequenza di messa in
   opera è cambiata (nuovo commit del plugin in `WP_PACKAGE_REF` di `init-wordpress.sh`).
 - [ ] **Passo 4 (commit):** `docs(oc:8969): note e procedura di messa in opera`.
+
+### Task 7: lavoro aggiunto dopo il piano (Rubens, 12-13/11)
+
+Fatto e verificato in locale, con i test di `tests/dettaglio.php`; decisioni e misure in `notes.md`.
+
+- [x] Icone delle tipologie di disabilità dal set IcoMoon dello shard (`wmwp_icon_svg()` del plugin), indicatori e
+      «Sentiero per tutti» identici alla Tavola 3, accessibilità e screen reader rivisti.
+- [x] Card uniche (dettaglio, ricerca, post) con filetto nel colore del tipo e segnaposto di Drupal; «Percorsi
+      correlati».
+- [x] Mappa del dettaglio come le tavole (collegati, POI numerati, legenda), partenza e arrivo come GeoHub, su mobile
+      subito dopo i pulsanti.
+- [x] «Vedi sulla mappa interattiva» con il focus sull'elemento e la webapp dell'ambiente; pagina della mappa più alta.
+- [x] Frecce della lightbox su tutto il sito.
+- [x] Nome del cammino (`layer_name`) e nid di Drupal come chiave stabile (filtro `wmwp_detail_source`).
+- [x] Gruppi dei dati chiusi da aprire uno per uno, come le tavole, con grado di difficoltà e «Maggiori info».
+- [ ] **Commit (istruzione per Rubens):** `feat(oc:8969): …` dei file cambiati dopo 2cd79fb, nello stesso branch.

@@ -5,7 +5,7 @@ Template: Impreza
 Author: Webmapp
 Author URI: https://webmapp.it/
 Description: Child theme di Impreza per Sardegna Sentieri (Forestas). Versionato nel repo wp-forestas e montato dal compose: si modifica nel repo, non dal pannello.
-Version: 1.12.0
+Version: 1.16.9
 */
 
 
@@ -1778,13 +1778,32 @@ Version: 1.12.0
 /*
  * Mappa interattiva: il blocco «mappa_interattiva» del tema Drupal (block--mappa-interattiva.html.twig)
  * con le regole compilate di sase-map-wrapper e has-iframe-fullpage. Alta quanto la finestra meno header,
- * percorso e barra di WordPress (su Drupal la toolbar); l'iframe parte 5rem sotto, dove c'è la barra con
- * il pulsante. A schermo intero copre la finestra, header compreso. Le altezze le misura
- * assets/js/mappa.js, come header-navigation.js e scripts.js di Drupal.
+ * riga del percorso e barra di WordPress (su Drupal la toolbar), e almeno 30rem. Diversa da Drupal
+ * (oc:8969): «Espandi la mappa» sta nella riga del percorso e non in una barra di 88px sopra la mappa,
+ * che resta solo a schermo intero, con «Esci». A schermo intero copre la finestra, header compreso. Le
+ * altezze le misura assets/js/mappa.js, come header-navigation.js e scripts.js di Drupal.
  */
+.forestas-mappa-testa {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.5rem 1rem;
+	padding-right: var(--sase-rientro-contenuto);
+	border-bottom: 1px solid var(--sase-filo-percorso);
+}
+.forestas-mappa-testa .forestas-percorso {
+	border-bottom: 0;
+}
+.l-main .forestas-mappa-testa .forestas-pulsante {
+	width: fit-content;
+	gap: 0.625rem;                                          /* l'icona ha il suo rientro solo da 768px */
+	height: 2.5em;
+	margin: 0.25rem 0;
+}
 .forestas-mappa {
 	--_map-ratio: var(--map-ratio, var(--_iframe-ratio));
-	--_iframe-ratio: calc(var(--forestas-vh, 100vh) - var(--forestas-mappa-header, 0px) - var(--forestas-mappa-percorso, 0px) - var(--wp-admin--admin-bar--height, 0px));
+	--_iframe-ratio: max(30rem, calc(var(--forestas-vh, 100vh) - var(--forestas-mappa-header, 0px) - var(--forestas-mappa-percorso, 0px) - var(--wp-admin--admin-bar--height, 0px)));
 	position: relative;
 	width: 100%;
 	height: 0;
@@ -1801,6 +1820,13 @@ Version: 1.12.0
 	height: calc(100% - 5rem) !important;
 	border: 0;
 }
+.forestas-mappa.is-shrinked iframe {
+	top: 0 !important;
+	height: 100% !important;
+}
+.forestas-mappa.is-shrinked .forestas-mappa__barra {
+	display: none;
+}
 .forestas-mappa.is-expanded {
 	--map-ratio: calc(var(--forestas-vh, 100vh) - var(--wp-admin--admin-bar--height, 0px));
 	position: fixed;
@@ -1812,7 +1838,7 @@ Version: 1.12.0
 }
 /* Sotto 640px su Drupal la mappa lascia libera in basso la barra di 57px dell'app (ionic) */
 @media (max-width: 639px) {
-	.forestas-mappa iframe {
+	.forestas-mappa.is-expanded iframe {
 		height: calc(100% - 1.25rem - 57px) !important;
 	}
 	.forestas-mappa.is-expanded {
@@ -2395,6 +2421,26 @@ Version: 1.12.0
  * eventi per filetto e sottolineatura, la data in un riquadro bianco sulla foto, in alto a sinistra.
  */
 .forestas-card--evento { --c: var(--sase-blu-pulsante); }
+/* Card di percorsi e punti di interesse (dettaglio, oc:8969) e della ricerca: il filetto ha il colore del menu del tipo */
+.forestas-card--sentiero,
+.wmwp-card--type-route-type-trail { --c: var(--sase-sezione-sentieri); }
+.forestas-card--itinerario,
+.wmwp-card--type-route-type-itinerary { --c: var(--sase-sezione-itinerari); }
+.forestas-card--cammino,
+.wmwp-card--type-route-type-walk { --c: var(--sase-sezione-cammini); }
+.forestas-card--poi { --c: var(--sase-sezione-punti-di-interesse); }
+.wmwp-card--type-da-sapere { --c: var(--sase-sezione-da-sapere); }
+.wmwp-card--type-news { --c: var(--sase-sezione-news); }
+.wmwp-card--type-evento { --c: var(--sase-blu-pulsante); }
+/* Card senza foto: il segnaposto di Drupal (images/thumb-placeholder.png del tema sardegnasentieri, grigio con il logo),
+   come in node--sentiero--teaser, node--search-result e gli altri teaser (oc:8969). Nella ricerca il JS toglie solo
+   l'immagine, e il riquadro resta */
+.forestas-card__media--segnaposto,
+.forestas-card__media:not(:has(img)) {
+	background: #F0F0F0 url("assets/img/thumb-placeholder.png") right bottom / cover no-repeat;
+}
+/* «Mostra tutti» nasconde le card in più con `hidden`, che display: flex della card annullerebbe */
+.forestas-card[hidden] { display: none; }
 .forestas-card__giorno {
 	position: absolute;
 	top: 12px;
@@ -2929,55 +2975,27 @@ a.wmwp-card__link[href]:hover .wmwp-card__title {
 	grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
 	gap: 16px;
 }
-.wmwp-card {
-	--wmwp-type: var(--sase-testo);
-	border: 1px solid var(--wmwp-line);
-	background: #fff;
-}
-.wmwp-card--type-route-type-trail { --wmwp-type: var(--sase-sezione-sentieri); }
-.wmwp-card--type-route-type-itinerary { --wmwp-type: var(--sase-sezione-itinerari); }
-.wmwp-card--type-route-type-walk { --wmwp-type: var(--sase-sezione-cammini); }
-.wmwp-card--type-da-sapere { --wmwp-type: var(--sase-sezione-da-sapere); }
-.wmwp-card--type-news,
-.wmwp-card--type-evento { --wmwp-type: #C2410C; }
-.wmwp-card__link {
-	display: block;
-	height: 100%;
+.wmwp-search__list--cards > .forestas-card { margin: 0; }
+/* Card della ricerca: la card unica del sito (forestas-card, template wp-package/card.php del child, oc:8969); qui solo
+   quello che cambia perché tutta la card è un link */
+.forestas-card__collegamento {
+	display: flex;
+	flex: 1;
+	flex-direction: column;
 	color: inherit;
 	text-decoration: none;
 }
-.wmwp-card__image {
-	display: block;
-	width: 100%;
-	aspect-ratio: 3 / 2;
-	object-fit: cover;
+.forestas-card__collegamento:focus-visible { outline: none; }
+.forestas-card__collegamento .forestas-card__titolo,
+.forestas-card__collegamento .forestas-card__tag,
+.forestas-card__collegamento .forestas-card__data { display: block; }
+.forestas-card__collegamento .forestas-card__tag { display: inline-flex; }
+a.forestas-card__collegamento[href]:hover .forestas-card__titolo {
+	text-decoration: underline;
+	text-decoration-color: var(--c);
+	text-underline-offset: 3px;
 }
-.wmwp-card__body {
-	display: block;
-	padding: 13px 14px;
-}
-.wmwp-card__type {
-	display: block;
-	width: fit-content;
-	margin-bottom: 8px;
-	padding-bottom: 4px;
-	border-bottom: 2px solid var(--wmwp-type);
-	font-size: 10.5px;
-	letter-spacing: .06em;
-	text-transform: uppercase;
-	color: var(--wmwp-type);
-}
-.wmwp-card__title {
-	display: block;
-	font: 600 13px/1.35 Montserrat, sans-serif;
-	color: var(--sase-testo);
-}
-.wmwp-card__meta {
-	display: block;
-	margin-top: 6px;
-	font-size: 12px;
-	color: var(--wmwp-ink-3);
-}
+.forestas-card__collegamento .forestas-card__media img { display: block; width: 100%; height: 100%; object-fit: cover; }
 
 /* Tab «Tutti»: un gruppo per tipo */
 .wmwp-search__group {
@@ -3533,10 +3551,13 @@ body:has(.wmwp-selection:not([hidden])) .w-toplink:not(.visible):not(:focus-visi
  * pieno quando il percorso è scelto) */
 .wmwp-map-popup .wmwp-card {
 	border: 0;
+	border-radius: 0;
+	box-shadow: none;
 }
+.wmwp-map-popup .wmwp-card:hover { box-shadow: none; transform: none; }
 /* Il riquadro resta più basso della mappa (420px): immagine 2:1 invece di 3:2 e comuni su al massimo 3 righe. Un
  * cammino tocca anche 12 comuni (C100T), e con l'immagine intera il riquadro usciva dalla mappa */
-.wmwp-map-popup .wmwp-card__image {
+.wmwp-map-popup .forestas-card__media {
 	aspect-ratio: 2 / 1;
 }
 .wmwp-map-popup .wmwp-card__meta {
