@@ -293,14 +293,15 @@ e `notes.md` di questo repo; la parte generica è nell'overview e nel piano di `
   opera è cambiata (nuovo commit del plugin in `WP_PACKAGE_REF` di `init-wordpress.sh`).
 - [x] **Passo 4 (commit):** note e howto sono entrati in b3f0d2d e nel commit delle correzioni della review.
 - [ ] **Passo 5 (rilascio, dopo la review):** ordine dei merge, uno per repo:
-  1. merge del branch di `wp-package` in `develop` (squash);
-  2. nel branch di `wp-forestas`, `WP_PACKAGE_REF` di `docker/scripts/init-wordpress.sh` con l'hash di quel merge,
-     letto con `git -C <clone di wp-package> rev-parse origin/develop`, mai scritto a mano (oggi è ancora 9537a61, di
-     oc:8952: senza le funzioni `wmwp_detail_*`, `wmwp_webapp_url` e `wmwp_icon_svg` i dettagli si spengono in
-     silenzio, mentre `/punti-di-interesse/` è già rinominata);
-  3. merge del branch di `wp-forestas`;
-  4. in `forestas` il puntatore del submodule, poi `scripts/wordpress-up.sh` su dev e UAT (ricostruisce l'immagine
-     con l'init nuovo).
+  - [x] wp-package su `develop` e su `main` (13/11): i commit del ticket erano già su `develop` con un push diretto,
+    l'ultimo (documentazione) con la PR #3 in squash; `develop` → `main` con la PR #4, merge commit 96f8d56;
+  - [x] `WP_PACKAGE_REF` di `docker/scripts/init-wordpress.sh` = 96f8d563e24794bb959fd27303668017715efddf, letto con
+    `git ls-remote` di `main`;
+  - [x] merge di `wp-forestas` su `develop` e su `main` (13/11, con il commit che porta questo passo: i commit di
+    codice erano già su `develop` con un push diretto, il resto con una PR in squash, poi `develop` → `main` con un
+    merge commit);
+  - [ ] in `forestas` il puntatore del submodule (solo su indicazione di Rubens), poi `scripts/wordpress-up.sh` su dev
+    e UAT (ricostruisce l'immagine con l'init nuovo).
 
 ### Task 7: lavoro aggiunto dopo il piano (Rubens, 12-13/11)
 
