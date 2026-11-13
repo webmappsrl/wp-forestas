@@ -87,7 +87,7 @@ dettaglio, elencate anche in «Cosa manca nel backend» dell'overview.
 Il DB locale aveva 29 migrazioni indietro e nessun dato di enti, termini e `route-type`; senza la
 copia Drupal in locale l'import non si può rifare.
 
-- Backup del DB locale prima: `/Volumes/WebmappDev/Archivio/backup-db-forestas-locale/forestas-locale-20261112-1106.dump`.
+- Backup del DB locale prima, sul disco esterno di lavoro (fuori dal repo).
 - Migrazioni applicate, poi DB sostituito con il dump del dev
   (`…/forestas-dev-20261112-1107.dump`): 769 tracce, 976 POI, 93 enti, 70 termini.
 - `.env` locale: commentata `EC_TRACK_MODEL=Wm\WmPackage\Models\EcTrack` (regola di oc:8959), così i
@@ -794,8 +794,10 @@ che mette `start-point.png` (cerchio verde) all'inizio e `end-point.png` (bandie
 (nid 1330, Seleni) solo l'inizio. Da noi: opzione `ends` della traccia in `wmwp_map()` del plugin (`track-map.js` mette
 i due punti, `map/src/index.js` disegna la bandiera con `getAdditionalPointStyles` del componente), anello = fine entro
 50 m dall'inizio. Verde #1F8F35, più scuro di quello di GeoHub perché stacchi dal bordo bianco (4,2:1, WCAG 1.4.11).
-Raggio 12 contro 9 dei POI numerati: su Seleni la partenza è a 5 m dal POI 3 e resta visibile come anello verde
-intorno. Il child passa le etichette «Partenza» / «Arrivo» e le mette in legenda (l'arrivo solo se non è un anello,
+Raggio 15 (come il cerchio di GeoHub, circa 30 px) contro 9 dei POI numerati: su Seleni la partenza è a 5 m dal POI 3
+e resta visibile come anello verde intorno. Il primo raggio, 12, lasciava un anello troppo sottile e Rubens non vedeva
+la partenza (13/11). Anelli e andata e ritorno (fine entro 50 m dall'inizio, es. itinerario Arredelus, 0 m) con la
+sola partenza, come Drupal: confermato da Rubens il 13/11. Il child passa le etichette «Partenza» / «Arrivo» e le mette in legenda (l'arrivo solo se non è un anello,
 `forestas_dettaglio_anello()`); child 1.16.8.
 
 ## Gruppi dei dati come le tavole e «Maggiori info» (Rubens, 13/11)
@@ -826,3 +828,25 @@ correlati; recensioni. Mappa a destra su desktop, subito dopo i pulsanti su mobi
   spesso sono il roadbook in PDF (Seleni: «Roadbook_ANDALA SEGURA.pdf») e starebbero meglio vicino al «come si fa».
 - **Indice della pagina** («Vai a: Dati · Correlati · Recensioni…»): utile soprattutto su mobile, dove con la mappa dopo
   i pulsanti indicatori e dati scendono di circa 500px. Non è nel wireframe: va concordato con il cliente.
+
+## Correzioni della review interna (13/11)
+
+Review della sessione wp-forestas su b3f0d2d; correzioni nel working tree, con i test in `tests/dettaglio.php`; child
+1.16.10. Secondo ciclo senza bloccanti. Il plugin ha avuto la sua review (wp-package, approvata al secondo ciclo):
+le correzioni sono nel suo piano, Task 10.
+
+- **Percorsi vicini del POI**: la frase diceva «entro 1 km». Il raggio è dello shard
+  (`sardegnasentieri.poi_tracks_radius_meters`, oggi 1000), ma la review ha visto in locale vicini fino a 9,6 km su 91
+  POI di 247: segno che la tabella `ec_poi_ec_track` locale non è stata ricalcolata dopo il passaggio dai collegamenti
+  di Drupal al calcolo per vicinanza (oc:8959, 12/11). Da verificare su dev dopo il reset notturno; la frase ora non
+  dice il raggio («I 10 percorsi più vicini su 11.», «Nessun percorso vicino.»).
+- **Il grado di accessibilità non è una difficoltà**: «Accessibilità: AT» usciva fra le difficoltà e nel «Grado di
+  difficoltà», con il link ai gradi escursionistici; sta solo nell'indicatore Accessibilità.
+- **Codice nel nome**: «(B 401)» in coda al nome si toglie anche quando il `ref` è «B-401» (63 tracce su 589).
+- **Itinerario senza «Segnala» e senza «Avviso»**: l'Avviso non c'è nella Tavola 4; «Segnala» sì, ma su Drupal le
+  segnalazioni sono solo dei sentieri: resta da decidere nel ticket di segnalazioni e recensioni.
+- **Da segnalare, non toccato**: il segnaposto sulle card degli eventi senza immagine in tutto il sito è voluto (card
+  uniche, segnaposto di Drupal); sotto i 640px l'iframe della mappa interattiva occupa tutta l'altezza della pagina:
+  da controllare su un telefono vero.
+- **Storia del repo pubblico**: b3f0d2d contiene ancora due percorsi della macchina di sviluppo e il link all'artifact
+  del wireframe in `plan.md` e `notes.md`; corretti nel working tree, la storia non si riscrive.

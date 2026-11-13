@@ -66,7 +66,7 @@ wmwp_template_header();
 		</div>
 	<?php endif; ?>
 
-	<header class="wm-hero" data-wm-hero>
+	<header class="wm-hero<?php echo '' === $foto ? ' wm-hero--senza-foto' : ''; ?>" data-wm-hero>
 		<?php if ( '' !== $foto ) : ?>
 			<?php // Testo alternativo dalla didascalia della foto, se c'è (specifica di oc:8783, «Testata con foto»); senza, è decorativa ?>
 			<img class="wm-hero__img" src="<?php echo esc_url( $foto ); ?>" alt="<?php echo esc_attr( wp_strip_all_tags( forestas_dettaglio_testo( $p['feature_image']['caption'] ?? null ) ) ); ?>" fetchpriority="high">
@@ -92,7 +92,7 @@ wmwp_template_header();
 				<?php if ( '' !== $cammino['testo'] ) : ?>
 					<span<?php echo null !== $cammino['lingua'] && forestas_dettaglio_lingua() !== $cammino['lingua'] ? ' lang="' . esc_attr( $cammino['lingua'] ) . '"' : ''; ?>><?php echo esc_html( $cammino['testo'] ); ?></span>
 				<?php elseif ( $luoghi['aree'] ) : ?>
-					<span><?php echo esc_html( forestas_testo( 'Aree geografiche', 'Geographic areas' ) . ' ' . implode( ', ', $luoghi['aree'] ) ); ?></span>
+					<span><?php echo esc_html( ( 1 === count( $luoghi['aree'] ) ? forestas_testo( 'Area geografica', 'Geographic area' ) : forestas_testo( 'Aree geografiche', 'Geographic areas' ) ) . ' ' . implode( ', ', $luoghi['aree'] ) ); ?></span>
 				<?php endif; ?>
 			</p>
 			<h1 class="wm-hero__tit">
@@ -307,20 +307,21 @@ wmwp_template_header();
 			<?php if ( 'cammino' === $tipo ) : ?>
 				<?php
 				// «Il cammino, in sintesi» con i soli dati che esistono (Tavola 5, chiesto da Forestas il 17/09)
+				// Ogni tematismo con la sua lingua, se ripiega sull'italiano (WCAG 3.1.2)
 				$tematismi = [];
 				foreach ( (array) ( $p['taxonomies']['itinerary-type'] ?? [] ) as $termine ) {
-					$tematismo = forestas_dettaglio_testo( $termine['name'] ?? null );
-					if ( '' !== $tematismo ) {
-						$tematismi[] = $tematismo;
+					$tematismo = forestas_dettaglio_testo_lingua( $termine['name'] ?? null );
+					if ( '' !== $tematismo['testo'] ) {
+						$tematismi[] = '<span' . forestas_dettaglio_lang( $tematismo['lingua'] ) . '>' . esc_html( $tematismo['testo'] ) . '</span>';
 					}
 				}
 				$gestori = array_values( array_filter( $enti, fn( $ente ) => 'gestore' === $ente['ruolo'] ) );
 				?>
 				<section class="wm-sec" aria-labelledby="wm-sintesi">
-					<?php echo $titolo( forestas_testo( 'Il cammino, in sintesi', 'The walk at a glance' ), 'wm-sintesi' ); // phpcs:ignore ?>
+					<?php echo $titolo( forestas_testo( 'Il cammino, in sintesi', 'Key facts about the walk' ), 'wm-sintesi' ); // phpcs:ignore ?>
 					<table class="wm-dt">
 						<tbody>
-							<tr><th scope="row"><?php echo esc_html( forestas_testo( 'Tematismo', 'Theme' ) ); ?></th><td><?php echo esc_html( forestas_dettaglio_valore( implode( ', ', $tematismi ) ) ); ?></td></tr>
+							<tr><th scope="row"><?php echo esc_html( forestas_testo( 'Tematismo', 'Theme' ) ); ?></th><td><?php echo $tematismi ? implode( ', ', $tematismi ) : '—'; // phpcs:ignore WordPress.Security.EscapeOutput -- markup già escapato ?></td></tr>
 							<tr><th scope="row"><?php echo esc_html( forestas_testo( 'Gestore', 'Managing authority' ) ); ?></th><td><?php echo esc_html( $gestori ? implode( ', ', array_map( fn( $ente ) => $ente['nome'] ?? $non_disp, $gestori ) ) : '—' ); ?></td></tr>
 							<tr><th scope="row"><?php echo esc_html( forestas_testo( 'Iscrizione al Registro', 'Register entry' ) ); ?></th><td><?php echo esc_html( forestas_dettaglio_valore( $forestas['registry_code'] ?? null ) ); ?></td></tr>
 						</tbody>
@@ -359,8 +360,8 @@ wmwp_template_header();
 						<table class="wm-diff">
 							<thead><tr><th scope="col"><?php echo esc_html( forestas_testo( 'Attività', 'Activity' ) ); ?></th><th scope="col"><?php echo esc_html( forestas_testo( 'Difficoltà', 'Difficulty' ) ); ?></th></tr></thead>
 							<tbody>
-								<?php foreach ( $difficolta as [ $attivita, $grado ] ) : ?>
-									<tr><td><?php echo esc_html( $attivita ); ?></td><td><span class="wm-pill"><?php echo esc_html( $grado ); ?></span></td></tr>
+								<?php foreach ( $difficolta as [ $attivita, $grado, $lingua_grado ] ) : ?>
+									<tr><td><?php echo esc_html( $attivita ); ?></td><td><span class="wm-pill"<?php echo forestas_dettaglio_lang( $lingua_grado ); // phpcs:ignore ?>><?php echo esc_html( $grado ); ?></span></td></tr>
 								<?php endforeach; ?>
 							</tbody>
 						</table>
@@ -385,21 +386,11 @@ wmwp_template_header();
 				</section>
 			<?php endif; ?>
 
-			<?php
-			$allegati = array_values( array_filter( (array) ( $forestas['attachments'] ?? [] ), fn( $a ) => ! empty( $a['url'] ) ) );
-			$video    = array_values( array_filter( (array) ( $forestas['videos'] ?? [] ), fn( $v ) => ! empty( $v['url'] ) ) );
-			?>
-			<?php if ( $allegati || $video ) : ?>
+			<?php $allegati = forestas_dettaglio_allegati_html( forestas_dettaglio_allegati( $forestas ) ); ?>
+			<?php if ( '' !== $allegati ) : ?>
 				<section class="wm-sec" aria-labelledby="wm-allegati">
 					<?php echo $titolo( forestas_testo( 'Allegati', 'Attachments' ), 'wm-allegati' ); // phpcs:ignore ?>
-					<ul class="wm-files">
-						<?php foreach ( $allegati as $allegato ) : ?>
-							<li><a href="<?php echo esc_url( $allegato['url'] ); ?>" download><?php echo esc_html( $allegato['title'] ?: basename( (string) wp_parse_url( $allegato['url'], PHP_URL_PATH ) ) ); ?></a></li>
-						<?php endforeach; ?>
-						<?php foreach ( $video as $i => $filmato ) : ?>
-							<li><a href="<?php echo esc_url( $filmato['url'] ); ?>" target="_blank" rel="noopener"><?php echo esc_html( $filmato['title'] ?: sprintf( forestas_testo( 'Video %d', 'Video %d' ), $i + 1 ) ); ?><span class="screen-reader-text"> <?php echo esc_html( forestas_testo( '(si apre in una nuova finestra)', '(opens in a new window)' ) ); ?></span></a></li>
-						<?php endforeach; ?>
-					</ul>
+					<?php echo $allegati; // phpcs:ignore WordPress.Security.EscapeOutput -- markup già escapato ?>
 				</section>
 			<?php endif; ?>
 
@@ -417,8 +408,6 @@ wmwp_template_header();
 				</div>
 			</section>
 
-			<?php
-			?>
 			<?php if ( $correlati['poi'] ) : ?>
 				<section class="wm-sec" aria-labelledby="wm-poi">
 					<?php echo $titolo( forestas_testo( 'Punti di interesse correlati', 'Related points of interest' ), 'wm-poi' ); // phpcs:ignore ?>

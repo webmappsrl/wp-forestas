@@ -21,7 +21,9 @@ solo sulle pagine di dettaglio.
 verifica nel browser (Playwright o Chrome) in locale.
 
 **Stato al 13/11:** Task 1-5 fatti; i loro commit sono stati raggruppati in due (d9ca844, 2cd79fb) invece di uno per
-task. Task 6 e Task 7 (lavoro aggiunto dopo il piano) da chiudere: il lavoro dopo 2cd79fb non è ancora committato.
+task. Task 7 (lavoro aggiunto dopo il piano) in b3f0d2d. Task 8 (correzioni della review interna, chiusa al secondo
+ciclo senza bloccanti) nel commit dopo b3f0d2d. Del Task 6 restano la prova dal vivo con dati cambiati (Passo 2) e il
+rilascio (Passo 5).
 
 **Spec:** `docs/features/8969-pagine-di-dettaglio-di-percorsi-e-punti-di-interesse-sul-sito-wordpress/overview.md`
 e `notes.md` di questo repo; la parte generica è nell'overview e nel piano di `wp-package`.
@@ -30,12 +32,12 @@ e `notes.md` di questo repo; la parte generica è nell'overview e nel piano di `
 
 - **Riferimenti di design:**
   - il wireframe di oc:8783 (Tavole 3, 4, 5, 7). I componenti si prendono dal markup e dal CSS della
-    tavola (`Artifact` read di `https://claude.ai/artifact/4T3ZRSP1LCrbCuJdNuEGXQ`, path `index.html`,
-    sezioni `s2`, `s2i`, `s2k`, `s2p`), non dalla descrizione scritta;
+    tavola (l'artifact del wireframe collegato al ticket oc:8783, file `index.html`, sezioni `s2`, `s2i`, `s2k`,
+    `s2p`), non dalla descrizione scritta;
   - un elemento con una nota numerata può essere una spiegazione per il cliente: si chiede a Rubens
     prima di costruirlo;
-  - per ciò che il wireframe non disegna, il tema Drupal locale
-    (`/Volumes/WebmappDev/Archivio/Siti Webmapp/Wordpress/Forestas/Drupal sardegnasentieri/sardegnasentieri/docroot/themes/custom/sardegnasentieri`).
+  - per ciò che il wireframe non disegna, il tema Drupal (`docroot/themes/custom/sardegnasentieri` della copia del
+    repository di sardegnasentieri.it: dove prenderla è scritto nel `CLAUDE.md` di questo repo).
 - **Colori per tipo:**
 
   | Tipo | Colore | Fascia |
@@ -274,19 +276,31 @@ e `notes.md` di questo repo; la parte generica è nell'overview e nel piano di `
 **File:**
 - Modify: `docs/howto/ricreare-wordpress-da-zero.md` (se serve), `notes.md` del ticket
 
-- [ ] **Passo 1:** giro completo in locale:
+- [x] **Passo 1:** giro completo in locale (12-13/11: ricerca → card → dettaglio in italiano e inglese, card della
+  mappa, `/da-vedere/` in 301, title e canonical controllati anche dalla review interna):
   - **dalla ricerca:** dalla pagina di ricerca alla card, al dettaglio, indietro, in italiano e in
     inglese;
   - **dalla mappa:** dalla card della mappa della ricerca al dettaglio;
   - **indirizzi:** `/da-vedere/` porta a `/punti-di-interesse/`;
   - **SEO:** il sorgente HTML di un dettaglio ha un solo `canonical`, una `description`, i tag `og:` e
     i due `hreflang`.
-- [ ] **Passo 2:** prova con dati cambiati, in locale:
+- [ ] **Passo 2:** prova con dati cambiati, in locale (non ancora fatta dal vivo; i casi di traccia rinominata,
+  cancellata o con l'id passato a un'altra sono coperti dai test del plugin, `tests/php/detail-render.php` e
+  `detail-route.php`):
   - rinomina in Nova una traccia del database locale (`localhost:8000/nova`) e rigenera il suo file;
   - il vecchio indirizzo dà 404 o 301, quello nuovo funziona, senza toccare WordPress.
-- [ ] **Passo 3:** aggiorna `notes.md` (deviazioni, decisioni) e la howto, se la sequenza di messa in
+- [x] **Passo 3:** aggiorna `notes.md` (deviazioni, decisioni) e la howto, se la sequenza di messa in
   opera è cambiata (nuovo commit del plugin in `WP_PACKAGE_REF` di `init-wordpress.sh`).
-- [ ] **Passo 4 (commit):** `docs(oc:8969): note e procedura di messa in opera`.
+- [x] **Passo 4 (commit):** note e howto sono entrati in b3f0d2d e nel commit delle correzioni della review.
+- [ ] **Passo 5 (rilascio, dopo la review):** ordine dei merge, uno per repo:
+  1. merge del branch di `wp-package` in `develop` (squash);
+  2. nel branch di `wp-forestas`, `WP_PACKAGE_REF` di `docker/scripts/init-wordpress.sh` con l'hash di quel merge,
+     letto con `git -C <clone di wp-package> rev-parse origin/develop`, mai scritto a mano (oggi è ancora 9537a61, di
+     oc:8952: senza le funzioni `wmwp_detail_*`, `wmwp_webapp_url` e `wmwp_icon_svg` i dettagli si spengono in
+     silenzio, mentre `/punti-di-interesse/` è già rinominata);
+  3. merge del branch di `wp-forestas`;
+  4. in `forestas` il puntatore del submodule, poi `scripts/wordpress-up.sh` su dev e UAT (ricostruisce l'immagine
+     con l'init nuovo).
 
 ### Task 7: lavoro aggiunto dopo il piano (Rubens, 12-13/11)
 
@@ -302,4 +316,17 @@ Fatto e verificato in locale, con i test di `tests/dettaglio.php`; decisioni e m
 - [x] Frecce della lightbox su tutto il sito.
 - [x] Nome del cammino (`layer_name`) e nid di Drupal come chiave stabile (filtro `wmwp_detail_source`).
 - [x] Gruppi dei dati chiusi da aprire uno per uno, come le tavole, con grado di difficoltà e «Maggiori info».
-- [ ] **Commit (istruzione per Rubens):** `feat(oc:8969): …` dei file cambiati dopo 2cd79fb, nello stesso branch.
+- [x] **Commit (istruzione per Rubens):** `feat(oc:8969): …` dei file cambiati dopo 2cd79fb, nello stesso branch
+      (b3f0d2d).
+
+### Task 8: correzioni della review interna (13/11)
+
+- [x] B1 «Mostra tutto» e «Mostra tutti» nascosti davvero quando hanno `hidden`; B2 inglese di «Il cammino, in
+      sintesi» diverso da quello di «in breve»; B3 frase dei percorsi vicini del POI senza il raggio.
+- [x] R2 howto con i prerequisiti e le verifiche dei dettagli; R3 questo piano; R1 nel Passo 5 del Task 6.
+- [x] Cleanup: grado di accessibilità fuori dalle difficoltà, codice ripetuto nel nome, titoli vuoti, `lang` sui
+      testi che ripiegano, allegati e video in una funzione, costanti, CSS morto, testata senza foto più bassa,
+      «Area geografica» al singolare, id della mappa interattiva limitato a 10 cifre e mappa senza focus su `#/map`,
+      documenti senza percorsi personali.
+- [x] Secondo ciclo della review: nessun bloccante.
+- [x] **Commit (istruzione per Rubens):** `fix(oc:8969): correzioni della review interna`, dopo b3f0d2d.

@@ -26,7 +26,7 @@ wmwp_template_header();
 ?>
 <main id="page-content" class="l-main wm-dettaglio wm-dettaglio--poi" style="--wm-c:<?php echo esc_attr( $colori['colore'] ); ?>;--wm-bg:<?php echo esc_attr( $colori['fascia'] ); ?>">
 
-	<header class="wm-hero" data-wm-hero>
+	<header class="wm-hero<?php echo '' === $foto ? ' wm-hero--senza-foto' : ''; ?>" data-wm-hero>
 		<?php if ( '' !== $foto ) : ?>
 			<?php // Testo alternativo dalla didascalia della foto, se c'è (specifica di oc:8783, «Testata con foto»); senza, è decorativa ?>
 			<img class="wm-hero__img" src="<?php echo esc_url( $foto ); ?>" alt="<?php echo esc_attr( wp_strip_all_tags( forestas_dettaglio_testo( $p['feature_image']['caption'] ?? null ) ) ); ?>" fetchpriority="high">
@@ -44,9 +44,9 @@ wmwp_template_header();
 		?>
 		<div class="wm-hero__scrim<?php echo '' !== $credits_foto ? ' wm-hero__scrim--credits' : ''; ?>">
 			<p class="wm-hero__occ">
-				<span class="wm-tipo wm-tipo--poi"><?php echo esc_html( $dati['tipologia'] ?? forestas_testo( 'Punto di interesse', 'Point of interest' ) ); ?></span>
+				<span class="wm-tipo wm-tipo--poi"<?php echo forestas_dettaglio_lang( $dati['tipologia'] ? $dati['tipologia_lang'] : null ); // phpcs:ignore ?>><?php echo esc_html( $dati['tipologia'] ?? forestas_testo( 'Punto di interesse', 'Point of interest' ) ); ?></span>
 				<?php if ( $dati['luoghi']['aree'] ) : ?>
-					<span><?php echo esc_html( forestas_testo( 'Aree geografiche', 'Geographic areas' ) . ' ' . implode( ', ', $dati['luoghi']['aree'] ) ); ?></span>
+					<span><?php echo esc_html( ( 1 === count( $dati['luoghi']['aree'] ) ? forestas_testo( 'Area geografica', 'Geographic area' ) : forestas_testo( 'Aree geografiche', 'Geographic areas' ) ) . ' ' . implode( ', ', $dati['luoghi']['aree'] ) ); ?></span>
 				<?php endif; ?>
 			</p>
 			<h1 class="wm-hero__tit"><?php echo esc_html( $nome ); ?><span class="screen-reader-text">, <?php echo esc_html( forestas_testo( 'punto di interesse', 'point of interest' ) ); ?></span></h1>
@@ -72,7 +72,7 @@ wmwp_template_header();
 				<?php echo $titolo( forestas_testo( 'Il punto in breve', 'At a glance' ), 'wm-breve' ); // phpcs:ignore ?>
 				<table class="wm-dt">
 					<tbody>
-						<tr><th scope="row"><?php echo esc_html( forestas_testo( 'Tipologia', 'Type' ) ); ?></th><td><?php echo esc_html( forestas_dettaglio_valore( $dati['tipologia'] ) ); ?></td></tr>
+						<tr><th scope="row"><?php echo esc_html( forestas_testo( 'Tipologia', 'Type' ) ); ?></th><td<?php echo forestas_dettaglio_lang( $dati['tipologia'] ? $dati['tipologia_lang'] : null ); // phpcs:ignore ?>><?php echo esc_html( forestas_dettaglio_valore( $dati['tipologia'] ) ); ?></td></tr>
 						<tr><th scope="row"><?php echo esc_html( forestas_testo( 'Comune', 'Municipality' ) ); ?></th><td><?php echo esc_html( forestas_dettaglio_valore( implode( ', ', $dati['luoghi']['comuni'] ) ) ); ?></td></tr>
 						<tr><th scope="row"><?php echo esc_html( forestas_testo( 'Area geografica', 'Geographic area' ) ); ?></th><td><?php echo esc_html( forestas_dettaglio_valore( implode( ', ', $dati['luoghi']['aree'] ) ) ); ?></td></tr>
 						<?php foreach ( forestas_dettaglio_enti( $p ) as $ente ) : ?>
@@ -82,16 +82,16 @@ wmwp_template_header();
 				</table>
 			</section>
 
-			<?php // Percorsi vicini: li calcola lo shard (entro 1 km, i più vicini per primi), il frontend non calcola niente ?>
+			<?php // Percorsi vicini: li calcola lo shard (raggio in sardegnasentieri.poi_tracks_radius_meters, i più vicini per primi), il frontend non calcola niente; il raggio non si scrive, lo decide lo shard ?>
 			<section class="wm-sec" aria-labelledby="wm-vicini">
 				<?php echo $titolo( forestas_testo( 'Percorsi vicini', 'Nearby routes' ), 'wm-vicini' ); // phpcs:ignore ?>
 				<?php if ( $dati['percorsi'] ) : ?>
 					<?php echo forestas_dettaglio_griglia( $dati['percorsi'], 'percorso', 'wm-vicini-percorsi' ); // phpcs:ignore ?>
 					<?php if ( $dati['percorsi_totale'] > count( $dati['percorsi'] ) ) : ?>
-						<p class="wm-att"><?php echo esc_html( sprintf( forestas_testo( 'I %1$d percorsi più vicini su %2$d entro 1 km.', 'The %1$d closest routes out of %2$d within 1 km.' ), count( $dati['percorsi'] ), $dati['percorsi_totale'] ) ); ?></p>
+						<p class="wm-att"><?php echo esc_html( sprintf( forestas_testo( 'I %1$d percorsi più vicini su %2$d.', 'The %1$d closest routes out of %2$d.' ), count( $dati['percorsi'] ), $dati['percorsi_totale'] ) ); ?></p>
 					<?php endif; ?>
 				<?php else : ?>
-					<p><?php echo esc_html( forestas_testo( 'Nessun percorso entro 1 km.', 'No routes within 1 km.' ) ); ?></p>
+					<p><?php echo esc_html( forestas_testo( 'Nessun percorso vicino.', 'No nearby routes.' ) ); ?></p>
 				<?php endif; ?>
 			</section>
 
@@ -125,17 +125,11 @@ wmwp_template_header();
 				</section>
 			<?php endif; ?>
 
-			<?php if ( $dati['allegati'] || $dati['video'] ) : ?>
+			<?php $allegati = forestas_dettaglio_allegati_html( [ 'allegati' => $dati['allegati'], 'video' => $dati['video'] ] ); ?>
+			<?php if ( '' !== $allegati ) : ?>
 				<section class="wm-sec" aria-labelledby="wm-allegati">
 					<?php echo $titolo( forestas_testo( 'Allegati', 'Attachments' ), 'wm-allegati' ); // phpcs:ignore ?>
-					<ul class="wm-files">
-						<?php foreach ( $dati['allegati'] as $allegato ) : ?>
-							<li><a href="<?php echo esc_url( $allegato['url'] ); ?>" download><?php echo esc_html( $allegato['title'] ); ?></a></li>
-						<?php endforeach; ?>
-						<?php foreach ( $dati['video'] as $i => $filmato ) : ?>
-							<li><a href="<?php echo esc_url( $filmato['url'] ); ?>" target="_blank" rel="noopener"><?php echo esc_html( sprintf( forestas_testo( 'Video %d', 'Video %d' ), $i + 1 ) ); ?><span class="screen-reader-text"> <?php echo esc_html( forestas_testo( '(si apre in una nuova finestra)', '(opens in a new window)' ) ); ?></span></a></li>
-						<?php endforeach; ?>
-					</ul>
+					<?php echo $allegati; // phpcs:ignore WordPress.Security.EscapeOutput -- markup già escapato ?>
 				</section>
 			<?php endif; ?>
 		</div>

@@ -48,6 +48,7 @@ secondo giro senza nulla da fare. I passi qui sotto restano per guardare un pass
 | Copia del database Drupal | tunnel SSH verso quella di UAT; nel `.env` `DRUPAL_DB_HOST=host.docker.internal`, `DRUPAL_DB_PORT=3307`, `DRUPAL_DB_USER` e `DRUPAL_DB_PASSWORD` | container `mysql-sardegnasentieri-dump` sulla stessa macchina; nel `.env` solo `DRUPAL_DB_USER` e `DRUPAL_DB_PASSWORD` |
 | Orario | qualsiasi, ma non durante il reload della copia di UAT (dalle 10:00 per circa 15 minuti) | lo stesso |
 | Plugin della ricerca `wp-package` (oc:8952) | `WP_PACKAGE_SHARD=forestasdev`, `WP_PACKAGE_APP_ID=1`; per sviluppare il plugin anche `WP_PACKAGE_DIR` con il percorso del clone | `WP_PACKAGE_SHARD` e `WP_PACKAGE_APP_ID` dello shard di UAT; `WP_PACKAGE_DIR` vuoto |
+| Pagine di dettaglio di percorsi e POI (oc:8969) | `wp-package` con il lavoro di oc:8969 (`WP_PACKAGE_REF` di `init-wordpress.sh`, o il clone con `WP_PACKAGE_DIR`); sullo shard il set di icone con le `txn-disability-*` caricato da `/icons-upload` e il nome inglese dei tre `route-type` inserito in Nova | lo stesso: il set di icone si carica prima del rilascio aggiungendo le icone a quelle che ci sono (script in `docs/features/8969-…/icone/`), il nome inglese dei `route-type` a mano in Nova |
 | File dei media (`DRUPAL_FILES_URL` nel `.env`) | vuoto: si scaricano dal sito pubblico di Drupal | lo stesso finché Drupal è acceso; dopo lo spegnimento va puntato alla copia della cartella `sites/default/files`, da chiedere prima |
 
 Il tunnel, in locale (`forestas/docs/howto/copia-database-drupal.md`, «Lavorare dal locale sulla copia
@@ -189,6 +190,13 @@ Nel browser, in italiano e inglese:
   del tipo (`?tipo=percorsi&percorso=route-type-trail`); fra i «Contenuti del sito» di tipo pagina ci sono 14
   pagine, le 13 venute da Drupal più la «Pagina di esempio» che WordPress crea all'installazione (da togliere
   dall'installazione, oc:8952);
+- dettagli (oc:8969, aggiunti al ciclo il 13/11 ma non ancora verificati con un reset completo): `/da-vedere/` porta
+  in 301 a `/punti-di-interesse/`; dalla ricerca una card porta al dettaglio (`/?wmwp_detail=track&wmwp_id=<id>` in
+  302 a `/sentiero/<slug>/`, `/itinerario/…`, `/cammino/…`, i POI sotto `/punti-di-interesse/<slug>/`), con testata,
+  indicatori, mappa con partenza e arrivo, gruppi dei dati da aprire e correlati; le icone delle tipologie di
+  disabilità si vedono solo se il set dello shard le ha. Se dopo il reset un dettaglio dà 404 perché le basi sono
+  cambiate (pagina «Punti di interesse» ricreata), l'indice si rifà da solo entro 5 minuti, o subito con
+  `docker exec wordpress-forestas wp eval 'wmwp_detail_index( true );' --allow-root`;
 - il titolo della scheda è «Pagina | Sardegna Sentieri», come su Drupal: il nome viene da `blogname`
   di `config/sito.json` (l'apply lo scrive), il separatore dal child. Se resta «Forestas» l'apply non è
   andato a buon fine.

@@ -15,24 +15,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-/** Id della pagina «Punti di interesse» nella lingua predefinita, 0 se non c'è. */
+/** Id della pagina «Punti di interesse» (chiave `da-vedere`) nella lingua predefinita, 0 se non c'è. */
 function forestas_dettaglio_pagina_poi(): int {
-	static $id = null;
-	if ( null === $id ) {
-		$pagine = get_posts(
-			[
-				'post_type'        => 'page',
-				'post_status'      => 'publish',
-				'numberposts'      => 1,
-				'fields'           => 'ids',
-				'meta_key'         => '_wpf_pagina',
-				'meta_value'       => 'da-vedere',
-				'suppress_filters' => true,
-			]
-		);
-		$id     = $pagine ? (int) apply_filters( 'wpml_object_id', (int) $pagine[0], 'page', true, apply_filters( 'wpml_default_language', null ) ) : 0;
-	}
-	return $id;
+	$id = forestas_pagina_per_chiave( 'da-vedere' );
+	return $id ? (int) apply_filters( 'wpml_object_id', $id, 'page', true, apply_filters( 'wpml_default_language', null ) ) : 0;
 }
 
 // Basi degli indirizzi: le impone il tema, il pannello del plugin le mostra disattivate
@@ -56,8 +42,10 @@ add_filter(
 );
 
 /*
- * Dati del dettaglio. Le chiavi del JSON dello shard si leggono solo qui: quando lo shard le cambia (gli enti da
- * `entities` a `organizations`, il `forestas` dei POI da ripulire) si corregge un punto solo. Ogni dato può mancare
+ * Dati del dettaglio. Le chiavi strutturate del JSON dello shard (enti, indicatori, tabelle, correlati, mappa, allegati,
+ * dati del POI) si leggono solo qui: quando lo shard le cambia (gli enti da `entities` a `organizations`, il `forestas`
+ * dei POI da ripulire) si corregge un punto solo. I template leggono da sé solo campi semplici e stabili (`ref`,
+ * `description`, `feature_image`, `forestas.downloads.gpx`, `forestas.useful_info`, `forestas.registry_code`). Ogni dato può mancare
  * (dettaglio di ripiego del package, traccia appena creata): una funzione restituisce null o un elenco vuoto, mai un
  * avviso.
  */
@@ -114,6 +102,14 @@ function forestas_dettaglio_testo_lingua( $valore, ?string $lingua = null ): arr
 }
 
 /**
+ * Attributo `lang` per un testo che ripiega su un'altra lingua (WCAG 3.1.2): ` lang="it"` se la lingua del testo è
+ * diversa da quella della pagina, altrimenti ''.
+ */
+function forestas_dettaglio_lang( ?string $lingua ): string {
+	return null !== $lingua && '' !== $lingua && forestas_dettaglio_lingua() !== $lingua ? ' lang="' . esc_attr( $lingua ) . '"' : '';
+}
+
+/**
  * Testo ricco dello shard (descrizione, informazioni utili, come arrivare, tappe) pronto per la pagina, accessibile:
  * - i titoli scritti in Drupal hanno livelli qualsiasi (un h3 dentro «Descrizione», che è già un h3; salti da h4 a h6):
  *   si rinumerano da `$livello` (h4, sotto il titolo del blocco) mantenendo l'ordine relativo e senza salti (WCAG 1.3.1);
@@ -127,7 +123,9 @@ function forestas_dettaglio_ricco( $valore, ?string $lingua = null, int $livello
 	if ( '' === $dato['testo'] ) {
 		return '';
 	}
-	$html = forestas_dettaglio_titoli( wp_kses_post( $dato['testo'] ), $livello );
+	// Titoli vuoti (`<h4>&nbsp;</h4>` nei testi di Drupal) fuori: per lo screen reader sono titoli senza nome
+	$html = (string) preg_replace( '/<h([1-6])\b[^>]*>(?:\s|&nbsp;|&#160;|\x{00A0}|<br\s*\/?>)*<\/h\1>/iu', '', wp_kses_post( $dato['testo'] ) );
+	$html = forestas_dettaglio_titoli( $html, $livello );
 	if ( null !== $dato['lingua'] && $dato['lingua'] !== $lingua ) {
 		$html = '<div lang="' . esc_attr( $dato['lingua'] ) . '">' . $html . '</div>';
 	}
@@ -350,7 +348,7 @@ function forestas_dettaglio_indicatori( array $properties ): array {
 	$termine     = $properties['taxonomies']['validation-status'][0] ?? null;
 	$validazione = null;
 	if ( is_array( $termine ) && ! empty( $termine['identifier'] ) ) {
-		$etichette   = function_exists( 'forestas_search_term_labels' ) ? forestas_search_term_labels() : [];
+		$etichette   = forestas_search_term_labels();
 		$validazione = [
 			'chiave'    => (string) $termine['identifier'],
 			'etichetta' => $etichette[ $termine['identifier'] ] ?? forestas_dettaglio_testo( $termine['name'] ?? null ),
@@ -497,9 +495,9 @@ function forestas_dettaglio_pagina_drupal( string $nid ): string {
 	if ( ! isset( $url[ $nid ] ) ) {
 		$id           = get_posts(
 			[
-				'post_type'        => [ 'page', 'da_sapere' ],
+				'post_type'        => array_merge( [ 'page' ], FORESTAS_TIPI_IMPORTATI ),
 				'post_status'      => 'publish',
-				'meta_key'         => '_drupal_nid', // phpcs:ignore WordPress.DB.SlowDBQuery
+				'meta_key'         => FORESTAS_META_NID, // phpcs:ignore WordPress.DB.SlowDBQuery
 				'meta_value'       => $nid, // phpcs:ignore WordPress.DB.SlowDBQuery
 				'fields'           => 'ids',
 				'numberposts'      => 1,
@@ -544,8 +542,9 @@ function forestas_dettaglio_durata( $minuti ): ?string {
  * `assets/js/dettaglio.js` mette nel titolo il pulsante che apre e chiude il pannello (`aria-expanded`), come il
  * roadbook, e lo chiude se `data-wm-gr` è `chiuso`; senza JavaScript il pannello resta aperto (oc:8969, Rubens 13/11).
  *
- * @param list<array{0: string, 1: string, 2?: bool, 3?: array{url: string, nascosto: string}}> $righe Etichetta, valore,
- *        se il valore è un segnaposto e il link «Maggiori info» (con il resto del nome, nascosto, per lo screen reader).
+ * @param list<array{0: string, 1: string, 2?: bool, 3?: array{url: string, nascosto: string}|null, 4?: ?string}> $righe
+ *        Etichetta, valore, se il valore è un segnaposto, il link «Maggiori info» (con il resto del nome, nascosto, per
+ *        lo screen reader) e la lingua del valore se ripiega su un'altra (`lang`).
  */
 function forestas_dettaglio_gruppo( string $id, string $titolo, array $righe, bool $aperto ): string {
 	if ( ! $righe ) {
@@ -556,7 +555,7 @@ function forestas_dettaglio_gruppo( string $id, string $titolo, array $righe, bo
 		$link  = ! empty( $riga[3]['url'] )
 			? ' <a class="wm-dt__mi" href="' . esc_url( $riga[3]['url'] ) . '">' . esc_html( forestas_testo( 'Maggiori info', 'More info' ) ) . '<span class="screen-reader-text"> ' . esc_html( (string) ( $riga[3]['nascosto'] ?? '' ) ) . '</span></a>'
 			: '';
-		$html .= sprintf( '<tr><th scope="row">%1$s</th><td%3$s>%2$s%4$s</td></tr>', esc_html( (string) $riga[0] ), esc_html( (string) $riga[1] ), ! empty( $riga[2] ) ? ' class="wm-segnaposto"' : '', $link );
+		$html .= sprintf( '<tr><th scope="row">%1$s</th><td%3$s%5$s>%2$s%4$s</td></tr>', esc_html( (string) $riga[0] ), esc_html( (string) $riga[1] ), ! empty( $riga[2] ) ? ' class="wm-segnaposto"' : '', $link, forestas_dettaglio_lang( $riga[4] ?? null ) );
 	}
 	return sprintf(
 		'<div class="wm-gr" data-wm-gr="%3$s"><h3 class="wm-gr__h" id="%1$s">%2$s</h3><div class="wm-gr__p" id="%1$s-p"><table class="wm-dt" aria-labelledby="%1$s"><tbody>%4$s</tbody></table></div></div>',
@@ -579,8 +578,8 @@ function forestas_dettaglio_gruppo( string $id, string $titolo, array $righe, bo
 function forestas_dettaglio_tabelle( array $properties, string $tipo ): array {
 	$forestas   = (array) ( $properties['forestas'] ?? [] );
 	$indicatori = forestas_dettaglio_indicatori( $properties );
-	$partenza   = forestas_dettaglio_testo( $properties['from'] ?? null );
-	$arrivo     = forestas_dettaglio_testo( $properties['to'] ?? null );
+	$partenza   = forestas_dettaglio_testo_lingua( $properties['from'] ?? null );
+	$arrivo     = forestas_dettaglio_testo_lingua( $properties['to'] ?? null );
 	$roundtrip  = isset( $properties['roundtrip'] ) ? (bool) $properties['roundtrip'] : null;
 	$info       = function ( string $nid, string $nascosto ): array {
 		$url = forestas_dettaglio_pagina_drupal( $nid );
@@ -590,8 +589,8 @@ function forestas_dettaglio_tabelle( array $properties, string $tipo ): array {
 	$percorso   = [
 		'titolo' => forestas_testo( 'Percorso', 'Route' ),
 		'righe'  => [
-			[ forestas_testo( 'Partenza', 'Start' ), forestas_dettaglio_valore( $partenza ) ],
-			[ forestas_testo( 'Arrivo', 'End' ), forestas_dettaglio_valore( $arrivo ) ],
+			[ forestas_testo( 'Partenza', 'Start' ), forestas_dettaglio_valore( $partenza['testo'] ), false, null, $partenza['lingua'] ],
+			[ forestas_testo( 'Arrivo', 'End' ), forestas_dettaglio_valore( $arrivo['testo'] ), false, null, $arrivo['lingua'] ],
 			[ forestas_testo( 'Andata e ritorno', 'Round trip' ), forestas_dettaglio_valore( $roundtrip ) ],
 		],
 	];
@@ -795,10 +794,11 @@ function forestas_dettaglio_luoghi( array $properties ): array {
 
 /**
  * Difficoltà dichiarata per attività (una riga per famiglia `*-difficulty` che la traccia ha), come nella tabella della
- * Tavola 3: [ attività, valore ].
+ * Tavola 3: [ attività, valore ]. Il grado di accessibilità (`inclusivity-difficulty`) no: sta nell'indicatore
+ * Accessibilità, e il link dei gradi di difficoltà non lo spiega (review 13/11).
  *
  * @param array<string, mixed> $properties properties del JSON.
- * @return list<array{0: string, 1: string}>
+ * @return list<array{0: string, 1: string, 2: ?string}> attività, valore e lingua del valore
  */
 function forestas_dettaglio_difficolta( array $properties ): array {
 	$attivita = [
@@ -808,13 +808,12 @@ function forestas_dettaglio_difficolta( array $properties ): array {
 		'nordic-walking-difficulty'     => forestas_testo( 'Nordic walking', 'Nordic walking' ),
 		'soft-mobility-difficulty'      => forestas_testo( 'Mobilità dolce', 'Soft mobility' ),
 		'educational-trails-difficulty' => forestas_testo( 'Sentiero didattico', 'Educational trail' ),
-		'inclusivity-difficulty'        => forestas_testo( 'Accessibilità', 'Accessibility' ),
 	];
 	$righe    = [];
 	foreach ( $attivita as $chiave => $nome ) {
-		$valore = forestas_dettaglio_testo( $properties['taxonomies'][ $chiave ][0]['name'] ?? null );
-		if ( '' !== $valore ) {
-			$righe[] = [ $nome, $valore ];
+		$valore = forestas_dettaglio_testo_lingua( $properties['taxonomies'][ $chiave ][0]['name'] ?? null );
+		if ( '' !== $valore['testo'] ) {
+			$righe[] = [ $nome, $valore['testo'], $valore['lingua'] ];
 		}
 	}
 	return $righe;
@@ -894,11 +893,12 @@ add_action(
  * nei nomi importati da Drupal il codice c'è quasi sempre.
  */
 function forestas_dettaglio_nome( string $nome, string $codice ): string {
-	if ( '' === $codice ) {
+	// I codici si confrontano con le sole lettere e cifre: «(B 401)» nel nome e «B-401» nel `ref` sono lo stesso
+	$segni = fn( string $testo ): string => mb_strtolower( (string) preg_replace( '/[^\p{L}\p{N}]+/u', '', $testo ) );
+	if ( '' === $segni( $codice ) || ! preg_match( '/^(.*?)\s*\(([^()]*)\)\s*$/u', $nome, $m ) ) {
 		return $nome;
 	}
-	$senza = preg_replace( '/\s*\(\s*' . preg_quote( $codice, '/' ) . '\s*\)\s*$/u', '', $nome );
-	return is_string( $senza ) && '' !== trim( $senza ) ? trim( $senza ) : $nome;
+	return $segni( $m[2] ) === $segni( $codice ) && '' !== trim( $m[1] ) ? trim( $m[1] ) : $nome;
 }
 
 /**
@@ -911,22 +911,7 @@ function forestas_dettaglio_nome( string $nome, string $codice ): string {
  */
 function forestas_dettaglio_poi( array $properties ): array {
 	$forestas  = (array) ( $properties['forestas'] ?? [] );
-	$tipologia = forestas_dettaglio_testo( $properties['taxonomies']['poi-type'][0]['name'] ?? $properties['taxonomy']['poi_type']['name'] ?? null );
-	$elenco    = function ( $voci ): array {
-		$risultato = [];
-		foreach ( (array) $voci as $voce ) {
-			$url = is_array( $voce ) ? (string) ( $voce['url'] ?? '' ) : (string) $voce;
-			if ( '' === $url ) {
-				continue;
-			}
-			$titolo      = is_array( $voce ) ? (string) ( $voce['title'] ?? '' ) : '';
-			$risultato[] = [
-				'url'   => $url,
-				'title' => '' !== $titolo ? $titolo : rawurldecode( basename( (string) wp_parse_url( $url, PHP_URL_PATH ) ) ),
-			];
-		}
-		return $risultato;
-	};
+	$tipologia = forestas_dettaglio_testo_lingua( $properties['taxonomies']['poi-type'][0]['name'] ?? $properties['taxonomy']['poi_type']['name'] ?? null );
 	$percorsi = array_values( array_filter( array_map( fn( $t ) => forestas_dettaglio_card_percorso( (array) $t ), (array) ( $forestas['nearby_tracks'] ?? [] ) ) ) );
 	$where    = [];
 	foreach ( (array) ( $properties['taxonomy_where'] ?? [] ) as $id => $nomi ) {
@@ -938,18 +923,13 @@ function forestas_dettaglio_poi( array $properties ): array {
 		];
 	}
 	return [
-		'tipologia'     => '' !== $tipologia ? $tipologia : null,
+		'tipologia'     => '' !== $tipologia['testo'] ? $tipologia['testo'] : null,
+		'tipologia_lang' => $tipologia['lingua'],
 		'come_arrivare' => forestas_dettaglio_ricco( $forestas['directions'] ?? $forestas['come_arrivare'] ?? null ),
-		'allegati'      => $elenco( $forestas['attachments'] ?? $forestas['allegati'] ?? [] ),
-		'video'         => array_map(
-			fn( $v ) => [
-				'url'   => $v['url'],
-				'title' => null,
-			],
-			$elenco( $forestas['videos'] ?? $forestas['video'] ?? [] )
-		),
+		'allegati'      => forestas_dettaglio_allegati( $forestas )['allegati'],
+		'video'         => forestas_dettaglio_allegati( $forestas )['video'],
 		'luoghi'        => forestas_dettaglio_luoghi( [ 'taxonomies' => [ 'where' => $where ] ] ),
-		// Percorsi vicini (entro 1 km, i più vicini per primi; al massimo 10 e il totale)
+		// Percorsi vicini (raggio deciso dallo shard, i più vicini per primi; al massimo 10 e il totale)
 		'percorsi'        => $percorsi,
 		'percorsi_totale' => max( count( $percorsi ), (int) ( $forestas['nearby_tracks_count'] ?? 0 ) ),
 	];
@@ -1210,7 +1190,7 @@ function forestas_dettaglio_mappa_html( array $mappa, string $etichetta, int $al
 		}
 		$html .= '</ul>';
 	}
-	$pagina = function_exists( 'forestas_pagina_per_chiave' ) ? forestas_pagina_per_chiave( 'mappa-interattiva' ) : 0;
+	$pagina = forestas_pagina_per_chiave( 'mappa-interattiva' );
 	if ( $pagina ) {
 		// Con il focus sull'elemento, come `/mappa-interattiva?id=<nid>` di Drupal (forestas_mappa_url())
 		$indirizzo = (string) get_permalink( $pagina );
@@ -1220,4 +1200,62 @@ function forestas_dettaglio_mappa_html( array $mappa, string $etichetta, int $al
 			. '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 4 3 6.5v13.5l6-2.5 6 2.5 6-2.5V4l-6 2.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 4v13.5M15 6.5V20" fill="none" stroke="currentColor" stroke-width="1.8"/></svg></a></div>';
 	}
 	return $html;
+}
+
+/**
+ * Allegati e video di una traccia o di un POI, dal `forestas`: chiavi nuove (`attachments`, `videos`: elenchi di
+ * `{ url, title }`) o vecchie dei POI (`allegati`, `video`: elenchi di URL). Senza titolo, l'allegato prende il nome del
+ * file decodificato; il video resta senza titolo (l'HTML scrive «Video N»).
+ *
+ * @param array<string, mixed> $forestas `properties.forestas`.
+ * @return array{allegati: list<array{url: string, title: string}>, video: list<array{url: string, title: ?string}>}
+ */
+function forestas_dettaglio_allegati( array $forestas ): array {
+	$elenco = function ( $voci ): array {
+		$risultato = [];
+		foreach ( (array) $voci as $voce ) {
+			$url = is_array( $voce ) ? (string) ( $voce['url'] ?? '' ) : (string) $voce;
+			if ( '' !== $url ) {
+				$titolo      = is_array( $voce ) ? trim( (string) ( $voce['title'] ?? '' ) ) : '';
+				$risultato[] = [
+					'url'   => $url,
+					'title' => '' !== $titolo ? $titolo : null,
+				];
+			}
+		}
+		return $risultato;
+	};
+	$allegati = array_map(
+		fn( $a ) => [
+			'url'   => $a['url'],
+			'title' => $a['title'] ?? rawurldecode( basename( (string) wp_parse_url( $a['url'], PHP_URL_PATH ) ) ),
+		],
+		$elenco( $forestas['attachments'] ?? $forestas['allegati'] ?? [] )
+	);
+	return [
+		'allegati' => $allegati,
+		'video'    => $elenco( $forestas['videos'] ?? $forestas['video'] ?? [] ),
+	];
+}
+
+/**
+ * Elenco degli allegati (da scaricare) e dei video (in una finestra nuova, detto allo screen reader); '' se non ce ne
+ * sono.
+ *
+ * @param array{allegati: list<array{url: string, title: string}>, video: list<array{url: string, title: ?string}>} $allegati
+ */
+function forestas_dettaglio_allegati_html( array $allegati ): string {
+	if ( ! $allegati['allegati'] && ! $allegati['video'] ) {
+		return '';
+	}
+	$html = '<ul class="wm-files">';
+	foreach ( $allegati['allegati'] as $allegato ) {
+		$html .= '<li><a href="' . esc_url( $allegato['url'] ) . '" download>' . esc_html( $allegato['title'] ) . '</a></li>';
+	}
+	foreach ( $allegati['video'] as $i => $filmato ) {
+		$html .= '<li><a href="' . esc_url( $filmato['url'] ) . '" target="_blank" rel="noopener">'
+			. esc_html( $filmato['title'] ?? sprintf( forestas_testo( 'Video %d', 'Video %d' ), $i + 1 ) )
+			. '<span class="screen-reader-text"> ' . esc_html( forestas_testo( '(si apre in una nuova finestra)', '(opens in a new window)' ) ) . '</span></a></li>';
+	}
+	return $html . '</ul>';
 }

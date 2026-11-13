@@ -217,7 +217,15 @@ $tabelle = forestas_dettaglio_tabelle( $completa['feature']['properties'], 'camm
 $check( [ 'Misure', 'Stato' ] === $titoli( $tabelle ), 'cammino: Misure e Stato' );
 $check( 'Validato' === ( $riga( $tabelle, 'Stato', 'Stato di validazione' )[1] ?? null ), 'cammino: stato di validazione in Stato' );
 $diff_p  = [ 'taxonomies' => [ 'hiking-difficulty' => [ [ 'name' => [ 'it' => 'E' ] ] ], 'inclusivity-difficulty' => [ [ 'name' => [ 'it' => 'AT' ] ] ] ] ];
-$check( 'Escursionismo: E; Accessibilità: AT' === ( $riga( forestas_dettaglio_tabelle( $diff_p, 'sentiero' ), 'Misure', 'Grado di difficoltà' )[1] ?? null ), 'grado di difficoltà in Misure, con l\'attività' );
+$check( 'Escursionismo: E' === ( $riga( forestas_dettaglio_tabelle( $diff_p, 'sentiero' ), 'Misure', 'Grado di difficoltà' )[1] ?? null ), 'grado di difficoltà in Misure, con l\'attività, senza il grado di accessibilità' );
+// Il grado di accessibilità (AT · AE · AEE) sta nell'indicatore Accessibilità, non fra le difficoltà (review 13/11)
+$check( [] === forestas_dettaglio_difficolta( [ 'taxonomies' => [ 'inclusivity-difficulty' => [ [ 'name' => [ 'it' => 'AT' ] ] ] ] ] ), 'accessibilità non è una difficoltà' );
+// Il codice tra parentesi in coda al nome si toglie anche scritto in un altro modo (review 13/11: «(B 401)» e «B-401»)
+$check( 'Oliena - Monte Corrasi' === forestas_dettaglio_nome( 'Oliena - Monte Corrasi (B 401)', 'B-401' ), 'nome: codice tra parentesi tolto anche con un altro separatore' );
+$check( 'Anello (C 12)' === forestas_dettaglio_nome( 'Anello (C 12)', 'B 532A' ), 'nome: un altro codice tra parentesi resta' );
+// Titoli vuoti dei testi ricchi (`<h4>&nbsp;</h4>` dei testi di Drupal) scartati
+$ricco = forestas_dettaglio_ricco( '<p>Testo</p><h4>&nbsp;</h4><h3> </h3><h2>Vero</h2>', 'it' );
+$check( 1 === substr_count( $ricco, '</h' ) && false !== strpos( $ricco, 'Vero' ), 'testo ricco: titoli vuoti scartati (' . $ricco . ')' );
 $check( '—' === ( $riga( forestas_dettaglio_tabelle( [], 'itinerario' ), 'Misure', 'Grado di difficoltà' )[1] ?? null ), 'senza difficoltà: trattino' );
 
 // «Maggiori info» accanto al grado di difficoltà e alla validazione, come su Drupal: il «da sapere» dei gradi (nodo
@@ -407,7 +415,8 @@ $html_poi = forestas_dettaglio_mappa_html( [ 'tracks' => [], 'points' => [ [ 'co
 $check( (bool) preg_match( '#href="[^"]*mappa-interattiva/\?poi=7"#', $html_poi ), 'pulsante con ?poi=<id>' );
 $check( wmwp_webapp_url( 'track', 312 ) === forestas_mappa_url( [ 'track' => '312' ] ), 'pagina della mappa con ?track: webapp con il focus' );
 $check( wmwp_webapp_url( 'poi', 7 ) === forestas_mappa_url( [ 'poi' => '7' ] ), 'pagina della mappa con ?poi' );
-$check( wmwp_webapp_url() === forestas_mappa_url( [ 'track' => 'x' ] ) && wmwp_webapp_url() === forestas_mappa_url( [] ), 'senza parametri validi: la mappa intera' );
+$check( wmwp_webapp_url() . '#/map' === forestas_mappa_url( [ 'track' => 'x' ] ) && wmwp_webapp_url() . '#/map' === forestas_mappa_url( [] ), 'senza parametri validi: la mappa intera (#/map, come l\'iframe di Drupal)' );
+$check( wmwp_webapp_url() . '#/map' === forestas_mappa_url( [ 'track' => '99999999999999999999' ] ), 'id più lungo di 10 cifre: niente focus' );
 
 restore_error_handler();
 // Gruppi dei dati (Percorso, Misure, Enti…): titolo h3 che dettaglio.js trasforma in pulsante, tabella con il nome dal
@@ -420,6 +429,17 @@ $check( false !== strpos( $gr, '<table class="wm-dt" aria-labelledby="wm-gr-0">'
 $check( false !== strpos( $gr, '<th scope="row">Partenza</th><td>Bivio &lt;A&gt;</td>' ), 'righe con i valori escapati' );
 $check( false !== strpos( $gr, '<td class="wm-segnaposto">Dato non ancora disponibile</td>' ), 'segnaposto' );
 $check( '' === forestas_dettaglio_gruppo( 'y', 'Vuoto', [], false ), 'gruppo senza righe: niente' );
+
+// Allegati e video in una funzione sola per tracce e POI (review 13/11): titolo, o nome del file decodificato; video
+// con il loro titolo, o «Video N»; chiavi nuove (`attachments`, `videos`) e vecchie dei POI (`allegati`, `video`)
+$al = forestas_dettaglio_allegati( [ 'attachments' => [ [ 'url' => 'http://x/Roadbook%20A.pdf', 'title' => null ], [ 'url' => '' ] ], 'videos' => [ [ 'url' => 'http://v/1', 'title' => 'Il sentiero' ], [ 'url' => 'http://v/2' ] ] ] );
+$check( [ [ 'url' => 'http://x/Roadbook%20A.pdf', 'title' => 'Roadbook A.pdf' ] ] === $al['allegati'], 'allegati: senza titolo il nome del file decodificato' );
+$check( 'Il sentiero' === ( $al['video'][0]['title'] ?? null ) && array_key_exists( 'title', $al['video'][1] ?? [] ) && null === $al['video'][1]['title'], 'video con il loro titolo' );
+$vecchi = forestas_dettaglio_allegati( [ 'allegati' => [ 'http://x/a.pdf' ], 'video' => [ 'http://v/3' ] ] );
+$check( 'a.pdf' === ( $vecchi['allegati'][0]['title'] ?? '' ) && 'http://v/3' === ( $vecchi['video'][0]['url'] ?? '' ), 'chiavi vecchie dei POI' );
+$html_al = forestas_dettaglio_allegati_html( $al );
+$check( false !== strpos( $html_al, '>Il sentiero<' ) && false !== strpos( $html_al, 'Video 2' ) && false !== strpos( $html_al, ' download>' ), 'HTML degli allegati e dei video' );
+$check( '' === forestas_dettaglio_allegati_html( [ 'allegati' => [], 'video' => [] ] ), 'senza allegati né video: niente' );
 
 if ( $failures ) {
 	echo 'FAIL: ' . implode( '; ', $failures ) . "\n";

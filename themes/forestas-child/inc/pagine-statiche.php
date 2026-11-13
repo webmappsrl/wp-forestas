@@ -478,9 +478,10 @@ const FORESTAS_MAPPA_URL = 'https://32.app.webmapp.it/#/map';
 
 /**
  * Indirizzo dell'iframe della pagina «Mappa interattiva» (oc:8969): la webapp dello shard configurato nel plugin
- * (`wmwp_webapp_url()`: su dev `https://1.forestasdev.webmapp.it/`, su UAT `https://1.forestasuat.webmapp.it/`), con il
- * focus sull'elemento se l'indirizzo della pagina ha `?track=<id>` o `?poi=<id>` (id dello shard, dal pulsante «Vedi sulla
- * mappa interattiva» del dettaglio), come `/mappa-interattiva?id=<nid>` di Drupal.
+ * (`wmwp_webapp_url()`, `https://<app ID>.<shard>.webmapp.it/` o il campo «Webapp»), sulla mappa (`#/map`, come l'iframe
+ * di Drupal), con il focus sull'elemento se l'indirizzo della pagina ha `?track=<id>` o `?poi=<id>` (id dello shard,
+ * dal pulsante «Vedi sulla mappa interattiva» del dettaglio), come `/mappa-interattiva?id=<nid>` di Drupal. Un id più
+ * lungo di 10 cifre non è un id: niente focus.
  *
  * @param array<string, mixed> $parametri Parametri della richiesta ($_GET).
  */
@@ -489,12 +490,12 @@ function forestas_mappa_url( array $parametri ): string {
 		return FORESTAS_MAPPA_URL;
 	}
 	foreach ( [ 'track', 'poi' ] as $tipo ) {
-		$id = isset( $parametri[ $tipo ] ) && is_scalar( $parametri[ $tipo ] ) && ctype_digit( (string) $parametri[ $tipo ] ) ? (int) $parametri[ $tipo ] : 0;
+		$id = isset( $parametri[ $tipo ] ) && is_scalar( $parametri[ $tipo ] ) && preg_match( '/^[1-9][0-9]{0,9}$/', (string) $parametri[ $tipo ] ) ? (int) $parametri[ $tipo ] : 0;
 		if ( $id > 0 ) {
 			return wmwp_webapp_url( $tipo, $id );
 		}
 	}
-	return wmwp_webapp_url();
+	return wmwp_webapp_url() . '#/map';
 }
 
 /*

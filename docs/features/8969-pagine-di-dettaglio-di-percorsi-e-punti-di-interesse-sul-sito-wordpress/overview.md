@@ -74,8 +74,11 @@ di sicai), ma leggono le API dello shard e non il database: gran parte del detta
       bandierina con il codice (`ref`), voto e numero di recensioni come segnaposto.
 - [x] Riga di azioni: **Scarica GPX** funzionante (`forestas.downloads`), **Condividi** con
       `forestas_condividi()`, **Stampa** e **Segnala** visibili ma disattivati (`aria-disabled`), senza
-      una nota che lo ripeta: si capisce dai pulsanti (Rubens, 12/11).
-- [x] Avviso del sentiero e fascia della percorribilità come segnaposto (i dati non esistono ancora).
+      una nota che lo ripeta: si capisce dai pulsanti (Rubens, 12/11). Sull'itinerario niente «Segnala»: la Tavola 4
+      lo ha, ma su Drupal le segnalazioni sono solo dei sentieri; si decide nel ticket di segnalazioni e recensioni,
+      come le recensioni dell'itinerario (`notes.md`).
+- [x] Avviso del sentiero e fascia della percorribilità come segnaposto (i dati non esistono ancora); non
+      sull'itinerario, che non è nel catasto e non li ha nella Tavola 4.
 - [x] Tre indicatori a tacche: validazione (dal termine `validation-status`), percorribilità
       (segnaposto), accessibilità (grado AT · AE · AEE da `inclusivity-difficulty` e le tre icone delle
       tipologie di disabilità da `inclusivity-disabilities`), ciascuno con la «i» della legenda e il link
@@ -163,8 +166,8 @@ di sicai), ma leggono le API dello shard e non il database: gran parte del detta
 
 - [x] «Vedi sulla mappa interattiva» apre la pagina `mappa-interattiva` con il focus sull'elemento
       (`?track=<id>`, `?poi=<id>`), come `/mappa-interattiva?id=<nid>` di Drupal; l'iframe è la webapp dello
-      shard dell'ambiente (`wmwp_webapp_url()` del plugin: dev `https://1.forestasdev.webmapp.it/`, UAT
-      `https://1.forestasuat.webmapp.it/`, produzione dal campo «Webapp» finché il dominio non c'è).
+      shard dell'ambiente (`wmwp_webapp_url()` del plugin, `https://<app ID>.<shard>.webmapp.it/`; in produzione il
+      campo «Webapp» finché il dominio non c'è), su `#/map` senza focus.
 - [x] La mappa della pagina è più alta: «Espandi la mappa» sta nella riga del percorso invece che in una barra
       di 88px, e la mappa ha almeno 30rem (differenza voluta da Drupal, Rubens 13/11).
 - [x] Frecce e chiusura della lightbox delle gallerie come su Drupal (cerchi con bordo bianco e icone di Font
@@ -224,13 +227,16 @@ Repo `wp-forestas` (questo):
 
 - `themes/forestas-child/wp-package/` — template del dettaglio di percorso e POI che sostituiscono
   quelli del plugin.
-- `themes/forestas-child/inc/` — un file nuovo per il dettaglio (dati per sezione, differenze per tipo,
-  basi degli indirizzi, segnaposto) e `inc/search.php` per il `link_template`.
+- `themes/forestas-child/inc/dettaglio.php` (nuovo, caricato da `functions.php`) — dati per sezione, differenze per
+  tipo, basi degli indirizzi, chiave stabile per il plugin, segnaposto. Il `link_template` della ricerca è del plugin.
+- `themes/forestas-child/wp-package/card.php` (nuovo) — card della ricerca uguale a quella dei post e del dettaglio.
+- `themes/forestas-child/tests/dettaglio.php` (nuovo) — test del dettaglio con `wp eval-file`.
 - `themes/forestas-child/` CSS e JS del dettaglio (testata compatta, galleria, mappa agganciata e spostata su
   mobile, gruppi dei dati, legende), `assets/css/galleria-lightbox.css` (frecce della lightbox, tutto il sito).
 - `config/pagine.json`, `config/menu.json` — slug della pagina «Punti di interesse».
 - `inc/pagine-statiche.php` — 301 da `/da-vedere/`; pagina «Mappa interattiva» (webapp dell'ambiente, focus
-  sull'elemento, altezza) con `assets/js/mappa.js`.
+  sull'elemento, altezza) con `assets/js/mappa.js`; `forestas_condividi()` e `forestas_credits_immagine()` accettano
+  anche i dati di un dettaglio dinamico (non solo l'id di un post).
 - `docs/howto/ricreare-wordpress-da-zero.md` — se cambia la configurazione da applicare.
 
 Repo `wp-package`: vedi la sua overview.
