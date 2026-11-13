@@ -161,12 +161,20 @@ function forestas_azioni( int $id ): string {
  * condivisione del sistema; altrove un pannello con i collegamenti di condivisione di WhatsApp, Facebook,
  * X, Telegram ed Email e «Copia link», che conferma «Link copiato». I collegamenti sono indirizzi
  * scritti: nessuno script né cookie di terzi finché non si sceglie un servizio
- * (assets/js/condividi.js).
+ * (assets/js/condividi.js). Riceve l'id di un post, o `[ 'url' => …, 'titolo' => … ]` per una pagina senza post.
  */
-function forestas_condividi( int $id ): string {
+function forestas_condividi( $origine ): string {
 	wp_enqueue_script( 'forestas-condividi', get_stylesheet_directory_uri() . '/assets/js/condividi.js', [], forestas_versione(), [ 'in_footer' => true, 'strategy' => 'defer' ] );
-	$url    = (string) get_permalink( $id );
-	$titolo = html_entity_decode( get_the_title( $id ), ENT_QUOTES, 'UTF-8' );
+	// Un post per id, oppure una pagina senza post (dettaglio di percorso o POI, oc:8969) con URL e titolo
+	if ( is_array( $origine ) ) {
+		$url    = (string) ( $origine['url'] ?? '' );
+		$titolo = (string) ( $origine['titolo'] ?? '' );
+		$id     = 'd' . substr( md5( $url ), 0, 8 );
+	} else {
+		$id     = (int) $origine;
+		$url    = (string) get_permalink( $id );
+		$titolo = html_entity_decode( get_the_title( $id ), ENT_QUOTES, 'UTF-8' );
+	}
 	$u      = rawurlencode( $url );
 	$t      = rawurlencode( $titolo );
 	$nuova  = '<span class="screen-reader-text"> ' . esc_html( forestas_testo( '(si apre in una nuova finestra)', '(opens in a new window)' ) ) . '</span>';
@@ -268,16 +276,29 @@ add_shortcode(
 /*
  * «Credits foto» della testata, come nel tema Drupal (media--image--testata-pagina.html.twig): un
  * pulsante in basso che mostra e nasconde «Autore foto» e «Credits immagine», separati da «•». Nascosti
- * all'apertura. Niente pulsante se l'immagine non ha né autore né credits.
+ * all'apertura. Niente pulsante se l'immagine non ha né autore né credits. Riceve l'id di un allegato o, per le
+ * pagine di dettaglio senza post, autore e credits della foto dello shard.
  */
-function forestas_credits_immagine( int $immagine ): string {
-	if ( ! $immagine ) {
-		return '';
+function forestas_credits_immagine( $immagine ): string {
+	// Un allegato di WordPress per id, oppure i dati di una foto dello shard (dettaglio di percorso o POI, oc:8969):
+	// [ 'autore' => …, 'credits' => …, 'chiave' => … ]
+	if ( is_array( $immagine ) ) {
+		$autore  = (string) ( $immagine['autore'] ?? '' );
+		$credits = (string) ( $immagine['credits'] ?? '' );
+		$chiave  = (string) ( $immagine['chiave'] ?? 'dettaglio' );
+	} else {
+		$immagine = (int) $immagine;
+		if ( ! $immagine ) {
+			return '';
+		}
+		$autore  = (string) get_post_meta( $immagine, FORESTAS_META_AUTORE, true );
+		$credits = (string) get_post_meta( $immagine, FORESTAS_META_CREDITS, true );
+		$chiave  = (string) $immagine;
 	}
 	// Come field--media--field-autore e field--media--field-credits: etichetta in grassetto, poi il valore
 	$campi = [
-		[ forestas_testo( 'Autore foto', 'Photo author' ), (string) get_post_meta( $immagine, FORESTAS_META_AUTORE, true ) ],
-		[ forestas_testo( 'Credits immagine', 'Image credits' ), (string) get_post_meta( $immagine, FORESTAS_META_CREDITS, true ) ],
+		[ forestas_testo( 'Autore foto', 'Photo author' ), $autore ],
+		[ forestas_testo( 'Credits immagine', 'Image credits' ), $credits ],
 	];
 	$parti = '';
 	foreach ( $campi as [ $etichetta, $valore ] ) {
@@ -289,7 +310,7 @@ function forestas_credits_immagine( int $immagine ): string {
 		return '';
 	}
 	wp_enqueue_script( 'forestas-credits', get_stylesheet_directory_uri() . '/assets/js/credits-foto.js', [], forestas_versione(), [ 'in_footer' => true, 'strategy' => 'defer' ] );
-	$id_testo = 'forestas-credits-' . $immagine;
+	$id_testo = 'forestas-credits-' . $chiave;
 	return sprintf(
 		'<div class="forestas-credits is-hidden"><button type="button" class="forestas-credits__pulsante" aria-expanded="false" aria-controls="%1$s" aria-label="%2$s"><i class="far fa-info-circle" aria-hidden="true"></i> %3$s <i class="far fa-eye forestas-credits__mostra" aria-hidden="true"></i><i class="far fa-eye-slash forestas-credits__nascondi" aria-hidden="true"></i></button><p class="forestas-credits__testo" id="%1$s">%4$s</p></div>',
 		esc_attr( $id_testo ),
@@ -450,11 +471,32 @@ function forestas_galleria_lightbox(): void {
 }
 
 /*
- * Indirizzo della mappa: quello scritto nel blocco di Drupal (MappaInterattivaBlock), non l'iframe del
- * testo della pagina, che su Drupal non si mostra. Il cambio di mappa con ?id= (sentiero, itinerario o
- * punto di interesse) arriverà con le loro pagine.
+ * Indirizzo della mappa di ripiego, quello scritto nel blocco di Drupal (MappaInterattivaBlock): si usa solo se il plugin
+ * wp-package non dà la webapp dello shard (plugin spento o shard non configurato).
  */
 const FORESTAS_MAPPA_URL = 'https://32.app.webmapp.it/#/map';
+
+/**
+ * Indirizzo dell'iframe della pagina «Mappa interattiva» (oc:8969): la webapp dello shard configurato nel plugin
+ * (`wmwp_webapp_url()`, `https://<app ID>.<shard>.webmapp.it/` o il campo «Webapp»), sulla mappa (`#/map`, come l'iframe
+ * di Drupal), con il focus sull'elemento se l'indirizzo della pagina ha `?track=<id>` o `?poi=<id>` (id dello shard,
+ * dal pulsante «Vedi sulla mappa interattiva» del dettaglio), come `/mappa-interattiva?id=<nid>` di Drupal. Un id più
+ * lungo di 10 cifre non è un id: niente focus.
+ *
+ * @param array<string, mixed> $parametri Parametri della richiesta ($_GET).
+ */
+function forestas_mappa_url( array $parametri ): string {
+	if ( ! function_exists( 'wmwp_webapp_url' ) || '' === wmwp_webapp_url() ) {
+		return FORESTAS_MAPPA_URL;
+	}
+	foreach ( [ 'track', 'poi' ] as $tipo ) {
+		$id = isset( $parametri[ $tipo ] ) && is_scalar( $parametri[ $tipo ] ) && preg_match( '/^[1-9][0-9]{0,9}$/', (string) $parametri[ $tipo ] ) ? (int) $parametri[ $tipo ] : 0;
+		if ( $id > 0 ) {
+			return wmwp_webapp_url( $tipo, $id );
+		}
+	}
+	return wmwp_webapp_url() . '#/map';
+}
 
 /*
  * Mappa interattiva come su Drupal (oc:8758): il percorso, il titolo della pagina nascosto alla vista, poi
@@ -471,10 +513,14 @@ add_shortcode(
 		wp_enqueue_script( 'forestas-mappa', get_stylesheet_directory_uri() . '/assets/js/mappa.js', [], forestas_versione(), [ 'in_footer' => true, 'strategy' => 'defer' ] );
 		$titolo = get_the_title( $id );
 		return sprintf(
-			'%1$s<h1 class="screen-reader-text">%2$s</h1>'
+			// Il pulsante che allarga la mappa sta nella riga del percorso, non in una barra sopra la mappa come su
+			// Drupal: la barra toglieva 88px alla mappa (oc:8969). La barra resta per la mappa a schermo intero.
+			'<h1 class="screen-reader-text">%2$s</h1>'
+			. '<div class="forestas-mappa-testa">%1$s'
+			. '<button type="button" id="mapExpander" class="forestas-pulsante forestas-pulsante--icona is-map-expander"><span>%4$s</span><i aria-hidden="true" class="far fa-expand-arrows forestas-pulsante__icona"></i></button>'
+			. '</div>'
 			. '<div class="forestas-mappa is-shrinked"><h2 class="screen-reader-text">%3$s</h2>'
 			. '<div class="forestas-mappa__barra">'
-			. '<button type="button" id="mapExpander" class="forestas-pulsante forestas-pulsante--icona is-map-expander"><span>%4$s</span><i aria-hidden="true" class="far fa-expand-arrows forestas-pulsante__icona"></i></button>'
 			. '<button type="button" id="mapShrinker" class="forestas-pulsante forestas-pulsante--icona is-map-shrinker"><span>%5$s</span><i aria-hidden="true" class="far fa-compress-arrows-alt forestas-pulsante__icona"></i></button>'
 			. '</div>'
 			. '<div><iframe src="%6$s" scrolling="no" frameborder="0" marginheight="0px" marginwidth="0px" height="100%%" width="100%%" allowfullscreen="" title="%7$s"></iframe></div>'
@@ -484,7 +530,7 @@ add_shortcode(
 			esc_html( forestas_testo( "Mappa interattiva: cerca sentieri, itinerari, punti d'interesse", 'Interactive map: search for trails, routes, Point of Interest' ) ),
 			esc_html( forestas_testo( 'Espandi la mappa', 'Expand map' ) ),
 			esc_html( forestas_testo( 'Esci dalla modalità mappa a schermo intero', 'Minimize fullscreen map' ) ),
-			esc_url( FORESTAS_MAPPA_URL ),
+			esc_url( forestas_mappa_url( $_GET ) ), // phpcs:ignore WordPress.Security.NonceVerification -- solo lettura, id numerici
 			esc_attr( forestas_testo( 'Mappa interattiva Sardegna Sentieri', 'Sardegna Sentieri interactive map' ) )
 		);
 	}
@@ -499,12 +545,14 @@ add_shortcode(
  * corrente se ha la traduzione (oc:8760). Solo gli indirizzi che Drupal aveva: un altro 404 resta 404.
  * Priorità 9, prima di redirect_canonical: per un alias che finisce con una punteggiatura
  * (/da-sapere/vestiti-“-cipolla”) il core toglierebbe l'ultimo carattere e manderebbe a un altro 404.
+ * Vale anche quando l'indirizzo è finito su un allegato con lo stesso slug: /da-vedere/ dopo che la pagina è
+ * diventata /punti-di-interesse/ prendeva l'immagine da-vedere.jpg, e il core mandava al file (oc:8969).
  */
 add_action(
 	'template_redirect',
 	function () {
 		global $wp;
-		if ( ! is_404() ) {
+		if ( ! is_404() && ! is_attachment() ) {
 			return;
 		}
 		$percorso = trim( strtolower( remove_accents( rawurldecode( (string) $wp->request ) ) ), '/' );

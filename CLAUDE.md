@@ -41,9 +41,12 @@ subagent.
 
 ## Trappole
 
-- La cartella del plugin `wp-geohub` deve chiamarsi `wm-package`: il plugin ha il percorso
-  `wp-content/plugins/wm-package/shortcodes` scritto nel codice e con un altro nome l'attivazione
-  lancia un'eccezione (oc:8711)
+- `wp-package` arriva dall'init a un commit fisso (`WP_PACKAGE_REF`) e si riscarica solo quando
+  quel commit è diverso da quello scritto in `wp-content/plugins/wp-package/.wpf-ref`: un aggiornamento
+  del plugin vuole il nuovo hash in `init-wordpress.sh`, poi `scripts/wordpress-up.sh` di `forestas`, che ricostruisce
+  l'immagine con l'init nuovo. In locale invece la
+  cartella è un link simbolico al clone montato in sola lettura (`compose.local.yml`): `wp i18n` e ogni
+  comando che scrive nel plugin vanno lanciati su una copia, non lì (oc:8952)
 - MariaDB crea utente e database solo al primo avvio su un volume vuoto: avviata senza password
   inizializzerebbe l'utente senza password e ignorerebbe il `.env` creato dopo. Per questo esce se
   manca `WP_DB_PASSWORD` — non togliere quel controllo (oc:8711)
@@ -153,7 +156,7 @@ subagent.
   e la traduzione va rifatta prima di aggiornare `sorgente`; se Drupal aggiunge la sua traduzione,
   vince quella (oc:8758)
 - Il cron usa `bin/wordpress-config.sh allinea`, con la riga versionata in `cron/allinea.crontab`
-  (lì anche lo stato: oggi non installata su nessun server, da aggiornare quando la si installa). Applica
+  (lì anche lo stato dell'installazione, da aggiornare quando la si installa o la si toglie). Applica
   da solo solo le differenze dei menu: un rilascio di `config/` (header, footer, Theme Options…) va
   applicato a mano con `applica --conferma`, altrimenti ogni giro chiude con `STATO non allineato` (oc:8758)
 - La sincronizzazione non va lanciata durante il reload giornaliero della copia Drupal su UAT (alle
@@ -178,3 +181,4 @@ subagent.
 | Pagine editoriali da Drupal | perimetro, sincronizzazione dalla copia Drupal, media, link, traduzioni nostre, template e shortcode del child; il cron in [docs/howto/cron-sincronizzazione-pagine.md](docs/howto/cron-sincronizzazione-pagine.md) | [docs/knowledge/8758-import-delle-pagine-editoriali-da-drupal-e-ricostruzione-con-impreza-di-quelle-fatte-con-il-layout-builder.md](docs/knowledge/8758-import-delle-pagine-editoriali-da-drupal-e-ricostruzione-con-impreza-di-quelle-fatte-con-il-layout-builder.md) |
 | News da Drupal | news come post della categoria News, termini con `_drupal_chiave`, pagina News a schede, editor e protezioni sulla copia | [docs/knowledge/8759-import-delle-news-da-drupal.md](docs/knowledge/8759-import-delle-news-da-drupal.md) |
 | Eventi e «da sapere» da Drupal | ciclo di import comune ai tipi con un nodo, eventi e «da sapere» come tipi propri, tipologie e loro pagine, filtri delle liste, vecchi indirizzi, template e editor | [docs/knowledge/8760-import-degli-eventi-e-dei-da-sapere-da-drupal.md](docs/knowledge/8760-import-degli-eventi-e-dei-da-sapere-da-drupal.md) |
+| Pagine di dettaglio di percorsi e POI | template del child sopra il plugin, tavole e Drupal come riferimento, chiave stabile (nid di Drupal), mappa interattiva per ambiente, icone dal set dello shard, messa in opera | [docs/knowledge/8969-pagine-di-dettaglio-di-percorsi-e-punti-di-interesse-sul-sito-wordpress.md](docs/knowledge/8969-pagine-di-dettaglio-di-percorsi-e-punti-di-interesse-sul-sito-wordpress.md) |

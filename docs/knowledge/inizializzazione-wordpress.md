@@ -17,8 +17,9 @@ qui conta come si comporta e perché.
   PHP li mostrava ai visitatori con i percorsi del server e non li registrava; una pagina bianca o
   incompleta si indaga dai log. `wordpress.ini` sta nell'immagine: una sua modifica vale dopo
   `scripts/wordpress-up.sh` di `forestas`.
-- **GitHub non raggiungibile:** il sito parte lo stesso con un avviso nei log; `wp-geohub` si scarica
-  al riavvio successivo.
+- **GitHub non raggiungibile:** il sito parte lo stesso con un avviso nei log; `wp-package` si
+  scarica al riavvio successivo, e intanto `/cerca-nel-sito` mostra un campo di ricerca semplice verso
+  `?s=` (oc:8952).
 - **Zip di Impreza assente:** avviso nei log, tema di default. Il tema si riconosce dallo slug della
   cartella (`impreza`, senza distinzione di maiuscole). Uno zip la cui cartella radice non è
   `Impreza/` non si installa: il child, che dichiara `Template: Impreza`, resterebbe senza padre.
@@ -31,8 +32,13 @@ qui conta come si comporta e perché.
 - **Dietro un proxy HTTPS** `wp-config.php` imposta `HTTPS=on` quando arriva
   `X-Forwarded-Proto: https`: senza, WordPress crede di essere in http e va in un ciclo di redirect.
 
-Vincolo: `wp-geohub` non ha tag né release; si scarica a un commit fisso (`GEOHUB_REF` in
-`init-wordpress.sh`), che si aggiorna a mano (oc:8717). Un sito già installato non lo riscarica.
+Vincolo: `wp-package` si scarica dal repo pubblico a un commit fisso (`WP_PACKAGE_REF` in
+`init-wordpress.sh`), che si aggiorna a mano; il commit scaricato resta in
+`wp-content/plugins/wp-package/.wpf-ref`, e quando `WP_PACKAGE_REF` cambia il plugin si riscarica
+anche su un sito già installato (oc:8952). Finché il repo GitHub non esiste il valore è vuoto e l'init
+scrive solo un AVVISO. Shard e app id li scrive dal `.env` (`WP_PACKAGE_SHARD`, `WP_PACKAGE_APP_ID`)
+solo se le opzioni del plugin sono vuote. In locale il clone di sviluppo, montato in sola lettura da
+`compose.local.yml` (`WP_PACKAGE_DIR`), prende il posto del download con un link simbolico.
 
 ## Perché così
 
@@ -40,8 +46,15 @@ Vincolo: `wp-geohub` non ha tag né release; si scarica a un commit fisso (`GEOH
   controllo unico, un pezzo perso o aggiunto dopo l'installazione non tornerebbe mai.
 - **Chiavi di sicurezza generate da `wp config create`** (oc:8711): non passano da nessun `.env`,
   quindi niente caratteri speciali da proteggere e nulla da incollare.
-- **Plugin scaricato come tarball nella cartella `wm-package`** (oc:8711): lo zip che GitHub genera
-  per un branch crea una cartella con il nome del branch, e il plugin vuole il nome `wm-package`.
+- **Plugin scaricato come tarball nella sua cartella** (oc:8711, oc:8952): lo zip che GitHub genera per
+  un branch crea una cartella con il nome del branch; l'archivio si estrae con `--strip-components=1` nella
+  cartella `wp-package`.
+- **Il commit scaricato scritto accanto al plugin** (oc:8952): con il solo controllo «c'è `index.php`?» un
+  commit nuovo non sarebbe mai arrivato su un sito che non si azzera, come la produzione.
+- **Clone di sviluppo fuori da `/var/www/html`, collegato con un link** (oc:8952): un mount sopra la
+  cartella del plugin, con un valore predefinito vuoto nel compose dei server, avrebbe coperto il plugin
+  scaricato; e `find` del passo dei permessi, senza `-L`, non entra nel link, quindi i file del clone
+  sull'host non cambiano proprietario.
 - **Child theme montato dal compose e non copiato dallo script** (oc:8717): una modifica nel repo è
   subito visibile sul sito, e il codice del child ha una sola copia.
 - **`chown` su tutti i file di WordPress, core compreso** (oc:8717): WordPress confronta il
@@ -80,8 +93,8 @@ Vincolo: `wp-geohub` non ha tag né release; si scarica a un commit fisso (`GEOH
   `wpf_scrivi_htaccess()` con la funzione di WordPress che usa il pannello, dichiarando che
   `mod_rewrite` c'è (l'immagine lo abilita): l'init solo se il file manca, l'apply quando cambia i
   permalink. La funzione tocca solo la sezione «WordPress» del file.
-- **wp-geohub a un commit fisso** (oc:8717): dal ramo `main` due siti ricreati in giorni diversi
-  avevano codice diverso, contro l'obiettivo di un sito ricreabile.
+- **Plugin a un commit fisso** (oc:8717 per wp-geohub, oc:8952 per wp-package): dal ramo `main` due
+  siti ricreati in giorni diversi avevano codice diverso, contro l'obiettivo di un sito ricreabile.
 - **Un apply alla volta, e l'automatico solo con le stesse versioni** (oc:8717): l'apply
   dell'avvio e uno lanciato dall'host nello stesso momento creerebbero post e menu doppi. All'avvio
   del container (passo 4c) si tolgono i blocchi presi prima dell'avvio, perché un apply gira dentro il
@@ -198,6 +211,10 @@ differenze prima di `--conferma`. Dopo ogni aggiornamento la prova è: su un Wor
   va diretta sui metadati e un tipo non registrato si salta.
 - **Plugin nella cartella `wp-geohub`** (oc:8711, superata): l'attivazione falliva perché il plugin
   cerca i suoi shortcode in `wp-content/plugins/wm-package/` (`functions/imports.php`).
+- **wp-geohub (`wm-package`) come plugin del sito** (oc:8711, superata da oc:8952): sostituito da
+  `wp-package`, il fork ridotto alla ricerca, che non ha percorsi con il nome della cartella scritti nel
+  codice. Su un sito esistente l'init non disinstalla niente: `wm-package` si toglie a mano (howto di messa
+  in opera di forestas).
 - **`chown` solo su `wp-content`** (oc:8711, superata da oc:8717): il core scaricato da
   `wp --allow-root` restava di root e l'installazione dei plugin dal pannello falliva con
   `unable_to_connect_to_filesystem`.

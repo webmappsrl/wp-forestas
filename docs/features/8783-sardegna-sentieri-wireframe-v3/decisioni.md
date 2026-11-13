@@ -242,20 +242,20 @@ Fonte generale: call 16/10 (impianto A scelto, opzione B tolta).
 ## Tavola 4 — Scheda itinerario
 
 Fonte generale: call 17/09, 01:15–01:20; call 16/10; richiesta del 19/10 di avere per itinerario e
-cammino la stessa struttura del sentiero.
+cammino la stessa struttura del sentiero; call di approvazione del 02/11.
 
-- **Stessa struttura della scheda sentiero**: voto e recensioni sulla foto, testata compatta, azioni
-  (Scarica GPX, Stampa, Condividi, Segnala), fascia della percorribilità, tre indicatori a tacche, in
-  breve, attività e avvertenze, galleria, tabella dei dati, correlati, mappa, recensioni.
+- **Struttura della scheda sentiero, senza classificazione catastale**: voto e recensioni sulla
+  foto, testata compatta, azioni (Scarica GPX, Stampa, Condividi, Segnala), in breve, attività e
+  avvertenze, galleria, tabella dei dati, correlati, mappa, recensioni.
+- **Niente fascia della percorribilità e niente indicatori** (call 02/11): l'itinerario non ha
+  validazione, percorribilità né accessibilità, perché non è classificato nel catasto.
 - **Tabella «Dati dell'itinerario»** al posto dei dati catastali, con i campi che l'itinerario ha
-  nel Drupal: arrivo, lunghezza, tempo, dislivello totale, difficoltà, accatastamento, stato di
-  validazione. Alla riga Accatastamento «Itinerario in progetto», al posto di «accatastato»
-  (call 16/10).
+  nel Drupal: arrivo, lunghezza, tempo, dislivello totale, difficoltà. Il gruppo «Stato»
+  (accatastamento e stato di validazione) è tolto con la decisione del 02/11; con lui esce anche
+  «Itinerario in progetto», proposto il 16/10 al posto di «accatastato».
 - **Esempio reale**: «Monte Borborisaghe – Teti» (nessun itinerario semplice in Ogliastra: sono tutti
   tappe). Quote da Geohub, perché l'itinerario nel Drupal non ha questi campi. Esempi dichiarati:
-  voto e recensioni, stato e data della percorribilità.
-- Da chiarire: nel Drupal l'itinerario ha «Stato di validazione: Percorribile», mentre la sua
-  avvertenza dice che non è nella rete escursionistica.
+  voto e recensioni.
 
 ## Tavola 5 — Scheda cammino
 

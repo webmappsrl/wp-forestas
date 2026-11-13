@@ -9,13 +9,19 @@ AVVIO=$(date +%s)
 WP_PATH=/var/www/html
 WP="wp --allow-root --path=${WP_PATH}"
 IMPREZA_ZIP=/opt/wp-forestas/themes/impreza.zip
-# Il plugin si chiama «WM Package» e cerca i propri file in wp-content/plugins/wm-package
-# (percorso scritto fisso in functions/imports.php): la cartella deve avere questo nome.
-GEOHUB_DIR="${WP_PATH}/wp-content/plugins/wm-package"
-# Commit fisso di wp-geohub: un sito ricreato deve avere lo stesso codice di quello di partenza. Per
-# aggiornarlo: git ls-remote https://github.com/webmappsrl/wp-geohub refs/heads/main, poi l'hash qui
-GEOHUB_REF=92d2ae43b7b4569f1f257bcc38d809266d4bdddd
-GEOHUB_TARBALL="https://github.com/webmappsrl/wp-geohub/archive/${GEOHUB_REF}.tar.gz"
+# Plugin wp-package: ricerca unica (oc:8952) e pagine di dettaglio (oc:8969, 0.2.0). Commit fisso: un sito ricreato deve avere lo stesso
+# codice di quello di partenza (vuoto: nessun download). Per aggiornarlo:
+# git ls-remote https://github.com/webmappsrl/wp-package refs/heads/main, poi l'hash qui e scripts/wordpress-up.sh
+# di forestas, che ricostruisce l'immagine
+WP_PACKAGE_REF=96f8d563e24794bb959fd27303668017715efddf
+WMWP_DIR="${WP_PATH}/wp-content/plugins/wp-package"
+WMWP_TARBALL="https://github.com/webmappsrl/wp-package/archive/${WP_PACKAGE_REF}.tar.gz"
+# Commit scaricato, scritto nella cartella del plugin: se è diverso da WP_PACKAGE_REF si riscarica, così un
+# commit nuovo arriva anche su un sito che non si azzera
+WMWP_REF_FILE="${WMWP_DIR}/.wpf-ref"
+# Clone di sviluppo, montato in sola lettura solo in locale (compose.local.yml): se c'è, la cartella del
+# plugin è un link simbolico a questo clone e non si scarica niente
+WMWP_DEV_DIR=/opt/wp-forestas/wp-package-dev
 # Child theme versionato in themes/forestas-child, montato qui dal compose
 CHILD_DIR="${WP_PATH}/wp-content/themes/forestas-child"
 # Script PHP della configurazione: costanti.php contiene anche nomi e percorsi che usa questo script
@@ -232,21 +238,52 @@ if [ "$($WP language core list --status=active --field=language)" != "it_IT" ]; 
     $WP site switch-language it_IT
 fi
 
-# 6. Plugin wp-geohub (dal repo pubblico al commit GEOHUB_REF, nella cartella wm-package)
-if [ ! -f "${GEOHUB_DIR}/index.php" ]; then
-    log "scarico wp-geohub"
-    tmp=$(mktemp -d)
-    if curl -fsSL --connect-timeout "$RETE_CONNESSIONE" --max-time "$RETE_ATTESA" "$GEOHUB_TARBALL" | tar xz --strip-components=1 -C "$tmp"; then
-        mkdir -p "$GEOHUB_DIR"
-        cp -a "$tmp"/. "$GEOHUB_DIR"/
-        geohub_appena_scaricato=1
-    else
-        log "AVVISO: impossibile scaricare wp-geohub, riprovo al prossimo avvio"
+# 6. Plugin wp-package (oc:8952): in locale il clone di sviluppo collegato con un link simbolico,
+#    altrimenti l'archivio del repo pubblico al commit WP_PACKAGE_REF. Shard e app id dal .env, solo se le
+#    opzioni del plugin sono vuote (come URL e amministratore, contano solo la prima volta).
+wmwp_nuovo=no
+if [ -f "${WMWP_DEV_DIR}/index.php" ]; then
+    if [ "$(readlink "$WMWP_DIR" 2>/dev/null || true)" != "$WMWP_DEV_DIR" ]; then
+        log "collego wp-package al clone di sviluppo"
+        rm -rf "$WMWP_DIR"
+        ln -s "$WMWP_DEV_DIR" "$WMWP_DIR"
+        wmwp_nuovo=sì
     fi
-    rm -rf "$tmp"
+else
+    # Un link al clone di sviluppo che non è più montato non porta a niente: si toglie
+    if [ -L "$WMWP_DIR" ]; then
+        log "il clone di sviluppo di wp-package non è più montato, tolgo il link"
+        rm -f "$WMWP_DIR"
+    fi
+    if [ -z "$WP_PACKAGE_REF" ]; then
+        log "AVVISO: wp-package non ancora pubblicato, nessun download"
+    elif [ "$(cat "$WMWP_REF_FILE" 2>/dev/null || true)" != "$WP_PACKAGE_REF" ]; then
+        log "scarico wp-package al commit ${WP_PACKAGE_REF}"
+        tmp=$(mktemp -d)
+        if curl -fsSL --connect-timeout "$RETE_CONNESSIONE" --max-time "$RETE_ATTESA" "$WMWP_TARBALL" | tar xz --strip-components=1 -C "$tmp"; then
+            rm -rf "$WMWP_DIR"
+            mkdir -p "$WMWP_DIR"
+            cp -a "$tmp"/. "$WMWP_DIR"/
+            # cp -a di «$tmp/.» copia anche i permessi della cartella temporanea (700): come gli altri plugin
+            chmod 755 "$WMWP_DIR"
+            echo "$WP_PACKAGE_REF" > "$WMWP_REF_FILE"
+            wmwp_nuovo=sì
+        else
+            log "AVVISO: impossibile scaricare wp-package, riprovo al prossimo avvio"
+        fi
+        rm -rf "$tmp"
+    fi
 fi
-if [ -f "${GEOHUB_DIR}/index.php" ]; then
-    attiva_plugin wm-package "$( [ -n "${geohub_appena_scaricato:-}" ] && echo sì || echo no )"
+if [ -f "${WMWP_DIR}/index.php" ]; then
+    attiva_plugin wp-package "$wmwp_nuovo"
+    for coppia in "wmwp_shard=${WP_PACKAGE_SHARD:-}" "wmwp_app_id=${WP_PACKAGE_APP_ID:-}"; do
+        opzione=${coppia%%=*}
+        valore=${coppia#*=}
+        if [ -n "$valore" ] && [ -z "$($WP option get "$opzione" 2>/dev/null || true)" ]; then
+            log "imposto ${opzione} dal .env"
+            $WP option update "$opzione" "$valore" >/dev/null
+        fi
+    done
 fi
 
 # 7. Tema Impreza (commerciale: solo se c'è lo zip in docker/themes/, copiato a mano o creato con
@@ -396,7 +433,8 @@ fi
 
 # 9. Permessi: Apache gira come www-data, e anche il core deve essere suo, altrimenti WordPress
 #    non riconosce di poter scrivere e chiede le credenziali FTP per installare plugin e temi.
-#    Il child theme resta escluso: è una cartella del repo montata dall'host.
+#    Il child theme resta escluso: è una cartella del repo montata dall'host. Il clone di sviluppo di
+#    wp-package sta fuori da WP_PATH, montato in sola lettura: find senza -L non entra nel link.
 #    -h cambia il proprietario di un link simbolico e non del file a cui punta. Un errore qui non
 #    blocca l'avvio: Apache parte e il proprietario si ritenta al riavvio.
 find "$WP_PATH" -path "$CHILD_DIR" -prune -o ! -user www-data -exec chown -h www-data:www-data {} + \

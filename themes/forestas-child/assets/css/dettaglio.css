@@ -1,0 +1,277 @@
+/*
+ * Dettaglio di percorsi e punti di interesse (oc:8969), dalla Tavola 3 del wireframe di oc:8783 (markup e CSS della
+ * tavola). Colore del tipo e della fascia dei titoli dalle variabili --wm-c e --wm-bg, scritte dal template.
+ * Si carica solo sulle pagine di dettaglio (body.wmwp-detail).
+ */
+.wm-dettaglio {
+	--wm-ink: #1A1A1A;
+	--wm-ink-3: #666666;
+	--wm-line: #D0D5DD;
+	--wm-line-2: #F0F0F0;
+	--wm-stick-top: 0px;
+	color: var(--wm-ink);
+	font-family: 'Work Sans', system-ui, sans-serif;
+	/* Tutta la larghezza, come le pagine statiche: il contenuto rientra con --sase-rientro-contenuto */
+	--wm-rientro: var(--sase-rientro-contenuto, max(22px, calc((100% - 1294px) / 2)));
+	margin: 0 0 40px;
+}
+.wm-dettaglio h1,
+.wm-dettaglio h2,
+.wm-dettaglio h3 {
+	font-family: Montserrat, sans-serif;
+	font-weight: 600;
+	letter-spacing: 0;
+}
+
+/* Segnaposto: dato che lo shard non ha ancora. Riconoscibile, occupa lo spazio del componente finito */
+.wm-segnaposto { color: var(--wm-ink-3); font-style: italic; }
+
+/* Avviso */
+/* Avviso del sentiero: come la fascia degli avvisi della home nel wireframe (Tavola 3, nota 1; Tavola 1) */
+.wm-avviso { display: flex; gap: 14px; align-items: center; padding: 12px var(--wm-rientro); background: #FDECEC; border-bottom: 1px solid var(--wm-line-2); font-size: 14px; color: var(--wm-ink, #1A1A1A); }
+.wm-avviso__tag { flex: none; display: inline-flex; align-items: center; gap: 5px; font-style: normal; font-size: 12px; font-weight: 600; color: #fff; background: #B70827; padding: 3px 8px; border-radius: 2px; }
+.wm-avviso__tag svg { width: 14px; height: 14px; display: block; flex: none; }
+
+/* Testata: foto con la fascia scura al 60%, alta come quella delle pagine statiche (.forestas-testata, dal tema Drupal) */
+.wm-hero { position: relative; height: 66vh; min-height: 17.86rem; background: #F5F5F5; overflow: hidden; }
+@media (min-width: 768px) { .wm-hero { max-height: 50vh; } }
+@media (min-width: 1025px) { .wm-hero { min-height: 500px; max-height: 600px; } }
+/* Senza foto niente riquadro grigio alto due terzi della finestra: la testata è alta quanto il testo */
+.wm-hero.wm-hero--senza-foto { height: auto; min-height: 0; max-height: none; display: flex; align-items: flex-end; }
+.wm-hero--senza-foto .wm-hero__scrim { position: relative; flex: 1; padding-top: 48px; }
+.wm-hero__img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.wm-hero__scrim { position: absolute; left: 0; right: 0; bottom: 0; color: #fff; padding: 79px var(--wm-rientro) 17px; background: linear-gradient(to top, rgba(26, 26, 26, .6) 0, rgba(26, 26, 26, .6) calc(100% - 64px), rgba(26, 26, 26, 0) 100%); }
+.wm-hero__occ { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: 0; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; }
+.wm-hero__tit { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 6px 0 4px; color: #fff; font-size: clamp(22px, 2.6vw, 34px); line-height: 1.2; }
+.wm-hero__sub, .wm-hero__meta { margin: 0; font-size: 14px; }
+.wm-hero__meta { margin-top: 8px; color: #fff; }
+.wm-tipo { display: inline-block; flex: none; font-style: normal; font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: #fff; background: var(--wm-c); padding: 3px 8px; border-radius: 2px; }
+.wm-flag { display: inline-block; flex: none; padding: .55em .95em; font-size: .46em; line-height: 1; font-weight: 700; letter-spacing: .02em; color: var(--wm-ink, #1A1A1A); border-radius: 2px; box-shadow: 0 0 0 1px rgba(0, 0, 0, .18); background: linear-gradient(to right, #C8102E 0, #C8102E .55em, #fff .55em, #fff calc(100% - .55em), #C8102E calc(100% - .55em)); padding-left: 1.2em; padding-right: 1.2em; }
+
+/* Testata compatta: compare dopo la testata grande, sotto l'header del sito (assets/js/dettaglio.js) */
+.wm-stick { position: fixed; z-index: 90; left: 0; right: 0; top: var(--wm-stick-top); display: flex; align-items: center; gap: 12px; padding: 10px var(--wm-rientro); color: #fff; background: rgba(26, 26, 26, .82); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); transform: translateY(-120%); visibility: hidden; transition: transform .2s ease, visibility 0s linear .2s; }
+.wm-stick.is-on { transform: none; visibility: visible; transition: transform .2s ease; }
+.wm-stick__tit { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 15px Montserrat, sans-serif; }
+.wm-stick .wm-flag { font-size: 11px; }
+.wm-stick__st { margin-left: auto; flex: none; font-size: 13px; }
+
+/* Azioni: riga e pulsanti delle pagine statiche (.forestas-azioni, .forestas-pulsante); qui solo i pulsanti non ancora attivi */
+.l-main .wm-actions .forestas-pulsante[aria-disabled="true"],
+.l-main .wm-actions .forestas-pulsante[aria-disabled="true"]:hover { color: #6B6B6B; border-color: #9A9A9A; background-color: #F5F5F5; cursor: not-allowed; }
+
+/* Percorribilità */
+.wm-state { margin: 16px var(--wm-rientro) 0; padding: 13px 15px; border-left: 4px solid #9A9A9A; background: #F5F5F5; }
+.wm-state p { margin: 0; font-size: 14px; }
+.wm-state__lbl { font-style: normal; font-weight: 600; color: var(--wm-ink); }
+
+/* Tre indicatori a tacche */
+/* Indicatori e «Sentiero per tutti»: dalla Tavola 3 del wireframe di oc:8783 (note 10, 11, 12), classi con il prefisso wm- */
+.wm-ind { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; margin: 16px var(--wm-rientro) 0; background: var(--wm-line-2); border: 1px solid var(--wm-line-2); }
+.wm-ind__i { background: #fff; padding: 11px 13px; position: relative; }
+.wm-ind__k { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--wm-ink-3); overflow-wrap: anywhere; }
+.wm-ind__info { width: 24px; height: 24px; flex: none; border-radius: 50%; border: 1px solid #4D4D4D; background: #fff; color: var(--wm-ink, #1A1A1A); font: 700 12px/1 Georgia, serif; display: inline-grid; place-items: center; padding: 0; cursor: pointer; text-transform: none; letter-spacing: 0; }
+.wm-ind__info[aria-expanded="true"] { background: #16497B; color: #fff; border-color: #16497B; }
+.wm-ind__info:focus-visible { outline: 3px solid #0089C7; outline-offset: 2px; }
+.wm-ind__v { display: flex; align-items: center; gap: 8px; margin-top: 5px; font-size: 14px; font-weight: 600; }
+.wm-ind__n { font-size: 12px; color: #4D4D4D; font-weight: 400; margin-top: 5px; line-height: 1.45; }
+.wm-ind__leg { position: absolute; left: 8px; right: 8px; top: 34px; z-index: 5; background: #fff; border: 1px solid #767676; border-radius: 4px; box-shadow: 0 6px 16px rgba(0, 0, 0, .18); padding: 10px 12px; font-size: 13px; color: var(--wm-ink, #1A1A1A); text-transform: none; letter-spacing: 0; }
+.wm-ind__lt { margin: 0 0 6px; font-weight: 600; }
+.wm-ind__leg ol { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 3px; }
+.wm-ind__leg li b { display: inline-block; min-width: 3.2em; }
+.wm-ind__nota { margin: 0 0 8px; }
+.wm-ind__leg a { color: #B83F14; text-decoration: underline; text-underline-offset: 2px; font-weight: 600; }
+.wm-tac { display: flex; gap: 3px; margin-top: 8px; }
+.wm-tac i { flex: 1; max-width: 26px; height: 10px; border: 1px solid #8C8C8C; border-radius: 2px; background: #fff; }
+.wm-tac-l { display: flex; gap: 3px; margin-top: 3px; font-size: 11px; color: #4D4D4D; }
+.wm-tac-l span { flex: 1; max-width: 26px; text-align: center; }
+.wm-ind__i--val .wm-tac i.on { background: #8A6A1E; border-color: #8A6A1E; }
+.wm-ind__i--per .wm-tac i.on { background: #FF4B4D; border-color: #FF4B4D; }
+.wm-ind__i--acc .wm-tac i.on { background: #006239; border-color: #006239; }
+/* Colonna Accessibilità: tacche, valore e, a destra, le icone delle tipologie di disabilità (verdi se sì, grigie e tratteggiate se no) */
+.wm-ind__i--acc { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px; align-content: start; }
+.wm-ind__i--acc > * { grid-column: 1; }
+.wm-ind__i--acc > .wm-acc-tip { grid-column: 2; grid-row: 1 / span 4; margin-top: 0; flex-wrap: nowrap; gap: 5px; align-self: start; }
+.wm-ind__i--acc > .wm-ind__leg { grid-column: 1 / -1; }
+.wm-acc-tip { display: flex; gap: 8px; margin: 10px 0 0; flex-wrap: wrap; list-style: none; padding: 0; }
+.wm-acc-tip li { display: flex; flex-direction: column; width: 56px; margin: 0; border: 1.5px dashed #767676; background: #fff; }
+.wm-acc-tip__ab { display: flex; align-items: center; justify-content: center; min-height: 24px; padding: 2px; background: #767676; color: #fff; font-size: 9.5px; line-height: 1.1; text-align: center; overflow-wrap: anywhere; hyphens: auto; }
+.wm-acc-tip svg { display: block; width: 28px; height: 28px; margin: 3px auto; fill: none; stroke: #767676; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.wm-acc-tip li.on { border: 1.5px solid #006239; }
+.wm-acc-tip li.on .wm-acc-tip__ab { background: #006239; }
+.wm-acc-tip li.on svg { stroke: #006239; }
+/* Icona dal set dello shard: forma piena, colorata con fill invece che con il tratto */
+.wm-acc-tip svg.wmwp-icon { fill: #767676; stroke: none; }
+.wm-acc-tip li.on svg.wmwp-icon { fill: #006239; }
+/* «Sentiero per tutti»: stesso bordo e stesso fondo della colonna Accessibilità, a forma di L rovesciata */
+.wm-ind--spt { border-bottom: 0; }
+.wm-ind--spt .wm-ind__i--acc { background: #F0F6F2; border: 2px solid #006239; border-bottom: 0; }
+.wm-spt { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr); column-gap: 22px; align-items: start; margin: 0 var(--wm-rientro); padding: 12px 16px; background: #F0F6F2; border: 2px solid #006239; border-top: 0; color: var(--wm-ink, #1A1A1A); }
+.wm-spt::before { content: ""; position: absolute; left: -2px; top: 0; width: calc(100% * 2 / 3 + 5px); height: 2px; background: #006239; }
+.wm-dettaglio .wm-spt__h { grid-column: 1; grid-row: 1; display: flex; align-items: center; gap: 8px; margin: 0 0 8px; padding: 0; font-size: 12px; line-height: 1.3; letter-spacing: .06em; text-transform: uppercase; color: var(--wm-ink, #1A1A1A); font-weight: 600; }
+.wm-spt__c { grid-column: 1; grid-row: 2; position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px; align-items: center; }
+.wm-spt__c > .wm-ind__leg { top: 100%; left: 0; right: 0; }
+.wm-spt__badge { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 6px; background: #006239; color: #fff; font-size: 20px; font-weight: 700; }
+.wm-spt .wm-ind__k { letter-spacing: .04em; color: #4D4D4D; }
+.wm-spt .wm-ind__v { font-size: 13.5px; margin-top: 4px; }
+.wm-spt .wm-tac { margin-top: 6px; }
+.wm-spt .wm-tac i.on { background: #006239; border-color: #006239; }
+.wm-spt__tab { grid-column: 2; grid-row: 1 / span 2; width: 100%; margin: -4px 0 0; border-collapse: collapse; font-size: 13px; }
+.wm-spt__tab th { text-align: left; font-weight: 500; color: #4D4D4D; padding: 4px 12px 4px 0; width: 44%; vertical-align: middle; border-bottom: 1px solid #C6D9CD; overflow-wrap: anywhere; background: none; }
+.wm-spt__tab td { font-weight: 600; color: var(--wm-ink, #1A1A1A); padding: 4px 0; border-bottom: 1px solid #C6D9CD; vertical-align: middle; overflow-wrap: anywhere; background: none; }
+.wm-spt__tab tr:last-child th, .wm-spt__tab tr:last-child td { border-bottom: 0; }
+.wm-spt__tab .wm-tac { display: inline-flex; width: 120px; margin: 0 8px 0 0; vertical-align: middle; }
+.wm-spt__tv { white-space: nowrap; }
+@media (max-width: 860px) {
+	.wm-ind--spt { border-bottom: 1px solid var(--wm-line-2); }
+	.wm-spt { border-top: 2px solid #006239; margin-top: 0; }
+	.wm-spt::before { display: none; }
+}
+@media (max-width: 700px) {
+	.wm-spt { display: block; }
+	.wm-spt__c { margin-bottom: 14px; }
+	.wm-spt__tab { margin-top: 0; }
+}
+@media (max-width: 520px) {
+	.wm-spt__c { grid-template-columns: minmax(0, 1fr); }
+	.wm-ind__i--acc { display: block; }
+	.wm-ind__i--acc > .wm-acc-tip { margin-top: 10px; flex-wrap: wrap; }
+	.wm-acc-tip li { width: 62px; }
+}
+
+/* Corpo con la mappa agganciata a destra */
+.wm-cols { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 28px; align-items: start; padding: 0 var(--wm-rientro); }
+.wm-aside { position: sticky; top: calc(var(--wm-stick-top) + 64px); margin-top: 18px; }
+/* Legenda sotto la mappa e «Vedi sulla mappa interattiva» (wireframe, `.map-leg` e `.foot`) */
+.wm-map-leg { list-style: none; margin: 8px 0 0; padding: 8px 12px; display: grid; gap: 5px; font-size: 12px; color: #333; background: #fff; border: 1px solid #D0D5DD; }
+.wm-map-leg li { display: flex; align-items: center; gap: 8px; margin: 0; }
+.wm-map-leg__main { flex: none; width: 22px; height: 4px; border-radius: 2px; background: var(--wm-leg); }
+.wm-map-leg__near { flex: none; width: 22px; height: 0; border-top: 2.5px dashed var(--wm-leg); }
+/* Partenza e arrivo come sulla mappa (track-map.js e map/src/index.js del plugin): cerchio verde, bandiera a scacchi */
+.wm-map-leg__start, .wm-map-leg__end { flex: none; width: 18px; height: 18px; border-radius: 50%; box-shadow: 0 0 0 1px #D0D5DD; border: 2px solid #fff; box-sizing: border-box; }
+.wm-map-leg__start { background: #1F8F35; }
+.wm-map-leg__end { background: repeating-conic-gradient(var(--wm-ink, #1A1A1A) 0 25%, #fff 0 50%) 0 0 / 6px 6px; }
+.wm-map-leg__poi { flex: none; display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; color: #fff; font-size: 11px; font-weight: 700; }
+.wm-map-foot { margin-top: 11px; }
+.wm-map-foot__btn { display: inline-flex; align-items: center; gap: 8px; }
+.wm-map-foot__btn svg { width: 18px; height: 18px; flex: none; }
+.wm-sec { margin: 22px 0 0; }
+.wm-dettaglio > .wm-sec { margin: 28px var(--wm-rientro) 0; }
+/* Più specifico di `h2:first-child { padding-top: 0 }` di Impreza, che toglieva lo spazio sopra il testo */
+.wm-dettaglio .wm-sec__h { display: flex; align-items: center; min-height: 40px; box-sizing: border-box; font-size: 16px; line-height: 1.3; color: var(--wm-ink, #1A1A1A); background: var(--wm-bg); border-left: 4px solid var(--wm-c); padding: 8px 12px; margin: 0 0 14px; border-radius: 0 3px 3px 0; }
+
+.wm-facts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; margin: 0 0 14px; background: var(--wm-line-2); }
+.wm-fact { display: flex; flex-direction: column-reverse; background: #fff; padding: 11px 12px; }
+.wm-fact dd { margin: 0; font-size: 19px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.wm-fact dt { font-size: 13px; color: var(--wm-ink-3); }
+.wm-blk { padding: 13px 0; border-top: 1px solid var(--wm-line-2); }
+.wm-blk h3 { margin: 0 0 6px; font-size: 15px; }
+
+/* Testo lungo con «Mostra tutto» */
+.wm-xp__body { font-size: 15px; line-height: 1.6; color: #333; overflow-wrap: anywhere; }
+.wm-xp.is-chiuso .wm-xp__body { max-height: 12em; overflow: hidden; -webkit-mask-image: linear-gradient(#000 70%, transparent); mask-image: linear-gradient(#000 70%, transparent); }
+.wm-xp__more { display: flex; justify-content: center; padding-top: 10px; }
+/* Il display del pulsante batterebbe l'attributo hidden: testi corti e senza JavaScript, niente pulsante */
+.wm-xp__more[hidden], .wm-ucg__more[hidden] { display: none; }
+
+/* Roadbook a fisarmonica con la linea del percorso */
+.wm-rb { --st: 3em; position: relative; padding-left: var(--st); }
+.wm-rb::before { content: ""; position: absolute; left: calc(var(--st) / 2 - 1px); top: 22px; bottom: 0; width: 2px; background: var(--wm-c); }
+.wm-rb__h { position: relative; margin: 0; font-size: 15px; border-top: 1px solid var(--wm-line); }
+.wm-rb__h:first-child { border-top: 0; }
+.wm-rb__h::before { content: ""; position: absolute; top: 50%; left: calc(var(--st) / -2); width: 1.4em; height: 1.4em; transform: translate(-50%, -50%); border-radius: 50%; border: 2px solid var(--wm-c); background: #fff; box-shadow: 0 0 0 4px #fff; }
+.wm-rb__btn { display: flex; width: 100%; min-height: 44px; align-items: center; padding: 10px 0; border: 0; background: none; font: inherit; color: var(--wm-ink); text-align: left; cursor: pointer; }
+.wm-rb__btn::after { content: "▾"; margin-left: auto; transition: transform .2s ease; }
+.wm-rb__btn[aria-expanded="true"]::after { transform: rotate(-180deg); }
+.wm-rb__btn:focus-visible { outline: 2px solid var(--wm-ink, #1A1A1A); outline-offset: 2px; }
+.wm-rb__p { padding: 4px 0 16px; font-size: 15px; line-height: 1.6; color: #333; }
+
+/* Attività e avvertenze */
+.wm-diff { width: 100%; border-collapse: collapse; font-size: 15px; }
+.wm-diff th { text-align: left; font-weight: 500; font-size: 13px; color: var(--wm-ink-3); padding: 0 0 7px; border-bottom: 1px solid var(--wm-line); }
+.wm-diff td { padding: 9px 0; border-bottom: 1px solid var(--wm-line-2); }
+.wm-pill { display: inline-block; font-size: 13px; font-weight: 600; padding: 2px 8px; border: 1.5px solid #4F750B; color: #3F5E09; border-radius: 2px; }
+.wm-att { margin: 12px 0 0; font-size: 15px; }
+
+/* Galleria, allegati */
+.wm-gal { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 0; padding: 0; list-style: none; }
+.wm-gal img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; border: 1px solid var(--wm-line-2); }
+.wm-gal a:focus-visible { outline: 3px solid #0089C7; outline-offset: 2px; }
+.wm-files { margin: 0; padding-left: 18px; font-size: 15px; }
+.wm-files li + li { margin-top: 6px; }
+
+/* Tabelle dei dati */
+.wm-dt-wrap { display: grid; gap: 16px; }
+/* Gruppi dei dati: il titolo ha l'aspetto della vecchia didascalia della tabella, il pulsante lo mette dettaglio.js */
+.wm-gr__h { margin: 0; padding: 8px 12px; background: var(--wm-bg); border: 1px solid var(--wm-line); color: var(--wm-ink, #1A1A1A); font: 600 12px/1.4 Montserrat, sans-serif; letter-spacing: .06em; text-transform: uppercase; }
+.wm-gr__h:has(.wm-gr__btn) { padding: 0; }
+.wm-gr__btn { display: flex; width: 100%; min-height: 44px; align-items: center; gap: 12px; padding: 8px 12px; border: 0; background: none; font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit; text-align: left; cursor: pointer; }
+.wm-gr__btn::after { content: "▾"; margin-left: auto; font-size: 16px; line-height: 1; transition: transform .2s ease; }
+.wm-gr__btn[aria-expanded="true"]::after { transform: rotate(-180deg); }
+.wm-gr__btn:hover { background: rgba(0, 0, 0, .04); }
+.wm-gr__btn:focus-visible { outline: 2px solid var(--wm-ink, #1A1A1A); outline-offset: -2px; }
+.wm-gr__p > .wm-dt { border-top: 0; }
+.wm-dt { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 15px; background: #fff; border: 1px solid var(--wm-line); }
+.wm-dt caption { text-align: left; background: var(--wm-bg); border: 1px solid var(--wm-line); border-bottom: 0; padding: 8px 12px; color: var(--wm-ink, #1A1A1A); font: 600 12px Montserrat, sans-serif; letter-spacing: .06em; text-transform: uppercase; }
+.wm-dt th { text-align: left; font-weight: 500; color: #4D4D4D; width: 46%; padding: 9px 12px; vertical-align: top; }
+.wm-dt td { font-weight: 600; color: var(--wm-ink, #1A1A1A); padding: 9px 12px; vertical-align: top; overflow-wrap: anywhere; }
+/* «Maggiori info» nelle righe (wireframe, .dt .mi): #B83F14 sottolineato, 5,59:1 sul bianco e 5,12:1 sulle righe grigie */
+.l-main .wm-dt__mi { margin-left: .4em; font-weight: 400; color: #B83F14; text-decoration: underline; text-underline-offset: 2px; }
+.l-main .wm-dt__mi:hover { color: var(--wm-ink, #1A1A1A); }
+.wm-dt td.wm-segnaposto { font-weight: 400; color: var(--wm-ink-3); }
+.wm-dt tr:nth-child(even) { background: #F5F5F5; }
+
+/* Card dei correlati, tre colonne */
+/* Griglia delle card (forestas-griglia di style.css, card forestas-card come i post e la ricerca) */
+.wm-ucg { margin: 0; padding: 0; list-style: none; }
+.wm-ucg > .forestas-card { margin: 0; }
+
+.wm-sec--last { margin-bottom: 24px; }
+
+@media (max-width: 1024px) {
+	.wm-cols { grid-template-columns: 1fr; }
+	/* Sotto 1024px la mappa non si aggancia: viene dopo il testo */
+	.wm-aside { position: static; }
+}
+@media (max-width: 860px) {
+	.wm-ind { grid-template-columns: 1fr; }
+	.wm-facts { grid-template-columns: 1fr 1fr; }
+	.wm-stick__st { display: none; }
+}
+@media (max-width: 767px) {
+	/* Mappa spostata subito dopo i pulsanti da dettaglio.js: fuori da .wm-cols prende il rientro della pagina */
+	.wm-aside--su { margin: 18px var(--wm-rientro) 0; }
+	/* Come le pagine statiche: alta quanto il contenuto, con il minimo */
+	.wm-hero { height: auto; display: flex; align-items: flex-end; }
+	.wm-hero__scrim { position: relative; }
+}
+@media (prefers-reduced-motion: reduce) {
+	.wm-stick, .wm-stick.is-on, .wm-rb__btn::after, .wm-gr__btn::after { transition: none; }
+}
+
+
+/* Didascalia, autore e credits per la lightbox (markup di Blazy): nascosti alla vista, letti dallo script */
+.wm-gal .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.wm-gal li { position: relative; }
+
+/* Punto di interesse: tipologia su etichetta bianca (Tavola 7) */
+.wm-tipo--poi { color: #B7127F; background: #fff; }
+
+/* Sotto 768px i pulsanti delle pagine vanno a tutta larghezza: anche «Condividi», che sta dentro un contenitore in linea */
+@media (max-width: 767px) {
+	.wm-actions .forestas-condividi { display: flex; width: 100%; }
+}
+
+/* «Credits foto» della testata (.forestas-credits delle pagine statiche): in basso sulla foto, sopra la fascia;
+   la fascia lascia il posto al pulsante */
+.wm-hero .forestas-credits { z-index: 2; padding-left: var(--wm-rientro); padding-right: var(--wm-rientro); }
+.wm-hero__scrim--credits { padding-bottom: calc(17px + 2.8em); }
+@media (max-width: 1024px) { .wm-hero__scrim--credits { padding-bottom: calc(17px + 3.4em); } }
+
+/* «Mostra tutti» dei correlati, centrato sotto la griglia come «Mostra tutto» della descrizione */
+.wm-ucg__more { display: flex; justify-content: center; padding-top: 16px; }
+
+/* In stampa i gruppi dei dati escono tutti aperti */
+@media print {
+	.wm-gr__p[hidden] { display: block !important; content-visibility: visible !important; }
+	.wm-gr__btn::after { content: none; }
+}
