@@ -25,7 +25,8 @@ arriva su nessun server.
       la chiave degli elementi importati, gli altri sono riconosciuti dall'id, il suffisso non lo usa più. Il codice
       del filtro non cambia (restituisce il nid o la chiave del plugin; l'id lo aggiunge il plugin), quindi nemmeno i
       suoi test (`themes/forestas-child/tests/dettaglio.php:92-98`).
-- [ ] `WP_PACKAGE_REF` in `docker/scripts/init-wordpress.sh` al commit di `main` di `wp-package` con la 0.3.0.
+- [x] `WP_PACKAGE_REF` in `docker/scripts/init-wordpress.sh` al commit di `main` di `wp-package` con la 0.3.0
+      (`d820602`).
 - [x] Pagina di conoscenza 8969: la chiave degli elementi è il nid finché c'è, l'id per quelli creati in Nova, anche
       dopo lo spegnimento di Drupal (il nid resta salvato nello shard, `properties->sardegnasentieri_id`); la
       precondizione della 0.3.0 su ogni ambiente (`sardegnasentieri_id` nell'Elasticsearch delle tracce).

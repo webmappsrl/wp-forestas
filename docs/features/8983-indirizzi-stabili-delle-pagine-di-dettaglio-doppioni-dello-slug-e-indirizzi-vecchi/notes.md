@@ -17,8 +17,16 @@ Le note complete (divergenze, bug trovati in review, decisioni, verifica in loca
 - Il codice di `forestas_dettaglio_nid()` non cambia: restituisce il nid o la chiave del plugin, e il passaggio
   all'id per gli elementi creati in Nova lo fa il plugin. Cambia solo il docblock; i test del child restano uguali.
 
+## Rilascio (16/11)
+
+- Sul dev le tracce nell'Elasticsearch hanno `sardegnasentieri_id` (769 su 769): la precondizione della 0.3.0 c'è.
+- `wp-package`: PR #5 chiusa con squash and merge in `develop` (`fe8569f`), poi `develop` → `main` con merge commit
+  (`d820602`). Il piano e le note del plugin restano com'erano al merge: l'avanzamento del rilascio sta qui.
+- `wp-forestas`: `WP_PACKAGE_REF` a `d820602`, in un commit a sé.
+
 ## Follow-up
 
-- `WP_PACKAGE_REF` (`docker/scripts/init-wordpress.sh:16`) all'hash di `main` di `wp-package` con la 0.3.0, poi
-  `scripts/wordpress-up.sh` di `forestas` sul dev e la verifica (Task 9 del piano del plugin). Prima, su ogni
-  ambiente, il controllo di `sardegnasentieri_id` nell'Elasticsearch delle tracce (pagina di conoscenza 8969).
+- Dopo il merge di `wp-forestas`: puntatore di `wp-forestas` in `forestas` (il merge in `develop` fa partire il deploy
+  sul dev), `scripts/wordpress-up.sh` di `forestas` sul dev e la verifica, anche il giorno dopo il reset notturno
+  (Task 9 del piano del plugin). Su UAT e in produzione, prima, il controllo di `sardegnasentieri_id`
+  nell'Elasticsearch delle tracce (pagina di conoscenza 8969).
