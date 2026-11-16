@@ -10,6 +10,11 @@ configurazione, pagine statiche, news, eventi, «da sapere», media e menu colle
 i due sono indicate passo per passo. **In produzione il reset non si usa**: lì i dati di WordPress
 sono permanenti.
 
+Il reset cancella anche lo storico degli indirizzi delle pagine di dettaglio del plugin `wp-package` (oc:8983): sul
+sito ricreato i doppioni dello slug si ricalcolano in ordine di nid, quindi un sentiero che teneva il suo indirizzo
+grazie allo storico può scambiarlo con un omonimo, e i 301 dagli indirizzi di prima di una rinomina non ci sono più. Su
+UAT va bene; è un motivo in più per non usarlo in produzione.
+
 Ultima verifica dell'intero ciclo: 10/11/2026, in locale (oc:8952), con la ricerca unica e il plugin
 `wp-package` collegato al clone (`WP_PACKAGE_DIR`), passi 1-5: 46 pagine (23 IT, 23 EN, comprese le due
 `/cerca-nel-sito`), 99 news, 14 eventi e 121 «da sapere», come prima del reset anche nei 774 allegati; mancanti
@@ -49,6 +54,7 @@ secondo giro senza nulla da fare. I passi qui sotto restano per guardare un pass
 | Orario | qualsiasi, ma non durante il reload della copia di UAT (dalle 10:00 per circa 15 minuti) | lo stesso |
 | Plugin della ricerca `wp-package` (oc:8952) | `WP_PACKAGE_SHARD=forestasdev`, `WP_PACKAGE_APP_ID=1`; per sviluppare il plugin anche `WP_PACKAGE_DIR` con il percorso del clone | `WP_PACKAGE_SHARD` e `WP_PACKAGE_APP_ID` dello shard di UAT; `WP_PACKAGE_DIR` vuoto |
 | Pagine di dettaglio di percorsi e POI (oc:8969) | `wp-package` con il lavoro di oc:8969 (`WP_PACKAGE_REF` di `init-wordpress.sh`, o il clone con `WP_PACKAGE_DIR`); sullo shard il set di icone con le `txn-disability-*` caricato da `/icons-upload` e il nome inglese dei tre `route-type` inserito in Nova | lo stesso: il set di icone si carica prima del rilascio aggiungendo le icone a quelle che ci sono (script in `docs/features/8969-…/icone/`), il nome inglese dei `route-type` a mano in Nova |
+| Indirizzi stabili dei dettagli (`wp-package` 0.3.0, oc:8983) | le tracce nell'Elasticsearch dello shard locale hanno `sardegnasentieri_id` (una richiesta all'API Elasticsearch dello shard); se manca, `docker exec php-forestas php artisan scout:import "App\Models\EcTrack"` | lo stesso sullo shard di UAT, prima del primo giro della 0.3.0 |
 | File dei media (`DRUPAL_FILES_URL` nel `.env`) | vuoto: si scaricano dal sito pubblico di Drupal | lo stesso finché Drupal è acceso; dopo lo spegnimento va puntato alla copia della cartella `sites/default/files`, da chiedere prima |
 
 Il tunnel, in locale (`forestas/docs/howto/copia-database-drupal.md`, «Lavorare dal locale sulla copia
