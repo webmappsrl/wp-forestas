@@ -17,6 +17,10 @@ e 7 del wireframe di oc:8783.
   gruppi dei dati, enti, correlati, mappa, allegati) e passa al plugin la chiave stabile (`forestas_dettaglio_nid()`
   sul filtro `wmwp_detail_source`: il nid di Drupal, `sardegnasentieri_id`). CSS e JS in `assets/css/dettaglio.css` e
   `assets/js/dettaglio.js`, caricati solo sui dettagli; `wp-package/card.php` dà alla ricerca la stessa card dei post.
+- **Indirizzi stabili** (oc:8983, plugin 0.3.0): per Forestas la chiave con cui il plugin riconosce gli elementi, e
+  con cui decide fra gli omonimi chi tiene l'indirizzo senza suffisso, è il nid di Drupal; i contenuti creati in Nova,
+  senza nid, li riconosce dall'id dello shard. Come funzionano doppioni, storico dei percorsi e 301: README e pagina di
+  conoscenza 8969 del plugin. Le correzioni a mano si fanno con `wp wmwp detail-paths`.
 - **Pagina «Mappa interattiva»** (`inc/pagine-statiche.php`, `forestas_mappa_url()`): iframe della webapp dello shard
   dell'ambiente (`wmwp_webapp_url()` del plugin), con il focus sull'elemento da «Vedi sulla mappa interattiva».
 - **Icone delle tipologie di disabilità** dal set IcoMoon dello shard (`wmwp_icon_svg()`), che le prende dai termini
@@ -44,18 +48,26 @@ e 7 del wireframe di oc:8783.
   barra di 88px; differenza voluta (Rubens).
 - **Icone dal set dello shard, non dal package**: il set si carica da `/icons-upload` dello shard e i termini lo usano
   per nome; il package non si tocca per i dati di uno shard.
+- **Il nid resta la chiave anche dopo lo spegnimento di Drupal** (oc:8983): l'import lo salva nello shard (per le
+  tracce in `properties->sardegnasentieri_id`, per i POI in `properties->forestas->sardegnasentieri_id`), quindi gli
+  elementi importati lo tengono per sempre. L'id dei contenuti creati dopo non si rinumera, perché il reset notturno
+  con `RESTART IDENTITY` gira solo dove `SARDEGNASENTIERI_DAILY_RESET` è acceso, e nell'ordine degli omonimi i nuovi
+  vengono dopo i nid, quindi non tolgono l'indirizzo a chi c'era.
 
 ## Messa in opera
 
 L'elenco dei passi è nella howto `docs/howto/ricreare-wordpress-da-zero.md` («Prima di cominciare» e «Verifiche») e
-nel Passo 5 del Task 6 del piano. Due cose da sapere:
+nel Passo 5 del Task 6 del piano. Tre cose da sapere:
 
 - con `WP_PACKAGE_REF` a un commit del plugin senza oc:8969 i dettagli si spengono in silenzio (i template controllano
   che le funzioni del plugin esistano), mentre «Punti di interesse» è già rinominata;
 - le icone `txn-disability-*` si **aggiungono** al set che lo shard dell'ambiente ha già, mai al posto suo: il set è lo
   stesso che usano Nova e l'app (script in
   `docs/features/8969-pagine-di-dettaglio-di-percorsi-e-punti-di-interesse-sul-sito-wordpress/icone/`, con il
-  controllo che non se ne perda nessuna).
+  controllo che non se ne perda nessuna);
+- prima che un ambiente passi a `wp-package` 0.3.0, le tracce nell'Elasticsearch dello shard devono avere
+  `sardegnasentieri_id`: altrimenti al primo giro il plugin le registra con l'id e, quando il nid arriva, gli omonimi
+  possono scambiarsi l'indirizzo (oc:8983). Controllo e comando nella howto, «Prima di cominciare».
 
 ## Come ci siamo arrivati
 

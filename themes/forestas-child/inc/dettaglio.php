@@ -232,9 +232,10 @@ function forestas_dettaglio_nome_cammino( array $properties, string $tipo, ?stri
 /**
  * Chiave stabile di tracce e POI per il plugin (filtro `wmwp_detail_source`): il nid di Drupal, che a differenza dell'id
  * dello shard non cambia con il reset notturno di dev e UAT. Il plugin lo usa per riconoscere l'elemento dopo un
- * reimport e per il suffisso degli slug doppi, che così non cambiano. Arriva in `forestas.sardegnasentieri_id` (dettaglio
- * di tracce e POI, `pois.geojson` dopo il reimport) o piatto, `sardegnasentieri_id` (indice Elasticsearch delle tracce)
- * (oc:8959). Senza, resta quello del plugin: `out_source_feature_id`, che in `pois.geojson` è lo stesso nid.
+ * reimport, per l'ordine fra gli omonimi e per lo storico dei percorsi (oc:8983); gli elementi senza nid, creati in
+ * Nova, il plugin li riconosce dall'id dello shard. Arriva in `forestas.sardegnasentieri_id` (dettaglio di tracce e POI,
+ * `pois.geojson` dopo il reimport) o piatto, `sardegnasentieri_id` (indice Elasticsearch delle tracce) (oc:8959).
+ * Senza, resta quello del plugin: `out_source_feature_id`, che in `pois.geojson` è lo stesso nid.
  *
  * @param string               $fonte      Chiave trovata dal plugin.
  * @param string               $tipo       `track` o `poi`.

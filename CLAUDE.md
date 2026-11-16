@@ -171,6 +171,11 @@ subagent.
   `docs/knowledge/8759-import-delle-news-da-drupal.md` (oc:8759, oc:8760)
 - Il redirect dei vecchi indirizzi Drupal (`inc/pagine-statiche.php`) resta a priorità 9: a 10 lo
   precede `redirect_canonical` e un alias con la punteggiatura finale finisce in 404 (knowledge 8760) (oc:8760)
+- Il valore che `forestas_dettaglio_nid()` (`themes/forestas-child/inc/dettaglio.php`) restituisce al filtro
+  `wmwp_detail_source` è l'identità con cui `wp-package` ricorda a chi appartiene ogni indirizzo dei dettagli (storico
+  dei percorsi): cambiarne valore o forma (per esempio `4076` → `nid-4076`, o un altro campo) rende orfane le righe
+  dello storico, i 301 delle rinomine diventano 404 e gli omonimi possono scambiarsi l'indirizzo. Si cambia solo con
+  un passaggio che converta lo storico (oc:8983)
 
 ## Conoscenza
 
@@ -181,4 +186,4 @@ subagent.
 | Pagine editoriali da Drupal | perimetro, sincronizzazione dalla copia Drupal, media, link, traduzioni nostre, template e shortcode del child; il cron in [docs/howto/cron-sincronizzazione-pagine.md](docs/howto/cron-sincronizzazione-pagine.md) | [docs/knowledge/8758-import-delle-pagine-editoriali-da-drupal-e-ricostruzione-con-impreza-di-quelle-fatte-con-il-layout-builder.md](docs/knowledge/8758-import-delle-pagine-editoriali-da-drupal-e-ricostruzione-con-impreza-di-quelle-fatte-con-il-layout-builder.md) |
 | News da Drupal | news come post della categoria News, termini con `_drupal_chiave`, pagina News a schede, editor e protezioni sulla copia | [docs/knowledge/8759-import-delle-news-da-drupal.md](docs/knowledge/8759-import-delle-news-da-drupal.md) |
 | Eventi e «da sapere» da Drupal | ciclo di import comune ai tipi con un nodo, eventi e «da sapere» come tipi propri, tipologie e loro pagine, filtri delle liste, vecchi indirizzi, template e editor | [docs/knowledge/8760-import-degli-eventi-e-dei-da-sapere-da-drupal.md](docs/knowledge/8760-import-degli-eventi-e-dei-da-sapere-da-drupal.md) |
-| Pagine di dettaglio di percorsi e POI | template del child sopra il plugin, tavole e Drupal come riferimento, chiave stabile (nid di Drupal), mappa interattiva per ambiente, icone dal set dello shard, messa in opera | [docs/knowledge/8969-pagine-di-dettaglio-di-percorsi-e-punti-di-interesse-sul-sito-wordpress.md](docs/knowledge/8969-pagine-di-dettaglio-di-percorsi-e-punti-di-interesse-sul-sito-wordpress.md) |
+| Pagine di dettaglio di percorsi e POI | template del child sopra il plugin, tavole e Drupal come riferimento, chiave stabile (nid di Drupal, anche a Drupal spento), indirizzi stabili e storico dei percorsi del plugin, mappa interattiva per ambiente, icone dal set dello shard, messa in opera | [docs/knowledge/8969-pagine-di-dettaglio-di-percorsi-e-punti-di-interesse-sul-sito-wordpress.md](docs/knowledge/8969-pagine-di-dettaglio-di-percorsi-e-punti-di-interesse-sul-sito-wordpress.md) |
