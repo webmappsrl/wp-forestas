@@ -1,7 +1,8 @@
 <?php
 /**
  * Ricerca unica del sito (oc:8952), parte del child. La pagina e i percorsi li fa il plugin wp-package;
- * qui la source «Contenuti del sito» (news, eventi, «da sapere», pagine) con la sua rotta REST.
+ * qui le source «Contenuti del sito» (news, eventi, «da sapere», pagine) ed «Enti» (oc:8990), ognuna con la sua
+ * rotta REST.
  *
  * Il child parla al plugin solo con i filter hook, con shortcode_exists() e, in JS, controllando
  * window.wmWpSearch: senza plugin il sito non va in errore.
@@ -35,6 +36,33 @@ function forestas_search_type_labels(): array {
 	];
 }
 
+/** Argomenti comuni delle rotte REST della ricerca: testo, pagina, risultati per pagina, lingua della pagina. */
+function forestas_search_rest_args(): array {
+	return [
+		'q'        => [
+			'type'              => 'string',
+			'default'           => '',
+			'sanitize_callback' => 'sanitize_text_field',
+		],
+		'page'     => [
+			'type'    => 'integer',
+			'default' => 1,
+			'minimum' => 1,
+		],
+		'per_page' => [
+			'type'    => 'integer',
+			'default' => FORESTAS_SEARCH_PER_PAGE,
+			'minimum' => 1,
+			'maximum' => 50,
+		],
+		'lang'     => [
+			'type'    => 'string',
+			'default' => '',
+			'enum'    => [ '', 'it', 'en' ],
+		],
+	];
+}
+
 add_action(
 	'rest_api_init',
 	function () {
@@ -45,34 +73,23 @@ add_action(
 				'methods'             => 'GET',
 				'callback'            => 'forestas_search_rest',
 				'permission_callback' => '__return_true',
-				'args'                => [
-					'q'        => [
+				'args'                => forestas_search_rest_args() + [
+					'type' => [
 						'type'              => 'string',
 						'default'           => '',
 						'sanitize_callback' => 'sanitize_text_field',
-					],
-					'type'     => [
-						'type'              => 'string',
-						'default'           => '',
-						'sanitize_callback' => 'sanitize_text_field',
-					],
-					'page'     => [
-						'type'    => 'integer',
-						'default' => 1,
-						'minimum' => 1,
-					],
-					'per_page' => [
-						'type'    => 'integer',
-						'default' => FORESTAS_SEARCH_PER_PAGE,
-						'minimum' => 1,
-						'maximum' => 50,
-					],
-					'lang'     => [
-						'type'    => 'string',
-						'default' => '',
-						'enum'    => [ '', 'it', 'en' ],
 					],
 				],
+			]
+		);
+		register_rest_route(
+			'forestas/v1',
+			'/entes-search',
+			[
+				'methods'             => 'GET',
+				'callback'            => 'forestas_entes_search_rest',
+				'permission_callback' => '__return_true',
+				'args'                => forestas_search_rest_args(),
 			]
 		);
 	}
@@ -85,7 +102,8 @@ add_action(
 function forestas_search_rest( WP_REST_Request $request ): WP_REST_Response {
 	$lang = (string) $request['lang'];
 	if ( '' !== $lang ) {
-		do_action( 'wpml_switch_language', $lang );
+		// Con il codice di WPML (`en` → `en-us`): con `en` WPML cambia i testi di forestas_testo() ma non gli indirizzi
+		do_action( 'wpml_switch_language', function_exists( 'forestas_entes_wpml_code' ) ? forestas_entes_wpml_code( $lang ) : $lang );
 	}
 	$text   = trim( (string) $request['q'] );
 	$chosen = array_values( array_intersect( array_map( 'trim', explode( ',', (string) $request['type'] ) ), array_keys( FORESTAS_SEARCH_TYPES ) ) );
@@ -176,6 +194,270 @@ function forestas_search_card( int $id, string $key, string $label ): array {
 		'meta'      => [],
 		'badge'     => null,
 		'excerpt'   => html_entity_decode( wp_trim_words( wp_strip_all_tags( strip_shortcodes( get_the_excerpt( $id ) ) ), 30 ), ENT_QUOTES, 'UTF-8' ),
+	];
+}
+
+/*
+ * Tab «Enti» (oc:8990): gli enti dello shard, letti con le funzioni di inc/entes.php. A testo vuoto (apertura della
+ * pagina) l'elenco della copia, come gli altri tab elencano i loro contenuti; con un testo la ricerca dello shard
+ * (api/v1/entes/search), che chiama solo il server, con il token del sito.
+ *
+ * Nessuna cache per testo: con la ricerca mentre si scrive quasi ogni testo è nuovo, e la cache lascerebbe solo righe in
+ * wp_options. Lo shard si protegge invece con due freni, perché il suo limite al minuto (throttle di Laravel) conta per
+ * IP, e il sito è un IP solo: la stessa chiave per la ricerca (600 al minuto) e per il JSON della copia (60 al minuto),
+ * così le ricerche consumano anche il margine del rinnovo. Il limite per visitatore spetta al sito (pagina 8965 di
+ * forestas):
+ * - un limite per visitatore: FORESTAS_ENTES_SEARCH_LIMIT ricerche con un testo in una finestra fissa di
+ *   FORESTAS_ENTES_SEARCH_WINDOW secondi, contate per impronta dell'IP in un'opzione sola, che tiene solo le finestre
+ *   aperte e al massimo FORESTAS_ENTES_SEARCH_VISITORS visitatori; oltre, 429 con `Retry-After`;
+ * - una pausa per tutto il sito quando la ricerca dello shard non è disponibile (rete, 5xx, 429, token mancante o
+ *   rifiutato, risposta 200 non valida): per FORESTAS_ENTES_SEARCH_PAUSE secondi la rotta risponde 503 senza chiamare
+ *   lo shard, e nel log va una riga per pausa, non una per tasto. Un 4xx che dipende dal testo (400, 422…) non è un
+ *   guasto dello shard e non la fa partire (forestas_entes_search_refused()): altrimenti un testo fatto apposta
+ *   fermerebbe la ricerca per tutti.
+ */
+const FORESTAS_ENTES_SEARCH_MAX = 200; // caratteri del testo accettati da api/v1/entes/search: oltre risponde 422
+// Secondi di attesa della ricerca dello shard: meno dei 15 del plugin (timeout_ms di assets/js/search.js), così la
+// risposta 503 arriva prima che la pagina rinunci alla source
+const FORESTAS_ENTES_SEARCH_TIMEOUT = 8;
+// Ricerche con un testo per visitatore in una finestra: con la ricerca mentre si scrive (una richiesta ogni 400 ms al
+// massimo, DEBOUNCE_MS del plugin) una persona ne fa poche per parola
+const FORESTAS_ENTES_SEARCH_LIMIT     = 30;
+const FORESTAS_ENTES_SEARCH_WINDOW    = 60;                            // secondi della finestra fissa del limite
+const FORESTAS_ENTES_SEARCH_PAUSE     = 30;                            // secondi senza chiamare lo shard dopo un errore
+const FORESTAS_ENTES_SEARCH_PAUSE_KEY = 'forestas_entes_search_pause'; // transient della pausa: l'istante in cui finisce
+// Contatori del limite per visitatore: impronta dell'IP → [ ricerche, inizio della finestra ], non autoload
+const FORESTAS_ENTES_SEARCH_COUNTERS = 'forestas_entes_search_counters';
+// Visitatori al massimo nei contatori: oltre restano quelli con la finestra più recente (144 KB serializzati)
+const FORESTAS_ENTES_SEARCH_VISITORS = 2000;
+
+/** L'indirizzo è un IP pubblico (né privato, né di loopback o riservato)? */
+function forestas_entes_public_ip( string $ip ): bool {
+	return false !== filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE );
+}
+
+/**
+ * IP del visitatore, per il limite della ricerca degli enti. Su dev e UAT il container WordPress sta dietro l'Apache
+ * dell'host (docker/dev/, docker/uat/: `ProxyPass` verso 127.0.0.1:8090), quindi REMOTE_ADDR è il gateway della rete
+ * di Docker (privato, es. 172.27.0.1) e l'IP vero arriva in X-Forwarded-For, che mod_proxy aggiunge in coda. Per questo
+ * X-Forwarded-For vale solo quando REMOTE_ADDR è privato o di loopback (un proxy di fiducia), e se ne prende l'ultimo
+ * indirizzo pubblico da destra: quelli più a sinistra li può scrivere il visitatore. Con un REMOTE_ADDR pubblico (sito
+ * senza proxy) vale quello. '' se REMOTE_ADDR non è un IP (WP-CLI).
+ */
+function forestas_entes_visitor_ip(): string {
+	$remote = isset( $_SERVER['REMOTE_ADDR'] ) ? trim( (string) $_SERVER['REMOTE_ADDR'] ) : '';
+	if ( false === filter_var( $remote, FILTER_VALIDATE_IP ) ) {
+		return '';
+	}
+	if ( forestas_entes_public_ip( $remote ) ) {
+		return $remote;
+	}
+	$forwarded = isset( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ? (string) $_SERVER['HTTP_X_FORWARDED_FOR'] : '';
+	foreach ( array_reverse( explode( ',', $forwarded ) ) as $candidate ) {
+		$candidate = trim( $candidate );
+		if ( forestas_entes_public_ip( $candidate ) ) {
+			return $candidate;
+		}
+	}
+	return $remote;
+}
+
+/** Chiave di un IP nei contatori del limite: l'impronta (HMAC con il salt del sito), così l'IP non va nel database. */
+function forestas_entes_search_visitor_key( string $ip ): string {
+	return substr( hash_hmac( 'sha256', $ip, wp_salt( 'nonce' ) ), 0, 32 );
+}
+
+/**
+ * Conta una ricerca con un testo dell'IP nella sua finestra fissa (FORESTAS_ENTES_SEARCH_WINDOW secondi dalla prima).
+ * 0 se la ricerca può partire; oltre il limite i secondi che mancano alla fine della finestra (per `Retry-After`), senza
+ * scrivere nel database.
+ *
+ * I contatori stanno in un'opzione sola (FORESTAS_ENTES_SEARCH_COUNTERS), non in un transient per visitatore: senza una
+ * object cache persistente un transient scaduto resta in wp_options finché lo stesso IP non lo rilegge o non passa
+ * `delete_expired_transients` (una volta al giorno, con WP-Cron), e una raffica da molti IP lascerebbe migliaia di
+ * righe. A ogni scrittura escono le finestre chiuse, e oltre FORESTAS_ENTES_SEARCH_VISITORS visitatori quelle più
+ * vecchie: l'opzione ha al massimo quella misura. Due ricerche nello stesso istante possono contare una volta sola (la
+ * seconda scrittura copre la prima): il limite può sforare di poco, e va bene per un freno.
+ */
+function forestas_entes_search_throttle( string $ip ): int {
+	$key      = forestas_entes_search_visitor_key( $ip );
+	$now      = time();
+	$counters = get_option( FORESTAS_ENTES_SEARCH_COUNTERS, [] );
+	$counters = array_filter(
+		is_array( $counters ) ? $counters : [],
+		fn( $entry ) => is_array( $entry ) && $now - (int) ( $entry[1] ?? 0 ) < FORESTAS_ENTES_SEARCH_WINDOW
+	);
+	$count = (int) ( $counters[ $key ][0] ?? 0 );
+	$start = (int) ( $counters[ $key ][1] ?? $now );
+	if ( $count >= FORESTAS_ENTES_SEARCH_LIMIT ) {
+		return FORESTAS_ENTES_SEARCH_WINDOW - ( $now - $start );
+	}
+	unset( $counters[ $key ] );
+	if ( count( $counters ) >= FORESTAS_ENTES_SEARCH_VISITORS ) {
+		uasort( $counters, fn( array $a, array $b ) => (int) ( $b[1] ?? 0 ) <=> (int) ( $a[1] ?? 0 ) );
+		$counters = array_slice( $counters, 0, FORESTAS_ENTES_SEARCH_VISITORS - 1, true );
+	}
+	$counters[ $key ] = [ $count + 1, $start ];
+	update_option( FORESTAS_ENTES_SEARCH_COUNTERS, $counters, false );
+	return 0;
+}
+
+/**
+ * Testo della ricerca senza i caratteri invisibili o di spaziatura in testa e in coda: spazi Unicode (\p{Z}, compreso
+ * U+00A0), caratteri di controllo (\p{Cc}) e di formato (\p{Cf}: U+200B-U+200F, U+2060, U+FEFF…), e gli altri di
+ * `Str::INVISIBLE_CHARACTERS` di Laravel. È il taglio di `Str::trim()`, che lo shard fa con il middleware TrimStrings,
+ * con qualche carattere in più: sanitize_text_field() e trim() di PHP quei caratteri li lasciano, e un testo fatto solo
+ * di quelli arriverebbe allo shard, che lo renderebbe null e risponderebbe 422. Così è vuoto anche qui.
+ */
+function forestas_entes_search_text( string $text ): string {
+	$invisible = '[\s\p{Z}\p{Cc}\p{Cf}\x{034F}\x{115F}\x{1160}\x{17B4}\x{17B5}\x{2065}\x{2800}\x{3164}\x{FFA0}\x{1D159}\x{1D173}-\x{1D17A}]';
+	return preg_replace( '/^' . $invisible . '+|' . $invisible . '+$/u', '', $text ) ?? trim( $text );
+}
+
+/**
+ * Lo shard ha rifiutato la ricerca per il testo? Sì solo per i 4xx della validazione (400, 422), e allora la risposta è
+ * «nessun risultato», senza pausa e senza log: il testo lo sceglie il visitatore. Ogni altro codice è un guasto, con la
+ * pausa e il messaggio nel tab: la rete (0), 401 e 403 (token), 404 (rotta mancante, come su uno shard senza oc:8965),
+ * 429 (limite al minuto dello shard), gli altri 4xx e i 5xx.
+ */
+function forestas_entes_search_refused( int $code ): bool {
+	return in_array( $code, [ 400, 422 ], true );
+}
+
+/** Secondi che restano alla pausa della ricerca dopo un errore dello shard, 0 se non c'è. */
+function forestas_entes_search_paused(): int {
+	return max( 0, (int) get_transient( FORESTAS_ENTES_SEARCH_PAUSE_KEY ) - time() );
+}
+
+/**
+ * Risultati del tab «Enti»: `{ total, items }`, con una pagina di card nella forma di quelle dei contenuti.
+ * - Testo vuoto: gli enti della copia nell'ordine dell'elenco /enti, senza chiamare lo shard (l'API risponde 422 a un
+ *   testo vuoto) e senza contare per il limite. Se una copia non c'è mai stata (sito appena installato) 503: la prima
+ *   richiesta allo shard è delle pagine degli enti (forestas_entes_all()), non di una chiamata REST fatta mentre si
+ *   scrive.
+ * - Testo: le card della ricerca dello shard (al massimo 50, in ordine di rilevanza), divise in pagine qui; il testo si
+ *   tronca ai 200 caratteri che l'API accetta. Il link al dettaglio c'è solo per gli enti della copia: un ente appena
+ *   creato nello shard ha la sua pagina al rinnovo successivo, e fino ad allora la card resta senza link. Un testo fatto
+ *   solo di spazi o di caratteri invisibili è vuoto (forestas_entes_search_text()).
+ * - Oltre il limite del visitatore: 429 con `Retry-After`. Durante la pausa dopo un errore: 503 con `Retry-After`, senza
+ *   chiamare lo shard e senza log.
+ * - Testo rifiutato dallo shard (400, 422…, forestas_entes_search_refused()): nessun risultato, senza pausa né log.
+ * - Ricerca dello shard che non risponde (indice degli enti assente, shard spento, troppe richieste, token mancante o
+ *   rifiutato, risposta non valida): 503 con un messaggio, una riga di log e la pausa. Il plugin mostra l'errore nel tab
+ *   «Enti», gli altri tab vanno avanti.
+ * Nomi, tipi e indirizzi sono nella lingua chiesta: WPML passa a `lang` prima di costruire le card.
+ */
+function forestas_entes_search_rest( WP_REST_Request $request ): WP_REST_Response {
+	$lang = (string) $request['lang'];
+	if ( '' !== $lang ) {
+		// Con il codice di WPML (`en` → `en-us`): con `en` WPML cambia i testi di forestas_testo() ma non gli indirizzi
+		do_action( 'wpml_switch_language', forestas_entes_wpml_code( $lang ) );
+	}
+	$lang = forestas_entes_lang( '' !== $lang ? $lang : (string) apply_filters( 'wpml_current_language', 'it' ) );
+	$text = forestas_entes_search_text( mb_substr( forestas_entes_search_text( (string) $request['q'] ), 0, FORESTAS_ENTES_SEARCH_MAX ) );
+
+	// Slug degli enti della copia: hanno una pagina /enti/<slug>/. Una copia vuota non esiste (il rinnovo la scarta)
+	$known = forestas_entes_known_slugs();
+	if ( '' === $text ) {
+		if ( ! $known ) {
+			return forestas_entes_search_unavailable();
+		}
+		$entes = forestas_entes_list( $lang );
+	} else {
+		$wait = forestas_entes_search_throttle( forestas_entes_visitor_ip() );
+		if ( $wait > 0 ) {
+			return forestas_entes_search_rate_limited( $wait );
+		}
+		$paused = forestas_entes_search_paused();
+		if ( $paused > 0 ) {
+			return forestas_entes_search_unavailable( $paused );
+		}
+		$response = forestas_entes_api_get( 'api/v1/entes/search', [ 'query' => $text ], FORESTAS_ENTES_SEARCH_TIMEOUT );
+		$code     = (int) $response['code'];
+		$found    = $response['data']['data'] ?? null;
+		if ( forestas_entes_search_refused( $code ) ) {
+			// Testo rifiutato (400, 422…): nessun risultato, senza pausa né log
+			$found = [];
+		} elseif ( 200 !== $code || ! is_array( $found ) || ! array_is_list( $found ) ) {
+			$reason = 200 === $code ? 'risposta senza la lista `data`' : forestas_entes_http_reason( $code, (string) $response['error'] );
+			set_transient( FORESTAS_ENTES_SEARCH_PAUSE_KEY, time() + FORESTAS_ENTES_SEARCH_PAUSE, FORESTAS_ENTES_SEARCH_PAUSE );
+			error_log( sprintf( 'forestas enti: ricerca degli enti non riuscita, codice %d (%s); per %d secondi la ricerca risponde 503 senza chiamare lo shard', $code, $reason, FORESTAS_ENTES_SEARCH_PAUSE ) );
+			return forestas_entes_search_unavailable( FORESTAS_ENTES_SEARCH_PAUSE );
+		}
+		$entes = [];
+		foreach ( $found as $ente ) {
+			// Senza slug un ente non ha una pagina
+			if ( is_array( $ente ) && '' !== forestas_entes_slug( $ente ) ) {
+				$entes[] = forestas_entes_list_item( $ente, $lang, $known );
+			}
+		}
+	}
+
+	$per_page = (int) $request['per_page'];
+	$pages    = max( 1, (int) ceil( count( $entes ) / $per_page ) );
+	$page     = min( (int) $request['page'], $pages );
+	return new WP_REST_Response(
+		[
+			'total' => count( $entes ),
+			'items' => array_map( 'forestas_entes_search_card', array_slice( $entes, ( $page - 1 ) * $per_page, $per_page ) ),
+		]
+	);
+}
+
+/**
+ * Risposta del tab «Enti» quando gli enti non si possono mostrare: 503 con il messaggio nella lingua corrente e, durante
+ * la pausa dopo un errore, `Retry-After` con i secondi che restano.
+ */
+function forestas_entes_search_unavailable( int $retry_after = 0 ): WP_REST_Response {
+	$response = new WP_REST_Response(
+		[
+			'code'    => 'forestas_entes_unavailable',
+			'message' => forestas_testo( 'Gli enti non sono disponibili in questo momento. Riprova più tardi.', 'Organisations are not available right now. Please try again later.' ),
+			'data'    => [ 'status' => 503 ],
+		],
+		503
+	);
+	if ( $retry_after > 0 ) {
+		$response->header( 'Retry-After', (string) $retry_after );
+	}
+	return $response;
+}
+
+/** Risposta del tab «Enti» oltre il limite del visitatore: 429 con `Retry-After` e il messaggio nella lingua corrente. */
+function forestas_entes_search_rate_limited( int $retry_after ): WP_REST_Response {
+	$response = new WP_REST_Response(
+		[
+			'code'    => 'forestas_entes_rate_limited',
+			'message' => forestas_testo( 'Troppe ricerche in poco tempo. Riprova fra qualche secondo.', 'Too many searches in a short time. Please try again in a few seconds.' ),
+			'data'    => [ 'status' => 429 ],
+		],
+		429
+	);
+	$response->header( 'Retry-After', (string) $retry_after );
+	return $response;
+}
+
+/**
+ * Card di un ente nella ricerca, nella forma di quelle dei contenuti (forestas_search_card()). L'etichetta è il tipo
+ * dell'ente (Comune, Complesso forestale…), come il tipo di percorso nelle card dei percorsi; «Ente» se il tipo manca o
+ * è sconosciuto. L'immagine è decorativa (alt vuoto): il nome dell'ente è il testo del link.
+ *
+ * @param array{id: int, name: string, type: ?string, image: ?string, url: ?string} $ente Una card di forestas_entes_list_item().
+ */
+function forestas_entes_search_card( array $ente ): array {
+	return [
+		'id'        => (int) $ente['id'],
+		'title'     => (string) $ente['name'],
+		'url'       => $ente['url'],
+		'typeKey'   => 'ente',
+		'typeLabel' => $ente['type'] ?? forestas_testo( 'Ente', 'Organisation' ),
+		'image'     => $ente['image'] ? [
+			'src' => $ente['image'],
+			'alt' => '',
+		] : null,
+		'code'      => null,
+		'meta'      => [],
+		'badge'     => null,
 	];
 }
 
@@ -351,7 +633,7 @@ function forestas_search_track_facets(): array {
 	];
 }
 
-/** Source della ricerca: i percorsi del plugin con i nomi e i filtri di Forestas, più i contenuti del sito. */
+/** Source della ricerca: i percorsi del plugin con i nomi e i filtri di Forestas, più i contenuti del sito e gli enti. */
 add_filter(
 	'wp_package_search_sources',
 	function ( array $sources ): array {
@@ -403,6 +685,19 @@ add_filter(
 				],
 			],
 		];
+		// Enti dello shard (oc:8990): card con immagine, nome e tipo, dalla rotta forestas/v1/entes-search; nessun filtro
+		$sources['entes'] = [
+			'slug'         => 'enti',
+			'label'        => forestas_testo( 'Enti', 'Organisations' ),
+			'nouns'        => [
+				'one'   => forestas_testo( '%s ente', '%s organisation' ),
+				'other' => forestas_testo( '%s enti', '%s organisations' ),
+			],
+			'script'       => 'forestas-search',
+			'layout'       => 'cards',
+			'search_label' => forestas_testo( 'Cerca un ente', 'Search for an organisation' ),
+			'facets'       => [],
+		];
 		return $sources;
 	}
 );
@@ -437,8 +732,9 @@ add_shortcode(
 			'forestas-search',
 			'window.forestasSearch = ' . wp_json_encode(
 				[
-					'endpoint' => rest_url( 'forestas/v1/search' ),
-					'types'    => forestas_search_type_labels(),
+					'endpoint'      => rest_url( 'forestas/v1/search' ),
+					'entesEndpoint' => rest_url( 'forestas/v1/entes-search' ),
+					'types'         => forestas_search_type_labels(),
 				]
 			) . ';',
 			'before'

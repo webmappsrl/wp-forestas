@@ -5,7 +5,7 @@ Template: Impreza
 Author: Webmapp
 Author URI: https://webmapp.it/
 Description: Child theme di Impreza per Sardegna Sentieri (Forestas). Versionato nel repo wp-forestas e montato dal compose: si modifica nel repo, non dal pannello.
-Version: 1.16.10
+Version: 1.16.16
 */
 
 
@@ -1334,17 +1334,19 @@ Version: 1.16.10
 }
 
 /* Barretta del tema Drupal (sase-heading-has-decoration): 57×7px sopra il titolo della testata,
-   dell'intestazione e della galleria. Nella testata è un elemento con lo spazio sotto; negli altri due
-   è un ::before che sale di 1,875rem nel padding del titolo */
+   dell'intestazione, della galleria e delle sezioni del dettaglio degli enti. Nella testata è un elemento
+   con lo spazio sotto; negli altri è un ::before che sale di 1,875rem nel padding del titolo */
 .forestas-testata-filo,
 .forestas-intestazione::before,
-.forestas-galleria-titolo::before {
+.forestas-galleria-titolo::before,
+.forestas-ente__titolo::before {
 	display: block;
 	width: var(--sase-filo-larghezza);
 	height: var(--sase-filo-altezza);
 }
 .forestas-intestazione::before,
-.forestas-galleria-titolo::before {
+.forestas-galleria-titolo::before,
+.forestas-ente__titolo::before {
 	content: "";
 	margin-top: calc(-1 * var(--sase-filo-spazio));
 }
@@ -2092,6 +2094,14 @@ Version: 1.16.10
 	display: grid;
 	gap: 20px;
 	grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+/* Messaggio di una griglia senza elementi (news, «da sapere», enti) */
+.forestas-griglia-vuota {
+	margin: 0;
+	color: var(--sase-testo);
+	font-size: var(--sase-testo-pagina);
+	line-height: 1.6;
+	text-align: center;
 }
 /* Disposizione di sase-grid--left-highlight-column di Drupal (blocchi «in evidenza» di News, Attività e Da
    sapere): due colonne uguali a 15px, la prima card su tre righe a sinistra, le altre tre impilate a

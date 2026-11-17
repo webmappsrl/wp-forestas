@@ -402,7 +402,7 @@ wmwp_template_header();
 					foreach ( forestas_dettaglio_tabelle( $p, $tipo ) as $n => $tabella ) {
 						echo forestas_dettaglio_gruppo( 'wm-gr-' . (int) $n, $tabella['titolo'], $tabella['righe'], false ); // phpcs:ignore WordPress.Security.EscapeOutput -- markup già escapato
 					}
-					$righe_enti = array_map( fn( $ente ) => [ $ente['etichetta'], $ente['nome'] ?? $non_disp, null === $ente['nome'] ], $enti );
+					$righe_enti = array_map( fn( $ente ) => [ $ente['etichetta'], $ente['nome'] ?? $non_disp, null === $ente['nome'], null, null, $ente['url'] ], $enti );
 					echo forestas_dettaglio_gruppo( 'wm-gr-enti', forestas_testo( 'Enti', 'Organisations' ), $righe_enti, 1 === count( $enti ) ); // phpcs:ignore WordPress.Security.EscapeOutput -- markup già escapato
 					?>
 				</div>

@@ -153,6 +153,79 @@ $vecchio = forestas_dettaglio_enti( [ 'forestas' => [ 'entities' => [ [ 'id' => 
 $check( 2 === count( $vecchio ) && null === $vecchio[0]['nome'] && 'gestore' === $vecchio[0]['ruolo'], 'formato vecchio: ruoli senza nome' );
 $check( [] === forestas_dettaglio_enti( $vuota['feature']['properties'] ), 'nessun ente' );
 
+// 3b. Link agli enti (oc:8990): url dagli slug della copia degli enti (opzione piccola degli slug), senza chiamare lo
+// shard e senza leggere la copia
+$opt_enti    = 'forestas_entes_copy';
+$opt_slug    = 'forestas_entes_slugs';
+$copia_prima = get_option( $opt_enti, null );
+$slug_prima  = get_option( $opt_slug, null );
+$ripristina  = function () use ( $opt_enti, $opt_slug, $copia_prima, $slug_prima ) {
+	delete_option( $opt_enti );
+	if ( null !== $copia_prima ) {
+		update_option( $opt_enti, $copia_prima, false );
+	}
+	// Dopo la copia, che riscrive l'opzione degli slug
+	delete_option( $opt_slug );
+	if ( null !== $slug_prima ) {
+		update_option( $opt_slug, $slug_prima, false );
+	}
+};
+register_shutdown_function( $ripristina );
+$chiamate_shard = 0;
+$blocca_shard   = function ( $pre ) use ( &$chiamate_shard ) {
+	++$chiamate_shard;
+	return new WP_Error( 'test', 'nessuna richiesta attesa' );
+};
+add_filter( 'pre_http_request', $blocca_shard );
+try {
+	delete_option( $opt_enti );
+	$senza = forestas_dettaglio_enti( $completa['feature']['properties'] );
+	$check( null === $senza[0]['url'] && null === $senza[1]['url'], 'senza copia: url null' );
+	$html_senza = forestas_dettaglio_gruppo( 'x', 'Enti', array_map( fn( $e ) => [ $e['etichetta'], $e['nome'], false, null, null, $e['url'] ], $senza ), true );
+	$check( false === strpos( $html_senza, '<a ' ) && false !== strpos( $html_senza, 'Comune di Talana' ), 'senza copia: nessun link, il nome resta' );
+
+	update_option( $opt_enti, [ 'generated_at' => gmdate( 'c' ), 'fetched_at' => time(), 'data' => [ [ 'id' => 3, 'slug' => 'forestas-lanusei' ] ] ], false );
+	$con = forestas_dettaglio_enti( $completa['feature']['properties'] );
+	$check( null === $con[0]['url'], 'slug non nella copia: url null' );
+	$check( is_string( $con[1]['url'] ) && false !== strpos( $con[1]['url'], '/enti/forestas-lanusei/' ), 'slug nella copia: url dell\'ente' );
+	$html_con = forestas_dettaglio_gruppo( 'x', 'Enti', array_map( fn( $e ) => [ $e['etichetta'], $e['nome'], false, null, null, $e['url'] ], $con ), true );
+	$check( 1 === substr_count( $html_con, '<a ' ) && false !== strpos( $html_con, 'href="' . esc_url( $con[1]['url'] ) . '">Forestas Lanusei</a>' ), 'gruppo Enti: il nome con url è un link, l\'altro no' );
+	$html_lang = forestas_dettaglio_gruppo( 'x', 'T', [ [ 'E', 'A&B', false, null, 'en', 'http://x/?a=1&b=2' ] ], true );
+	$check( false !== strpos( $html_lang, 'lang="en"' ) && false !== strpos( $html_lang, '>A&amp;B</a>' ) && false !== strpos( $html_lang, 'href="http://x/?a=1&#038;b=2"' ), 'link: lang e escape mantenuti' );
+	$html_sp = forestas_dettaglio_gruppo( 'x', 'T', [ [ 'E', '–', true, null, null, 'http://x/' ] ], true );
+	$check( false !== strpos( $html_sp, 'wm-segnaposto' ), 'link: segnaposto mantenuto' );
+	$check( 0 === $chiamate_shard, 'nessuna richiesta allo shard' );
+
+	// Con l'opzione degli slug il dettaglio non legge la copia (circa 1 MB); uno slug con spazi nel JSON della traccia
+	// vale come lo slug pulito, come in forestas_entes_slug()
+	$letture_copia = 0;
+	$conta_copia   = function ( $valore ) use ( &$letture_copia ) {
+		++$letture_copia;
+		return $valore;
+	};
+	forestas_entes_copy( true ); // una richiesta nuova
+	add_filter( 'option_' . $opt_enti, $conta_copia );
+	$con_spazi = $completa['feature']['properties'];
+	foreach ( $con_spazi['forestas']['organizations'] ?? [] as $chiave => $lista ) {
+		foreach ( (array) $lista as $i => $org ) {
+			if ( 'forestas-lanusei' === ( $org['slug'] ?? null ) ) {
+				$con_spazi['forestas']['organizations'][ $chiave ][ $i ]['slug'] = ' forestas-lanusei ';
+			}
+		}
+	}
+	$spazi = forestas_dettaglio_enti( $con_spazi );
+	remove_filter( 'option_' . $opt_enti, $conta_copia );
+	$check( is_string( $spazi[1]['url'] ?? null ) && 'forestas-lanusei' === ( $spazi[1]['slug'] ?? null ), 'slug con spazi: pulito e con il link' );
+	$check( 0 === $letture_copia, 'link agli enti senza leggere la copia (' . $letture_copia . ' letture)' );
+	// Copia cancellata: l'opzione degli slug sparisce con lei, e i link con lei
+	delete_option( $opt_enti );
+	$check( null === forestas_dettaglio_enti( $completa['feature']['properties'] )[1]['url'], 'copia cancellata: nessun link' );
+} finally {
+	remove_filter( 'pre_http_request', $blocca_shard );
+	$ripristina();
+}
+$check( $copia_prima === get_option( $opt_enti, null ) && $slug_prima === get_option( $opt_slug, null ), 'copia e opzione degli slug degli enti rimesse com\'erano' );
+
 // 4. Indicatori
 $ind = forestas_dettaglio_indicatori( $completa['feature']['properties'] );
 $check( 'validation-status-validated' === ( $ind['validazione']['chiave'] ?? '' ), 'validazione dal termine' );

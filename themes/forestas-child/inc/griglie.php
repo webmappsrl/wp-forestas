@@ -206,14 +206,25 @@ function forestas_filtri_conta( array $griglia, array $campi, array $scelti ): a
 function forestas_filtri( array $griglia ): string {
 	$campi  = forestas_filtri_campi( $griglia );
 	$scelti = forestas_filtri_scelti( $griglia );
-	$gruppi = forestas_filtri_conta( $griglia, $campi, $scelti );
-	$html   = '';
+	$attivi = array_map( fn( $s ) => $s instanceof WP_Term ? $s->slug : (string) $s, $scelti );
+	return forestas_filtri_colonna( $campi, forestas_filtri_conta( $griglia, $campi, $scelti ), $attivi );
+}
+
+/*
+ * Markup della colonna dei filtri (forestas_filtri), usato anche dal filtro «Argomento» dell'elenco degli enti
+ * (templates/entes-list.php): $campi sono i gruppi [ campo, titolo { it, en }, numeri ], $gruppi le voci di ogni
+ * gruppo [ campo => [ valore => [ nome, numero ] ] ] già in ordine, $attivi il valore scelto di ogni gruppo
+ * [ campo => valore ]. Gli indirizzi delle voci sono quello della pagina con ?<campo>=<valore> (senza, per la voce
+ * scelta) e senza pagina. '' se nessun gruppo ha voci.
+ */
+function forestas_filtri_colonna( array $campi, array $gruppi, array $attivi ): string {
+	$html = '';
 	foreach ( $campi as $f ) {
 		$campo = $f['campo'];
 		if ( empty( $gruppi[ $campo ] ) ) {
 			continue;
 		}
-		$attivo = isset( $scelti[ $campo ] ) ? ( $scelti[ $campo ] instanceof WP_Term ? $scelti[ $campo ]->slug : (string) $scelti[ $campo ] ) : '';
+		$attivo = (string) ( $attivi[ $campo ] ?? '' );
 		$numeri = $f['numeri'] ?? true;
 		$voci   = '';
 		$i      = 0;
