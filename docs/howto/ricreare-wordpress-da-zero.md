@@ -54,6 +54,7 @@ secondo giro senza nulla da fare. I passi qui sotto restano per guardare un pass
 | Orario | qualsiasi, ma non durante il reload della copia di UAT (dalle 10:00 per circa 15 minuti) | lo stesso |
 | Plugin della ricerca `wp-package` (oc:8952) | `WP_PACKAGE_SHARD=forestasdev`, `WP_PACKAGE_APP_ID=1`; per sviluppare il plugin anche `WP_PACKAGE_DIR` con il percorso del clone | `WP_PACKAGE_SHARD` e `WP_PACKAGE_APP_ID` dello shard di UAT; `WP_PACKAGE_DIR` vuoto |
 | Pagine di dettaglio di percorsi e POI (oc:8969) | `wp-package` con il lavoro di oc:8969 (`WP_PACKAGE_REF` di `init-wordpress.sh`, o il clone con `WP_PACKAGE_DIR`); sullo shard il set di icone con le `txn-disability-*` caricato da `/icons-upload` e il nome inglese dei tre `route-type` inserito in Nova | lo stesso: il set di icone si carica prima del rilascio aggiungendo le icone a quelle che ci sono (script in `docs/features/8969-…/icone/`), il nome inglese dei `route-type` a mano in Nova |
+| Enti (oc:8990) | `WP_API_TOKEN` nel `wp-forestas/.env` con il valore di `WP_API_TOKEN` del `.env` dello shard del dev: con `WP_PACKAGE_SHARD=forestasdev` il sito locale legge il dev, anche dopo il reset. Lo shard locale lo legge solo con il mu-plugin non versionato `wp-content/mu-plugins/wpf-shard-locale.php` (oc:8969), che sta nel volume di WordPress e quindi il reset cancella: rimesso il mu-plugin, il token è quello del `.env` di `forestas` locale, e sullo shard locale serve l'indice degli enti, `docker exec php-forestas php artisan scout:import "App\Models\Ente"` (pagina 8965 di `forestas`) | `WP_API_TOKEN` del `.env` dello shard di UAT, lo stesso valore, nel `wp-forestas/.env`; l'indice degli enti lo crea il primo deploy di oc:8965 (`forestas/docs/howto/deploy-automatico.md`) |
 | Indirizzi stabili dei dettagli (`wp-package` 0.3.0, oc:8983) | le tracce nell'Elasticsearch dello shard locale hanno `sardegnasentieri_id` (una richiesta all'API Elasticsearch dello shard); se manca, `docker exec php-forestas php artisan scout:import "App\Models\EcTrack"` | lo stesso sullo shard di UAT, prima del primo giro della 0.3.0 |
 | File dei media (`DRUPAL_FILES_URL` nel `.env`) | vuoto: si scaricano dal sito pubblico di Drupal | lo stesso finché Drupal è acceso; dopo lo spegnimento va puntato alla copia della cartella `sites/default/files`, da chiedere prima |
 
@@ -67,6 +68,11 @@ nc -z 127.0.0.1 3307 && echo tunnel aperto
 
 Il tunnel cade al riavvio del Mac o al cambio di rete. Se è caduto, la sincronizzazione si ferma con
 `copia Drupal non raggiungibile su host.docker.internal:3307`.
+
+Il container legge il `.env` solo quando viene creato: `WP_API_TOKEN` va scritto prima del reset, che ricrea il
+container. Se lo si aggiunge dopo, serve `scripts/wordpress-up.sh` di `forestas`; fino ad allora le pagine degli enti
+rispondono 503 e il log di PHP dice:
+`forestas enti: rinnovo non riuscito, codice 0 (WP_API_TOKEN mancante nell'ambiente del container)`.
 
 Prima del reset, se il sito ha contenuti da conservare, fai un backup, per esempio con All-in-One WP
 Migration: il reset cancella database e uploads.
@@ -139,6 +145,24 @@ la creazione dei contenuti, non un giro che non scrive nulla. Quando l'apply ric
 menu italiani, WPML stacca dai menu inglesi le traduzioni delle voci vecchie; i menu inglesi vengono
 ricreati subito dopo, e le voci staccate si cancellano (oc:8758).
 
+L'apply ha anche il passo «4. Contenuti di default di WordPress» (oc:8990): sposta nel cestino, con
+`wp_trash_post()`, il post 1 «Ciao mondo!», la pagina 2 «Pagina di esempio» e la bozza 3 «Privacy
+Policy», se hanno ancora lo slug di default e non sono mai stati modificati, e azzera
+`wp_page_for_privacy_policy` se punta a quella bozza. Su un sito appena ricreato lo ha già fatto l'apply
+automatico del passo 2, quindi qui l'anteprima non ha righe `default:` (comportamento del codice, non ancora
+verificato con un reset completo). Le quattro righe compaiono su un sito installato prima di oc:8990 che non ha
+ancora fatto un `applica --conferma` con il passo nuovo, e dopo quel giro non compaiono più:
+
+```
+default: post 1 ciao-mondo: 'presente' → 'nel cestino'
+default: page 2 pagina-di-esempio: 'presente' → 'nel cestino'
+default: page 3 privacy-policy: 'presente' → 'nel cestino'
+default: opzione wp_page_for_privacy_policy: 3 → 0
+```
+
+In tutti e due i casi si verifica con `wp post list --post_status=trash` (id 1, 2, 3) e con `/news/ciao-mondo/`
+che risponde 404.
+
 L'ordine fra i passi 3 e 4 si può invertire: se l'apply viene prima delle pagine, le voci restano link
 per indirizzo e si collegano alle pagine con un secondo `applica --conferma` dopo il passo 3.
 
@@ -155,9 +179,8 @@ bin/wordpress-config.sh ritratto   # stato del sito, da confrontare con un ritra
 Nel browser, in italiano e inglese:
 - header e footer di Sardegna Sentieri, non quelli demo di Impreza;
 - le voci dei menu portano alle pagine, in inglese a quelle inglesi (tutte le 14 pagine hanno la
-  versione inglese, sei con la nostra traduzione in `config/traduzioni/en/`); CONTATTI porta a `/enti`, come su Drupal, e
-  oggi dà 404 finché l'elenco degli enti non esiste in WordPress; AREA RISERVATA porta al login della
-  Regione;
+  versione inglese, sei con la nostra traduzione in `config/traduzioni/en/`); CONTATTI porta all'elenco degli enti
+  `/enti/`, come su Drupal; AREA RISERVATA porta al login della Regione;
 - le pagine hanno testata, percorso «Home › pagina» subito sotto, «Condividi» sulle pagine di testo,
   testo e allegati; la Mappa interattiva mostra la mappa a tutta pagina con «Espandi la mappa»;
 - News: `/news/` è la scheda News (le 4 news in evidenza), `/news/attivita-e-comunicazioni/` la
@@ -193,9 +216,8 @@ Nel browser, in italiano e inglese:
   basso e l'indirizzo con `vista=mappa` (il 10/11 in locale, senza testo, 769 percorsi in circa 7 secondi); `/?s=oliena` porta
   in 302 a `/cerca-nel-sito/?search_api_fulltext=oliena`, `/en/?s=trail` a `/en/cerca-nel-sito/`; un vecchio
   link di Drupal `…?f%5B0%5D=cerca_contenuto_nel_sito%3Asentiero` porta in 302 al tab «Percorsi» con il filtro
-  del tipo (`?tipo=percorsi&percorso=route-type-trail`); fra i «Contenuti del sito» di tipo pagina ci sono 14
-  pagine, le 13 venute da Drupal più la «Pagina di esempio» che WordPress crea all'installazione (da togliere
-  dall'installazione, oc:8952);
+  del tipo (`?tipo=percorsi&percorso=route-type-trail`); fra i «Contenuti del sito» di tipo pagina ci sono le 13
+  pagine venute da Drupal (la «Pagina di esempio» dell'installazione è nel cestino, oc:8990);
 - dettagli (oc:8969, aggiunti al ciclo il 13/11 ma non ancora verificati con un reset completo): `/da-vedere/` porta
   in 301 a `/punti-di-interesse/`; dalla ricerca una card porta al dettaglio (`/?wmwp_detail=track&wmwp_id=<id>` in
   302 a `/sentiero/<slug>/`, `/itinerario/…`, `/cammino/…`, i POI sotto `/punti-di-interesse/<slug>/`), con testata,
@@ -203,6 +225,14 @@ Nel browser, in italiano e inglese:
   disabilità si vedono solo se il set dello shard le ha. Se dopo il reset un dettaglio dà 404 perché le basi sono
   cambiate (pagina «Punti di interesse» ricreata), l'indice si rifà da solo entro 5 minuti, o subito con
   `docker exec wordpress-forestas wp eval 'wmwp_detail_index( true );' --allow-root`;
+- enti (oc:8990, aggiunti al ciclo il 16/11 ma non ancora verificati con un reset completo): la prima visita a
+  `/enti/` scarica la copia del JSON, poi la rinnova WP-Cron ogni 15 minuti; in locale WP-Cron non parte, e il
+  rinnovo si lancia con `docker exec wordpress-forestas wp --allow-root cron event run forestas_entes_refresh`, o lo fa una
+  pagina degli enti dopo un'ora senza rinnovi (la prima lo lascia per 2 minuti a WP-Cron, che parte senza girare).
+  `/enti/` ha 9 card per pagina e a sinistra il filtro «Argomento» con i cinque tipi; `/enti/<slug>/` ha «Informazioni»,
+  «Sentieri gestiti», la galleria e le date; `/enti/page/99/` e `/enti/non-esiste/` danno 404; in
+  `/cerca-nel-sito/` c'è il tab «Enti» con il numero degli enti, e una ricerca con un testo trova gli enti per nome;
+  nel gruppo «Enti» di un dettaglio di sentiero il nome dell'ente porta alla sua pagina;
 - il titolo della scheda è «Pagina | Sardegna Sentieri», come su Drupal: il nome viene da `blogname`
   di `config/sito.json` (l'apply lo scrive), il separatore dal child. Se resta «Forestas» l'apply non è
   andato a buon fine.
@@ -244,4 +274,12 @@ Da qui in poi le pagine si tengono allineate a Drupal con un cron sull'host:
 | `AVVISO: wp-package non ancora pubblicato, nessun download` nei log dell'init; `/cerca-nel-sito` con il solo campo di ricerca | `WP_PACKAGE_REF` vuoto in `init-wordpress.sh`: il repo GitHub del plugin non c'era quando l'immagine è stata costruita | atteso finché il repo non esiste; dopo, l'hash in `WP_PACKAGE_REF` e `scripts/wordpress-up.sh` di forestas (oc:8952) |
 | Tab «Percorsi (—)» e «Questi risultati non sono disponibili» in `/cerca-nel-sito` | il plugin non raggiunge l'API Elasticsearch: shard o app id sbagliati o vuoti (Impostazioni → WP Package), o lo shard non risponde | controllare le opzioni `wmwp_shard`/`wmwp_app_id` e l'URL mostrato nella pagina delle impostazioni (oc:8952) |
 | `AVVISO aggiornamento automatico dei link di WPML non trovato` | WPML aggiornato: gli hook che rendevano assoluti i link non si chiamano più così | controllare che i link dei testi inglesi restino relativi; aggiornare `wpf_wpml_senza_link_automatici()` |
+| `/enti/` risponde 503 «Pagina momentaneamente non disponibile»; nel log di PHP `forestas enti: rinnovo non riuscito, codice 0 (WP_API_TOKEN mancante nell'ambiente del container)` | il token non è nel container: manca nel `wp-forestas/.env`, o il container è stato creato prima. Il 503 c'è solo su un sito che non ha mai avuto una copia degli enti (dopo il reset); con una copia le pagine restano sull'ultima | `.env`, poi `scripts/wordpress-up.sh` di `forestas`; le pagine riprovano dopo 5 minuti, o subito con `wp cron event run forestas_entes_refresh` (oc:8990) |
+| nel log `forestas enti: … codice 401` o `codice 403` | 401: token diverso da quello dello shard a cui punta il sito. In locale succede dopo il reset con il token dello shard locale: il reset ha cancellato il mu-plugin `wpf-shard-locale.php`, e il sito legge il dev. 403: lo shard non ha `WP_API_TOKEN` | nel `wp-forestas/.env` il token dello shard a cui punta il sito (in locale quello del dev, o il mu-plugin rimesso con il token dello shard locale), poi `scripts/wordpress-up.sh` di `forestas`; per lo shard i passi del primo deploy di oc:8965 (`forestas/docs/howto/deploy-automatico.md`) |
+| tab «Enti (—)» in `/cerca-nel-sito` solo con un testo; nel log `ricerca degli enti non riuscita, codice 503` | sullo shard manca l'indice degli enti | `docker exec php-forestas php artisan scout:import "App\Models\Ente"` (oc:8990) |
+| tab «Enti (—)» per mezzo minuto; nel log una riga `ricerca degli enti non riuscita, codice … ; per 30 secondi la ricerca risponde 503 senza chiamare lo shard` | la ricerca dello shard non è disponibile (rete, 5xx, 429 del limite al minuto dello shard, 401/403 del token, risposta senza la lista `data`): per 30 secondi il sito non la richiama, e il log ha una riga per pausa. Un 4xx che dipende dal testo (400, 422…) non fa partire la pausa: il tab dice «nessun risultato», senza riga di log | se torna dopo la pausa, niente; se si ripete, il motivo è nella riga (oc:8990) |
+| nel log `forestas enti: rinnovo saltato, ne gira già un altro` | un rinnovo partito mentre ne girava un altro (WP-Cron e una pagina, o `wp cron event run` lanciato in quel momento): ne gira uno alla volta, con il lucchetto `forestas_entes_refresh_lock` | niente; se il rinnovo è stato interrotto a metà, il lucchetto si riprende dopo 2 minuti, o subito con `wp option delete forestas_entes_refresh_lock` (oc:8990) |
+| nel log `forestas enti: … token non mandato: lo shard è in http su un host non locale` | l'origine dello shard vista dal server è in http su un dominio: il token viaggerebbe in chiaro | l'indirizzo dello shard in https (`environment.ts` del plugin, o il filtro `wmwp_server_origin`); in http valgono solo `localhost`, `127.0.0.1`, `::1`, `host.docker.internal` e i nomi dei servizi Docker (oc:8990) |
+| `/enti/` dà 404 | rewrite rules non rigenerate dopo l'aggiornamento del child | un giro di `pagine --conferma` (riga `REGOLE`) o `wp rewrite flush` |
+| nel log `forestas enti: copia nuova scartata, non plausibile: …` | lo shard ha meno della metà degli enti o dei collegamenti ente-traccia della copia: su UAT l'import dopo il reset notturno è in corso | niente: la copia di prima resta e la nuova entra quando l'import finisce. Un calo che dura più di 3 ore dal primo rifiuto si accetta da solo (nel log `calo accettato`); per accettarlo subito, `wp option delete forestas_entes_copy` e poi `wp cron event run forestas_entes_refresh` (oc:8990) |
 | PHPStan di `forestas` fallisce con `Unable to create file …/build/phpstan/cache/…` | cache scritta da più processi su un volume montato da macOS | rilanciare con `--debug` (un solo processo) |

@@ -150,7 +150,9 @@ subagent.
   una modifica fatta in WordPress (oc:8758)
 - `DRUPAL_DB_USER` e `DRUPAL_DB_PASSWORD` non hanno valori predefiniti (repo pubblico): senza nel
   `.env` il comando `pagine` si ferma; su un server nuovo vanno aggiunte prima del primo giro, poi
-  `scripts/wordpress-up.sh` di `forestas`, perché il container legge il `.env` solo all'avvio (oc:8758)
+  `scripts/wordpress-up.sh` di `forestas`, perché il container legge il `.env` solo all'avvio (oc:8758).
+  Vale anche per `WP_API_TOKEN` degli enti: senza container ricreato il sito resta sull'ultima copia degli enti, o
+  in 503 se una copia non c'è mai stata (oc:8990)
 - Le traduzioni inglesi nostre (`config/traduzioni/en/`) portano l'impronta del testo italiano da cui
   sono state fatte (`sorgente`): se Drupal cambia l'italiano il log dà un AVVISO con l'impronta nuova,
   e la traduzione va rifatta prima di aggiornare `sorgente`; se Drupal aggiunge la sua traduzione,
@@ -158,7 +160,8 @@ subagent.
 - Il cron usa `bin/wordpress-config.sh allinea`, con la riga versionata in `cron/allinea.crontab`
   (lì anche lo stato dell'installazione, da aggiornare quando la si installa o la si toglie). Applica
   da solo solo le differenze dei menu: un rilascio di `config/` (header, footer, Theme Options…) va
-  applicato a mano con `applica --conferma`, altrimenti ogni giro chiude con `STATO non allineato` (oc:8758)
+  applicato a mano con `applica --conferma`, altrimenti ogni giro chiude con `STATO non allineato` (oc:8758).
+  Lo stesso per le righe `default:` dei contenuti di default su un sito installato prima di oc:8990 (oc:8990)
 - La sincronizzazione non va lanciata durante il reload giornaliero della copia Drupal su UAT (alle
   10:00, crontab di `root`, circa un quarto d'ora: il 20/10 è finito alle 10:14): il controllo di integrità la ferma senza scrivere, ma il giro
   va perso; il cron va messo lontano da quell'ora (`docs/howto/cron-sincronizzazione-pagine.md`) (oc:8758)
@@ -176,6 +179,16 @@ subagent.
   dei percorsi): cambiarne valore o forma (per esempio `4076` → `nid-4076`, o un altro campo) rende orfane le righe
   dello storico, i 301 delle rinomine diventano 404 e gli omonimi possono scambiarsi l'indirizzo. Si cambia solo con
   un passaggio che converta lo storico (oc:8983)
+- La copia degli enti (`forestas_entes_copy`) non si sostituisce con una che ha meno della metà degli enti o dei
+  collegamenti ente-traccia (succede su UAT durante l'import dopo il reset): un calo vero si accetta da solo dopo 3
+  ore. Per accettarlo subito: `wp option delete forestas_entes_copy`, poi `wp cron event run forestas_entes_refresh`;
+  senza il secondo passo, fino al rinnovo successivo spariscono i link agli enti dai dettagli e la prima visita a
+  `/enti/` aspetta il rinnovo (503 se fallisce). Il log lo dice a ogni rinnovo scartato (oc:8990)
+- Passando il WordPress locale dallo shard locale (mu-plugin non versionato `wpf-shard-locale.php`, tracce con il nid)
+  al dev, il plugin scarta il nuovo indice dei dettagli perché la chiave della fonte «crolla»: i dettagli dei percorsi
+  danno 404 e i sentieri gestiti degli enti spariscono. Va cancellata la cache dell'indice e ricostruita:
+  `wp transient delete wmwp_detail_index`, `wp option delete wmwp_detail_index_last wmwp_detail_index_rebuilt_at`,
+  poi `wp eval 'wmwp_detail_index( true );'`. Nel verso opposto non serve (knowledge 8990) (oc:8990)
 
 ## Conoscenza
 
@@ -187,3 +200,4 @@ subagent.
 | News da Drupal | news come post della categoria News, termini con `_drupal_chiave`, pagina News a schede, editor e protezioni sulla copia | [docs/knowledge/8759-import-delle-news-da-drupal.md](docs/knowledge/8759-import-delle-news-da-drupal.md) |
 | Eventi e «da sapere» da Drupal | ciclo di import comune ai tipi con un nodo, eventi e «da sapere» come tipi propri, tipologie e loro pagine, filtri delle liste, vecchi indirizzi, template e editor | [docs/knowledge/8760-import-degli-eventi-e-dei-da-sapere-da-drupal.md](docs/knowledge/8760-import-degli-eventi-e-dei-da-sapere-da-drupal.md) |
 | Pagine di dettaglio di percorsi e POI | template del child sopra il plugin, tavole e Drupal come riferimento, chiave stabile (nid di Drupal, anche a Drupal spento), indirizzi stabili e storico dei percorsi del plugin, mappa interattiva per ambiente, icone dal set dello shard, messa in opera | [docs/knowledge/8969-pagine-di-dettaglio-di-percorsi-e-punti-di-interesse-sul-sito-wordpress.md](docs/knowledge/8969-pagine-di-dettaglio-di-percorsi-e-punti-di-interesse-sul-sito-wordpress.md) |
+| Enti sul sito | copia del JSON degli enti con token e WP-Cron, ultima copia buona e plausibilità, elenco e dettaglio come Drupal, tab della ricerca, link da percorsi e POI; la messa in opera in [docs/howto/messa-in-opera-degli-enti.md](docs/howto/messa-in-opera-degli-enti.md) | [docs/knowledge/8990-enti-sul-sito-wordpress-elenco-enti-dettaglio-enti-slug-e-ricerca-dallapi-di-oc8965.md](docs/knowledge/8990-enti-sul-sito-wordpress-elenco-enti-dettaglio-enti-slug-e-ricerca-dallapi-di-oc8965.md) |
