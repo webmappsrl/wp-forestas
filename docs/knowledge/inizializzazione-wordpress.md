@@ -27,6 +27,15 @@ qui conta come si comporta e perché.
   scrivono un avviso se falliscono e il sito parte comunque. Licenze e plugin si ritentano a ogni
   riavvio; l'apply automatico solo su un sito installato dall'init, al massimo 3 volte e solo nei 3
   giorni dopo l'installazione.
+- **Contenuti di default di WordPress nel cestino** (oc:8990): `bin/wordpress-config.sh applica`, e quindi anche
+  l'apply automatico dei primi 3 giorni, ha il passo «4. Contenuti di default di WordPress nel cestino»
+  (`docker/scripts/config/default-content.php`).
+  - Con `wp_trash_post()` ci vanno il post 1 «Ciao mondo!», la pagina 2 «Pagina di esempio» e la bozza 3 «Privacy
+    Policy», a tre condizioni: hanno ancora lo slug di default, non sono già nel cestino e non sono mai stati modificati
+    (`post_modified_gmt` uguale a `post_date_gmt`).
+  - L'option `wp_page_for_privacy_policy` si azzera solo se punta alla pagina 3 e quella è la bozza di default.
+  - L'anteprima mostra una riga `default: …` per ogni modifica; un secondo giro non fa nulla.
+  - Il passo gira dentro `wpf_wpml_tutte_le_lingue()`, come quello dei menu.
 - **Variabili mancanti:** lo script esce elencandole; Docker riavvia il container a intervalli
   crescenti finché il `.env` non c'è.
 - **Dietro un proxy HTTPS** `wp-config.php` imposta `HTTPS=on` quando arriva
@@ -44,6 +53,11 @@ solo se le opzioni del plugin sono vuote. In locale il clone di sviluppo, montat
 
 - **Passi indipendenti invece di un solo controllo «WordPress installato?»** (oc:8711): con un
   controllo unico, un pezzo perso o aggiunto dopo l'installazione non tornerebbe mai.
+- **Contenuti di default nel cestino, non cancellati** (oc:8990):
+  - `wpf_wpml_cancella_post` cancella per sempre (`wp_delete_post( $id, true )`); dal cestino un contenuto si recupera
+    per 30 giorni (`EMPTY_TRASH_DAYS`), e la riga di traduzione di WPML resta finché il post esiste;
+  - si toccano solo contenuti mai modificati, e l'option della privacy solo se punta alla bozza di default, perché una
+    pagina 3 modificata può essere la privacy vera.
 - **Chiavi di sicurezza generate da `wp config create`** (oc:8711): non passano da nessun `.env`,
   quindi niente caratteri speciali da proteggere e nulla da incollare.
 - **Plugin scaricato come tarball nella sua cartella** (oc:8711, oc:8952): lo zip che GitHub genera per

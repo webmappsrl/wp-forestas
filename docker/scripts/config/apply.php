@@ -8,7 +8,7 @@
  * WPF_PAGINE=1 aggiorna anche le pagine che esistono già, come la Home (vedi post.php).
  * Con WPF_PROVA=1 non scrive nulla e stampa una riga per differenza. Senza, applica nell'ordine: WPML
  * (lingue e impostazioni), post, menu, Theme Options, traduzioni dei loro testi, theme_mods, posizioni
- * dei menu, impostazioni del sito; solo se tutto riesce scrive l'opzione WPF_OPZIONE_FATTO.
+ * dei menu, impostazioni del sito, contenuti di default di WordPress nel cestino; solo se tutto riesce scrive l'opzione WPF_OPZIONE_FATTO.
  * WPF_AUTOMATICO=1 (apply dell'init) si rifiuta di applicare un config/ esportato da un'altra versione
  * (principale o minore, «9.4» contro «9.5») di Impreza o di un plugin: nessuno guarda le differenze.
  * Lanciato due volte non duplica nulla: post e menu si ritrovano dalla chiave stabile
@@ -20,6 +20,7 @@ require_once __DIR__ . '/wpml.php';
 require_once __DIR__ . '/post.php';
 require_once __DIR__ . '/menu.php';
 require_once __DIR__ . '/opzioni.php';
+require_once __DIR__ . '/default-content.php';
 
 $dir        = getenv( 'WPF_CONFIG_DIR' ) ?: WPF_DIR_CONFIG;
 $prova      = getenv( 'WPF_PROVA' ) === '1';
@@ -147,6 +148,11 @@ if ( $child !== null ) {
 }
 $ok = wpf_posizioni_applica( (array) ( $menu_cfg['posizioni'] ?? [] ), $id_menu, $prova, $diff ) && $ok;
 $ok = wpf_sito_applica( (array) $leggi( 'sito.json' ), $prova, $diff, $risolvi ) && $ok;
+
+// --- 4. Contenuti di default di WordPress nel cestino ---------------------------------------
+
+// Come per i menu: con i filtri di WPML attivi get_post() potrebbe convertire l'id o non vedere la lingua
+$ok = wpf_wpml_tutte_le_lingue( fn() => wpf_default_content_apply( $prova, $diff ) ) && $ok;
 
 // --- Esito ----------------------------------------------------------------------------------
 

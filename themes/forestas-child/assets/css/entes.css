@@ -1,0 +1,165 @@
+/*
+ * Pagine degli enti (oc:8990): elenco /enti (templates/entes-list.php) e dettaglio /enti/<slug> (templates/ente-detail.php).
+ * Si carica solo lì. Lo stile è quello delle pagine e delle news del child (intestazione, testata, percorso, card
+ * forestas-card, colonna forestas-pagina-testo, tutti in style.css); qui ci sono solo le parti proprie degli enti, con le
+ * misure del sito attuale (node--ente-istituzione-societa--full di Drupal) misurate a 1512px. Griglia dei sentieri
+ * gestiti, galleria e «Mostra tutto» vengono da assets/css/dettaglio.css (componenti del dettaglio traccia).
+ */
+
+/* Elenco: la griglia è una lista, senza i rientri e i pallini dell'elenco */
+.forestas-entes__griglia {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+.forestas-entes__griglia > .forestas-card {
+	margin: 0;
+}
+/* Colonne della view `enti` di Drupal (sase-grid--3 sase-grid--tablet-2): tre, due fra 768 e 1127px
+   ($breakpoint-ipad-portrait, $breakpoint-laptop-wide), una sotto 768px */
+@media (min-width: 768px) and (max-width: 1127px) {
+	.forestas-entes__griglia { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 767px) {
+	.forestas-entes__griglia { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Dettaglio: i componenti del dettaglio traccia (dettaglio.css) leggono le variabili dalla radice .wm-dettaglio, che qui
+   non c'è. --wm-line-2 è il bordo delle foto della galleria (.wm-gal img), stesso valore di dettaglio.css */
+.forestas-ente {
+	--wm-line-2: #F0F0F0;
+}
+/* Dentro la colonna del testo, i blocchi annidati con la tipografia delle pagine (descrizione, contatti) non riprendono
+   larghezza e margini della colonna */
+.forestas-ente .forestas-pagina-testo .forestas-pagina-testo {
+	width: auto;
+	max-width: none;
+	margin: 0;
+	padding: 0;
+}
+/* Sezioni: «Informazioni», «Sentieri gestiti», «Galleria fotografica», date. 4,375rem fra un blocco e l'altro, lo
+   spazio di Drupal fra l'ultimo campo e «Sentieri gestiti» (sase-padding-v-6 dei campi + sase-padding-v-8 della sezione);
+   1,875rem fra il titolo e il contenuto (sase-section-inner-vertical-spaced-margin-6) */
+.forestas-ente__sezione + .forestas-ente__sezione,
+.forestas-ente__date {
+	margin-top: 4.375rem;
+}
+.forestas-ente__corpo > .forestas-ente__date:first-child {
+	margin-top: 0;
+}
+/* Titolo di sezione: sase-h2 con sase-heading-has-decoration is-left-aligned, il filo arancio sopra a sinistra come il
+   titolo della galleria delle pagine (.forestas-galleria-titolo; misure del filo nel gruppo della barretta di
+   style.css). Dimensione di sase-h2 ($font-size-40px-fluid, la stessa del titolo della testata sotto 768px): con quella
+   dei titoli h2 del testo delle pagine i titoli h3 della descrizione (28px-fluid) sarebbero più grandi del titolo della
+   sezione */
+.l-main .forestas-ente__titolo {
+	display: grid;
+	justify-items: start;
+	margin: 0 0 1.875rem;
+	padding: var(--sase-filo-spazio) 0 0;
+	color: var(--sase-testo);
+	font-family: var(--sase-font-titoli);
+	font-size: clamp(1.875rem, 1.875rem + (1vw - 0.2rem) * 0.625, 2.5rem);
+	font-weight: 600;
+	line-height: 1.2;
+}
+.forestas-ente__titolo::before {
+	background-color: var(--sase-arancio);
+}
+
+/* Descrizione con «Mostra tutto» (.wm-xp di dettaglio.css): testo con la tipografia delle pagine, chiuso a 30em come
+   sase-expandable-section (--expandable-block-max-height: 30em) */
+.forestas-ente .wm-xp__body {
+	color: var(--sase-testo);
+	font-size: 1rem;
+	line-height: 1.4;
+}
+.forestas-ente .wm-xp.is-chiuso .wm-xp__body {
+	max-height: 30em;
+}
+/* «Mostra tutto» 1,25rem sotto il testo; il pulsante è quello del child, largo quanto il testo da 768px */
+.forestas-ente .wm-xp__more {
+	padding-top: 1.25rem;
+}
+
+/* Campi: tipo di ente, contatti, pagina web, collegamenti (sase-content-field). Etichetta sase-h6, valore subito sotto in
+   grassetto; 1,875rem fra un campo e l'altro e prima del primo (sase-padding-v-6) */
+.forestas-ente__campi {
+	display: grid;
+	gap: 1.875rem;
+	margin-top: 1.875rem;
+}
+.l-main .forestas-ente__etichetta {
+	margin: 0;
+	padding: 0;
+	color: var(--sase-testo);
+	font-family: var(--sase-font-titoli);
+	font-size: var(--sase-testo-grande);
+	font-weight: 600;
+	line-height: 1.4;
+}
+.forestas-ente__valore {
+	margin: 0;
+	color: var(--sase-testo);
+	font-size: var(--sase-testo-pagina);
+	font-weight: 600;
+	line-height: 1.4;
+}
+/* I paragrafi dei contatti come il valore (sase-content-field__value), non come il testo della pagina */
+.forestas-ente .forestas-ente__valore > :is(p, ul, ol):not([class]) {
+	font-size: inherit;
+	font-weight: inherit;
+	line-height: inherit;
+}
+.forestas-ente__valore > :first-child {
+	margin-top: 0;
+}
+/* Pagina web e collegamenti: link in grassetto senza sottolineatura (solo al passaggio del mouse), 5px sotto
+   l'etichetta, icona arancio come su Drupal (sase-link) */
+.forestas-ente__link {
+	display: grid;
+	gap: .9375rem;
+	margin: .3125rem 0 0;
+	padding: 0;
+	list-style: none;
+}
+.forestas-ente__link li {
+	margin: 0;
+}
+/* Collegamenti: 10px in più sopra e fra etichetta e link (sase-padding-t-2 sase-section-inner-vertical-spaced-padding-2) */
+.forestas-ente__campo--collegamenti {
+	padding-top: .625rem;
+}
+.forestas-ente__campo--collegamenti .forestas-ente__link {
+	margin-top: .625rem;
+}
+.forestas-link-esterno {
+	display: inline-flex;
+	align-items: baseline;
+	gap: .5em;
+	color: var(--sase-testo);
+	font-size: 1rem;
+	font-weight: 600;
+	text-decoration: none;
+}
+.forestas-link-esterno:hover,
+.forestas-link-esterno:focus {
+	text-decoration: underline;
+}
+.forestas-ente :is(.forestas-link-esterno, .forestas-link-freccia) i {
+	font-size: .9375rem;
+	color: var(--sase-arancio);                              /* come l'icona dei file delle pagine: decorativa */
+}
+
+/* Date: etichetta sase-h6 e data sase-p-s, 1,25rem fra le due (sase-section-inner-vertical-spaced-padding-4) */
+.forestas-ente__date {
+	display: grid;
+	gap: 1.25rem;
+}
+.forestas-ente__data time {
+	display: block;
+	margin-top: .1875rem;
+	color: var(--sase-testo);
+	font-size: clamp(0.875rem, 0.875rem + (1vw - 0.2rem) * 0.125, 1rem); /* sase-p-s, come .forestas-file__info */
+	line-height: 1.4;
+}

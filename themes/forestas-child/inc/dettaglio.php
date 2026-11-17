@@ -300,14 +300,18 @@ function forestas_dettaglio_ruoli(): array {
 
 /**
  * Enti collegati, un elemento per ente e ruolo, nell'ordine dei ruoli. Il nome è null nel formato vecchio
- * (`entities`, solo id e ruoli).
+ * (`entities`, solo id e ruoli). `url` è l'indirizzo dell'ente nella lingua della pagina se lo slug è fra gli enti della
+ * copia (forestas_entes_known_slugs(), che non chiama mai lo shard), altrimenti null.
  *
  * @param array<string, mixed> $properties properties del JSON.
- * @return list<array{ruolo: string, etichetta: string, id: int, nome: ?string, slug: ?string}>
+ * @return list<array{ruolo: string, etichetta: string, id: int, nome: ?string, slug: ?string, url: ?string}>
  */
 function forestas_dettaglio_enti( array $properties ): array {
 	$forestas = (array) ( $properties['forestas'] ?? [] );
 	$enti     = [];
+	// Slug degli enti della copia, una volta sola, dall'opzione piccola degli slug (non si deserializza la copia)
+	$known = function_exists( 'forestas_entes_known_slugs' ) ? forestas_entes_known_slugs() : [];
+	$lang = (string) apply_filters( 'wpml_current_language', 'it' );
 	foreach ( forestas_dettaglio_ruoli() as $ruolo => $info ) {
 		$lista = [];
 		if ( isset( $forestas['organizations'] ) && is_array( $forestas['organizations'] ) ) {
@@ -326,12 +330,14 @@ function forestas_dettaglio_enti( array $properties ): array {
 				continue;
 			}
 			$nome   = forestas_dettaglio_testo( $ente['name'] ?? null );
+			$slug   = function_exists( 'forestas_entes_slug' ) && '' !== forestas_entes_slug( $ente ) ? forestas_entes_slug( $ente ) : null;
 			$enti[] = [
 				'ruolo'     => $ruolo,
 				'etichetta' => $info['etichetta'],
 				'id'        => (int) ( $ente['id'] ?? 0 ),
 				'nome'      => '' !== $nome ? $nome : null,
-				'slug'      => isset( $ente['slug'] ) && '' !== (string) $ente['slug'] ? (string) $ente['slug'] : null,
+				'slug'      => $slug,
+				'url'       => null !== $slug && isset( $known[ $slug ] ) ? forestas_entes_url( $slug, $lang ) : null,
 			];
 		}
 	}
@@ -543,9 +549,10 @@ function forestas_dettaglio_durata( $minuti ): ?string {
  * `assets/js/dettaglio.js` mette nel titolo il pulsante che apre e chiude il pannello (`aria-expanded`), come il
  * roadbook, e lo chiude se `data-wm-gr` è `chiuso`; senza JavaScript il pannello resta aperto (oc:8969, Rubens 13/11).
  *
- * @param list<array{0: string, 1: string, 2?: bool, 3?: array{url: string, nascosto: string}|null, 4?: ?string}> $righe
+ * @param list<array{0: string, 1: string, 2?: bool, 3?: array{url: string, nascosto: string}|null, 4?: ?string, 5?: ?string}> $righe
  *        Etichetta, valore, se il valore è un segnaposto, il link «Maggiori info» (con il resto del nome, nascosto, per
- *        lo screen reader) e la lingua del valore se ripiega su un'altra (`lang`).
+ *        lo screen reader), la lingua del valore se ripiega su un'altra (`lang`) e l'indirizzo del valore, che
+ *        se c'è lo rende un link.
  */
 function forestas_dettaglio_gruppo( string $id, string $titolo, array $righe, bool $aperto ): string {
 	if ( ! $righe ) {
@@ -556,7 +563,11 @@ function forestas_dettaglio_gruppo( string $id, string $titolo, array $righe, bo
 		$link  = ! empty( $riga[3]['url'] )
 			? ' <a class="wm-dt__mi" href="' . esc_url( $riga[3]['url'] ) . '">' . esc_html( forestas_testo( 'Maggiori info', 'More info' ) ) . '<span class="screen-reader-text"> ' . esc_html( (string) ( $riga[3]['nascosto'] ?? '' ) ) . '</span></a>'
 			: '';
-		$html .= sprintf( '<tr><th scope="row">%1$s</th><td%3$s%5$s>%2$s%4$s</td></tr>', esc_html( (string) $riga[0] ), esc_html( (string) $riga[1] ), ! empty( $riga[2] ) ? ' class="wm-segnaposto"' : '', $link, forestas_dettaglio_lang( $riga[4] ?? null ) );
+		$valore = esc_html( (string) $riga[1] );
+		if ( ! empty( $riga[5] ) ) {
+			$valore = '<a href="' . esc_url( (string) $riga[5] ) . '">' . $valore . '</a>';
+		}
+		$html .= sprintf( '<tr><th scope="row">%1$s</th><td%3$s%5$s>%2$s%4$s</td></tr>', esc_html( (string) $riga[0] ), $valore, ! empty( $riga[2] ) ? ' class="wm-segnaposto"' : '', $link, forestas_dettaglio_lang( $riga[4] ?? null ) );
 	}
 	return sprintf(
 		'<div class="wm-gr" data-wm-gr="%3$s"><h3 class="wm-gr__h" id="%1$s">%2$s</h3><div class="wm-gr__p" id="%1$s-p"><table class="wm-dt" aria-labelledby="%1$s"><tbody>%4$s</tbody></table></div></div>',
@@ -636,12 +647,15 @@ function forestas_dettaglio_tabelle( array $properties, string $tipo ): array {
 	];
 }
 
+/** La parte `AAAA-MM-GG` di una data dello shard (`AAAA-MM-GG`, ISO o `Y-m-d H:i:s`), o null: anche per `<time datetime>`. */
+function forestas_date_iso( $data ): ?string {
+	return is_string( $data ) && preg_match( '/^\d{4}-\d{2}-\d{2}/', $data ) ? substr( $data, 0, 10 ) : null;
+}
+
 /** Data `AAAA-MM-GG` nel formato del sito, o null. */
 function forestas_dettaglio_data( $data ): ?string {
-	if ( ! is_string( $data ) || ! preg_match( '/^\d{4}-\d{2}-\d{2}/', $data ) ) {
-		return null;
-	}
-	$time = strtotime( substr( $data, 0, 10 ) );
+	$iso  = forestas_date_iso( $data );
+	$time = null === $iso ? false : strtotime( $iso );
 	return false === $time ? null : date_i18n( get_option( 'date_format' ), $time );
 }
 
