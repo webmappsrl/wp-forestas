@@ -66,6 +66,14 @@ function forestas_corpo_contenuto( int $id, string $prima = '', string $classe =
 		. $prima . forestas_testo_importato( $id ) . forestas_allegati( $id ) . forestas_collegamenti( $id ) . forestas_galleria( $id ) . '</div>';
 }
 
+/**
+ * Testo di un link tagliato a FORESTAS_COLLEGAMENTO_MAX caratteri con «…», come il formatter «link» di Drupal
+ * (trim_length: 80): collegamenti di news ed eventi, pagina web degli enti.
+ */
+function forestas_trim_link_text( string $text ): string {
+	return mb_strlen( $text ) > FORESTAS_COLLEGAMENTO_MAX ? mb_substr( $text, 0, FORESTAS_COLLEGAMENTO_MAX - 1 ) . '…' : $text;
+}
+
 /*
  * «Collegamenti» come nel tema Drupal (field--field-collegamenti): titolo sase-h5, «Links» tradotto da
  * Drupal in «Collegamenti» (locales_target), poi i link con la freccia davanti nel colore della sezione
@@ -80,7 +88,7 @@ function forestas_collegamenti( int $id ): string {
 		}
 		// Senza testo si mostra l'indirizzo, come il formatter «link» di Drupal (e come dice il riquadro)
 		$testo = trim( (string) ( $c['titolo'] ?? '' ) ) !== '' ? (string) $c['titolo'] : (string) $c['url'];
-		$testo = mb_strlen( $testo ) > FORESTAS_COLLEGAMENTO_MAX ? mb_substr( $testo, 0, FORESTAS_COLLEGAMENTO_MAX - 1 ) . '…' : $testo;
+		$testo = forestas_trim_link_text( $testo );
 		$voci .= sprintf( '<li><a class="forestas-link-freccia" href="%s"><i class="fas fa-arrow-right" aria-hidden="true"></i>%s</a></li>', esc_url( $c['url'] ), esc_html( $testo ) );
 	}
 	return $voci === '' ? '' : '<section class="forestas-collegamenti"><h2 class="forestas-collegamenti-titolo">' . esc_html( forestas_testo( 'Collegamenti', 'Links' ) ) . '</h2><ul>' . $voci . '</ul></section>';

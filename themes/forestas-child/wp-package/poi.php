@@ -76,7 +76,7 @@ wmwp_template_header();
 						<tr><th scope="row"><?php echo esc_html( forestas_testo( 'Comune', 'Municipality' ) ); ?></th><td><?php echo esc_html( forestas_dettaglio_valore( implode( ', ', $dati['luoghi']['comuni'] ) ) ); ?></td></tr>
 						<tr><th scope="row"><?php echo esc_html( forestas_testo( 'Area geografica', 'Geographic area' ) ); ?></th><td><?php echo esc_html( forestas_dettaglio_valore( implode( ', ', $dati['luoghi']['aree'] ) ) ); ?></td></tr>
 						<?php foreach ( forestas_dettaglio_enti( $p ) as $ente ) : ?>
-							<tr><th scope="row"><?php echo esc_html( $ente['etichetta'] ); ?></th><td><?php echo esc_html( $ente['nome'] ?? $non_disp ); ?></td></tr>
+							<tr><th scope="row"><?php echo esc_html( $ente['etichetta'] ); ?></th><td><?php echo ! empty( $ente['url'] ) ? '<a href="' . esc_url( $ente['url'] ) . '">' . esc_html( $ente['nome'] ?? $non_disp ) . '</a>' : esc_html( $ente['nome'] ?? $non_disp ); // phpcs:ignore WordPress.Security.EscapeOutput -- markup già escapato ?></td></tr>
 						<?php endforeach; ?>
 					</tbody>
 				</table>

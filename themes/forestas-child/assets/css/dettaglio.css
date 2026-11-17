@@ -1,7 +1,8 @@
 /*
  * Dettaglio di percorsi e punti di interesse (oc:8969), dalla Tavola 3 del wireframe di oc:8783 (markup e CSS della
  * tavola). Colore del tipo e della fascia dei titoli dalle variabili --wm-c e --wm-bg, scritte dal template.
- * Si carica solo sulle pagine di dettaglio (body.wmwp-detail).
+ * Si carica solo sulle pagine di dettaglio (body.wmwp-detail) e sul dettaglio di un ente (oc:8990), che ne usa i soli
+ * componenti (.wm-ucg, .wm-gal, .wm-xp) senza la radice .wm-dettaglio.
  */
 .wm-dettaglio {
 	--wm-ink: #1A1A1A;

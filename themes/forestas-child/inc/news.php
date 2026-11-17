@@ -115,12 +115,13 @@ add_filter( 'rewrite_rules_array', fn( array $regole ) => forestas_regole_schede
 
 /*
  * Le regole si rigenerano quando cambiano le schede o le regole stesse: va alzata FORESTAS_REGOLE_VERSIONE
- * quando questo file cambia le sue regole (o forestas_senza_front). Il controllo lo fa il giro di
+ * quando il child cambia le sue regole (questo file, forestas_senza_front, le pagine degli enti di inc/entes.php:
+ * versione 4, oc:8990). Il controllo lo fa il giro di
  * bin/wordpress-config.sh pagine (riga REGOLE), il pannello alla prima pagina dopo un aggiornamento del
  * child e dopo il salvataggio di una pagina: così vale anche dopo il lancio, con la sincronizzazione
  * spenta. Vero se le ha rigenerate.
  */
-const FORESTAS_REGOLE_VERSIONE = 3;
+const FORESTAS_REGOLE_VERSIONE = 4;
 const FORESTAS_OPZIONE_REGOLE  = 'forestas_regole_schede';
 
 function forestas_regole_aggiorna(): bool {

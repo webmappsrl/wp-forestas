@@ -2,11 +2,13 @@
  * Dettaglio di percorsi e punti di interesse (oc:8969): testata compatta che compare dopo la testata grande, sotto
  * l'header del sito; «Mostra tutto» dei testi lunghi; roadbook a fisarmonica; legende degli indicatori dietro la «i».
  * Senza JavaScript tutto il testo resta leggibile: i testi non sono tagliati e le legende restano nascoste.
+ * Serve anche al dettaglio di un ente (oc:8990, templates/ente-detail.php): «Mostra tutto» della descrizione e
+ * «Mostra tutti (N)» di sentieri gestiti e galleria; le altre parti lì non trovano i loro elementi e non fanno nulla.
  */
 (function () {
 	'use strict';
 
-	var root = document.querySelector('.wm-dettaglio');
+	var root = document.querySelector('.wm-dettaglio, .forestas-ente');
 	if (!root) {
 		return;
 	}
