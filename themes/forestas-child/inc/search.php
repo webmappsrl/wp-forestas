@@ -493,78 +493,61 @@ function forestas_search_route_type_labels(): array {
  * nomi tipo e stato restavano in italiano. In italiano sono i nomi dell'API; in inglese provvisori, scritti da noi.
  */
 function forestas_search_term_labels(): array {
-	return forestas_search_route_type_labels() + [
+	// Stati della percorribilità dal registro del plugin, nella lingua della pagina (oc:9000)
+	$walkability = array_map( fn( $name ) => $name['text'], forestas_status_names( forestas_walkability_family() ) );
+	return forestas_search_route_type_labels() + $walkability + [
 		'validation-status-validated'        => forestas_testo( 'Validato', 'Validated' ),
 		'validation-status-certified'        => forestas_testo( 'Certificato', 'Certified' ),
 		'validation-status-under-review'     => forestas_testo( 'In revisione-validazione', 'Under review' ),
 		'validation-status-pre-registration' => forestas_testo( 'In pre-accatastamento o manutenzione', 'Pre-registration or maintenance' ),
-		'validation-status-walkable'         => forestas_testo( 'Percorribile', 'Walkable' ),
 		'validation-status-unverified'       => forestas_testo( 'Non verificato', 'Not verified' ),
-		'validation-status-not-walkable'     => forestas_testo( 'Non percorribile', 'Not walkable' ),
 	];
+}
+
+/**
+ * Faccetta di una famiglia del registro degli stati del plugin (oc:9000): un gruppo per stato, nell'ordine dello shard,
+ * con il nome nella lingua della pagina; `missing` è lo stato di assenza, che vale anche per i percorsi senza termine
+ * (search-logic.js). Null se il registro non conosce la famiglia o il plugin è più vecchio della 0.5.0.
+ *
+ * @return array<string, mixed>|null
+ */
+function forestas_search_status_facet( string $family, string $key, string $label ): ?array {
+	$names = forestas_status_names( $family );
+	if ( ! $names ) {
+		return null;
+	}
+	$groups = [];
+	foreach ( $names as $id => $name ) {
+		$groups[] = [
+			'id'     => (string) $id,
+			'label'  => $name['text'],
+			'values' => [ (string) $id ],
+		];
+	}
+	$registry = wmwp_status_families()[ $family ];
+	$facet = [
+		'key'    => $key,
+		'label'  => $label,
+		'type'   => 'terms',
+		'field'  => 'terms.' . $family,
+		'groups' => $groups,
+		'order'  => array_column( $groups, 'id' ),
+	];
+	if ( null !== ( $registry['absent'] ?? null ) ) {
+		$facet['missing'] = (string) $registry['absent'];
+	}
+	return $facet;
 }
 
 /**
  * Filtri dei percorsi di Forestas, nell'ordine della tavola 2 del wireframe di oc:8952.
  */
 function forestas_search_track_facets(): array {
-	return [
-		[
-			'key'    => 'percorribilita',
-			'label'  => forestas_testo( 'Percorribilità', 'Walkability' ),
-			'type'   => 'terms',
-			// Dallo stato di validazione del catasto (scrum dell'11/11, Giuseppe). Regola di Forestas («Osservazioni
-			// finali a CANVAS CLAUDE fase 2»): il valore unico di Drupal si copia tal quale anche sulla
-			// percorribilità, verde da 4 in su; i livelli sono quelli di ConfigureTaxonomyTermsCommand dello shard
-			// (4 Percorribile, 5 Validato, 6 Certificato). Voci del semaforo della home (oc:8783, decisioni.md):
-			// verde 4–6, giallo 2–3, rosso 1; «Non verificato» (0) fuori. Se arriva la scala di percorribilità
-			// separata (oc:8783, oc:8932) cambiano solo campo e valori
-			'field'  => 'terms.validation-status',
-			'groups' => [
-				[
-					'id'     => 'percorribili',
-					'label'  => forestas_testo( 'Percorribili', 'Walkable' ),
-					'values' => [ 'validation-status-walkable', 'validation-status-validated', 'validation-status-certified' ],
-				],
-				[
-					'id'     => 'parziali',
-					'label'  => forestas_testo( 'In revisione o parzialmente percorribili', 'Under review or partly walkable' ),
-					'values' => [ 'validation-status-under-review', 'validation-status-pre-registration' ],
-				],
-				[
-					'id'     => 'non-percorribili',
-					'label'  => forestas_testo( 'Non percorribili', 'Not walkable' ),
-					'values' => [ 'validation-status-not-walkable' ],
-				],
-			],
-			'order'  => [ 'percorribili', 'parziali', 'non-percorribili' ],
-		],
-		[
-			'key'    => 'validazione',
-			'label'  => forestas_testo( 'Validazione catastale', 'Trail registry validation' ),
-			'type'   => 'terms',
-			'field'  => 'terms.validation-status',
-			// Fasce della tavola 2 del wireframe e della descrizione di oc:8952. «Non percorribile» non vi compare:
-			// sta in Base, supposto livello 1 (Rubens, 09/11: «procedi»)
-			'groups' => [
-				[
-					'id'     => 'avanzato',
-					'label'  => forestas_testo( 'Avanzato · 5–6', 'Advanced · 5–6' ),
-					'values' => [ 'validation-status-validated', 'validation-status-certified' ],
-				],
-				[
-					'id'     => 'intermedio',
-					'label'  => forestas_testo( 'Intermedio · 2–4', 'Intermediate · 2–4' ),
-					'values' => [ 'validation-status-under-review', 'validation-status-pre-registration', 'validation-status-walkable' ],
-				],
-				[
-					'id'     => 'base',
-					'label'  => forestas_testo( 'Base · 0–1', 'Basic · 0–1' ),
-					'values' => [ 'validation-status-unverified', 'validation-status-not-walkable' ],
-				],
-			],
-			'order'  => [ 'avanzato', 'intermedio', 'base' ],
-		],
+	return array_values( array_filter( [
+		// Un'opzione per stato, dal registro degli stati del plugin (oc:9000): percorribilità di wm-package e
+		// validazione di forestas; i percorsi senza termine valgono lo stato di assenza
+		forestas_search_status_facet( forestas_walkability_family(), 'percorribilita', forestas_testo( 'Percorribilità', 'Walkability' ) ),
+		forestas_search_status_facet( 'validation-status', 'validazione', forestas_testo( 'Validazione catastale', 'Trail registry validation' ) ),
 		[
 			'key'    => 'percorso',
 			'label'  => forestas_testo( 'Tipo di percorso', 'Route type' ),
@@ -630,7 +613,7 @@ function forestas_search_track_facets(): array {
 			'exclude'         => array_merge( [ 'Sardegna' ], FORESTAS_SEARCH_PROVINCES ),
 			'exclude_pattern' => '^(Area |Z[A-Z]{3}[0-9]+$)',
 		],
-	];
+	] ) );
 }
 
 /** Source della ricerca: i percorsi del plugin con i nomi e i filtri di Forestas, più i contenuti del sito e gli enti. */
@@ -651,8 +634,10 @@ add_filter(
 					'search_label'    => forestas_testo( 'Cerca un percorso', 'Search for a trail' ),
 					'placeholder'     => forestas_testo( 'Nome, codice o luogo — per esempio «721» o «Punta La Marmora»', 'Name, code or place — for example “721” or “Punta La Marmora”' ),
 					'facets'          => forestas_search_track_facets(),
-					// Stato di validazione del catasto nella riga, come nella tavola 2 (dal 09/11 nell'API del dev)
-					'badge_field'     => 'terms.validation-status',
+					// Percorribilità nella riga, con il semaforo della tavola 2 (che riassume la percorribilità, decisioni.md
+					// di oc:8783); niente etichetta per lo stato «non lo sappiamo» (Rubens, 18/11, oc:9000)
+					'badge_field'     => forestas_plugin_ready() ? 'terms.' . forestas_walkability_family() : '',
+					'badge_exclude'   => forestas_plugin_ready() ? array_values( array_filter( [ wmwp_status_families()[ forestas_walkability_family() ]['absent'] ?? null ] ) ) : [],
 					// Nomi di tipo e stato nella lingua della pagina (l'API li dà solo in italiano)
 					'term_labels'     => forestas_search_term_labels(),
 					// I comuni all'inizio della riga, come nella tavola 2 («Desulo, Villagrande Strisaili · 5,3 km …»)
@@ -664,6 +649,30 @@ add_filter(
 						'other' => forestas_testo( '%s percorsi selezionati', '%s trails selected' ),
 					],
 					'selection_label' => forestas_testo( 'Percorsi selezionati', 'Selected trails' ),
+				]
+			);
+		}
+		// Punti di interesse (oc:9000): la sorgente è del plugin (pois.geojson), qui nomi e indirizzo di Forestas
+		if ( isset( $sources['pois'] ) ) {
+			$sources['pois'] = array_merge(
+				$sources['pois'],
+				[
+					'slug'         => 'punti-di-interesse',
+					'label'        => forestas_testo( 'Punti di interesse', 'Points of interest' ),
+					'nouns'        => [
+						'one'   => forestas_testo( '%s punto di interesse', '%s point of interest' ),
+						'other' => forestas_testo( '%s punti di interesse', '%s points of interest' ),
+					],
+					'search_label' => forestas_testo( 'Cerca un punto di interesse', 'Search for a point of interest' ),
+					// Tipo sulla card, nella lingua della pagina
+					'type_label'   => forestas_testo( 'Punto di interesse', 'Point of interest' ),
+					'facets'       => [
+						[
+							'key'   => 'tipo-poi',
+							'label' => forestas_testo( 'Tipo di punto di interesse', 'Type of point of interest' ),
+							'type'  => 'terms',
+						],
+					],
 				]
 			);
 		}
@@ -764,7 +773,7 @@ function forestas_search_url(): string {
  * (`f[N]=cerca_contenuto_nel_sito:<tipo>`, link `rel="nofollow"` dei filtri di /cerca-nel-sito). null senza `f`.
  * `sentiero` e `itinerario` portano al tab «Percorsi» con il filtro «Tipo di percorso», `news`, `evento` e `page` al
  * tab «Contenuti del sito» con il tipo; più tipi dello stesso tab vanno nello stesso filtro (OR), separati da virgole.
- * `poi` e i tipi sconosciuti portano al tab «Tutti».
+ * `poi` porta al tab «Punti di interesse» (oc:9000), i tipi sconosciuti al tab «Tutti».
  */
 function forestas_search_from_drupal( array $query ): ?array {
 	if ( empty( $query['f'] ) || ! is_array( $query['f'] ) ) {
@@ -777,6 +786,8 @@ function forestas_search_from_drupal( array $query ): ?array {
 		'news'       => [ 'contenuti', 'contenuto', 'news' ],
 		'evento'     => [ 'contenuti', 'contenuto', 'evento' ],
 		'page'       => [ 'contenuti', 'contenuto', 'pagina' ],
+		// I punti di interesse hanno il loro tab (oc:9000), senza filtro
+		'poi'        => [ 'punti-di-interesse', null, null ],
 	];
 	$out    = [];
 	$values = [];
@@ -789,7 +800,7 @@ function forestas_search_from_drupal( array $query ): ?array {
 			$out['tipo'] = $tab;
 		}
 		// Il tab è quello del primo tipo: i tipi di un altro tab non hanno un filtro lì
-		if ( $tab === $out['tipo'] ) {
+		if ( $tab === $out['tipo'] && null !== $key ) {
 			$values[ $key ][] = $value;
 		}
 	}
@@ -839,7 +850,7 @@ add_action(
  */
 function forestas_search_canonical_args( array $query ): array {
 	$single  = [ 'search_api_fulltext', 'tipo', 'pagina' ];
-	$keys    = array_merge( [ 'search_api_fulltext', 'tipo' ], array_column( forestas_search_track_facets(), 'key' ), [ 'contenuto', 'pagina' ] );
+	$keys    = array_merge( [ 'search_api_fulltext', 'tipo' ], array_column( forestas_search_track_facets(), 'key' ), [ 'tipo-poi', 'contenuto', 'pagina' ] );
 	$args    = [];
 	foreach ( $keys as $key ) {
 		if ( ! isset( $query[ $key ] ) || ! is_string( $query[ $key ] ) || '' === trim( $query[ $key ] ) ) {

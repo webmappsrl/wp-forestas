@@ -5,7 +5,7 @@ Template: Impreza
 Author: Webmapp
 Author URI: https://webmapp.it/
 Description: Child theme di Impreza per Sardegna Sentieri (Forestas). Versionato nel repo wp-forestas e montato dal compose: si modifica nel repo, non dal pannello.
-Version: 1.16.16
+Version: 1.17.4
 */
 
 
@@ -2438,7 +2438,8 @@ Version: 1.16.16
 .wmwp-card--type-route-type-itinerary { --c: var(--sase-sezione-itinerari); }
 .forestas-card--cammino,
 .wmwp-card--type-route-type-walk { --c: var(--sase-sezione-cammini); }
-.forestas-card--poi { --c: var(--sase-sezione-punti-di-interesse); }
+.forestas-card--poi,
+.wmwp-card--type-poi { --c: var(--sase-sezione-punti-di-interesse); }
 .wmwp-card--type-da-sapere { --c: var(--sase-sezione-da-sapere); }
 .wmwp-card--type-news { --c: var(--sase-sezione-news); }
 .wmwp-card--type-evento { --c: var(--sase-blu-pulsante); }
@@ -2963,22 +2964,39 @@ a.wmwp-card__link[href]:hover .wmwp-card__title {
 	color: #fff;
 	white-space: nowrap;
 }
-/* Stato di validazione nella riga: colori di Drupal indicati nel wireframe (percorribile #0E7D2C, in revisione
- * #F59B23 con testo scuro, non percorribile #B70827); il nome è sempre scritto, il colore non basta (WCAG 1.4.1) */
-.wmwp-badge--validation-status-validated,
-.wmwp-badge--validation-status-walkable {
+/* Percorribilità nella riga, con il semaforo del wireframe (percorribile #0E7D2C, parzialmente #F59B23 con testo
+ * scuro, non percorribile #B70827); «Sconosciuta» non ha l'etichetta. Il nome è sempre scritto, il colore non basta
+ * (WCAG 1.4.1) (oc:9000) */
+.wmwp-badge--walkability-status-walkable {
 	background: #0E7D2C;
 }
-.wmwp-badge--validation-status-under-review,
-.wmwp-badge--validation-status-pre-registration {
+.wmwp-badge--walkability-status-partially-walkable {
 	background: #F59B23;
 	color: #333;
 }
-.wmwp-badge--validation-status-not-walkable {
+.wmwp-badge--walkability-status-not-walkable {
 	background: #B70827;
 }
-.wmwp-badge--validation-status-unverified {
-	background: #595959;
+/* Etichetta «Avviso» con il triangolo (forestas_notice_tag_html()): uguale nel dettaglio del sentiero e nella pagina
+ * /avvisi, per questo sta qui e non nel CSS di una delle due pagine (oc:9000) */
+.wm-avviso__tag {
+	flex: none;
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	font-style: normal;
+	font-size: 12px;
+	font-weight: 600;
+	color: #fff;
+	background: #B70827;
+	padding: 3px 8px;
+	border-radius: 2px;
+}
+.wm-avviso__tag svg {
+	width: 14px;
+	height: 14px;
+	display: block;
+	flex: none;
 }
 .wmwp-search__list--cards {
 	display: grid;

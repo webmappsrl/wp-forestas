@@ -316,3 +316,5 @@ require_once __DIR__ . '/inc/da-sapere.php';
 require_once __DIR__ . '/inc/search.php';
 require_once __DIR__ . '/inc/dettaglio.php';
 require_once __DIR__ . '/inc/entes.php';
+require_once __DIR__ . '/inc/statuses.php';
+require_once __DIR__ . '/inc/notices.php';

@@ -35,11 +35,13 @@ e 7 del wireframe di oc:8783.
   negli anelli solo la partenza), «Maggiori info» accanto al grado di difficoltà e alla validazione verso le pagine che
   Drupal linka (nodo 1102, «gradi di difficoltà», e nodo 87, Note legali, che spiegano i livelli 0-6), frecce della
   lightbox.
-- **Itinerario senza Avviso, Segnala e recensioni**: l'itinerario non è nel catasto (call del 02/11); la Tavola 4 ha
-  «Segnala» e le recensioni, ma su Drupal le segnalazioni sono solo dei sentieri. Si decide nel ticket di segnalazioni e
-  recensioni.
-- **Segnaposto dichiarati** («Dato non ancora disponibile») per avvisi, percorribilità, recensioni, data di
-  accatastamento: occupano lo spazio del componente finito, così il layout non cambia quando il dato arriva.
+- **Itinerario senza Segnala e recensioni**: l'itinerario non è nel catasto (call del 02/11); la Tavola 4 ha
+  «Segnala» e le recensioni, ma su Drupal le segnalazioni sono solo dei sentieri. Con oc:9000 segnalazioni e
+  recensioni sono tolte da tutti i dettagli per il primo rilascio (tornano con oc:8980), e la fascia «Avviso» compare
+  anche sugli itinerari, perché `api/v1/avvisi` include i loro avvisi.
+- **Segnaposto dichiarati** («Dato non ancora disponibile») per i dati che lo shard non ha ancora, come la data di
+  accatastamento: occupano lo spazio del componente finito, così il layout non cambia quando il dato arriva. Avviso e
+  percorribilità vengono dal dato vero da oc:9000.
 - **Gruppi dei dati chiusi da aprire** (pattern «disclosure», come il roadbook): titolo `h3` con il pulsante, tabella
   con il nome dal titolo, tutto aperto senza JavaScript; gli Enti aperti se ce n'è uno solo.
 - **Su mobile la mappa sale dopo i pulsanti, spostata nel DOM** e non solo a vista: Tab e screen reader seguono

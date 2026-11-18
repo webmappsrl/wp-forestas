@@ -27,11 +27,12 @@
 /* Segnaposto: dato che lo shard non ha ancora. Riconoscibile, occupa lo spazio del componente finito */
 .wm-segnaposto { color: var(--wm-ink-3); font-style: italic; }
 
-/* Avviso */
-/* Avviso del sentiero: come la fascia degli avvisi della home nel wireframe (Tavola 3, nota 1; Tavola 1) */
-.wm-avviso { display: flex; gap: 14px; align-items: center; padding: 12px var(--wm-rientro); background: #FDECEC; border-bottom: 1px solid var(--wm-line-2); font-size: 14px; color: var(--wm-ink, #1A1A1A); }
-.wm-avviso__tag { flex: none; display: inline-flex; align-items: center; gap: 5px; font-style: normal; font-size: 12px; font-weight: 600; color: #fff; background: #B70827; padding: 3px 8px; border-radius: 2px; }
-.wm-avviso__tag svg { width: 14px; height: 14px; display: block; flex: none; }
+/* Avviso del sentiero: come la fascia degli avvisi della home nel wireframe (Tavola 3, nota 1; Tavola 1). L'etichetta
+   .wm-avviso__tag sta in style.css, perché la usa anche la pagina /avvisi. Quando lo spazio non basta la data va a capo
+   sotto il testo, non lo stringe (oc:9000) */
+.wm-avviso { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; padding: 12px var(--wm-rientro); background: #FDECEC; border-bottom: 1px solid var(--wm-line-2); font-size: 14px; color: var(--wm-ink, #1A1A1A); }
+.wm-avviso__testo { flex: 1 1 14em; min-width: 0; }
+.wm-avviso__data { flex: 0 1 auto; margin-left: auto; font-size: 13px; color: #595959; }
 
 /* Testata: foto con la fascia scura al 60%, alta come quella delle pagine statiche (.forestas-testata, dal tema Drupal) */
 .wm-hero { position: relative; height: 66vh; min-height: 17.86rem; background: #F5F5F5; overflow: hidden; }
@@ -44,8 +45,7 @@
 .wm-hero__scrim { position: absolute; left: 0; right: 0; bottom: 0; color: #fff; padding: 79px var(--wm-rientro) 17px; background: linear-gradient(to top, rgba(26, 26, 26, .6) 0, rgba(26, 26, 26, .6) calc(100% - 64px), rgba(26, 26, 26, 0) 100%); }
 .wm-hero__occ { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: 0; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; }
 .wm-hero__tit { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 6px 0 4px; color: #fff; font-size: clamp(22px, 2.6vw, 34px); line-height: 1.2; }
-.wm-hero__sub, .wm-hero__meta { margin: 0; font-size: 14px; }
-.wm-hero__meta { margin-top: 8px; color: #fff; }
+.wm-hero__sub { margin: 0; font-size: 14px; }
 .wm-tipo { display: inline-block; flex: none; font-style: normal; font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: #fff; background: var(--wm-c); padding: 3px 8px; border-radius: 2px; }
 .wm-flag { display: inline-block; flex: none; padding: .55em .95em; font-size: .46em; line-height: 1; font-weight: 700; letter-spacing: .02em; color: var(--wm-ink, #1A1A1A); border-radius: 2px; box-shadow: 0 0 0 1px rgba(0, 0, 0, .18); background: linear-gradient(to right, #C8102E 0, #C8102E .55em, #fff .55em, #fff calc(100% - .55em), #C8102E calc(100% - .55em)); padding-left: 1.2em; padding-right: 1.2em; }
 
@@ -64,6 +64,15 @@
 .wm-state { margin: 16px var(--wm-rientro) 0; padding: 13px 15px; border-left: 4px solid #9A9A9A; background: #F5F5F5; }
 .wm-state p { margin: 0; font-size: 14px; }
 .wm-state__lbl { font-style: normal; font-weight: 600; color: var(--wm-ink); }
+/* Fascia della percorribilità per stato (wireframe di oc:8783, «Fascia della percorribilità»): testo sempre scuro,
+   lo stato è scritto e non affidato al colore (oc:9000) */
+.wm-state--walkable { border-left-color: #0E7D2C; background: #EEF6F0; }
+.wm-state--walkable .wm-state__lbl { color: #0B6624; }
+.wm-state--partially-walkable { border-left-color: #6B4A00; background: #FFF4DB; }
+.wm-state--partially-walkable .wm-state__lbl { color: #6B4A00; }
+.wm-state--not-walkable { border-left-color: #9B0720; background: #FDECEC; }
+.wm-state--not-walkable .wm-state__lbl { color: #9B0720; }
+.wm-state--walkable p:not(.wm-state__lbl), .wm-state--partially-walkable p:not(.wm-state__lbl), .wm-state--not-walkable p:not(.wm-state__lbl) { margin-top: 3px; font-size: 13px; color: #333; line-height: 1.5; }
 
 /* Tre indicatori a tacche */
 /* Indicatori e «Sentiero per tutti»: dalla Tavola 3 del wireframe di oc:8783 (note 10, 11, 12), classi con il prefisso wm- */
@@ -225,8 +234,6 @@
 /* Griglia delle card (forestas-griglia di style.css, card forestas-card come i post e la ricerca) */
 .wm-ucg { margin: 0; padding: 0; list-style: none; }
 .wm-ucg > .forestas-card { margin: 0; }
-
-.wm-sec--last { margin-bottom: 24px; }
 
 @media (max-width: 1024px) {
 	.wm-cols { grid-template-columns: 1fr; }

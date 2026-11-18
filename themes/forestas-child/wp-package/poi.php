@@ -8,13 +8,19 @@
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
+// Con un wp-package più vecchio della 0.5.0 il dettaglio usa il template del plugin, invece di andare in fatal (oc:9000)
+if ( ! forestas_plugin_ready() ) {
+	require WMWP_PATH . 'templates/poi.php';
+	return;
+}
 
 $detail   = wmwp_detail_current();
 $p        = (array) ( $detail['feature']['properties'] ?? [] );
 $colori   = forestas_dettaglio_colori( 'poi' );
 $dati     = forestas_dettaglio_poi( $p );
 $nome     = (string) $detail['name'];
-$foto     = $p['feature_image']['sizes']['1440x500'] ?? $p['feature_image']['url'] ?? '';
+$main_photo = wmwp_detail_feature_image( $p, forestas_dettaglio_lingua() );
+$foto     = $main_photo['large'] ?? '';
 $galleria = forestas_dettaglio_galleria( $p );
 $non_disp = forestas_testo( 'Dato non ancora disponibile', 'Not yet available' );
 
@@ -29,14 +35,14 @@ wmwp_template_header();
 	<header class="wm-hero<?php echo '' === $foto ? ' wm-hero--senza-foto' : ''; ?>" data-wm-hero>
 		<?php if ( '' !== $foto ) : ?>
 			<?php // Testo alternativo dalla didascalia della foto, se c'è (specifica di oc:8783, «Testata con foto»); senza, è decorativa ?>
-			<img class="wm-hero__img" src="<?php echo esc_url( $foto ); ?>" alt="<?php echo esc_attr( wp_strip_all_tags( forestas_dettaglio_testo( $p['feature_image']['caption'] ?? null ) ) ); ?>" fetchpriority="high">
+			<img class="wm-hero__img" src="<?php echo esc_url( $foto ); ?>" alt="<?php echo esc_attr( wp_strip_all_tags( $main_photo['caption'] ?? '' ) ); ?>" fetchpriority="high">
 		<?php endif; ?>
 		<?php
 		// «Credits foto» come nella testata delle pagine statiche, con autore e credits della foto dello shard
 		$credits_foto = forestas_credits_immagine(
 			[
-				'autore'  => forestas_dettaglio_testo( $p['feature_image']['author'] ?? null ),
-				'credits' => forestas_dettaglio_testo( $p['feature_image']['credits'] ?? null ),
+				'autore'  => $main_photo['author'] ?? '',
+				'credits' => $main_photo['credits'] ?? '',
 				'chiave'  => 'poi-' . (int) $detail['id'],
 			]
 		);
