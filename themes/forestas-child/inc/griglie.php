@@ -200,14 +200,72 @@ function forestas_filtri_conta( array $griglia, array $campi, array $scelti ): a
  *   tranne quello con un valore scelto (su Drupal la freccia è in su a gruppo chiuso, in giù ad aperto);
  * - le voci sono link con il numero di contenuti in un riquadro a destra; le prime FORESTAS_FILTRI_VISIBILI,
  *   le altre dietro «Mostra di più» (soft limit);
- * - il valore scelto va in fondo al suo gruppo, e tutto il gruppo ha i valori in grassetto e i numeri su
- *   fondo pieno (.facet-active di Drupal); cliccandolo si toglie.
+ * - il valore scelto va in fondo al suo gruppo, e tutto il gruppo ha i numeri su fondo pieno (.facet-active di
+ *   Drupal); cliccandolo si toglie.
+ * L'aspetto è quello dei filtri della ricerca unica (oc:9000, style.css): titolo piccolo e grigio, casella disegnata
+ * davanti alla voce (piena per la voce scelta, che ha aria-current), numero nel riquadro arancione.
  */
 function forestas_filtri( array $griglia ): string {
 	$campi  = forestas_filtri_campi( $griglia );
 	$scelti = forestas_filtri_scelti( $griglia );
 	$attivi = array_map( fn( $s ) => $s instanceof WP_Term ? $s->slug : (string) $s, $scelti );
 	return forestas_filtri_colonna( $campi, forestas_filtri_conta( $griglia, $campi, $scelti ), $attivi );
+}
+
+/**
+ * Indirizzo della pagina senza i filtri dati e senza la pagina (la pagina corrente potrebbe non esserci nella lista
+ * con meno filtri), come i link delle voci di forestas_filtri_colonna().
+ *
+ * @param list<string> $campi Campi da togliere dall'indirizzo.
+ */
+function forestas_filtri_togli_url( array $campi ): string {
+	$url = remove_query_arg( array_merge( $campi, [ 'paged' ] ) );
+	return (string) preg_replace( '#/page/\d+/?#', '/', $url );
+}
+
+/**
+ * «Filtri attivi» sopra la lista, come nella ricerca unica (oc:9000, .wmwp-search__active): una voce per ogni filtro
+ * scelto, con il link che lo toglie (lo screen reader legge «Togli il filtro <gruppo>: <valore>»), e «Togli tutti i
+ * filtri». '' senza filtri scelti.
+ *
+ * @param list<array{gruppo: string, nome: string, url: string}> $voci  Filtri scelti.
+ * @param string                                               $tutti Indirizzo senza nessun filtro.
+ */
+function forestas_filtri_attivi_html( array $voci, string $tutti ): string {
+	if ( ! $voci ) {
+		return '';
+	}
+	$html = '';
+	foreach ( $voci as $voce ) {
+		$html .= sprintf(
+			'<li><a class="forestas-chip" href="%1$s" aria-label="%2$s">%3$s<span class="forestas-chip__x" aria-hidden="true">✕</span></a></li>',
+			esc_url( $voce['url'] ),
+			esc_attr( sprintf( forestas_testo( 'Togli il filtro %1$s: %2$s', 'Remove filter %1$s: %2$s' ), $voce['gruppo'], $voce['nome'] ) ),
+			esc_html( $voce['nome'] )
+		);
+	}
+	return '<div class="forestas-filtri-attivi"><span class="forestas-filtri-attivi__titolo">' . esc_html( forestas_testo( 'Filtri attivi:', 'Active filters:' ) ) . '</span>'
+		. '<ul class="forestas-filtri-attivi__voci" role="list">' . $html . '</ul>'
+		. '<a class="forestas-filtri-attivi__tutti" href="' . esc_url( $tutti ) . '">' . esc_html( forestas_testo( 'Togli tutti i filtri', 'Remove all filters' ) ) . '</a></div>';
+}
+
+/** «Filtri attivi» di una griglia con i filtri: i valori scelti nell'indirizzo (forestas_filtri_scelti()). */
+function forestas_filtri_attivi_griglia( array $griglia ): string {
+	$campi  = forestas_filtri_campi( $griglia );
+	$scelti = forestas_filtri_scelti( $griglia );
+	$voci   = [];
+	foreach ( $campi as $f ) {
+		$campo = $f['campo'];
+		if ( ! isset( $scelti[ $campo ] ) ) {
+			continue;
+		}
+		$voci[] = [
+			'gruppo' => forestas_testo( (string) ( $f['titolo']['it'] ?? $campo ), (string) ( $f['titolo']['en'] ?? $f['titolo']['it'] ?? $campo ) ),
+			'nome'   => $scelti[ $campo ] instanceof WP_Term ? $scelti[ $campo ]->name : (string) $scelti[ $campo ],
+			'url'    => forestas_filtri_togli_url( [ $campo ] ),
+		];
+	}
+	return forestas_filtri_attivi_html( $voci, forestas_filtri_togli_url( array_column( $campi, 'campo' ) ) );
 }
 
 /*
@@ -316,7 +374,7 @@ function forestas_griglia( array $griglia, int $livello = 3 ): string {
 	// Con i filtri: colonna dei filtri a sinistra e lista, come la griglia 3-9 della pagina di Drupal
 	if ( ! empty( $griglia['filtri'] ) ) {
 		wp_enqueue_script( 'forestas-filtri', get_stylesheet_directory_uri() . '/assets/js/filtri.js', [], forestas_versione(), [ 'in_footer' => true, 'strategy' => 'defer' ] );
-		$html = '<div class="forestas-filtrabile">' . forestas_filtri( $griglia ) . '<div class="forestas-filtrabile__lista">' . $html . '</div></div>';
+		$html = '<div class="forestas-filtrabile">' . forestas_filtri( $griglia ) . '<div class="forestas-filtrabile__lista">' . forestas_filtri_attivi_griglia( $griglia ) . $html . '</div></div>';
 	}
 	return $html;
 }

@@ -63,6 +63,14 @@ get_header();
 			<div class="forestas-filtrabile">
 			<?php echo $entes_filter; // phpcs:ignore WordPress.Security.EscapeOutput -- markup di forestas_filtri_colonna(), già con l'escape ?>
 			<div class="forestas-filtrabile__lista">
+			<?php
+			// «Filtri attivi», come nelle liste di news ed eventi (forestas_filtri_attivi_html())
+			$entes_label = '' !== $entes_type ? forestas_entes_type_label( $entes_type ) : null;
+			echo forestas_filtri_attivi_html( // phpcs:ignore WordPress.Security.EscapeOutput -- markup già con l'escape
+				null !== $entes_label && isset( $entes_facet[ $entes_type ] ) ? [ [ 'gruppo' => forestas_testo( 'Argomento', 'Topic' ), 'nome' => $entes_label, 'url' => forestas_filtri_togli_url( [ FORESTAS_ENTES_TYPE_PARAM ] ) ] ] : [],
+				forestas_filtri_togli_url( [ FORESTAS_ENTES_TYPE_PARAM ] )
+			);
+			?>
 		<?php endif; ?>
 		<?php if ( $entes_items ) : ?>
 			<ul class="forestas-griglia forestas-griglia--immagine forestas-entes__griglia" role="list" data-test="entes-list" data-page="<?php echo (int) $entes_page['page']; ?>" data-pages="<?php echo (int) $entes_page['pages']; ?>">

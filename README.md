@@ -186,6 +186,13 @@ Il comando trova da solo il container che monta il child da questa cartella; se 
   `@url_sito_urlenc` dove è codificato dentro un link) e i riferimenti
   ai post sono `@chiave:<nome>`: header, footer, Home e menu si riconoscono dal metadato
   `_wp_forestas_chiave`, non da titolo o slug, quindi rinominarli dal pannello non crea duplicati.
+- **L'icona del sito** (quella della scheda del browser, come la favicon di sardegnasentieri.it) è un file in
+  `config/media/icona-sito.png`, indicato in `config/sito.json` con `"site_icon": "@file:media/icona-sito.png"`:
+  l'apply ne crea l'allegato con le misure dell'icona di WordPress e lo ritrova ai giri dopo dal percorso e
+  dall'impronta del file (`_wp_forestas_file`, `_wp_forestas_md5`); un file cambiato diventa un allegato nuovo. Per
+  cambiarla si sostituisce il file (quadrato, almeno 512×512) e si applica, oppure si carica dal pannello in locale e
+  si esporta: l'export scrive il file in `config/media/`. La
+  copia che Impreza tiene nelle sue Theme Options (`site_icon`) non sta in `impreza.json` (oc:9000).
 - **Cosa finisce in `config/`**: tutti gli header, i Page Block, i Content Template e i Grid Layout di
   Impreza, **anche in bozza** (una prova va cancellata o cestinata prima dell'export); le pagine a cui
   puntano le Theme Options e le impostazioni del sito, come la Home; tutti i menu con le loro

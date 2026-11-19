@@ -4,7 +4,8 @@
  * - «Contenuti del sito» (oc:8952): news, eventi, «da sapere» e pagine dalla rotta REST forestas/v1/search, che dà le
  *   card pronte e i conteggi per tipo.
  * - «Enti» (oc:8990): gli enti dello shard dalla rotta forestas/v1/entes-search, che chiama l'API degli enti dal server
- *   con il token del sito (mai nel browser). Senza filtri.
+ *   con il token del sito (mai nel browser). Filtri «Tipo di ente» e «Ruolo sui sentieri» (oc:9000): le voci, già contate
+ *   e ordinate, le dà la rotta.
  */
 (function () {
   'use strict';
@@ -54,12 +55,19 @@
   });
 
   if (config.entesEndpoint) {
+    var ENTES_FACETS = ['tipo-ente', 'ruolo'];
     api.registerSource('entes', {
       search: function (query, signal) {
         var url = new URL(config.entesEndpoint, window.location.href);
+        var filters = query.filters || {};
         if (query.rawText) {
           url.searchParams.set('q', query.rawText);
         }
+        ENTES_FACETS.forEach(function (key) {
+          if (filters[key] && filters[key].length) {
+            url.searchParams.set(key, filters[key].join(','));
+          }
+        });
         url.searchParams.set('page', String(query.page));
         url.searchParams.set('per_page', String(query.perPage));
         url.searchParams.set('lang', query.lang);
@@ -76,7 +84,14 @@
             return response.json();
           })
           .then(function (data) {
-            return { total: data.total || 0, items: data.items || [], facets: [] };
+            var facets = data.facets || {};
+            return {
+              total: data.total || 0,
+              items: data.items || [],
+              facets: ENTES_FACETS.map(function (key) {
+                return { key: key, label: '', disabled: false, values: facets[key] || [] };
+              })
+            };
           });
       }
     });

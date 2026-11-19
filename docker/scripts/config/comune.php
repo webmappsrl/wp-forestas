@@ -9,7 +9,9 @@
  * - @url_sito       l'indirizzo del sito (@url_sito_json nella forma con le barre protette,
  *                   @url_sito_urlenc in quella codificata per gli URL);
  * - @segreto        un valore tolto perché segreto (il repo è pubblico);
- * - @chiave:<nome>  un post esportato, al posto del suo id.
+ * - @chiave:<nome>  un post esportato, al posto del suo id;
+ * - @file:<percorso> un file di config/ (oggi `media/icona-sito.png`), al posto dell'id dell'allegato che l'apply ne
+ *                   crea (allegati.php, oc:9000).
  */
 
 require_once __DIR__ . '/costanti.php';
@@ -17,6 +19,10 @@ require_once __DIR__ . '/costanti.php';
 const WPF_SEGNAPOSTO_URL = '@url_sito';
 const WPF_SEGRETO        = '@segreto';
 const WPF_RIFERIMENTO    = '@chiave:';
+const WPF_FILE           = '@file:';
+// Allegato creato dall'apply da un file di config/: percorso del file e impronta md5 (oc:9000)
+const WPF_META_FILE      = '_wp_forestas_file';
+const WPF_META_IMPRONTA  = '_wp_forestas_md5';
 const WPF_META_CHIAVE    = '_wp_forestas_chiave';
 // Chiave del perimetro di una pagina sincronizzata da Drupal (oc:8758): esporta e applica la saltano,
 // la scrive solo il comando pagine
@@ -25,7 +31,10 @@ const WPF_META_PAGINA    = '_wpf_pagina';
 // Impostazioni del sito versionate in sito.json (export) e mostrate nel ritratto. Il fuso orario lo
 // metteva solo il pacchetto della lingua italiana all'installazione: le date delle news (oc:8759)
 // dipendono da lui, e un sito ricreato senza quel pacchetto partirebbe in UTC
-const WPF_OPZIONI_SITO = [ 'blogname', 'blogdescription', 'permalink_structure', 'show_on_front', 'page_on_front', 'page_for_posts', 'timezone_string' ];
+const WPF_OPZIONI_SITO = [ 'blogname', 'blogdescription', 'permalink_structure', 'show_on_front', 'page_on_front', 'page_for_posts', 'timezone_string', 'site_icon' ];
+// Opzioni di sito.json che contengono l'id di un allegato con il file in config/ («@file:…», allegati.php): l'icona del
+// sito, come la favicon di Drupal (oc:9000)
+const WPF_OPZIONI_SITO_FILE = [ 'site_icon' ];
 // Opzioni di sito.json che contengono l'id di una pagina
 const WPF_OPZIONI_SITO_PAGINA = [ 'page_on_front', 'page_for_posts' ];
 
@@ -41,6 +50,9 @@ const WPF_TIPI_BUILDER = [ 'us_header', 'us_page_block', 'us_content_template', 
 // di sviluppo, su UAT sempre, o il pannello: versionata accenderebbe la manutenzione anche su un sito di
 // produzione nuovo) e i campi che descrivono un'operazione o un controllo in corso (ottimizzazione degli
 // asset, backup, informazioni su icone e immagini)
+// Theme Options di Impreza che sono una copia di un'opzione di WordPress versionata altrove: `site_icon` (Impreza la
+// legge da WordPress e, quando salva, la riscrive lì; sta in sito.json). Non si esportano e non si applicano (oc:9000)
+const WPF_IMPREZA_COPIE = [ 'site_icon' ];
 const WPF_IMPREZA_STATO = [ 'maintenance_mode', 'optimize_assets_start', 'optimize_assets_end', 'of_backup', 'used_icons_info', 'img_size_info' ];
 
 // Opzioni di Impreza con l'id di una pagina che il nome non rivela (vedi wpf_opzione_riferimento)

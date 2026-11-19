@@ -147,7 +147,7 @@ if ( $child !== null ) {
 	$ok = wpf_child_applica( $child, $prova, $diff ) && $ok;
 }
 $ok = wpf_posizioni_applica( (array) ( $menu_cfg['posizioni'] ?? [] ), $id_menu, $prova, $diff ) && $ok;
-$ok = wpf_sito_applica( (array) $leggi( 'sito.json' ), $prova, $diff, $risolvi ) && $ok;
+$ok = wpf_sito_applica( (array) $leggi( 'sito.json' ), $prova, $diff, $risolvi, $dir ) && $ok;
 
 // --- 4. Contenuti di default di WordPress nel cestino ---------------------------------------
 

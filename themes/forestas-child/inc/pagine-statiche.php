@@ -141,7 +141,9 @@ const FORESTAS_PAGINE_SENZA_CONDIVIDI = [ 'sentieri', 'itinerari', 'cammini', 'd
 	// Le pagine d'elenco delle news, con le loro pagine successive (decisione del dev, oc:8759)
 	'attivita-e-comunicazioni', 'tutte-le-news',
 	// L'elenco degli eventi, come le pagine d'elenco delle news (oc:8760)
-	'eventi' ];
+	'eventi',
+	// La ricerca unica, come le pagine d'elenco: si condivide il suo indirizzo dal browser (oc:9000)
+	'cerca-nel-sito' ];
 
 /*
  * Riga dei pulsanti sotto il percorso (.sh-actions dell'artifact «Canvas Fase 2»): per le pagine c'è solo

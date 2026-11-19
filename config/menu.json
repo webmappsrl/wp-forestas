@@ -261,21 +261,6 @@
                     "classi": [],
                     "descrizione": "",
                     "destinazione": {
-                        "tipo": "custom",
-                        "url": "#"
-                    },
-                    "genitore": null,
-                    "meta": [],
-                    "originale": null,
-                    "target": "",
-                    "titolo": "Segnalazioni",
-                    "xfn": ""
-                },
-                {
-                    "attr_title": "",
-                    "classi": [],
-                    "descrizione": "",
-                    "destinazione": {
                         "percorso": "faq",
                         "post_type": "page",
                         "tipo": "pagina",
@@ -602,21 +587,6 @@
                     "classi": [],
                     "descrizione": "",
                     "destinazione": {
-                        "tipo": "custom",
-                        "url": "#"
-                    },
-                    "genitore": null,
-                    "meta": [],
-                    "originale": 1,
-                    "target": "",
-                    "titolo": "Report an issue",
-                    "xfn": ""
-                },
-                {
-                    "attr_title": "",
-                    "classi": [],
-                    "descrizione": "",
-                    "destinazione": {
                         "percorso": "faq",
                         "post_type": "page",
                         "tipo": "pagina",
@@ -624,7 +594,7 @@
                     },
                     "genitore": null,
                     "meta": [],
-                    "originale": 2,
+                    "originale": 1,
                     "target": "",
                     "titolo": "FAQ",
                     "xfn": ""
@@ -641,7 +611,7 @@
                     },
                     "genitore": null,
                     "meta": [],
-                    "originale": 3,
+                    "originale": 2,
                     "target": "",
                     "titolo": "App",
                     "xfn": ""
@@ -658,7 +628,7 @@
                     },
                     "genitore": null,
                     "meta": [],
-                    "originale": 4,
+                    "originale": 3,
                     "target": "",
                     "titolo": "Trails for everyone",
                     "xfn": ""
@@ -675,7 +645,7 @@
                     },
                     "genitore": null,
                     "meta": [],
-                    "originale": 5,
+                    "originale": 4,
                     "target": "",
                     "titolo": "Open Data",
                     "xfn": ""

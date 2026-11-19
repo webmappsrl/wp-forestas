@@ -132,6 +132,8 @@ export_in() {
         fi
     done
     for f in $prodotti; do rm -f "${dest}/${f}"; done
+    # media/ (oggi l'icona del sito, oc:9000) la scrive tutta l'export: un file che il sito non usa più non resta
+    rm -rf "${dest}/media"
     # docker cp crea i file con l'utente dell'host, non con quello del container
     docker cp "${C}:${tmp}/." "$dest/" >/dev/null
     docker exec "$C" rm -rf "$tmp"
