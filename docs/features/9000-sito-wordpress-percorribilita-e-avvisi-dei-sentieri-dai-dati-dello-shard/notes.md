@@ -362,11 +362,9 @@ Dialogo del 18/11 (Rubens):
   dopo il deploy di oc:8997 con `WMFE_TRACK_VERSIONS` nel `.env` e la rigenerazione delle tracce: fino ad allora il
   plugin legge il file senza versione.
 
-- **Condizione di merge:** la PR di `wp-forestas` non va in merge prima del commit con il nuovo `WP_PACKAGE_REF` in
-  `docker/scripts/init-wordpress.sh` (hash di `git rev-parse` dopo il merge del plugin, commit a sé nella stessa PR).
-  Oggi è `827af5e`, la 0.4.0: senza il commit il child degrada (`forestas_plugin_ready()`), ma il sito resta senza
-  percorribilità, avvisi nel dettaglio, filtri degli stati e tab dei POI. Poi `scripts/wordpress-up.sh` di `forestas`
-  su dev e UAT.
+- **Plugin:** la 0.5.0 è in `main` di wp-package dal 19/11 (`2c332f5`, PR #7), e `WP_PACKAGE_REF` punta lì (commit a
+  sé nella PR del ticket). Dopo il merge di wp-forestas: `scripts/wordpress-up.sh` di `forestas` su dev e UAT, che
+  ricostruisce l'immagine e scarica il plugin nuovo.
 - **Dopo l'aggiornamento del plugin su dev e UAT** il tab «Punti di interesse» può rispondere 503 («I punti di
   interesse non sono disponibili») finché la prima ricostruzione dell'indice non scrive la copia dei POI: la rotta la
   programma subito, al massimo 5 minuti dopo l'ultima ricostruzione. È atteso, non un guasto: la 0.4.0 non scriveva la

@@ -537,8 +537,9 @@ stato `absent` della famiglia.
 - [x] **Passo 2:** rifare `snapshot.sh dopo` e il confronto del task 3: le uniche differenze sono quelle volute
       (fasce, tacche, avviso, via segnalazioni e recensioni); nessun indirizzo cambiato in `urls.json`.
 - [x] **Passo 3 (child):** tutti i test del child: PASS; `Version` alzata.
-- [ ] **Passo 4:** dopo il merge del plugin, `WP_PACKAGE_REF` in `wp-forestas/docker/scripts/init-wordpress.sh` con
-      l'hash letto da `git rev-parse` (commit a sé, nella PR del ticket di `wp-forestas`).
+- [x] **Passo 4:** dopo il merge del plugin (PR webmappsrl/wp-package#7, `develop` in `main` il 19/11),
+      `WP_PACKAGE_REF` in `wp-forestas/docker/scripts/init-wordpress.sh` a `2c332f5`, letto con `git rev-parse` (commit
+      a sé, nella PR del ticket di `wp-forestas`).
 - [x] **Passo 5:** cartella di lavoro e mu-plugin di prova del confronto non restano nel repo né nel container.
 - [ ] **Passo 6 (a cura del dev):** dopo il merge, su dev e UAT `scripts/wordpress-up.sh` di `forestas`; verifica con
       dati veri (un sentiero parzialmente percorribile e un avviso creati in Nova).
