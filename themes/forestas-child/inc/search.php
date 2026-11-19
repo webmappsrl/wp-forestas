@@ -568,8 +568,11 @@ function forestas_search_track_facets(): array {
 			'label'          => forestas_testo( 'Attività', 'Activity' ),
 			'type'           => 'list',
 			'field'          => 'taxonomyActivities',
-			// Tipi di percorso (sentiero, itinerario) e cammini stanno nello stesso campo: non sono attività
-			'exclude_prefix' => 'sardegnasentieri:',
+			// Tipi di percorso e cammini stanno nello stesso campo delle attività, ma attività non sono:
+			// sono le tre righe storiche con cui i layer «Sentieri», «Itinerari» e «Cammini di Sardegna»
+			// raccolgono le tracce. Si escludono per nome da quando non portano più il prefisso della
+			// sorgente Drupal; spariranno quando quei layer passeranno al termine «Tipo percorso»
+			'exclude'        => [ 'trail', 'itinerary', 'walk' ],
 			// Nomi del sito per gli identifier di Geohub (wireframe, tav. 2): provvisori finché non arrivano
 			// con oc:8932
 			'labels'         => [
@@ -581,18 +584,22 @@ function forestas_search_track_facets(): array {
 			],
 			'order'          => [ 'hiking', 'trekking', 'mtb', 'horse', 'nordic-walking' ],
 		],
+		// Le chiavi sono gli identifier dei termini sullo shard, che l'indice riporta così come sono:
+		// `<famiglia>-<sigla>`, con la sigla della scala CAI maiuscola. Prima erano i term id di
+		// Drupal (`sardegnasentieri:tid:4066`), cambiati quando gli identifier si sono staccati da
+		// Drupal: una chiave che non combacia lascia la voce senza etichetta e fuori ordine
 		[
 			'key'    => 'difficolta',
 			'label'  => forestas_testo( 'Difficoltà', 'Difficulty' ),
 			'type'   => 'terms',
 			'field'  => 'terms.hiking-difficulty',
 			'labels' => [
-				'sardegnasentieri:tid:4066' => forestas_testo( 'T — turistico', 'T — tourist' ),
-				'sardegnasentieri:tid:4067' => forestas_testo( 'E — escursionistico', 'E — hiking' ),
-				'sardegnasentieri:tid:4068' => forestas_testo( 'EE — per esperti', 'EE — for experts' ),
-				'sardegnasentieri:tid:4069' => forestas_testo( 'EEA — attrezzato', 'EEA — equipped' ),
+				'hiking-difficulty-T'   => forestas_testo( 'T — turistico', 'T — tourist' ),
+				'hiking-difficulty-E'   => forestas_testo( 'E — escursionistico', 'E — hiking' ),
+				'hiking-difficulty-EE'  => forestas_testo( 'EE — per esperti', 'EE — for experts' ),
+				'hiking-difficulty-EEA' => forestas_testo( 'EEA — attrezzato', 'EEA — equipped' ),
 			],
-			'order'  => [ 'sardegnasentieri:tid:4066', 'sardegnasentieri:tid:4067', 'sardegnasentieri:tid:4068', 'sardegnasentieri:tid:4069' ],
+			'order'  => [ 'hiking-difficulty-T', 'hiking-difficulty-E', 'hiking-difficulty-EE', 'hiking-difficulty-EEA' ],
 		],
 		// «Dove» dell'API (taxonomyWheres) mescola regione, macro aree, settori CAI, province e comuni: si divide
 		// riconoscendoli dal nome, ripiego finché l'API non dà i luoghi per tipo (Rubens, 09/11). Le province hanno
