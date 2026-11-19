@@ -970,6 +970,125 @@ function forestas_entes_type_facet( string $type ): array {
 }
 
 /**
+ * Nomi dei ruoli di un ente sui sentieri (`roles` delle tracce dell'API) nella lingua corrente di WPML, per il filtro
+ * «Ruolo sui sentieri» della ricerca (oc:9000): gli stessi del riquadro degli enti nei dettagli dei percorsi
+ * (forestas_dettaglio_ruoli()), e nel loro ordine. Sono anche l'elenco dei ruoli conosciuti.
+ *
+ * @return array<string, string> Ruolo → nome.
+ */
+function forestas_entes_role_labels(): array {
+	return array_map( fn( array $ruolo ): string => $ruolo['etichetta'], forestas_dettaglio_ruoli() );
+}
+
+/**
+ * Ruoli conosciuti (forestas_entes_role_labels()) che un ente ha su almeno un sentiero, ciascuno una volta.
+ *
+ * @param array<string, mixed> $ente Ente nella forma di `api/v1/entes` (con `tracks`).
+ * @return list<string>
+ */
+function forestas_entes_roles( array $ente ): array {
+	$known = forestas_entes_role_labels();
+	$roles = [];
+	foreach ( (array) ( $ente['tracks'] ?? [] ) as $track ) {
+		foreach ( is_array( $track ) ? (array) ( $track['roles'] ?? [] ) : [] as $role ) {
+			if ( is_string( $role ) && isset( $known[ $role ] ) ) {
+				$roles[ $role ] = true;
+			}
+		}
+	}
+	return array_keys( $roles );
+}
+
+/**
+ * Filtri «Tipo di ente» e «Ruolo sui sentieri» del tab «Enti» della ricerca (oc:9000), sugli enti trovati.
+ * - Più valori dello stesso filtro: basta uno (OR); i due filtri insieme: tutti e due (AND). Valori senza nome (tipi e
+ *   ruoli sconosciuti, scritti a mano nell'indirizzo) ignorati.
+ * - I ruoli di un ente vengono dalla copia (`$roles`, per slug): la ricerca dello shard non dà i sentieri. Un ente non
+ *   ancora nella copia non ha ruoli.
+ * - Voci di ogni filtro: contate sugli enti filtrati con l'altro filtro e senza il proprio (come la rotta dei contenuti),
+ *   quelle con almeno un ente o scelte, per numero decrescente e a pari numero per nome (come il filtro «Argomento» di
+ *   /enti, forestas_entes_type_facet()).
+ *
+ * @param list<array<string, mixed>> $entes  Enti trovati, nell'ordine dei risultati.
+ * @param array<string, list<string>> $roles Slug → ruoli (forestas_entes_roles()).
+ * @param string                     $types_raw Valori del filtro del tipo, separati da virgole.
+ * @param string                     $roles_raw Valori del filtro del ruolo, separati da virgole.
+ * @return array{entes: list<array<string, mixed>>, facets: array<string, list<array{id: string, label: string, count: int, selected: bool}>>}
+ */
+function forestas_entes_search_filter( array $entes, array $roles, string $types_raw, string $roles_raw ): array {
+	$labels = [
+		'tipo-ente' => forestas_entes_type_labels(),
+		'ruolo'     => forestas_entes_role_labels(),
+	];
+	$chosen = [];
+	foreach ( [ 'tipo-ente' => $types_raw, 'ruolo' => $roles_raw ] as $key => $raw ) {
+		$chosen[ $key ] = array_values( array_intersect( array_unique( array_map( 'trim', explode( ',', $raw ) ) ), array_keys( $labels[ $key ] ) ) );
+	}
+	$values_of = fn( array $ente ): array => [
+		'tipo-ente' => [ forestas_entes_type( $ente ) ],
+		'ruolo'     => $roles[ forestas_entes_slug( $ente ) ] ?? [],
+	];
+	$passes    = fn( array $values, string $key ): bool => ! $chosen[ $key ] || array_intersect( $values[ $key ], $chosen[ $key ] );
+
+	$found  = [];
+	$counts = array_fill_keys( array_keys( $labels ), [] );
+	foreach ( $entes as $ente ) {
+		$values = $values_of( $ente );
+		if ( $passes( $values, 'tipo-ente' ) && $passes( $values, 'ruolo' ) ) {
+			$found[] = $ente;
+		}
+		foreach ( array_keys( $labels ) as $key ) {
+			$other = 'tipo-ente' === $key ? 'ruolo' : 'tipo-ente';
+			if ( $passes( $values, $other ) ) {
+				foreach ( array_intersect( $values[ $key ], array_keys( $labels[ $key ] ) ) as $value ) {
+					$counts[ $key ][ $value ] = ( $counts[ $key ][ $value ] ?? 0 ) + 1;
+				}
+			}
+		}
+	}
+
+	$sort_name = fn( string $label ): string => strtolower( remove_accents( $label ) );
+	$facets    = [];
+	foreach ( $labels as $key => $names ) {
+		$items = [];
+		foreach ( $names as $value => $label ) {
+			$count    = $counts[ $key ][ $value ] ?? 0;
+			$selected = in_array( $value, $chosen[ $key ], true );
+			if ( $count > 0 || $selected ) {
+				$items[] = [
+					'id'       => (string) $value,
+					'label'    => $label,
+					'count'    => $count,
+					'selected' => $selected,
+				];
+			}
+		}
+		usort( $items, fn( array $a, array $b ): int => [ -$a['count'], $sort_name( $a['label'] ) ] <=> [ -$b['count'], $sort_name( $b['label'] ) ] );
+		$facets[ $key ] = $items;
+	}
+	return [
+		'entes'  => $found,
+		'facets' => $facets,
+	];
+}
+
+/**
+ * Ruoli sui sentieri degli enti della copia, per slug (il primo ente con quello slug, come forestas_entes_by_slug()).
+ *
+ * @return array<string, list<string>>
+ */
+function forestas_entes_roles_by_slug(): array {
+	$roles = [];
+	foreach ( forestas_entes_cached() as $ente ) {
+		$slug = forestas_entes_slug( $ente );
+		if ( '' !== $slug && ! isset( $roles[ $slug ] ) ) {
+			$roles[ $slug ] = forestas_entes_roles( $ente );
+		}
+	}
+	return $roles;
+}
+
+/**
  * Testo ricco dello shard (descrizione, contatti) pronto per la pagina: filtrato con wp_kses_post(), senza i titoli
  * vuoti di Drupal e con i titoli rinumerati da h3, sotto il titolo h2 della sezione (forestas_dettaglio_ricco()); il
  * template può rinumerarli da un altro livello con forestas_dettaglio_titoli(). Null se il testo è vuoto (`[]`).

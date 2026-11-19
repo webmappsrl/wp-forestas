@@ -7,6 +7,7 @@
 require_once __DIR__ . '/comune.php';
 require_once __DIR__ . '/wpml.php';
 require_once __DIR__ . '/menu.php';
+require_once __DIR__ . '/allegati.php';
 require_once ABSPATH . 'wp-admin/includes/plugin.php';
 
 $righe  = [];
@@ -53,7 +54,7 @@ foreach ( $confronto as $nome => $valore ) {
 		unset( $confronto[ $nome ] );
 	}
 }
-foreach ( WPF_IMPREZA_STATO as $nome ) {
+foreach ( array_merge( WPF_IMPREZA_STATO, WPF_IMPREZA_COPIE ) as $nome ) {
 	unset( $confronto[ $nome ] ); // stato che Impreza cambia da sé: l'impronta cambierebbe senza motivo
 }
 $righe[] = 'impreza theme options (impronta): ' . md5( wpf_json( $confronto ) );
@@ -65,7 +66,7 @@ $righe[] = 'impreza Google Fonts salvati sul sito e aggiornati: '
 	. ( function_exists( 'us_get_local_google_fonts_state' ) ? ( us_get_local_google_fonts_state()['is_current'] ? 'sì' : 'no' ) : '-' );
 
 foreach ( WPF_OPZIONI_SITO as $nome ) {
-	$righe[] = "sito {$nome}: " . ( in_array( $nome, WPF_OPZIONI_SITO_PAGINA, true ) ? $chiave( get_option( $nome ) ) : get_option( $nome ) );
+	$righe[] = "sito {$nome}: " . ( in_array( $nome, WPF_OPZIONI_SITO_PAGINA, true ) ? $chiave( get_option( $nome ) ) : ( in_array( $nome, WPF_OPZIONI_SITO_FILE, true ) ? wpf_allegato_descrivi( get_option( $nome ) ) : get_option( $nome ) ) );
 }
 
 wpf_wpml_tutte_le_lingue(

@@ -9,11 +9,12 @@ AVVIO=$(date +%s)
 WP_PATH=/var/www/html
 WP="wp --allow-root --path=${WP_PATH}"
 IMPREZA_ZIP=/opt/wp-forestas/themes/impreza.zip
-# Plugin wp-package: ricerca unica (oc:8952), pagine di dettaglio (oc:8969) e indirizzi stabili (oc:8983, 0.3.0). Commit fisso: un sito ricreato deve avere lo stesso
+# Plugin wp-package: ricerca unica (oc:8952), pagine di dettaglio (oc:8969), indirizzi stabili (oc:8983, 0.3.0) e
+# percorribilità, avvisi e ricerca dei POI (oc:9000, 0.5.0). Commit fisso: un sito ricreato deve avere lo stesso
 # codice di quello di partenza (vuoto: nessun download). Per aggiornarlo:
 # git ls-remote https://github.com/webmappsrl/wp-package refs/heads/main, poi l'hash qui e scripts/wordpress-up.sh
 # di forestas, che ricostruisce l'immagine
-WP_PACKAGE_REF=827af5ed0aafd4f24510e1140849d2746a6e7865
+WP_PACKAGE_REF=2c332f5a25c4b394626bf310d8b562209947f949
 WMWP_DIR="${WP_PATH}/wp-content/plugins/wp-package"
 WMWP_TARBALL="https://github.com/webmappsrl/wp-package/archive/${WP_PACKAGE_REF}.tar.gz"
 # Commit scaricato, scritto nella cartella del plugin: se è diverso da WP_PACKAGE_REF si riscarica, così un

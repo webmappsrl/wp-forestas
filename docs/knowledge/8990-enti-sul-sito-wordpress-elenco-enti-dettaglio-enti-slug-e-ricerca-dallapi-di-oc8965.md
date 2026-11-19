@@ -237,6 +237,13 @@ percorsi e POI. Gli enti sono un dato solo di Forestas: tutto il codice sta nel 
   `Retry-After` senza chiamare lo shard, e nel log va una riga per pausa, non una per tasto.
 - **Testo rifiutato dallo shard** (400 e 422, i 4xx della validazione, `forestas_entes_search_refused()`): il tab
   risponde «nessun risultato» (200 con `total` 0), senza pausa e senza log.
+- **Filtri** (oc:9000): «Tipo di ente» (`tipo-ente`, i `type` con un nome) e «Ruolo sui sentieri» (`ruolo`, i
+  `roles` delle tracce con i nomi di `forestas_dettaglio_ruoli()`), in `forestas_entes_search_filter()`.
+  - Valori dello stesso filtro in OR, i due filtri in AND; valori sconosciuti nell'indirizzo ignorati.
+  - La rotta restituisce le voci già contate (`facets`): ogni filtro conta sugli enti filtrati dall'altro, non dal
+    proprio; si vedono le voci con almeno un ente e quelle scelte, per numero e poi per nome.
+  - I ruoli vengono sempre dalla copia, per slug: la ricerca dello shard non dà le tracce, e un ente non ancora nella
+    copia non ha ruoli.
 - **Errore** (indice degli enti assente, token mancante o rifiutato, rotta mancante con 404, shard spento o al limite).
   - La rotta risponde 503 e scrive nel log `forestas enti: ricerca degli enti non riuscita, codice …; per 30 secondi la
     ricerca risponde 503 senza chiamare lo shard`.

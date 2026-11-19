@@ -7,6 +7,7 @@
 
 require_once __DIR__ . '/comune.php';
 require_once __DIR__ . '/wpml.php';
+require_once __DIR__ . '/allegati.php';
 
 /**
  * Theme Options di Impreza: riferimenti «@chiave:» risolti, segreti, stato del pannello e allegati
@@ -24,8 +25,10 @@ function wpf_impreza_applica( array $impreza, bool $prova, callable $diff, calla
 	}
 	$ora     = (array) get_option( wpf_nome_theme_options(), [] );
 	$impreza = wpf_ripristina_segreti( $impreza, $ora );
-	foreach ( WPF_IMPREZA_STATO as $nome ) {
-		unset( $impreza[ $nome ] ); // stato, non configurazione: resta quello del sito
+	foreach ( array_merge( WPF_IMPREZA_STATO, WPF_IMPREZA_COPIE ) as $nome ) {
+		// stato, non configurazione, o copia di un'opzione di WordPress versionata in sito.json: resta quella del
+		// sito (con `site_icon` passata, Impreza la riscriverebbe nell'icona del sito)
+		unset( $impreza[ $nome ] );
 	}
 	foreach ( $impreza as $nome => $valore ) {
 		if ( wpf_opzione_allegato( (string) $nome, $valore ) ) {
@@ -132,11 +135,12 @@ function wpf_posizioni_applica( array $posizioni_cfg, array $id_menu, bool $prov
 }
 
 /**
- * Impostazioni del sito (sito.json): titolo, permalink, home statica. Un valore null indica un'opzione
+ * Impostazioni del sito (sito.json): titolo, permalink, home statica, icona. Un valore null indica un'opzione
  * che sul sito dell'export non c'era; un riferimento non risolto (già segnalato) lascia il valore del
- * sito.
+ * sito. Un «@file:…» (WPF_OPZIONI_SITO_FILE) è un file di `$dir`: l'allegato si ritrova o si crea (allegati.php); in
+ * prova un allegato da creare è una differenza.
  */
-function wpf_sito_applica( array $sito, bool $prova, callable $diff, callable $risolvi ): bool {
+function wpf_sito_applica( array $sito, bool $prova, callable $diff, callable $risolvi, string $dir = WPF_DIR_CONFIG ): bool {
 	$ok = true;
 	foreach ( $sito as $nome => $valore ) {
 		if ( ! in_array( $nome, WPF_OPZIONI_SITO, true ) ) {
@@ -148,6 +152,28 @@ function wpf_sito_applica( array $sito, bool $prova, callable $diff, callable $r
 		}
 		if ( $valore === null ) {
 			continue;
+		}
+		if ( in_array( $nome, WPF_OPZIONI_SITO_FILE, true ) && is_string( $valore ) && strpos( $valore, WPF_FILE ) === 0 ) {
+			$percorso = substr( $valore, strlen( WPF_FILE ) );
+			$file     = wpf_file_config( $dir, $percorso );
+			if ( $file === null ) {
+				WP_CLI::warning( "sito.json: {$nome} indica {$percorso}, che non c'è in media/ della configurazione: resta il valore del sito" );
+				$ok = false;
+				continue;
+			}
+			$allegato = wpf_allegato_cerca( $percorso, (string) md5_file( $file ) );
+			if ( ! $allegato && $prova ) {
+				$diff( "sito: {$nome}", get_option( $nome ), "{$valore} (allegato da creare)" );
+				continue;
+			}
+			if ( ! $allegato ) {
+				$allegato = wpf_allegato_importa( $file, $percorso, $nome === 'site_icon' );
+			}
+			if ( ! $allegato ) {
+				$ok = false;
+				continue;
+			}
+			$valore = $allegato;
 		}
 		$id = $risolvi( $valore );
 		if ( $id === 0 ) {

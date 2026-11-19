@@ -8,13 +8,19 @@
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
+// Con un wp-package più vecchio della 0.5.0 il dettaglio usa il template del plugin, invece di andare in fatal (oc:9000)
+if ( ! forestas_plugin_ready() ) {
+	require WMWP_PATH . 'templates/poi.php';
+	return;
+}
 
 $detail   = wmwp_detail_current();
 $p        = (array) ( $detail['feature']['properties'] ?? [] );
 $colori   = forestas_dettaglio_colori( 'poi' );
 $dati     = forestas_dettaglio_poi( $p );
 $nome     = (string) $detail['name'];
-$foto     = $p['feature_image']['sizes']['1440x500'] ?? $p['feature_image']['url'] ?? '';
+$main_photo = wmwp_detail_feature_image( $p, forestas_dettaglio_lingua() );
+$foto     = $main_photo['large'] ?? '';
 $galleria = forestas_dettaglio_galleria( $p );
 $non_disp = forestas_testo( 'Dato non ancora disponibile', 'Not yet available' );
 
@@ -29,14 +35,14 @@ wmwp_template_header();
 	<header class="wm-hero<?php echo '' === $foto ? ' wm-hero--senza-foto' : ''; ?>" data-wm-hero>
 		<?php if ( '' !== $foto ) : ?>
 			<?php // Testo alternativo dalla didascalia della foto, se c'è (specifica di oc:8783, «Testata con foto»); senza, è decorativa ?>
-			<img class="wm-hero__img" src="<?php echo esc_url( $foto ); ?>" alt="<?php echo esc_attr( wp_strip_all_tags( forestas_dettaglio_testo( $p['feature_image']['caption'] ?? null ) ) ); ?>" fetchpriority="high">
+			<img class="wm-hero__img" src="<?php echo esc_url( $foto ); ?>" alt="<?php echo esc_attr( wp_strip_all_tags( $main_photo['caption'] ?? '' ) ); ?>" fetchpriority="high">
 		<?php endif; ?>
 		<?php
 		// «Credits foto» come nella testata delle pagine statiche, con autore e credits della foto dello shard
 		$credits_foto = forestas_credits_immagine(
 			[
-				'autore'  => forestas_dettaglio_testo( $p['feature_image']['author'] ?? null ),
-				'credits' => forestas_dettaglio_testo( $p['feature_image']['credits'] ?? null ),
+				'autore'  => $main_photo['author'] ?? '',
+				'credits' => $main_photo['credits'] ?? '',
 				'chiave'  => 'poi-' . (int) $detail['id'],
 			]
 		);
@@ -56,13 +62,15 @@ wmwp_template_header();
 		</div>
 	</header>
 
+	<?php echo forestas_dettaglio_percorso( 'poi', $nome ); // phpcs:ignore WordPress.Security.EscapeOutput -- markup già escapato ?>
+
 	<div class="wm-stick" data-wm-stick aria-hidden="true">
 		<span class="wm-tipo"><?php echo esc_html( forestas_testo( 'Punto di interesse', 'Point of interest' ) ); ?></span>
 		<span class="wm-stick__tit"><?php echo esc_html( $nome ); ?></span>
 	</div>
 
 	<div class="forestas-azioni wm-actions">
-		<button type="button" class="forestas-pulsante" aria-disabled="true"><?php echo esc_html( forestas_testo( 'Stampa', 'Print' ) ); ?></button>
+		<?php // «Stampa» tolto finché la stampa non c'è: torna con oc:8982 (Rubens, 19/11) ?>
 		<?php echo forestas_condividi( [ 'url' => (string) $detail['url'], 'titolo' => $nome ] ); // phpcs:ignore WordPress.Security.EscapeOutput -- markup già escapato ?>
 	</div>
 
@@ -75,24 +83,18 @@ wmwp_template_header();
 						<tr><th scope="row"><?php echo esc_html( forestas_testo( 'Tipologia', 'Type' ) ); ?></th><td<?php echo forestas_dettaglio_lang( $dati['tipologia'] ? $dati['tipologia_lang'] : null ); // phpcs:ignore ?>><?php echo esc_html( forestas_dettaglio_valore( $dati['tipologia'] ) ); ?></td></tr>
 						<tr><th scope="row"><?php echo esc_html( forestas_testo( 'Comune', 'Municipality' ) ); ?></th><td><?php echo esc_html( forestas_dettaglio_valore( implode( ', ', $dati['luoghi']['comuni'] ) ) ); ?></td></tr>
 						<tr><th scope="row"><?php echo esc_html( forestas_testo( 'Area geografica', 'Geographic area' ) ); ?></th><td><?php echo esc_html( forestas_dettaglio_valore( implode( ', ', $dati['luoghi']['aree'] ) ) ); ?></td></tr>
+						<?php // Quota e area sosta attrezzata (Tavola 7): solo quando ci sono, la quota appena lo shard calcola il DEM dei POI ?>
+						<?php if ( null !== $dati['quota'] ) : ?>
+							<tr><th scope="row"><?php echo esc_html( forestas_testo( 'Quota', 'Elevation' ) ); ?></th><td><?php echo esc_html( forestas_dettaglio_quota( $dati['quota'] ) ); ?></td></tr>
+						<?php endif; ?>
+						<?php if ( $dati['area_sosta'] ) : ?>
+							<tr><th scope="row"><?php echo esc_html( forestas_testo( 'Area sosta attrezzata', 'Equipped rest area' ) ); ?></th><td><?php echo esc_html( forestas_testo( 'Sì', 'Yes' ) ); ?></td></tr>
+						<?php endif; ?>
 						<?php foreach ( forestas_dettaglio_enti( $p ) as $ente ) : ?>
 							<tr><th scope="row"><?php echo esc_html( $ente['etichetta'] ); ?></th><td><?php echo ! empty( $ente['url'] ) ? '<a href="' . esc_url( $ente['url'] ) . '">' . esc_html( $ente['nome'] ?? $non_disp ) . '</a>' : esc_html( $ente['nome'] ?? $non_disp ); // phpcs:ignore WordPress.Security.EscapeOutput -- markup già escapato ?></td></tr>
 						<?php endforeach; ?>
 					</tbody>
 				</table>
-			</section>
-
-			<?php // Percorsi vicini: li calcola lo shard (raggio in sardegnasentieri.poi_tracks_radius_meters, i più vicini per primi), il frontend non calcola niente; il raggio non si scrive, lo decide lo shard ?>
-			<section class="wm-sec" aria-labelledby="wm-vicini">
-				<?php echo $titolo( forestas_testo( 'Percorsi vicini', 'Nearby routes' ), 'wm-vicini' ); // phpcs:ignore ?>
-				<?php if ( $dati['percorsi'] ) : ?>
-					<?php echo forestas_dettaglio_griglia( $dati['percorsi'], 'percorso', 'wm-vicini-percorsi' ); // phpcs:ignore ?>
-					<?php if ( $dati['percorsi_totale'] > count( $dati['percorsi'] ) ) : ?>
-						<p class="wm-att"><?php echo esc_html( sprintf( forestas_testo( 'I %1$d percorsi più vicini su %2$d.', 'The %1$d closest routes out of %2$d.' ), count( $dati['percorsi'] ), $dati['percorsi_totale'] ) ); ?></p>
-					<?php endif; ?>
-				<?php else : ?>
-					<p><?php echo esc_html( forestas_testo( 'Nessun percorso vicino.', 'No nearby routes.' ) ); ?></p>
-				<?php endif; ?>
 			</section>
 
 			<?php
@@ -122,6 +124,27 @@ wmwp_template_header();
 						<?php endforeach; ?>
 					</ul>
 					<?php echo forestas_dettaglio_mostra_tutti( 'wm-galleria-foto', count( $galleria ) ); // phpcs:ignore WordPress.Security.EscapeOutput -- markup già escapato ?>
+				</section>
+			<?php endif; ?>
+
+			<?php // «Percorsi correlati», con il titolo della traccia (Rubens, 19/11): sono i percorsi vicini al punto, sotto la galleria come i contenuti collegati della traccia. Li calcola lo shard (raggio in sardegnasentieri.poi_tracks_radius_meters, i più vicini per primi), il frontend non calcola niente; il raggio non si scrive, lo decide lo shard ?>
+			<section class="wm-sec" aria-labelledby="wm-vicini">
+				<?php echo $titolo( forestas_testo( 'Percorsi correlati', 'Related routes' ), 'wm-vicini' ); // phpcs:ignore ?>
+				<?php if ( $dati['percorsi'] ) : ?>
+					<?php echo forestas_dettaglio_griglia( $dati['percorsi'], 'percorso', 'wm-vicini-percorsi' ); // phpcs:ignore ?>
+					<?php if ( $dati['percorsi_totale'] > count( $dati['percorsi'] ) ) : ?>
+						<p class="wm-att"><?php echo esc_html( sprintf( forestas_testo( 'I %1$d percorsi correlati più vicini su %2$d.', 'The %1$d closest related routes out of %2$d.' ), count( $dati['percorsi'] ), $dati['percorsi_totale'] ) ); ?></p>
+					<?php endif; ?>
+				<?php else : ?>
+					<p><?php echo esc_html( forestas_testo( 'Nessun percorso correlato.', 'No related routes.' ) ); ?></p>
+				<?php endif; ?>
+			</section>
+
+			<?php // Punti di interesse correlati, come nella traccia (Rubens, 19/11): i POI correlati di Drupal, dallo shard ?>
+			<?php if ( $dati['poi_correlati'] ) : ?>
+				<section class="wm-sec" aria-labelledby="wm-poi">
+					<?php echo $titolo( forestas_testo( 'Punti di interesse correlati', 'Related points of interest' ), 'wm-poi' ); // phpcs:ignore ?>
+					<?php echo forestas_dettaglio_griglia( $dati['poi_correlati'], 'poi', 'wm-correlati-poi' ); // phpcs:ignore ?>
 				</section>
 			<?php endif; ?>
 

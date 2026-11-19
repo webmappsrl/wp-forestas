@@ -139,7 +139,8 @@ bin/wordpress-config.sh applica --conferma    # backup in backup/<data-ora>, poi
 ```
 
 Atteso nell'output: `menu: 18 voci rimaste senza menu cancellate` (10/11; il 29/10 erano 17, e `config/menu.json` è
-cambiato il 02/11 con oc:8760). È normale. Dopo il primo giro del
+cambiato il 02/11 con oc:8760). È normale. Il 18/11, con oc:9000, il menu di servizio ha perso la voce
+«Segnalazioni» («Report an issue» in inglese): il numero può cambiare, il ciclo non è stato rifatto. Dopo il primo giro del
 passo 3 è atteso anche `wpml: stato del wizard: 'diverso' → 'come nel repo'` (29/10, oc:8760): lo cambia
 la creazione dei contenuti, non un giro che non scrive nulla. Quando l'apply ricrea i
 menu italiani, WPML stacca dai menu inglesi le traduzioni delle voci vecchie; i menu inglesi vengono
@@ -235,7 +236,10 @@ Nel browser, in italiano e inglese:
   nel gruppo «Enti» di un dettaglio di sentiero il nome dell'ente porta alla sua pagina;
 - il titolo della scheda è «Pagina | Sardegna Sentieri», come su Drupal: il nome viene da `blogname`
   di `config/sito.json` (l'apply lo scrive), il separatore dal child. Se resta «Forestas» l'apply non è
-  andato a buon fine.
+  andato a buon fine;
+- la scheda del browser ha l'icona del sito, la «S» del logo su un cerchio bianco (`config/media/icona-sito.png`,
+  oc:9000): nell'HTML ci sono `<link rel="icon">` da 32 e 192 pixel e `apple-touch-icon`. Se manca, `bin/wordpress-config.sh
+  applica` mostra la riga `sito: site_icon` da applicare.
 
 ## 6. Elementi mancanti
 

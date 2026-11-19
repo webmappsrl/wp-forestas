@@ -229,7 +229,25 @@ $check( $copia_prima === get_option( $opt_enti, null ) && $slug_prima === get_op
 // 4. Indicatori
 $ind = forestas_dettaglio_indicatori( $completa['feature']['properties'] );
 $check( 'validation-status-validated' === ( $ind['validazione']['chiave'] ?? '' ), 'validazione dal termine' );
-$check( null === $ind['percorribilita'], 'percorribilità: dato che non esiste ancora' );
+// Tacche dinamiche dal registro degli stati del plugin (oc:9000): tante quanti gli stati della famiglia, assenza
+// compresa; il livello è la posizione dello stato, l'assenza vale 0
+$check( 4 === ( $ind['validazione_tacche']['livello'] ?? null ) && 5 === ( $ind['validazione_tacche']['totale'] ?? null ), 'validato 4 su 5' );
+$walk = function ( string $suffix ): array {
+	return [ 'taxonomies' => [ 'walkability-status' => [ [ 'identifier' => 'walkability-status-' . $suffix, 'name' => [ 'it' => 'x' ] ] ] ] ];
+};
+$per = forestas_dettaglio_indicatori( $walk( 'partially-walkable' ) )['percorribilita'];
+$check( 3 === $per['level'] && 4 === $per['total'] && false === $per['absent'], 'parzialmente percorribile 3 su 4' );
+$per = forestas_dettaglio_indicatori( [] )['percorribilita'];
+$check( 0 === $per['level'] && 4 === $per['total'] && true === $per['absent'] && 'Sconosciuta' === $per['name'], 'senza termine: Sconosciuta 0 su 4' );
+$val = function ( string $suffix ): array {
+	return forestas_dettaglio_indicatori( [ 'taxonomies' => [ 'validation-status' => [ [ 'identifier' => 'validation-status-' . $suffix, 'name' => [ 'it' => 'x' ] ] ] ] ] )['validazione_tacche'];
+};
+$check( [ 5, 5 ] === [ $val( 'certified' )['livello'], $val( 'certified' )['totale'] ], 'certificato 5 su 5' );
+$check( 0 === $val( 'unverified' )['livello'] && 'Non verificato' === $val( 'unverified' )['etichetta'], 'non verificato 0' );
+$senza_val = forestas_dettaglio_indicatori( [] )['validazione_tacche'];
+$check( 0 === $senza_val['livello'] && 5 === $senza_val['totale'] && 'Non verificato' === $senza_val['etichetta'], 'senza validazione: Non verificato 0 su 5' );
+$aee = forestas_dettaglio_indicatori( [ 'taxonomies' => [ 'inclusivity-difficulty' => [ [ 'identifier' => 'inclusivity-difficulty-aee', 'name' => [ 'it' => 'AEE' ] ] ] ] ] )['accessibilita'];
+$check( 3 === $aee['livello'] && 3 === $aee['totale'], 'AEE 3 su 3' );
 // Accessibilità = grado AT · AE · AEE (inclusivity-difficulty) e tipologie di disabilità (wireframe Tavola 3, nota 10)
 $acc_p = [
 	'taxonomies' => [
@@ -352,10 +370,10 @@ $check( 2 === count( $diff ) && 'EE' === $diff[0][1], 'difficoltà per attività
 $check( [ 'Cinghiali' ] === forestas_dettaglio_avvertenze( $p ), 'avvertenze' );
 $check( [] === forestas_dettaglio_difficolta( [] ) && [] === forestas_dettaglio_avvertenze( [] ), 'niente difficoltà né avvertenze' );
 
-// 10. Livello della validazione sulla scala 0-6 della legenda
-$check( 4 === forestas_dettaglio_livello_validazione( 'validation-status-walkable' ), 'percorribile = 4' );
-$check( 6 === forestas_dettaglio_livello_validazione( 'validation-status-certified' ), 'certificato = 6' );
-$check( 0 === forestas_dettaglio_livello_validazione( 'sconosciuto' ), 'sconosciuto = 0' );
+// 10. Livello della validazione dal registro degli stati (oc:9000): i valori tolti da oc:8989 valgono 0
+$check( 2 === $val( 'under-review' )['livello'], 'in revisione = 2' );
+$check( 0 === $val( 'walkable' )['livello'] && 5 === $val( 'walkable' )['totale'], 'percorribile tolto = 0 su 5' );
+$check( 0 === forestas_dettaglio_indicatori( [ 'taxonomies' => [ 'validation-status' => [ [ 'identifier' => 'sconosciuto' ] ] ] ] )['validazione_tacche']['livello'], 'sconosciuto = 0' );
 
 // 11. Galleria: immagine grande, miniatura, didascalia, autore, credits
 $gal = forestas_dettaglio_galleria( [ 'image_gallery' => [ [ 'url' => 'http://x/a.jpg', 'thumbnail' => 'http://x/a-t.jpg', 'caption' => 'A', 'author' => null, 'credits' => 'C' ], [ 'caption' => 'senza url' ] ] ] );
@@ -384,6 +402,24 @@ $check( 1 === count( $dati['video'] ), 'video' );
 $check( [ 'Goni' ] === $dati['luoghi']['comuni'] && 'Cagliari' === $dati['luoghi']['provincia'] && [ 'Area C (Sud-EST )' ] === $dati['luoghi']['aree'], 'luoghi del POI' );
 $vuoto = forestas_dettaglio_poi( [] );
 $check( null === $vuoto['tipologia'] && '' === $vuoto['come_arrivare'] && [] === $vuoto['allegati'], 'POI vuoto' );
+// Quota e area sosta attrezzata (Rubens, 19/11; Tavola 7): la quota dal DEM dello shard (`properties.ele` di
+// UpdateEcPoiDemJob), l'area sosta dal tipo `equipped-rest-area`, con il nome del termine nella lingua della pagina
+$check( null === $vuoto['quota'] && false === $vuoto['area_sosta'], 'POI vuoto: niente quota né area sosta' );
+$sosta = forestas_dettaglio_poi( [
+	'ele'        => 1293.4,
+	// Come Perda Liana: l'area sosta è il primo tipo
+	'taxonomies' => [ 'poi-type' => [
+		[ 'identifier' => 'equipped-rest-area', 'name' => [ 'it' => 'Area sosta attrezzata' ] ],
+		[ 'identifier' => 'nature', 'name' => [ 'it' => 'Meraviglie della Geologia e del Paesaggio' ] ],
+	] ],
+] );
+$check( 1293 === $sosta['quota'], 'quota arrotondata al metro: ' . wp_json_encode( $sosta['quota'] ) );
+$check( true === $sosta['area_sosta'], 'area sosta dal tipo del POI' );
+$check( 'Meraviglie della Geologia e del Paesaggio' === $sosta['tipologia'], 'tipologia: il primo tipo che non è l\'area sosta (Tavola 7), non «Area sosta attrezzata»' );
+$solo_sosta = forestas_dettaglio_poi( [ 'taxonomies' => [ 'poi-type' => [ [ 'identifier' => 'equipped-rest-area', 'name' => [ 'it' => 'Area sosta attrezzata' ] ] ] ] ] );
+$check( 'Area sosta attrezzata' === $solo_sosta['tipologia'] && true === $solo_sosta['area_sosta'], 'con il solo tipo area sosta la tipologia resta quella' );
+$check( null === forestas_dettaglio_poi( [ 'ele' => 'x' ] )['quota'] && 0 === forestas_dettaglio_poi( [ 'ele' => 0 ] )['quota'], 'quota non numerica: niente; 0 (sul mare): 0' );
+$check( '1.293 m' === forestas_dettaglio_quota( 1293 ), 'quota scritta con il separatore delle migliaia: ' . forestas_dettaglio_quota( 1293 ) );
 
 // 14. Titolo «in breve» con l'articolo giusto per tipo
 $check( 'Il sentiero in breve' === forestas_dettaglio_titolo_breve( 'sentiero' ), 'il sentiero' );
@@ -416,6 +452,18 @@ $check( false !== strpos( $poi_card, 'forestas-card--poi' ) && false !== strpos(
 $check( false !== strpos( forestas_dettaglio_card( [ 'id' => 4, 'nome' => 'Biancone' ], 'poi' ), '<span class="forestas-card__tag">Punto di interesse</span>' ), 'POI senza tipologia: etichetta «Punto di interesse»' );
 $check( false !== strpos( forestas_dettaglio_card( [ 'id' => 3, 'nome' => 'X', 'tipo_id' => null ], 'percorso' ), 'forestas-card--sentiero' ), 'percorso senza tipo: colore dei sentieri' );
 $check( [] === forestas_dettaglio_poi( [] )['percorsi'] && 0 === forestas_dettaglio_poi( [] )['percorsi_totale'], 'POI senza percorsi vicini' );
+// POI correlati del POI (Rubens, 19/11): `forestas.related_pois` dello shard (id, nome, foto), card come i POI
+// correlati della traccia, con l'indirizzo del dettaglio dal plugin; senza id fuori
+$correlati_poi = forestas_dettaglio_poi( [ 'forestas' => [ 'related_pois' => [
+	[ 'id' => 149, 'name' => [ 'it' => 'Punto di arrivo T-113', 'en' => 'End point T-113' ], 'feature_image' => [ 'thumbnail' => 'https://x/t.jpg' ], 'addr_complete' => 'Perda Liana' ],
+	[ 'id' => 0, 'name' => [ 'it' => 'Senza id' ] ],
+] ] ] )['poi_correlati'];
+$check( 1 === count( $correlati_poi ) && 149 === $correlati_poi[0]['id'] && 'Punto di arrivo T-113' === $correlati_poi[0]['nome'] && 'https://x/t.jpg' === $correlati_poi[0]['immagine'] && null === $correlati_poi[0]['tipo'], 'POI correlati del POI: ' . wp_json_encode( $correlati_poi ) );
+$check( [] === forestas_dettaglio_poi( [] )['poi_correlati'], 'POI senza POI correlati' );
+// Un'etichetta sola per i percorsi collegati, nel POI come nella traccia (Rubens, 19/11)
+$poi_template = (string) file_get_contents( get_stylesheet_directory() . '/wp-package/poi.php' );
+$check( false !== strpos( $poi_template, "forestas_testo( 'Percorsi correlati', 'Related routes' )" ) && false === strpos( $poi_template, "'Percorsi vicini'" ), 'POI: «Percorsi correlati» come nella traccia' );
+$check( false !== strpos( (string) file_get_contents( get_stylesheet_directory() . '/wp-package/poi.php' ), "forestas_dettaglio_griglia( \$dati['poi_correlati'], 'poi'" ), 'il template del POI mostra i POI correlati' );
 
 // Mappa del dettaglio (Tavola 3 e Tavola 7 del wireframe): tracce, punti e legenda dal JSON
 $p_mappa = [
@@ -513,6 +561,109 @@ $check( 'a.pdf' === ( $vecchi['allegati'][0]['title'] ?? '' ) && 'http://v/3' ==
 $html_al = forestas_dettaglio_allegati_html( $al );
 $check( false !== strpos( $html_al, '>Il sentiero<' ) && false !== strpos( $html_al, 'Video 2' ) && false !== strpos( $html_al, ' download>' ), 'HTML degli allegati e dei video' );
 $check( '' === forestas_dettaglio_allegati_html( [ 'allegati' => [], 'video' => [] ] ), 'senza allegati né video: niente' );
+
+// oc:9000: fascia della percorribilità — solo per gli stati noti che non sono di assenza, data solo se c'è, nota. I
+// dati vengono da wmwp_walkability() del plugin, con il registro vero (4 stati)
+$stato_per = function ( string $suffix, array $walkability = [] ): array {
+	return wmwp_walkability(
+		[
+			// Senza nome nel termine: il nome viene dal registro
+			'taxonomies'  => [ 'walkability-status' => [ [ 'identifier' => 'walkability-status-' . $suffix ] ] ],
+			'walkability' => $walkability,
+		],
+		'it'
+	);
+};
+$fascia = forestas_detail_walkability_html( $stato_per( 'partially-walkable', [ 'description' => [ 'it' => 'zone di fango' ], 'last_update' => '2026-11-17T09:06:46+01:00', 'user' => 7 ] ) );
+$check( false !== strpos( $fascia, 'wm-state--partially-walkable' ) && false !== strpos( $fascia, 'Parzialmente percorribile' ), 'fascia: stato e classe' );
+$check( false !== strpos( $fascia, 'stato aggiornato il' ) && false !== strpos( $fascia, '<time datetime="2026-11-17' ), 'fascia: data' );
+$check( false !== strpos( $fascia, 'Nota: zone di fango' ), 'fascia: nota' );
+$check( false === strpos( $fascia, 'Inserito da' ), 'fascia: niente «Inserito da»' );
+$senza_data = forestas_detail_walkability_html( $stato_per( 'walkable', [ 'last_update' => '2026-11-17T09:06:46+01:00', 'user' => null ] ) );
+$check( '' !== $senza_data && false === strpos( $senza_data, 'aggiornato' ) && false === strpos( $senza_data, 'Nota' ), 'fascia senza data né nota' );
+$check( '' === forestas_detail_walkability_html( forestas_dettaglio_indicatori( [] )['percorribilita'] ), 'nessuna fascia senza percorribilità' );
+$check( '' === forestas_detail_walkability_html( $stato_per( 'closed' ) ), 'nessuna fascia per uno stato che il registro non conosce' );
+
+// oc:9000: fascia «Avviso» dal dato vero, con la lingua del testo di ripiego
+$avviso = forestas_detail_notice_html( [ 'message' => 'Frana al km 3', 'lang' => 'it', 'updated_at' => '2026-11-17T11:34:00+00:00' ] );
+$check( false !== strpos( $avviso, 'wm-avviso' ) && false !== strpos( $avviso, 'Frana al km 3' ) && false !== strpos( $avviso, '<time datetime="2026-11-17' ), 'avviso: testo e data' );
+$check( false === strpos( $avviso, 'wm-segnaposto' ), 'avviso: niente segnaposto' );
+$check( '' === forestas_detail_notice_html( null ), 'nessun avviso, nessuna fascia' );
+
+// oc:9000: nel dettaglio non ci sono segnalazioni né recensioni (primo rilascio senza); l'avviso vale anche per gli
+// itinerari, che non hanno la fascia della percorribilità. Il template si genera davvero, con lo shard bloccato
+$template = (string) file_get_contents( get_stylesheet_directory() . '/wp-package/track.php' );
+$check( false === strpos( $template, "'Segnala'" ) && false === strpos( $template, "'Recensioni: '" ) && false === strpos( $template, 'Opinioni e recensioni' ), 'template senza segnalazioni né recensioni' );
+$genera = function ( string $route_type ): string {
+	$GLOBALS['wmwp_detail'] = [
+		'type'    => 'track',
+		'id'      => 999999901,
+		'name'    => 'Prova',
+		'lang'    => 'it',
+		'feature' => [
+			'type'       => 'Feature',
+			'geometry'   => null,
+			'properties' => [
+				'id'                        => 999999901,
+				'name'                      => [ 'it' => 'Prova' ],
+				'not_accessible'            => true,
+				'not_accessible_message'    => [ 'it' => 'Frana al km 3' ],
+				'not_accessible_updated_at' => '2026-11-17T11:34:00+00:00',
+				'taxonomies'                => [
+					'route-type'         => [ [ 'identifier' => $route_type, 'name' => [ 'it' => 'x' ] ] ],
+					'walkability-status' => [ [ 'identifier' => 'walkability-status-not-walkable', 'name' => [ 'it' => 'Non percorribile' ] ] ],
+				],
+			],
+		],
+	];
+	$blocca = fn() => new WP_Error( 'test', 'shard bloccato nel test' );
+	add_filter( 'pre_http_request', $blocca, 1 );
+	ob_start();
+	try {
+		include get_stylesheet_directory() . '/wp-package/track.php';
+	} finally {
+		$html = (string) ob_get_clean();
+		remove_filter( 'pre_http_request', $blocca, 1 );
+		unset( $GLOBALS['wmwp_detail'] );
+	}
+	return $html;
+};
+$itinerario = $genera( 'route-type-itinerary' );
+$check( false !== strpos( $itinerario, 'class="wm-avviso"' ) && false !== strpos( $itinerario, 'Frana al km 3' ), 'itinerario: fascia «Avviso»' );
+$check( false === strpos( $itinerario, 'wm-state--' ), 'itinerario: niente fascia della percorribilità' );
+$sentiero = $genera( 'route-type-trail' );
+$check( false !== strpos( $sentiero, 'class="wm-avviso"' ) && false !== strpos( $sentiero, 'wm-state--not-walkable' ), 'sentiero: avviso e fascia della percorribilità' );
+$check( false === strpos( $sentiero, '>Segnala<' ) && false === strpos( $sentiero, 'Opinioni e recensioni' ), 'sentiero: niente segnalazioni né recensioni' );
+// Breadcrumb del dettaglio (Rubens, 19/11): Home › pagina d'elenco del tipo › nome, come nelle altre pagine del sito
+// La voce di mezzo ha il nome della voce del menu principale («Punti di interesse»), non il titolo della pagina, che
+// per i POI è ancora «Da vedere» (Rubens, 19/11)
+$elenco = function ( string $chiave, string $nome ): string {
+	$id = forestas_pagina_per_chiave( $chiave );
+	return $id ? '<a href="' . esc_url( get_permalink( $id ) ) . '">' . esc_html( $nome ) . '</a><span aria-hidden="true">›</span>' : 'pagina ' . $chiave . ' assente';
+};
+$check( false !== strpos( $sentiero, '<nav class="forestas-percorso" aria-label="Briciole di pane"><a href="' ) && false !== strpos( $sentiero, $elenco( 'sentieri', 'Sentieri' ) . '<span aria-current="page">Prova</span></nav>' ), 'sentiero: breadcrumb Home › Sentieri › nome' );
+$check( false !== strpos( $itinerario, $elenco( 'itinerari', 'Itinerari' ) . '<span aria-current="page">Prova</span></nav>' ), 'itinerario: breadcrumb Home › Itinerari › nome' );
+$check( strpos( $sentiero, 'class="forestas-percorso"' ) < strpos( $sentiero, 'class="forestas-azioni wm-actions"' ) && strpos( $sentiero, '</header>' ) < strpos( $sentiero, 'class="forestas-percorso"' ), 'sentiero: breadcrumb fra la testata e i pulsanti' );
+$check( false !== strpos( forestas_dettaglio_percorso( 'poi', 'Sos Nibberos' ), $elenco( 'da-vedere', 'Punti di interesse' ) . '<span aria-current="page">Sos Nibberos</span>' ), 'POI: breadcrumb Home › Punti di interesse › nome' );
+$check( false !== strpos( forestas_dettaglio_percorso( 'cammino', 'Tappa 1' ), $elenco( 'cammini', 'Cammini' ) ), 'cammino: breadcrumb con Cammini' );
+$check( false !== strpos( (string) file_get_contents( get_stylesheet_directory() . '/wp-package/poi.php' ), 'forestas_dettaglio_percorso(' ), 'POI: il template stampa la breadcrumb' );
+$check( 'Punti di interesse' === forestas_voce_menu_principale( forestas_pagina_per_chiave( 'da-vedere' ) ) && '' === forestas_voce_menu_principale( 0 ), 'nome della voce del menu principale, in maiuscolo solo la prima lettera' );
+// Niente «Stampa» finché la stampa non c'è (Rubens, 19/11: torna con oc:8982), né nella traccia né nel POI
+$check( false === strpos( $sentiero, '>Stampa<' ) && false === strpos( $itinerario, '>Stampa<' ), 'traccia: niente pulsante «Stampa»' );
+$check( false === strpos( (string) file_get_contents( get_stylesheet_directory() . '/wp-package/poi.php' ), "'Stampa'" ), 'POI: niente pulsante «Stampa»' );
+
+// oc:9000: controllo unico della versione del plugin, e legenda delle tacche dal registro (assenza a 0)
+$check( forestas_plugin_ready() && forestas_plugin_ready( '0.5.0' ) && forestas_plugin_ready( '0.10.0' ), 'plugin dalla 0.5.0: pronto' );
+$check( ! forestas_plugin_ready( '0.4.0' ) && ! forestas_plugin_ready( '' ), 'plugin più vecchio: il child degrada' );
+$check( [ 0 => 'Sconosciuta', 2 => 'Non percorribile', 3 => 'Parzialmente percorribile', 4 => 'Percorribile' ] === forestas_status_legend( 'walkability-status' ), 'legenda della percorribilità' );
+$check( [ 1 => 'AT', 2 => 'AE', 3 => 'AEE' ] === forestas_status_legend( 'inclusivity-difficulty' ), 'legenda dell\'accessibilità' );
+$check( [] === forestas_status_legend( 'nessuna-famiglia' ), 'famiglia sconosciuta: legenda vuota' );
+
+// oc:9000: il tipo delle tracce viene da `route-type`, famiglia di forestas indicata al plugin
+$check( 'route-type' === wmwp_track_kind_taxonomy(), 'famiglia del tipo indicata al plugin' );
+
+// Dettaglio della traccia dal file v1 (scrum del 19/11, oc:8997): il plugin legge tracks/v1/<id>.json
+$check( 'v1' === apply_filters( 'wmwp_track_json_version', '' ), 'versione del file della traccia: v1' );
 
 if ( $failures ) {
 	echo 'FAIL: ' . implode( '; ', $failures ) . "\n";

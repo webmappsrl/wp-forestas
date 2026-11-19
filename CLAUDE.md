@@ -189,6 +189,10 @@ subagent.
   danno 404 e i sentieri gestiti degli enti spariscono. Va cancellata la cache dell'indice e ricostruita:
   `wp transient delete wmwp_detail_index`, `wp option delete wmwp_detail_index_last wmwp_detail_index_rebuilt_at`,
   poi `wp eval 'wmwp_detail_index( true );'`. Nel verso opposto non serve (knowledge 8990) (oc:8990)
+- Lo stile dei filtri sta in due posti di `themes/forestas-child/style.css`, `.wmwp-facet*` e `.forestas-filtri*`:
+  cambiandone uno solo i filtri del sito tornano diversi (knowledge 9000, «Stile dei filtri») (oc:9000)
+- Rinominando lo slug del menu principale (`main-menu*`) la breadcrumb dei dettagli torna al titolo della pagina
+  d'elenco, «Da vedere» per i POI (knowledge 8969) (oc:9000)
 
 ## Conoscenza
 
@@ -201,3 +205,4 @@ subagent.
 | Eventi e «da sapere» da Drupal | ciclo di import comune ai tipi con un nodo, eventi e «da sapere» come tipi propri, tipologie e loro pagine, filtri delle liste, vecchi indirizzi, template e editor | [docs/knowledge/8760-import-degli-eventi-e-dei-da-sapere-da-drupal.md](docs/knowledge/8760-import-degli-eventi-e-dei-da-sapere-da-drupal.md) |
 | Pagine di dettaglio di percorsi e POI | template del child sopra il plugin, tavole e Drupal come riferimento, chiave stabile (nid di Drupal, anche a Drupal spento), indirizzi stabili e storico dei percorsi del plugin, mappa interattiva per ambiente, icone dal set dello shard, messa in opera | [docs/knowledge/8969-pagine-di-dettaglio-di-percorsi-e-punti-di-interesse-sul-sito-wordpress.md](docs/knowledge/8969-pagine-di-dettaglio-di-percorsi-e-punti-di-interesse-sul-sito-wordpress.md) |
 | Enti sul sito | copia del JSON degli enti con token e WP-Cron, ultima copia buona e plausibilità, elenco e dettaglio come Drupal, tab della ricerca, link da percorsi e POI; la messa in opera in [docs/howto/messa-in-opera-degli-enti.md](docs/howto/messa-in-opera-degli-enti.md) | [docs/knowledge/8990-enti-sul-sito-wordpress-elenco-enti-dettaglio-enti-slug-e-ricerca-dallapi-di-oc8965.md](docs/knowledge/8990-enti-sul-sito-wordpress-elenco-enti-dettaglio-enti-slug-e-ricerca-dallapi-di-oc8965.md) |
+| Percorribilità, avvisi e filtri | stati e tacche dal registro del plugin, fascia della percorribilità e avviso nel dettaglio, pagina `/avvisi`, filtri della ricerca e delle liste dei post con «Filtri attivi», icona del sito | [docs/knowledge/9000-sito-wordpress-percorribilita-e-avvisi-dei-sentieri-dai-dati-dello-shard.md](docs/knowledge/9000-sito-wordpress-percorribilita-e-avvisi-dei-sentieri-dai-dati-dello-shard.md) |
