@@ -332,13 +332,14 @@ function forestas_notices_item_html( array $item, string $lang ): string {
 	$name    = forestas_dettaglio_testo_lingua( $item['name'] ?? null, $lang );
 	$message = forestas_dettaglio_testo_lingua( $item['message'] ?? null, $lang );
 	$link    = $id > 0 && function_exists( 'wmwp_detail_url' ) ? wmwp_detail_url( 'track', $id, forestas_entes_wpml_code( $lang ) ) : '';
-	$label   = trim( ( '' !== (string) ( $item['ref'] ?? '' ) ? $item['ref'] . ' · ' : '' ) . $name['testo'] );
+	$ref     = trim( (string) ( $item['ref'] ?? '' ) );
+	$label   = ( '' !== $ref ? esc_html( $ref ) . forestas_separatore_html() : '' ) . esc_html( trim( $name['testo'] ) );
 	$date    = forestas_detail_time_html( is_string( $item['published_at'] ?? null ) ? $item['published_at'] : null );
 
 	$html = '<li class="av-it">' . forestas_notice_tag_html() . '<div>';
 	$html .= '' !== $link
-		? '<a href="' . esc_url( $link ) . '" class="av-t"' . forestas_dettaglio_lang( $name['lingua'] ) . '>' . esc_html( $label ) . '</a>'
-		: '<span class="av-t"' . forestas_dettaglio_lang( $name['lingua'] ) . '>' . esc_html( $label ) . '</span>';
+		? '<a href="' . esc_url( $link ) . '" class="av-t"' . forestas_dettaglio_lang( $name['lingua'] ) . '>' . $label . '</a>'
+		: '<span class="av-t"' . forestas_dettaglio_lang( $name['lingua'] ) . '>' . $label . '</span>';
 	if ( '' !== $message['testo'] ) {
 		$html .= '<p' . forestas_dettaglio_lang( $message['lingua'] ) . '>' . esc_html( $message['testo'] ) . '</p>';
 	}

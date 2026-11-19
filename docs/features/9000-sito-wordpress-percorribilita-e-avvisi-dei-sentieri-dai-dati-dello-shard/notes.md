@@ -4,6 +4,106 @@
 
 ## Divergenze dal piano, task per task
 
+### Task 13 icona del sito (aggiunto il 19/11)
+
+- Chiesto da Rubens il 19/11, sul ticket attuale: l'icona del sito come quella di Drupal, messa dallo script come il
+  resto della configurazione.
+- La favicon di Drupal (`public://favicon_2.ico`, da `sardegnasentieri.settings.yml`) è un ICO da 16×16: la «S» del
+  logo, alta 12 pixel, su un cerchio bianco con gli angoli trasparenti. WordPress vuole per `site_icon` un'immagine
+  grande e ne genera le misure da 32, 180, 192 e 270 pixel: da 16 pixel sarebbero sfocate. `config/media/icona-sito.png`
+  è la stessa icona rifatta a 512×512 dalla «S» del logo del child, con le proporzioni della favicon; a 32 pixel
+  coincide con quella di Drupal.
+- Nuovo segnaposto `@file:<percorso>` in `sito.json` (`allegati.php`): l'apply crea l'allegato con le misure di
+  `WP_Site_Icon` e il contesto `site-icon` e lo ritrova dal percorso e dall'impronta; l'export copia il file
+  dell'icona in `media/icona-sito.<estensione>` (anche caricata dal pannello) e `export_in` sostituisce tutta la
+  cartella `media/`. La copia di Impreza (`site_icon` delle Theme Options, che al salvataggio Impreza riscrive in
+  WordPress) è in `WPF_IMPREZA_COPIE`: non si esporta né si applica, così un apply delle Theme Options non azzera
+  l'icona. Il ritratto mostra file e impronta, non l'id.
+- Provato sul locale: `applica` una differenza, `--conferma` l'allegato e i tag `icon`/`apple-touch-icon` in Home e
+  `/avvisi`, secondo giro nessuna differenza; `esporta` riscrive lo stesso PNG, toglie `site_icon` da `impreza.json`
+  e rimescola solo l'ordine di `post.json` (rimesso com'era).
+- Bug trovato dopo: `tests/icona-sito.php` lanciato dopo l'apply cancellava l'icona vera, perché al passo 7 raccoglieva
+  tutti gli allegati con percorso `media/icona-sito.png` (e cancellare l'allegato dell'icona toglie anche `site_icon`).
+  Ora il test annota gli allegati veri all'inizio e non li tocca; rilanciato dopo `applica --conferma`, l'icona resta.
+
+### Task 14 filtri del tab «Enti» (aggiunto il 19/11)
+
+- Chiesto da Rubens il 19/11: fra le possibili faccette degli enti ha scelto tipo di ente e ruolo sui sentieri. La
+  terza proposta, provincia o area, non c'è: la copia degli enti non ha la posizione e servirebbe una modifica
+  all'API dello shard.
+- I valori arrivano già contati dalla rotta, come per il filtro dei contenuti: il tab a testo vuoto legge la copia, con
+  un testo lo shard, e solo la rotta ha tutti e due.
+- «Complesso forestale» compare in tutti e due i filtri: è un tipo di ente e anche un ruolo sulle tracce (`roles`
+  dell'API), con lo stesso nome usato da Drupal nei due posti.
+
+### Task 15 filtri dei luoghi dei POI (aggiunto il 19/11)
+
+- Chiesti da Rubens il 19/11. Gli altri filtri possibili non ci sono nei dati: `pois.geojson` non ha i percorsi
+  vicini né gli enti, e `forestas.zona_geografica` è un termine Drupal che ripete l'area.
+- Il lavoro è nel plugin (la copia dei POI e i conteggi stanno sul server); il child dichiara solo le tre faccette,
+  prese da `forestas_search_track_facets()` così le regole restano in un posto solo.
+- Da girare ad Alessandro: 269 POI su 976 non hanno il tipo (`poi-type`), e scelto un tipo spariscono tutti senza una
+  voce per ritrovarli. Va sistemato nei dati, non nel sito.
+
+### Task 16 stile dei filtri (aggiunto il 19/11)
+
+- Riferimento: lo stile finale della ricerca unica; si comincia dal numero nel riquadro arancione dei filtri dei post.
+  Come chiesto da Rubens, la dimensione del testo non cambia: il riquadro dei post usa .8em del testo della colonna,
+  quello della ricerca resta a 11,5px.
+- Il fondo pieno va a tutto il filtro con una voce scelta, come il gruppo attivo dei filtri dei post (`.facet-active`
+  di Drupal), non alla sola voce.
+
+### Task 17 filtri apribili (aggiunto il 19/11)
+
+- La funzione è nel plugin, spenta di base: il disegno delle faccette è di `search.js`. Il child la accende e dà lo
+  stile, con la freccia del Font Awesome di Impreza come i filtri dei post.
+- Il `legend` va allargato a tutta la colonna (`:has(.wmwp-facet__toggle)`), altrimenti la freccia resta attaccata al
+  titolo.
+
+### Controllo di accessibilità dei task 13–17 (19/11)
+
+- Contrasti (WCAG 1.4.3): numero arancione #CA4D1C su #FFFDFA 4,51:1, bianco su #CA4D1C 4,58:1, titoli dei filtri
+  #6B6B6B su bianco 5,33:1, «Mostra di più» #333 12,63:1. Il primo è appena sopra 4,5:1: non schiarire il fondo né
+  il colore senza ricalcolarlo.
+- Corretti: il pulsante che apre e chiude un filtro era alto 22px, ora `min-height: 24px` (2.5.8); le frecce del
+  Font Awesome in `::after`/`::before` entravano nel nome letto («Mostra di più» con il glifo in fondo), ora con il
+  testo alternativo vuoto (`content: "\f077" / ""`), anche nel «Mostra di più» dei filtri dei post.
+- Albero di accessibilità (Playwright, IT ed EN): ogni filtro è un `group` con il nome del titolo e un `button` con
+  `expanded` quando è aperto; le voci sono `checkbox` con nome e numero («Nuoro, 308 percorsi»: il numero visibile è
+  `aria-hidden`); a filtro chiuso le voci non ci sono per lo screen reader. Focus visibile (3px #0089C7), Invio apre e
+  chiude e il focus resta sul pulsante; su telefono (375px) il dialogo «Filtri» riceve il focus, Esc lo chiude e
+  riporta il focus su «Filtri», niente scorrimento orizzontale.
+- Restano com'erano: il nome della casella ha uno spazio prima della virgola («Nuoro , 308», tre elementi in una
+  `label` flex del plugin), che gli screen reader leggono come una pausa; l'icona del sito è decorativa.
+
+### Controllo di accessibilità di avvisi e percorribilità (19/11)
+
+- Provato con dati finti scritti per un'ora nella cache locale dei dettagli (sentiero 99 parzialmente percorribile con
+  nota, data e avviso; itinerario 613 con avviso senza data; cammino 646 non percorribile) e degli avvisi
+  (`forestas_notices`), poi cancellati: sul dev non ci sono avvisi attivi né sentieri parzialmente percorribili.
+- Contrasti: etichetta «Avviso» bianco su #B70827 6,82:1; testo dell'avviso 15,24:1, data 6,13:1; fascia
+  «Parzialmente percorribile» 7,38:1, nota 11,56:1; «Non percorribile» 7,52:1; etichette della riga della ricerca:
+  bianco su #0E7D2C 5,27:1, #333 su #F59B23 5,77:1, bianco su #B70827 6,82:1. Lo stato è sempre scritto, il colore non
+  è l'unico segnale (1.4.1).
+- Lingua (3.1.2): nella pagina inglese il testo dell'avviso solo italiano ha `lang="it"`, nel dettaglio e in
+  `/avvisi`. Ordinamento di `/avvisi`: `select` con etichetta e pulsante «Ordina», nessun cambio di pagina alla sola
+  scelta (3.2.2). Su telefono nessuno scorrimento orizzontale.
+- Corretti:
+  - gli indicatori della scheda facevano leggere due volte livello e stato (l'immagine delle tacche con `aria-label`
+    e il testo sotto): ora le tacche sono `aria-hidden`, anche nella tabella dei punteggi di inclusività;
+  - il «·» fra livello e stato, fra codice e nome nella lista degli avvisi e nel punteggio di inclusività si leggeva
+    «punto» o niente: ora è nascosto e lo screen reader legge una virgola (`forestas_separatore_html()`, la stessa
+    soluzione che c'era già nella fascia della percorribilità);
+  - «Avviso Chiuso il ponte…» si leggeva senza pausa: dopo l'etichetta c'è un «:» solo per lo screen reader.
+
+### Task 18 intestazione della ricerca (aggiunto il 19/11)
+
+- Riusati il markup di `[forestas_testata]` con la testata «Solo titolo centrato» e `forestas_percorso()`, così la
+  ricerca segue da sola ogni ritocco di intestazione e breadcrumb delle altre pagine.
+- Il filo è rosso perché la pagina della ricerca ha il colore tematico «sentieri» nelle sue impostazioni
+  (`forestas_sezione_pagina()`): si cambia dal pannello della pagina, senza codice.
+- Niente «Condividi», come le pagine d'elenco: l'indirizzo della ricerca si condivide dal browser.
+
 ### Commit
 
 - Un commit per repo invece di uno per task, come chiedeva il piano: molti file sono stati toccati da più task e dalle
@@ -194,6 +294,8 @@ Dialogo del 18/11 (Rubens):
   interesse non sono disponibili») finché la prima ricostruzione dell'indice non scrive la copia dei POI: la rotta la
   programma subito, al massimo 5 minuti dopo l'ultima ricostruzione. È atteso, non un guasto: la 0.4.0 non scriveva la
   copia.
+- **Icona del sito su dev e UAT:** è in `config/`, quindi la mette `bin/wordpress-config.sh applica --conferma` (il cron
+  `allinea` non applica `sito.json`); su un sito nuovo la mette l'apply automatico dell'init.
 - **UAT dopo oc:8989:** su UAT i percorsi hanno ancora `validation-status-walkable` (219) e `not-walkable` (41) e
   nessun `walkability-status` (18/11). oc:9000 va su UAT dopo oc:8989 e il suo import, altrimenti la Validazione
   mostra «0 su 5 · Percorribile» e la percorribilità è «Sconosciuta» ovunque.

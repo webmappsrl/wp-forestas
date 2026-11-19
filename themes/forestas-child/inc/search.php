@@ -89,7 +89,15 @@ add_action(
 				'methods'             => 'GET',
 				'callback'            => 'forestas_entes_search_rest',
 				'permission_callback' => '__return_true',
-				'args'                => forestas_search_rest_args(),
+				// Filtri «Tipo di ente» e «Ruolo sui sentieri» (oc:9000): valori separati da virgole
+				'args'                => forestas_search_rest_args() + array_fill_keys(
+					[ 'tipo-ente', 'ruolo' ],
+					[
+						'type'              => 'string',
+						'default'           => '',
+						'sanitize_callback' => 'sanitize_text_field',
+					]
+				),
 			]
 		);
 	}
@@ -362,7 +370,8 @@ function forestas_entes_search_rest( WP_REST_Request $request ): WP_REST_Respons
 		if ( ! $known ) {
 			return forestas_entes_search_unavailable();
 		}
-		$entes = forestas_entes_list( $lang );
+		$entes = forestas_entes_sort_by_date( forestas_entes_listed( forestas_entes_cached() ), 'created_at', false );
+		$known = null;
 	} else {
 		$wait = forestas_entes_search_throttle( forestas_entes_visitor_ip() );
 		if ( $wait > 0 ) {
@@ -384,22 +393,20 @@ function forestas_entes_search_rest( WP_REST_Request $request ): WP_REST_Respons
 			error_log( sprintf( 'forestas enti: ricerca degli enti non riuscita, codice %d (%s); per %d secondi la ricerca risponde 503 senza chiamare lo shard', $code, $reason, FORESTAS_ENTES_SEARCH_PAUSE ) );
 			return forestas_entes_search_unavailable( FORESTAS_ENTES_SEARCH_PAUSE );
 		}
-		$entes = [];
-		foreach ( $found as $ente ) {
-			// Senza slug un ente non ha una pagina
-			if ( is_array( $ente ) && '' !== forestas_entes_slug( $ente ) ) {
-				$entes[] = forestas_entes_list_item( $ente, $lang, $known );
-			}
-		}
+		// Senza slug un ente non ha una pagina
+		$entes = array_values( array_filter( $found, fn( $ente ) => is_array( $ente ) && '' !== forestas_entes_slug( $ente ) ) );
 	}
+	$filtered = forestas_entes_search_filter( $entes, forestas_entes_roles_by_slug(), (string) $request['tipo-ente'], (string) $request['ruolo'] );
+	$entes    = array_map( fn( array $ente ): array => forestas_entes_list_item( $ente, $lang, $known ), $filtered['entes'] );
 
 	$per_page = (int) $request['per_page'];
 	$pages    = max( 1, (int) ceil( count( $entes ) / $per_page ) );
 	$page     = min( (int) $request['page'], $pages );
 	return new WP_REST_Response(
 		[
-			'total' => count( $entes ),
-			'items' => array_map( 'forestas_entes_search_card', array_slice( $entes, ( $page - 1 ) * $per_page, $per_page ) ),
+			'total'  => count( $entes ),
+			'items'  => array_map( 'forestas_entes_search_card', array_slice( $entes, ( $page - 1 ) * $per_page, $per_page ) ),
+			'facets' => $filtered['facets'],
 		]
 	);
 }
@@ -616,6 +623,9 @@ function forestas_search_track_facets(): array {
 	] ) );
 }
 
+// Filtri della ricerca che si aprono e chiudono dal titolo, come i gruppi dei filtri dei post (oc:9000)
+add_filter( 'wmwp_search_collapsible_facets', '__return_true' );
+
 /** Source della ricerca: i percorsi del plugin con i nomi e i filtri di Forestas, più i contenuti del sito e gli enti. */
 add_filter(
 	'wp_package_search_sources',
@@ -666,13 +676,18 @@ add_filter(
 					'search_label' => forestas_testo( 'Cerca un punto di interesse', 'Search for a point of interest' ),
 					// Tipo sulla card, nella lingua della pagina
 					'type_label'   => forestas_testo( 'Punto di interesse', 'Point of interest' ),
-					'facets'       => [
+					// Dopo il tipo, area, provincia e comune come per i percorsi (oc:9000): stesse chiavi nell'indirizzo e stesse
+					// regole per dividere taxonomyWheres, che il plugin applica sul server
+					'facets'       => array_merge(
 						[
-							'key'   => 'tipo-poi',
-							'label' => forestas_testo( 'Tipo di punto di interesse', 'Type of point of interest' ),
-							'type'  => 'terms',
+							[
+								'key'   => 'tipo-poi',
+								'label' => forestas_testo( 'Tipo di punto di interesse', 'Type of point of interest' ),
+								'type'  => 'terms',
+							],
 						],
-					],
+						array_values( array_filter( forestas_search_track_facets(), fn( array $facet ): bool => in_array( $facet['key'], [ 'area', 'provincia', 'comune' ], true ) ) )
+					),
 				]
 			);
 		}
@@ -694,7 +709,8 @@ add_filter(
 				],
 			],
 		];
-		// Enti dello shard (oc:8990): card con immagine, nome e tipo, dalla rotta forestas/v1/entes-search; nessun filtro
+		// Enti dello shard (oc:8990): card con immagine, nome e tipo, dalla rotta forestas/v1/entes-search. Filtri del tipo
+		// e del ruolo sui sentieri (oc:9000): i valori li dà la rotta, qui solo la chiave nell'indirizzo e il nome
 		$sources['entes'] = [
 			'slug'         => 'enti',
 			'label'        => forestas_testo( 'Enti', 'Organisations' ),
@@ -705,7 +721,16 @@ add_filter(
 			'script'       => 'forestas-search',
 			'layout'       => 'cards',
 			'search_label' => forestas_testo( 'Cerca un ente', 'Search for an organisation' ),
-			'facets'       => [],
+			'facets'       => [
+				[
+					'key'   => 'tipo-ente',
+					'label' => forestas_testo( 'Tipo di ente', 'Type of organisation' ),
+				],
+				[
+					'key'   => 'ruolo',
+					'label' => forestas_testo( 'Ruolo sui sentieri', 'Role on trails' ),
+				],
+			],
 		];
 		return $sources;
 	}
@@ -727,12 +752,18 @@ function forestas_search_fallback_form(): string {
 /*
  * [forestas_search]: il template della pagina /cerca-nel-sito. Con wp-package attivo la ricerca del plugin
  * con le source del child, senza il campo di ricerca di WordPress: la pagina non mostra mai uno shortcode come
- * testo. Il titolo è visibile, come su Drupal.
+ * testo. Il titolo è visibile, come su Drupal, nell'intestazione delle altre pagine del sito (titolo centrato con il
+ * filo sopra nel colore della sezione) e seguito dalla breadcrumb «Home › Cerca nel sito» (oc:9000).
  */
 add_shortcode(
 	'forestas_search',
 	function (): string {
-		$title = sprintf( '<h1 class="forestas-search__title">%s</h1>', esc_html( get_the_title() ) );
+		$id    = (int) get_the_ID();
+		$title = sprintf(
+			'<div class="forestas-intestazione forestas-sezione-%1$s"><h1 class="forestas-intestazione-titolo">%2$s</h1></div>',
+			esc_attr( forestas_sezione_pagina( $id ) ),
+			esc_html( get_the_title( $id ) )
+		) . forestas_percorso( $id );
 		if ( ! shortcode_exists( 'wmwp_search' ) ) {
 			return $title . forestas_search_fallback_form();
 		}
@@ -850,7 +881,7 @@ add_action(
  */
 function forestas_search_canonical_args( array $query ): array {
 	$single  = [ 'search_api_fulltext', 'tipo', 'pagina' ];
-	$keys    = array_merge( [ 'search_api_fulltext', 'tipo' ], array_column( forestas_search_track_facets(), 'key' ), [ 'tipo-poi', 'contenuto', 'pagina' ] );
+	$keys    = array_merge( [ 'search_api_fulltext', 'tipo' ], array_column( forestas_search_track_facets(), 'key' ), [ 'tipo-poi', 'contenuto', 'tipo-ente', 'ruolo', 'pagina' ] );
 	$args    = [];
 	foreach ( $keys as $key ) {
 		if ( ! isset( $query[ $key ] ) || ! is_string( $query[ $key ] ) || '' === trim( $query[ $key ] ) ) {

@@ -139,6 +139,26 @@ Allo scrum del 18/11 il lavoro è stato definito come allineare il WordPress all
       waypoint compresi, come nell'indice di Drupal. La sorgente è nel plugin (`wp-package`, overview del plugin).
 - [x] Il redirect dei vecchi link di Drupal con `cerca_contenuto_nel_sito:poi` porta al tab «Punti di interesse»
       invece che a «Tutti».
+- [x] Il tab «Punti di interesse» ha anche i filtri «Area», «Provincia» e «Comune» (Rubens, 19/11), gli stessi dei
+      percorsi: stesse chiavi nell'indirizzo e stesse regole per dividere `taxonomyWheres`, calcolati dal plugin sul
+      server. Sul dev 974 POI su 976 hanno i luoghi: 7 aree, 8 province, 129 comuni.
+- [x] Stile dei filtri allineato fra la ricerca unica e i filtri dei post, con la ricerca unica come riferimento
+      (Rubens, 19/11). Primo passo: il numero di ogni voce nel riquadro arancione dei filtri dei post
+      (`.forestas-filtri__numero`: bordo e testo #CA4D1C su #FFFDFA, in grassetto), su fondo pieno in un filtro con una
+      voce scelta; la dimensione del testo resta quella della ricerca (11,5px).
+- [x] Come nei filtri dei post, ogni filtro della ricerca si apre e chiude con la freccia a destra del titolo (in su
+      a filtro chiuso, in giù ad aperto; all'apertura della pagina aperto solo il filtro con una voce scelta), e
+      «Mostra di più» / «Mostra meno» è il pulsante largo quanto la colonna con il filo sopra e la freccia; le
+      dimensioni del testo restano quelle della ricerca (Rubens, 19/11).
+- [x] Titolo della pagina della ricerca come nelle altre pagine del sito (Rubens, 19/11): intestazione
+      `.forestas-intestazione` (titolo centrato con il filo sopra nel colore della sezione) e breadcrumb «Home › Cerca
+      nel sito» (`forestas_percorso()`), senza «Condividi», come le pagine d'elenco.
+- [x] Il tab «Enti» ha due filtri, come gli altri tab (Rubens, 19/11): «Tipo di ente» (i cinque `type` dell'API, gli
+      stessi nomi del filtro «Argomento» di `/enti`) e «Ruolo sui sentieri» (i `roles` delle tracce collegate
+      all'ente, con i nomi del riquadro degli enti nei dettagli: «Soggetto gestore», «Soggetto rilevatore»…). Valori
+      di uno stesso filtro in OR, i due filtri in AND; ogni filtro conta senza il proprio filtro, come quello dei
+      contenuti. Con un testo i ruoli vengono dalla copia degli enti, perché la ricerca dello shard non dà le tracce.
+      Sul dev: 46 enti gestori di almeno un sentiero su 93.
 
 ### Segnalazioni e recensioni
 
@@ -149,6 +169,19 @@ Allo scrum del 18/11 il lavoro è stato definito come allineare il WordPress all
       per gli screen reader; tornano con oc:8980.
 - [x] Anche la voce «Segnalazioni» del menu di servizio dell'header («Report an issue» in inglese, link `#`) si toglie
       per ora, da `config/menu.json` (Rubens, 18/11); torna con oc:8980.
+
+### Icona del sito
+
+- [x] Il sito ha l'icona di sardegnasentieri.it (Rubens, 19/11): la «S» del logo su un cerchio bianco, come la
+      favicon di Drupal (`public://favicon_2.ico`, 16×16), rifatta a 512×512 dalla «S» del logo del child perché
+      WordPress vuole un'immagine quadrata grande (`site_icon`) e da 16 pixel verrebbe sfocata.
+- [x] L'icona si mette con lo script, come il resto della configurazione: il file sta in `config/media/`,
+      `config/sito.json` lo indica con `site_icon: "@file:media/icona-sito.png"`; `applica` crea l'allegato (con le
+      misure dell'icona di WordPress) e imposta `site_icon`, e lo ritrova al giro dopo senza duplicarlo; `esporta`
+      scrive in `config/media/` il file dell'icona del sito, anche se è stata cambiata dal pannello. Un sito nuovo
+      la riceve con l'apply automatico dell'init.
+- [x] La copia dell'icona nelle Theme Options di Impreza (`site_icon`, che al salvataggio Impreza riscrive
+      nell'opzione di WordPress) non si esporta e non si applica: l'icona sta solo in `sito.json`.
 
 ### Lingue
 
@@ -210,7 +243,9 @@ Repo `wp-forestas`, child theme `themes/forestas-child/`:
 - `inc/statuses.php` (nuovo): registrazione nel registro del plugin di `validation-status` e `inclusivity-difficulty`;
   controllo della versione del plugin (`forestas_plugin_ready()`), nomi e legenda degli stati per filtri e tacche.
 - `inc/search.php`: filtri «Percorribilità» e «Validazione catastale» generati dall'elenco degli stati,
-  `forestas_search_term_labels()`, POI nella ricerca unica, redirect dei vecchi link `poi`.
+  `forestas_search_term_labels()`, POI nella ricerca unica, redirect dei vecchi link `poi`; filtri «Tipo di ente» e
+  «Ruolo sui sentieri» del tab «Enti» (rotta `forestas/v1/entes-search`, con `forestas_entes_search_filter()` in
+  `inc/entes.php`, e `assets/js/search.js`); filtri «Area», «Provincia» e «Comune» della source dei POI.
 - `inc/notices.php` (nuovo) e `templates/notices-list.php` (nuovo): rotta `/avvisi`, lettura di `api/v1/avvisi` con
   copia, pagina.
 - `inc/news.php`: `FORESTAS_REGOLE_VERSIONE`.
@@ -219,7 +254,10 @@ Repo `wp-forestas`, child theme `themes/forestas-child/`:
   e `/avvisi`, card dei POI).
 - `tests/`: test della pagina degli avvisi, delle tacche, del dettaglio generato e dei filtri.
 
-Repo `wp-forestas`, fuori dal child: `config/menu.json` (voce «Segnalazioni» tolta),
+Repo `wp-forestas`, fuori dal child: `config/media/icona-sito.png` (nuovo), `config/sito.json` e
+`config/impreza.json` (icona del sito), `docker/scripts/config/` (`comune.php`, `allegati.php` nuovo, `opzioni.php`,
+`export.php`, `apply.php`, `ritratto.php`, test `tests/icona-sito.php`), `bin/wordpress-config.sh` (cartella
+`media/` dell'export), `config/menu.json` (voce «Segnalazioni» tolta),
 `docs/howto/ricreare-wordpress-da-zero.md` (conteggio delle voci del menu), `docs/knowledge/8969-…md` (itinerari e
 segnaposto superati); `docker/scripts/init-wordpress.sh`
 (`WP_PACKAGE_REF`) dopo il merge del plugin, in un commit a sé nella stessa PR.

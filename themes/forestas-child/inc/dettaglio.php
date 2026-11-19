@@ -799,6 +799,13 @@ function forestas_detail_time_html( ?string $iso ): string {
 }
 
 /**
+ * Separatore « · » visibile, che lo screen reader legge come una virgola (il punto centrale si legge «punto» o niente).
+ */
+function forestas_separatore_html(): string {
+	return '<span aria-hidden="true"> · </span><span class="screen-reader-text">, </span>';
+}
+
+/**
  * Testo escapato; dentro uno `span` con `lang` solo se ripiega su una lingua diversa da quella della pagina (WCAG 3.1.2).
  */
 function forestas_detail_lang_text( string $text, ?string $lang ): string {
@@ -823,7 +830,7 @@ function forestas_detail_walkability_html( array $walkability ): string {
 	$title    = forestas_detail_lang_text( (string) $walkability['name'], $walkability['name_lang'] ?? null );
 	$date     = forestas_detail_time_html( $walkability['updated_at'] ?? null );
 	if ( '' !== $date ) {
-		$title .= '<span aria-hidden="true"> · </span><span class="screen-reader-text">, </span>'
+		$title .= forestas_separatore_html()
 			. esc_html( forestas_testo( 'stato aggiornato il', 'status updated on' ) ) . ' ' . $date;
 	}
 	$html = '<div class="wm-state wm-state--' . esc_attr( $modifier ) . '"><p class="wm-state__lbl">' . $title . '</p>';
@@ -857,7 +864,7 @@ function forestas_detail_notice_html( ?array $notice ): string {
  * style.css, oc:9000).
  */
 function forestas_notice_tag_html(): string {
-	return '<span class="wm-avviso__tag"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3 2 21h20L12 3z" fill="none" stroke="#fff" stroke-width="2.2" stroke-linejoin="round"/><path d="M12 10v5" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/><circle cx="12" cy="18" r="1.3" fill="#fff"/></svg>' . esc_html( forestas_testo( 'Avviso', 'Notice' ) ) . '</span>';
+	return '<span class="wm-avviso__tag"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3 2 21h20L12 3z" fill="none" stroke="#fff" stroke-width="2.2" stroke-linejoin="round"/><path d="M12 10v5" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/><circle cx="12" cy="18" r="1.3" fill="#fff"/></svg>' . esc_html( forestas_testo( 'Avviso', 'Notice' ) ) . '<span class="screen-reader-text">:</span></span>';
 }
 
 /**

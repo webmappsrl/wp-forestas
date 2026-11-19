@@ -349,6 +349,90 @@ stato `absent` della famiglia.
       in «Tutti» e il tab con i conteggi per tipo; la card porta al dettaglio del POI.
 - [x] **Passo 5 (commit, a cura del dev; riunito nel commit del repo, vedi notes):** `feat(oc:9000): punti di interesse nella ricerca del sito`
 
+### Task 13: icona del sito dallo script (aggiunta il 19/11)
+
+**Repo:** `wp-forestas` (script di configurazione e `config/`).
+
+- [x] **Passo 1:** test `docker/scripts/config/tests/icona-sito.php` su una cartella di config temporanea: in prova
+      nessun allegato creato e una differenza; con la conferma allegato creato con `_wp_forestas_file` e l'impronta,
+      `site_icon` impostato; secondo giro nessuna differenza e nessun allegato in più; file cambiato → allegato nuovo;
+      file mancante → avviso e falso; export dell'allegato → `@file:media/icona-sito.png` e file uguale; un'icona
+      caricata dal pannello si esporta con lo stesso nome. Rimette `site_icon` e cancella gli allegati di prova.
+- [x] **Passo 2:** FAIL. **Passo 3:** `allegati.php` (ricerca, import con le misure di `WP_Site_Icon`, export,
+      descrizione per il ritratto), `site_icon` in `WPF_OPZIONI_SITO` e `WPF_IMPREZA_COPIE`, `@file:` in
+      `wpf_sito_applica()`, export in `export.php` e cartella `media/` in `export_in` di `bin/wordpress-config.sh`;
+      `config/media/icona-sito.png` dalla «S» del logo del child su un cerchio bianco, proporzioni della favicon di
+      Drupal.
+- [x] **Passo 4:** PASS; `applica` in prova e con `--conferma` sul locale, `<link rel="icon">` nella pagina;
+      `esporta` senza differenze in `git diff config/` oltre all'icona; howto `ricreare-wordpress-da-zero.md` e
+      README aggiornati.
+
+### Task 14: filtri del tab «Enti» della ricerca unica (aggiunto il 19/11)
+
+**Repo:** `wp-forestas` (child).
+
+- [x] **Passo 1:** casi nuovi in `tests/entes-search.php`: ruoli nelle tracce della copia di prova; source con i due
+      filtri (nomi in italiano e inglese); voci contate senza il proprio filtro e con l'altro, ordinate per numero e
+      nome, voce scelta con 0 che resta; tipi e ruoli sconosciuti fuori; con un testo i ruoli dalla copia; parametri
+      nel canonical.
+- [x] **Passo 2:** FAIL. **Passo 3:** `forestas_entes_role_labels()`, `forestas_entes_roles()`,
+      `forestas_entes_roles_by_slug()` e `forestas_entes_search_filter()` in `inc/entes.php`; argomenti `tipo-ente` e
+      `ruolo` della rotta, `facets` nella risposta e nella source, chiavi nel canonical in `inc/search.php`; filtri
+      passati e voci disegnate in `assets/js/search.js`; `Version` 1.17.5.
+- [x] **Passo 4:** PASS (anche `entes-copy`, `entes-route`, `entes-view`, `search-facets`); nel browser
+      `/cerca-nel-sito/?tipo=enti&ruolo=gestore`: 46 enti, «Soggetto gestore» spuntato, con «Comune» 17, nessun
+      errore in console.
+
+### Task 15: filtri dei luoghi dei punti di interesse (aggiunto il 19/11)
+
+**Repo:** `wp-package`, poi `wp-forestas` (child).
+
+- [x] **Passo 1 (plugin):** casi nuovi in `tests/php/search-pois.php` (luoghi nella copia, anche da stringa JSON;
+      faccette dei luoghi dalla source con `include`, `include_pattern`, `exclude`, `exclude_pattern`; conteggi senza
+      il proprio filtro e con gli altri, tipi compresi; OR dentro un filtro; voce scelta a 0; filtri sconosciuti
+      ignorati; copia senza luoghi: 200 e ricostruzione programmata) e in `tests/js/source-pois.test.js`
+      (`filter[chiave][]`). FAIL.
+- [x] **Passo 2 (plugin):** `wheres` nella copia, `wmwp_poi_search_place_facets()`, `wmwp_poi_search_keep_place()`,
+      `wmwp_poi_search_schedule_rebuild()`, parametro `filter` e conteggi incrociati in `includes/search-pois.php`;
+      `filter[chiave][]` in `assets/js/source-pois.js`; README, CHANGELOG (0.5.0). PASS, tutti i test PHP e JS.
+- [x] **Passo 3 (child):** controllo in `tests/search-facets.php` (FAIL), poi area, provincia e comune di
+      `forestas_search_track_facets()` nella source `pois` di `inc/search.php` (PASS, tutti i test del child); nel
+      browser `?tipo=punti-di-interesse&provincia=Nuoro`: 262 POI, con Bitti 33, nessun errore in console.
+
+### Task 16: stile dei filtri della ricerca unica come quelli dei post (aggiunto il 19/11)
+
+**Repo:** `wp-forestas` (child).
+
+- [x] **Passo 1:** `.wmwp-facet__count` in `style.css` con il riquadro di `.forestas-filtri__numero` (stessa forma e
+      stesso colore, `--forestas-filtro` anche su `.wmwp-search`), fondo pieno con `.wmwp-facet:has(input:checked)`;
+      testo a 11,5px come prima; `Version` 1.17.6.
+- [x] **Passo 2:** nel browser `?tipo=percorsi&provincia=Nuoro`: riquadri su tutte le voci, pieni nel filtro
+      «Provincia»; CSS servito con `?ver=1.17.6`.
+
+### Task 17: filtri della ricerca apribili e «Mostra di più» come nei post (aggiunto il 19/11)
+
+**Repo:** `wp-package`, poi `wp-forestas` (child).
+
+- [x] **Passo 1 (plugin):** `wmwp_search_collapsible_facets` (config `collapsible_facets`), pulsante nel `legend` in
+      `renderFacets()` di `assets/js/search.js`, «Mostra di più» nascosto a filtro chiuso; traduzione «Mostra di più»;
+      README e CHANGELOG. Test JS e PHP della ricerca: PASS.
+- [x] **Passo 2 (child):** filtro acceso in `inc/search.php`; stile di `.wmwp-facet__toggle`, `.wmwp-facet__chevron` e
+      `.wmwp-facet__more` in `style.css` (Version 1.17.8). Nel browser: all'apertura aperto solo «Provincia» (con
+      Nuoro scelta), «Attività» si apre con Invio e il focus resta sul pulsante, «Mostra di più» → «Mostra meno»;
+      testo a 12,5px come prima, nessun errore in console.
+
+### Task 18: intestazione e breadcrumb della ricerca (aggiunto il 19/11)
+
+**Repo:** `wp-forestas` (child).
+
+- [x] **Passo 1:** controllo in `tests/search-facets.php` su `[forestas_search]` (intestazione, breadcrumb, niente
+      titolo di prima né «Condividi»): FAIL.
+- [x] **Passo 2:** `[forestas_search]` in `inc/search.php` con l'intestazione e `forestas_percorso()`;
+      `cerca-nel-sito` in `FORESTAS_PAGINE_SENZA_CONDIVIDI`; tolto lo stile di `.forestas-search__title`; Version
+      1.17.10. PASS, tutti i test del child.
+- [x] **Passo 3:** nel browser IT a 1280px e EN a 375px: stessa intestazione della pagina Enti, un solo `h1`,
+      `navigation` «Briciole di pane» / «Breadcrumb» con `aria-current`, nessuno scorrimento orizzontale.
+
 ### Task 12: rilascio e controlli finali
 
 **Repo:** `wp-package`, poi `wp-forestas`.

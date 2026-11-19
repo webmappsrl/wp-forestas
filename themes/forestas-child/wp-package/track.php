@@ -51,7 +51,9 @@ $espandibile = function ( string $html, string $id ): string {
 		esc_attr( forestas_testo( 'Mostra meno', 'Show less' ) )
 	);
 };
-// Indicatore a tacche: livello acceso su un totale, con la legenda dietro la «i»
+// Indicatore a tacche: livello acceso su un totale, con la legenda dietro la «i». Nei tre indicatori della scheda le
+// tacche sono nascoste allo screen reader: il testo sotto dice già livello e stato, e un'immagine con la stessa
+// frase lo faceva leggere due volte (controllo di accessibilità di oc:9000)
 $tacche = function ( int $acceso, int $totale ): string {
 	$html = '';
 	for ( $i = 1; $i <= $totale; $i++ ) {
@@ -160,21 +162,21 @@ wmwp_template_header();
 		<div class="wm-ind<?php echo $spt ? ' wm-ind--spt' : ''; ?>">
 			<div class="wm-ind__i wm-ind__i--val">
 				<div class="wm-ind__k"><?php echo esc_html( forestas_testo( 'Validazione catastale', 'Trail register validation' ) ); ?> <?php echo $pulsante( 'wm-leg-val', forestas_testo( 'Legenda: livelli di validazione catastale', 'Legend: validation levels' ) ); // phpcs:ignore ?></div>
-				<span class="wm-tac" role="img" aria-label="<?php echo esc_attr( sprintf( forestas_testo( 'Validazione catastale: livello %1$d su %2$d, %3$s', 'Validation: level %1$d of %2$d, %3$s' ), $val['livello'], $val['totale'], $val['etichetta'] ) ); ?>"><?php echo $tacche( $val['livello'], $val['totale'] ); // phpcs:ignore ?></span>
-				<div class="wm-ind__v"><?php echo esc_html( $val['livello'] . ' ' . $su . ' ' . $val['totale'] . ' · ' . $val['etichetta'] ); ?></div>
+				<span class="wm-tac" aria-hidden="true"><?php echo $tacche( $val['livello'], $val['totale'] ); // phpcs:ignore ?></span>
+				<div class="wm-ind__v"><?php echo esc_html( $val['livello'] . ' ' . $su . ' ' . $val['totale'] ) . forestas_separatore_html() . esc_html( $val['etichetta'] ); // phpcs:ignore WordPress.Security.EscapeOutput -- testo già escapato ?></div>
 				<?php echo $legenda( 'wm-leg-val', sprintf( forestas_testo( 'Validazione catastale, da 0 a %d', 'Trail register validation, from 0 to %d' ), $val['totale'] ), forestas_status_legend( 'validation-status' ) ); // phpcs:ignore ?>
 			</div>
 			<div class="wm-ind__i wm-ind__i--per">
 				<div class="wm-ind__k"><?php echo esc_html( forestas_testo( 'Percorribilità', 'Walkability' ) ); ?> <?php echo $pulsante( 'wm-leg-per', forestas_testo( 'Legenda: livelli di percorribilità', 'Legend: walkability levels' ) ); // phpcs:ignore ?></div>
-				<span class="wm-tac" role="img" aria-label="<?php echo esc_attr( sprintf( forestas_testo( 'Percorribilità: livello %1$d su %2$d, %3$s', 'Walkability: level %1$d of %2$d, %3$s' ), $per['level'], $per['total'], $per['name'] ) ); ?>"><?php echo $tacche( $per['level'], $per['total'] ); // phpcs:ignore ?></span>
-				<div class="wm-ind__v"><?php echo esc_html( $per['level'] . ' ' . $su . ' ' . $per['total'] . ' · ' ) . forestas_detail_lang_text( (string) $per['name'], $per['name_lang'] ); // phpcs:ignore WordPress.Security.EscapeOutput -- testo già escapato ?></div>
+				<span class="wm-tac" aria-hidden="true"><?php echo $tacche( $per['level'], $per['total'] ); // phpcs:ignore ?></span>
+				<div class="wm-ind__v"><?php echo esc_html( $per['level'] . ' ' . $su . ' ' . $per['total'] ) . forestas_separatore_html() . forestas_detail_lang_text( (string) $per['name'], $per['name_lang'] ); // phpcs:ignore WordPress.Security.EscapeOutput -- testo già escapato ?></div>
 				<?php echo $legenda( 'wm-leg-per', sprintf( forestas_testo( 'Percorribilità, da 0 a %d', 'Walkability, from 0 to %d' ), $per['total'] ), forestas_status_legend( forestas_walkability_family() ) ); // phpcs:ignore ?>
 			</div>
 			<div class="wm-ind__i wm-ind__i--acc">
 				<div class="wm-ind__k"><?php echo esc_html( forestas_testo( 'Accessibilità', 'Accessibility' ) ); ?> <?php echo $pulsante( 'wm-leg-acc', forestas_testo( 'Legenda: gradi di accessibilità', 'Legend: accessibility grades' ) ); // phpcs:ignore ?></div>
-				<span class="wm-tac" role="img" aria-label="<?php echo esc_attr( $accessibilita['grado'] ? forestas_testo( 'Accessibilità: grado ', 'Accessibility: grade ' ) . $accessibilita['grado'] : forestas_testo( 'Accessibilità: non classificato', 'Accessibility: not classified' ) ); ?>"><?php echo $tacche( $accessibilita['livello'], $accessibilita['totale'] ); // phpcs:ignore ?></span>
+				<span class="wm-tac" aria-hidden="true"><?php echo $tacche( $accessibilita['livello'], $accessibilita['totale'] ); // phpcs:ignore ?></span>
 				<div class="wm-tac-l" aria-hidden="true"><?php foreach ( forestas_status_legend( 'inclusivity-difficulty' ) as $sigla_grado ) : ?><span><?php echo esc_html( $sigla_grado ); ?></span><?php endforeach; ?></div>
-				<div class="wm-ind__v<?php echo $accessibilita['grado'] ? '' : ' wm-segnaposto'; ?>"><?php echo esc_html( $accessibilita['grado'] ? $accessibilita['grado'] . ' · ' . $accessibilita['nome'] : forestas_testo( 'Non classificato', 'Not classified' ) ); ?></div>
+				<div class="wm-ind__v<?php echo $accessibilita['grado'] ? '' : ' wm-segnaposto'; ?>"><?php echo $accessibilita['grado'] ? esc_html( $accessibilita['grado'] ) . forestas_separatore_html() . esc_html( $accessibilita['nome'] ) : esc_html( forestas_testo( 'Non classificato', 'Not classified' ) ); // phpcs:ignore WordPress.Security.EscapeOutput -- testo già escapato ?></div>
 				<ul class="wm-acc-tip" aria-label="<?php echo esc_attr( forestas_testo( 'Tipologie di disabilità', 'Types of disability' ) ); ?>">
 					<?php
 					$icone = [
@@ -220,7 +222,7 @@ wmwp_template_header();
 					<div>
 						<div class="wm-ind__k"><?php echo esc_html( forestas_testo( 'Punteggio di inclusività', 'Inclusivity score' ) ); ?> <?php echo $pulsante( 'wm-leg-spt', forestas_testo( 'Legenda: classi del punteggio di inclusività', 'Legend: inclusivity score classes' ) ); // phpcs:ignore ?></div>
 						<span class="wm-tac" role="img" aria-label="<?php echo esc_attr( sprintf( forestas_testo( 'Punteggio di inclusività, classe %1$s: %2$d su 6', 'Inclusivity score, class %1$s: %2$d of 6' ), $spt['classe'], $spt['tacche'] ) ); ?>"><?php echo $tacche( $spt['tacche'], 6 ); // phpcs:ignore ?></span>
-						<div class="wm-ind__v"><?php echo esc_html( $spt['classe'] . ' · ' . $spt['nome'] ); ?></div>
+						<div class="wm-ind__v"><?php echo esc_html( $spt['classe'] ) . forestas_separatore_html() . esc_html( $spt['nome'] ); // phpcs:ignore WordPress.Security.EscapeOutput -- testo già escapato ?></div>
 						<?php if ( '' !== $spt['frase'] ) : ?>
 							<div class="wm-ind__n"><?php echo esc_html( $spt['frase'] ); ?></div>
 						<?php endif; ?>
@@ -239,7 +241,7 @@ wmwp_template_header();
 						<tr><th scope="row"><?php echo esc_html( forestas_testo( 'Fruibilità in autonomia', 'Independent use' ) ); ?></th><td><?php echo esc_html( forestas_dettaglio_valore( $spt['autonomia'] ) ); ?></td></tr>
 						<tr><th scope="row"><?php echo esc_html( forestas_testo( 'Disponibilità di assistenza', 'Assistance available' ) ); ?></th><td><?php echo esc_html( forestas_dettaglio_valore( $spt['assistenza'] ) ); ?></td></tr>
 						<?php foreach ( $spt['punteggi'] as $punteggio ) : ?>
-							<tr><th scope="row"><?php echo esc_html( $punteggio['etichetta'] ); ?></th><td><span class="wm-tac" role="img" aria-label="<?php echo esc_attr( $punteggio['etichetta'] . ': ' . $punteggio['tacche'] . ' ' . $su . ' 6' ); ?>"><?php echo $tacche( $punteggio['tacche'], 6 ); // phpcs:ignore ?></span><span class="wm-spt__tv"><?php echo esc_html( $punteggio['tacche'] . ' ' . $su . ' 6' ); ?></span></td></tr>
+							<tr><th scope="row"><?php echo esc_html( $punteggio['etichetta'] ); ?></th><td><span class="wm-tac" aria-hidden="true"><?php echo $tacche( $punteggio['tacche'], 6 ); // phpcs:ignore ?></span><span class="wm-spt__tv"><?php echo esc_html( $punteggio['tacche'] . ' ' . $su . ' 6' ); ?></span></td></tr>
 						<?php endforeach; ?>
 					</tbody>
 				</table>

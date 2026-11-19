@@ -113,9 +113,9 @@ $copia    = [
 	'generated_at' => '2026-11-16T10:00:00+00:00',
 	'fetched_at'   => gmdate( 'c' ),
 	'data'         => [
-		[ 'id' => 11, 'slug' => 'oasi-tepilora', 'name' => [ 'it' => 'Oasi Tepilora', 'en' => 'Oasi Tepilora' ], 'type' => 'complesso-forestale', 'feature_image' => $immagine( 'tepilora' ), 'created_at' => '2015-03-01 10:00:00', 'tracks' => [] ],
-		[ 'id' => 12, 'slug' => 'comune-di-stintino', 'name' => [ 'it' => 'Comune di Stintino', 'en' => 'Comune di Stintino' ], 'type' => 'comune', 'feature_image' => null, 'created_at' => '2013-01-20 09:00:00', 'tracks' => [] ],
-		[ 'id' => 13, 'slug' => 'agenzia-forestas', 'name' => [ 'it' => 'Agenzia Forestas', 'en' => 'Forestas Agency' ], 'type' => 'boh', 'feature_image' => null, 'created_at' => '2020-05-05 08:00:00', 'tracks' => [] ],
+		[ 'id' => 11, 'slug' => 'oasi-tepilora', 'name' => [ 'it' => 'Oasi Tepilora', 'en' => 'Oasi Tepilora' ], 'type' => 'complesso-forestale', 'feature_image' => $immagine( 'tepilora' ), 'created_at' => '2015-03-01 10:00:00', 'tracks' => [ [ 'id' => 1, 'roles' => [ 'gestore', 'manutentore' ] ], [ 'id' => 4, 'roles' => [ 'gestore' ] ] ] ],
+		[ 'id' => 12, 'slug' => 'comune-di-stintino', 'name' => [ 'it' => 'Comune di Stintino', 'en' => 'Comune di Stintino' ], 'type' => 'comune', 'feature_image' => null, 'created_at' => '2013-01-20 09:00:00', 'tracks' => [ [ 'id' => 2, 'roles' => [ 'rilevatore', 'ruolo-sconosciuto' ] ] ] ],
+		[ 'id' => 13, 'slug' => 'agenzia-forestas', 'name' => [ 'it' => 'Agenzia Forestas', 'en' => 'Forestas Agency' ], 'type' => 'boh', 'feature_image' => null, 'created_at' => '2020-05-05 08:00:00', 'tracks' => [ [ 'id' => 3, 'roles' => [ 'gestore' ] ] ] ],
 		[ 'id' => 14, 'slug' => '', 'name' => [ 'it' => 'Senza slug' ], 'type' => 'comune', 'feature_image' => null, 'created_at' => '2010-01-01 00:00:00', 'tracks' => [] ],
 		[ 'id' => 15, 'slug' => 'gal-bmg', 'name' => [ 'it' => 'GAL BMG', 'en' => 'GAL BMG' ], 'type' => 'ente-partner', 'feature_image' => null, 'created_at' => null, 'tracks' => [] ],
 	],
@@ -212,11 +212,12 @@ try {
 	$check( [ 'one' => '%s ente', 'other' => '%s enti' ] === $campo( $sorgente, 'nouns' ), 'source entes: nouns in italiano' );
 	$check( 'forestas-search' === $campo( $sorgente, 'script' ), 'source entes: script forestas-search' );
 	$check( 'cards' === $campo( $sorgente, 'layout' ), 'source entes: layout cards' );
-	$check( [] === $campo( $sorgente, 'facets' ), 'source entes: nessun filtro' );
+	$check( [ [ 'key' => 'tipo-ente', 'label' => 'Tipo di ente' ], [ 'key' => 'ruolo', 'label' => 'Ruolo sui sentieri' ] ] === $campo( $sorgente, 'facets' ), 'source entes: filtri tipo di ente e ruolo sui sentieri (' . wp_json_encode( $campo( $sorgente, 'facets' ) ) . ')' );
 	$lingua( 'en-us' );
 	$sorgente = apply_filters( 'wp_package_search_sources', [] )['entes'] ?? null;
 	$check( 'Organisations' === $campo( $sorgente, 'label' ), 'source entes: label Organisations' );
 	$check( [ 'one' => '%s organisation', 'other' => '%s organisations' ] === $campo( $sorgente, 'nouns' ), 'source entes: nouns in inglese' );
+	$check( [ 'Type of organisation', 'Role on trails' ] === array_column( (array) $campo( $sorgente, 'facets' ), 'label' ), 'source entes: nomi dei filtri in inglese' );
 	$lingua( 'it' );
 	// Ordine dei gruppi del tab «Tutti»: dopo percorsi e contenuti
 	$chiavi = array_keys( apply_filters( 'wp_package_search_sources', [ 'tracks' => [ 'label' => 'x' ] ] ) );
@@ -511,7 +512,7 @@ try {
 		file_put_contents( $file_log, '' );
 		$risponde( $codice, $corpo );
 		$risposta = $cerca( [ 'lang' => 'it', 'q' => 'tepilora' ] );
-		$check( 200 === $risposta->get_status() && [ 'total' => 0, 'items' => [] ] === $risposta->get_data(), "shard {$codice}: nessun risultato (" . $risposta->get_status() . ' ' . wp_json_encode( $risposta->get_data() ) . ')' );
+		$check( 200 === $risposta->get_status() && [ 'total' => 0, 'items' => [], 'facets' => [ 'tipo-ente' => [], 'ruolo' => [] ] ] === $risposta->get_data(), "shard {$codice}: nessun risultato (" . $risposta->get_status() . ' ' . wp_json_encode( $risposta->get_data() ) . ')' );
 		$check( false === get_transient( $pausa ) && 0 === forestas_entes_search_paused(), "shard {$codice}: nessuna pausa" );
 		$check( '' === $log(), "shard {$codice}: nessuna riga di log: " . $log() );
 		$cerca( [ 'lang' => 'it', 'q' => 'tepilor' ] );
@@ -547,6 +548,51 @@ try {
 	$richiesta = WP_REST_Request::from_url( rest_url( 'forestas/v1/entes-search' ) . '?q=%E2%80%8B&lang=it' );
 	$risposta  = rest_ensure_response( rest_do_request( $richiesta ) );
 	$check( 200 === $risposta->get_status() && 4 === $campo( $risposta->get_data(), 'total' ) && 0 === forestas_entes_search_paused(), '?q=%E2%80%8B: testo vuoto, senza pausa' );
+
+	// 13. Filtri «Tipo di ente» e «Ruolo sui sentieri» (oc:9000). Ogni filtro conta gli enti senza il proprio filtro e con
+	// l'altro (come la rotta dei contenuti); valori con almeno un ente o scelti, per numero e poi per nome; tipi e ruoli
+	// senza nome fuori; valori sconosciuti nell'indirizzo ignorati. Il ruolo di un ente: quelli dei suoi sentieri nella copia
+	$voci = fn( WP_REST_Response $r, string $chiave ) => array_map(
+		fn( $v ) => [ $v['id'] ?? null, $v['label'] ?? null, $v['count'] ?? null, $v['selected'] ?? null ],
+		(array) ( $r->get_data()['facets'][ $chiave ] ?? [ 'assente' ] )
+	);
+	$risponde( 200, $trovati );
+	$risposta = $cerca( [ 'lang' => 'it' ] );
+	$check(
+		[ [ 'complesso-forestale', 'Complesso forestale', 1, false ], [ 'comune', 'Comune', 1, false ], [ 'ente-partner', 'Ente partner', 1, false ] ] === $voci( $risposta, 'tipo-ente' ),
+		'filtri, testo vuoto: voci del tipo di ente ' . wp_json_encode( $voci( $risposta, 'tipo-ente' ) )
+	);
+	$check(
+		[ [ 'gestore', 'Soggetto gestore', 2, false ], [ 'manutentore', 'Soggetto manutentore', 1, false ], [ 'rilevatore', 'Soggetto rilevatore', 1, false ] ] === $voci( $risposta, 'ruolo' ),
+		'filtri, testo vuoto: voci del ruolo ' . wp_json_encode( $voci( $risposta, 'ruolo' ) )
+	);
+	$risposta = $cerca( [ 'lang' => 'it', 'ruolo' => 'gestore' ] );
+	$check( 2 === $campo( $risposta->get_data(), 'total' ) && [ 11, 13 ] === $ids( $risposta ), 'ruolo gestore: Tepilora e Agenzia (' . implode( ', ', $ids( $risposta ) ) . ')' );
+	$check( [ [ 'complesso-forestale', 'Complesso forestale', 1, false ] ] === $voci( $risposta, 'tipo-ente' ), 'ruolo gestore: il tipo conta solo i gestori ' . wp_json_encode( $voci( $risposta, 'tipo-ente' ) ) );
+	$check(
+		[ [ 'gestore', 'Soggetto gestore', 2, true ], [ 'manutentore', 'Soggetto manutentore', 1, false ], [ 'rilevatore', 'Soggetto rilevatore', 1, false ] ] === $voci( $risposta, 'ruolo' ),
+		'ruolo gestore: il ruolo conta senza il proprio filtro, gestore scelto ' . wp_json_encode( $voci( $risposta, 'ruolo' ) )
+	);
+	$risposta = $cerca( [ 'lang' => 'it', 'tipo-ente' => 'ente-partner,comune' ] );
+	$check( [ 12, 15 ] === $ids( $risposta ), 'tipo comune o ente partner: Stintino e GAL (' . implode( ', ', $ids( $risposta ) ) . ')' );
+	$check( [ [ 'rilevatore', 'Soggetto rilevatore', 1, false ] ] === $voci( $risposta, 'ruolo' ), 'tipo comune o ente partner: il ruolo conta solo quelli ' . wp_json_encode( $voci( $risposta, 'ruolo' ) ) );
+	$risposta = $cerca( [ 'lang' => 'it', 'tipo-ente' => 'comune', 'ruolo' => 'gestore' ] );
+	$check( 0 === $campo( $risposta->get_data(), 'total' ), 'comune e gestore: nessun ente' );
+	$check( [ [ 'complesso-forestale', 'Complesso forestale', 1, false ], [ 'comune', 'Comune', 0, true ] ] === $voci( $risposta, 'tipo-ente' ), 'comune e gestore: la voce scelta resta con 0 ' . wp_json_encode( $voci( $risposta, 'tipo-ente' ) ) );
+	$risposta = $cerca( [ 'lang' => 'it', 'ruolo' => 'inventato', 'tipo-ente' => 'boh' ] );
+	$check( 4 === $campo( $risposta->get_data(), 'total' ), 'valori sconosciuti nell\'indirizzo: ignorati' );
+	// Con un testo: il tipo dalla ricerca dello shard, i ruoli dalla copia (un ente non ancora nella copia non ne ha)
+	$risposta = $cerca( [ 'lang' => 'it', 'q' => 'tepilora' ] );
+	$check( [ [ 'complesso-forestale', 'Complesso forestale', 1, false ], [ 'comune', 'Comune', 1, false ] ] === $voci( $risposta, 'tipo-ente' ), 'tepilora: voci del tipo ' . wp_json_encode( $voci( $risposta, 'tipo-ente' ) ) );
+	$check( [ [ 'gestore', 'Soggetto gestore', 1, false ], [ 'manutentore', 'Soggetto manutentore', 1, false ] ] === $voci( $risposta, 'ruolo' ), 'tepilora: ruoli dalla copia ' . wp_json_encode( $voci( $risposta, 'ruolo' ) ) );
+	$risposta = $cerca( [ 'lang' => 'it', 'q' => 'tepilora', 'ruolo' => 'gestore' ] );
+	$check( [ 11 ] === $ids( $risposta ), 'tepilora e gestore: solo Tepilora (' . implode( ', ', $ids( $risposta ) ) . ')' );
+	$risposta = $cerca( [ 'lang' => 'en' ] );
+	$check( 'Municipality' === ( $voci( $risposta, 'tipo-ente' )[1][1] ?? null ) && 'Managing authority' === ( $voci( $risposta, 'ruolo' )[0][1] ?? null ), 'filtri in inglese' );
+	$lingua( 'it' );
+	// Parametri nell'indirizzo canonico, con i valori in ordine
+	$canonici = forestas_search_canonical_args( [ 'tipo' => 'enti', 'ruolo' => 'rilevatore,gestore', 'tipo-ente' => 'comune' ] );
+	$check( [ 'tipo' => 'enti', 'tipo-ente' => 'comune', 'ruolo' => rawurlencode( 'gestore,rilevatore' ) ] === $canonici, 'canonical con i filtri degli enti: ' . wp_json_encode( $canonici ) );
 
 	// Il token non deve mai finire nell'output del test
 	$failures = array_map( fn( $f ) => str_replace( $token, '<token>', $f ), $failures );

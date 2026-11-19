@@ -170,7 +170,10 @@ try {
 	do_action( 'wpml_switch_language', 'en-us' );
 	$html = $pagina( true, [ $avviso( 3, null ) ] );
 	$check( (bool) preg_match( '/<p lang="it"[^>]*>Testo italiano/', $html ), 'messaggio solo italiano su pagina inglese ha lang="it"' );
-	$check( (bool) preg_match( '/class="av-t">T 3 · Trail 3</', $html ), 'nome in inglese senza lang' );
+	// Il «·» fra codice e nome è nascosto allo screen reader, che legge una virgola (oc:9000, controllo di accessibilità)
+	$check( (bool) preg_match( '/class="av-t">T 3<span aria-hidden="true"> · <\/span><span class="screen-reader-text">, <\/span>Trail 3</', $html ), 'nome in inglese senza lang, con il separatore letto come virgola' );
+	// Dopo «Avviso» lo screen reader legge i due punti: «Avviso: Strada chiusa», non «Avviso Strada chiusa»
+	$check( false !== strpos( forestas_notice_tag_html(), 'Notice<span class="screen-reader-text">:</span></span>' ), 'etichetta «Avviso» seguita dai due punti letti' );
 } finally {
 	remove_filter( 'pre_http_request', $http, 1 );
 	do_action( 'wpml_switch_language', $prima['lingua'] );
