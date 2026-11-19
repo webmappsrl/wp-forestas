@@ -14,6 +14,7 @@
 require_once __DIR__ . '/comune.php';
 require_once __DIR__ . '/wpml.php';
 require_once __DIR__ . '/menu.php';
+require_once __DIR__ . '/allegati.php';
 
 $dir = (string) getenv( 'WPF_EXPORT_DIR' );
 if ( $dir === '' ) {
@@ -173,7 +174,7 @@ foreach ( $impreza as $nome => $valore ) {
 		$avvisi[] = "impreza {$nome}: è l'allegato {$valore} della Libreria media, che non sta in config/: su un altro sito va ricaricato dal pannello (l'apply tiene il valore di quel sito)";
 	}
 }
-foreach ( WPF_IMPREZA_STATO as $nome ) {
+foreach ( array_merge( WPF_IMPREZA_STATO, WPF_IMPREZA_COPIE ) as $nome ) {
 	unset( $impreza[ $nome ] );
 }
 $impreza = wpf_togli_segreti( $impreza, $tolti );
@@ -183,6 +184,8 @@ $impreza = wpf_togli_segreti( $impreza, $tolti );
 foreach ( WPF_OPZIONI_SITO_PAGINA as $nome ) {
 	$sito[ $nome ] = (int) $sito[ $nome ] > 0 ? $riferimento( $sito[ $nome ] ) : 0;
 }
+// L'icona del sito: il file in media/icona-sito.<estensione>, al posto dell'id dell'allegato (oc:9000)
+$sito['site_icon'] = wpf_allegato_esporta( (int) $sito['site_icon'], $dir, 'icona-sito', $scrivi );
 
 // --- child.json: theme_mods del tema attivo, senza ciò che ha un file o un export proprio ----------
 

@@ -236,7 +236,10 @@ Nel browser, in italiano e inglese:
   nel gruppo «Enti» di un dettaglio di sentiero il nome dell'ente porta alla sua pagina;
 - il titolo della scheda è «Pagina | Sardegna Sentieri», come su Drupal: il nome viene da `blogname`
   di `config/sito.json` (l'apply lo scrive), il separatore dal child. Se resta «Forestas» l'apply non è
-  andato a buon fine.
+  andato a buon fine;
+- la scheda del browser ha l'icona del sito, la «S» del logo su un cerchio bianco (`config/media/icona-sito.png`,
+  oc:9000): nell'HTML ci sono `<link rel="icon">` da 32 e 192 pixel e `apple-touch-icon`. Se manca, `bin/wordpress-config.sh
+  applica` mostra la riga `sito: site_icon` da applicare.
 
 ## 6. Elementi mancanti
 
