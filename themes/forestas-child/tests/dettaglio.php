@@ -402,6 +402,24 @@ $check( 1 === count( $dati['video'] ), 'video' );
 $check( [ 'Goni' ] === $dati['luoghi']['comuni'] && 'Cagliari' === $dati['luoghi']['provincia'] && [ 'Area C (Sud-EST )' ] === $dati['luoghi']['aree'], 'luoghi del POI' );
 $vuoto = forestas_dettaglio_poi( [] );
 $check( null === $vuoto['tipologia'] && '' === $vuoto['come_arrivare'] && [] === $vuoto['allegati'], 'POI vuoto' );
+// Quota e area sosta attrezzata (Rubens, 19/11; Tavola 7): la quota dal DEM dello shard (`properties.ele` di
+// UpdateEcPoiDemJob), l'area sosta dal tipo `equipped-rest-area`, con il nome del termine nella lingua della pagina
+$check( null === $vuoto['quota'] && false === $vuoto['area_sosta'], 'POI vuoto: niente quota né area sosta' );
+$sosta = forestas_dettaglio_poi( [
+	'ele'        => 1293.4,
+	// Come Perda Liana: l'area sosta è il primo tipo
+	'taxonomies' => [ 'poi-type' => [
+		[ 'identifier' => 'equipped-rest-area', 'name' => [ 'it' => 'Area sosta attrezzata' ] ],
+		[ 'identifier' => 'nature', 'name' => [ 'it' => 'Meraviglie della Geologia e del Paesaggio' ] ],
+	] ],
+] );
+$check( 1293 === $sosta['quota'], 'quota arrotondata al metro: ' . wp_json_encode( $sosta['quota'] ) );
+$check( true === $sosta['area_sosta'], 'area sosta dal tipo del POI' );
+$check( 'Meraviglie della Geologia e del Paesaggio' === $sosta['tipologia'], 'tipologia: il primo tipo che non è l\'area sosta (Tavola 7), non «Area sosta attrezzata»' );
+$solo_sosta = forestas_dettaglio_poi( [ 'taxonomies' => [ 'poi-type' => [ [ 'identifier' => 'equipped-rest-area', 'name' => [ 'it' => 'Area sosta attrezzata' ] ] ] ] ] );
+$check( 'Area sosta attrezzata' === $solo_sosta['tipologia'] && true === $solo_sosta['area_sosta'], 'con il solo tipo area sosta la tipologia resta quella' );
+$check( null === forestas_dettaglio_poi( [ 'ele' => 'x' ] )['quota'] && 0 === forestas_dettaglio_poi( [ 'ele' => 0 ] )['quota'], 'quota non numerica: niente; 0 (sul mare): 0' );
+$check( '1.293 m' === forestas_dettaglio_quota( 1293 ), 'quota scritta con il separatore delle migliaia: ' . forestas_dettaglio_quota( 1293 ) );
 
 // 14. Titolo «in breve» con l'articolo giusto per tipo
 $check( 'Il sentiero in breve' === forestas_dettaglio_titolo_breve( 'sentiero' ), 'il sentiero' );
@@ -434,6 +452,18 @@ $check( false !== strpos( $poi_card, 'forestas-card--poi' ) && false !== strpos(
 $check( false !== strpos( forestas_dettaglio_card( [ 'id' => 4, 'nome' => 'Biancone' ], 'poi' ), '<span class="forestas-card__tag">Punto di interesse</span>' ), 'POI senza tipologia: etichetta «Punto di interesse»' );
 $check( false !== strpos( forestas_dettaglio_card( [ 'id' => 3, 'nome' => 'X', 'tipo_id' => null ], 'percorso' ), 'forestas-card--sentiero' ), 'percorso senza tipo: colore dei sentieri' );
 $check( [] === forestas_dettaglio_poi( [] )['percorsi'] && 0 === forestas_dettaglio_poi( [] )['percorsi_totale'], 'POI senza percorsi vicini' );
+// POI correlati del POI (Rubens, 19/11): `forestas.related_pois` dello shard (id, nome, foto), card come i POI
+// correlati della traccia, con l'indirizzo del dettaglio dal plugin; senza id fuori
+$correlati_poi = forestas_dettaglio_poi( [ 'forestas' => [ 'related_pois' => [
+	[ 'id' => 149, 'name' => [ 'it' => 'Punto di arrivo T-113', 'en' => 'End point T-113' ], 'feature_image' => [ 'thumbnail' => 'https://x/t.jpg' ], 'addr_complete' => 'Perda Liana' ],
+	[ 'id' => 0, 'name' => [ 'it' => 'Senza id' ] ],
+] ] ] )['poi_correlati'];
+$check( 1 === count( $correlati_poi ) && 149 === $correlati_poi[0]['id'] && 'Punto di arrivo T-113' === $correlati_poi[0]['nome'] && 'https://x/t.jpg' === $correlati_poi[0]['immagine'] && null === $correlati_poi[0]['tipo'], 'POI correlati del POI: ' . wp_json_encode( $correlati_poi ) );
+$check( [] === forestas_dettaglio_poi( [] )['poi_correlati'], 'POI senza POI correlati' );
+// Un'etichetta sola per i percorsi collegati, nel POI come nella traccia (Rubens, 19/11)
+$poi_template = (string) file_get_contents( get_stylesheet_directory() . '/wp-package/poi.php' );
+$check( false !== strpos( $poi_template, "forestas_testo( 'Percorsi correlati', 'Related routes' )" ) && false === strpos( $poi_template, "'Percorsi vicini'" ), 'POI: «Percorsi correlati» come nella traccia' );
+$check( false !== strpos( (string) file_get_contents( get_stylesheet_directory() . '/wp-package/poi.php' ), "forestas_dettaglio_griglia( \$dati['poi_correlati'], 'poi'" ), 'il template del POI mostra i POI correlati' );
 
 // Mappa del dettaglio (Tavola 3 e Tavola 7 del wireframe): tracce, punti e legenda dal JSON
 $p_mappa = [
@@ -604,6 +634,23 @@ $check( false === strpos( $itinerario, 'wm-state--' ), 'itinerario: niente fasci
 $sentiero = $genera( 'route-type-trail' );
 $check( false !== strpos( $sentiero, 'class="wm-avviso"' ) && false !== strpos( $sentiero, 'wm-state--not-walkable' ), 'sentiero: avviso e fascia della percorribilità' );
 $check( false === strpos( $sentiero, '>Segnala<' ) && false === strpos( $sentiero, 'Opinioni e recensioni' ), 'sentiero: niente segnalazioni né recensioni' );
+// Breadcrumb del dettaglio (Rubens, 19/11): Home › pagina d'elenco del tipo › nome, come nelle altre pagine del sito
+// La voce di mezzo ha il nome della voce del menu principale («Punti di interesse»), non il titolo della pagina, che
+// per i POI è ancora «Da vedere» (Rubens, 19/11)
+$elenco = function ( string $chiave, string $nome ): string {
+	$id = forestas_pagina_per_chiave( $chiave );
+	return $id ? '<a href="' . esc_url( get_permalink( $id ) ) . '">' . esc_html( $nome ) . '</a><span aria-hidden="true">›</span>' : 'pagina ' . $chiave . ' assente';
+};
+$check( false !== strpos( $sentiero, '<nav class="forestas-percorso" aria-label="Briciole di pane"><a href="' ) && false !== strpos( $sentiero, $elenco( 'sentieri', 'Sentieri' ) . '<span aria-current="page">Prova</span></nav>' ), 'sentiero: breadcrumb Home › Sentieri › nome' );
+$check( false !== strpos( $itinerario, $elenco( 'itinerari', 'Itinerari' ) . '<span aria-current="page">Prova</span></nav>' ), 'itinerario: breadcrumb Home › Itinerari › nome' );
+$check( strpos( $sentiero, 'class="forestas-percorso"' ) < strpos( $sentiero, 'class="forestas-azioni wm-actions"' ) && strpos( $sentiero, '</header>' ) < strpos( $sentiero, 'class="forestas-percorso"' ), 'sentiero: breadcrumb fra la testata e i pulsanti' );
+$check( false !== strpos( forestas_dettaglio_percorso( 'poi', 'Sos Nibberos' ), $elenco( 'da-vedere', 'Punti di interesse' ) . '<span aria-current="page">Sos Nibberos</span>' ), 'POI: breadcrumb Home › Punti di interesse › nome' );
+$check( false !== strpos( forestas_dettaglio_percorso( 'cammino', 'Tappa 1' ), $elenco( 'cammini', 'Cammini' ) ), 'cammino: breadcrumb con Cammini' );
+$check( false !== strpos( (string) file_get_contents( get_stylesheet_directory() . '/wp-package/poi.php' ), 'forestas_dettaglio_percorso(' ), 'POI: il template stampa la breadcrumb' );
+$check( 'Punti di interesse' === forestas_voce_menu_principale( forestas_pagina_per_chiave( 'da-vedere' ) ) && '' === forestas_voce_menu_principale( 0 ), 'nome della voce del menu principale, in maiuscolo solo la prima lettera' );
+// Niente «Stampa» finché la stampa non c'è (Rubens, 19/11: torna con oc:8982), né nella traccia né nel POI
+$check( false === strpos( $sentiero, '>Stampa<' ) && false === strpos( $itinerario, '>Stampa<' ), 'traccia: niente pulsante «Stampa»' );
+$check( false === strpos( (string) file_get_contents( get_stylesheet_directory() . '/wp-package/poi.php' ), "'Stampa'" ), 'POI: niente pulsante «Stampa»' );
 
 // oc:9000: controllo unico della versione del plugin, e legenda delle tacche dal registro (assenza a 0)
 $check( forestas_plugin_ready() && forestas_plugin_ready( '0.5.0' ) && forestas_plugin_ready( '0.10.0' ), 'plugin dalla 0.5.0: pronto' );
@@ -614,6 +661,9 @@ $check( [] === forestas_status_legend( 'nessuna-famiglia' ), 'famiglia sconosciu
 
 // oc:9000: il tipo delle tracce viene da `route-type`, famiglia di forestas indicata al plugin
 $check( 'route-type' === wmwp_track_kind_taxonomy(), 'famiglia del tipo indicata al plugin' );
+
+// Dettaglio della traccia dal file v1 (scrum del 19/11, oc:8997): il plugin legge tracks/v1/<id>.json
+$check( 'v1' === apply_filters( 'wmwp_track_json_version', '' ), 'versione del file della traccia: v1' );
 
 if ( $failures ) {
 	echo 'FAIL: ' . implode( '; ', $failures ) . "\n";

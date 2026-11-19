@@ -261,8 +261,8 @@
 .wm-gal .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .wm-gal li { position: relative; }
 
-/* Punto di interesse: tipologia su etichetta bianca (Tavola 7) */
-.wm-tipo--poi { color: #B7127F; background: #fff; }
+/* Punto di interesse: la tipologia ha l'etichetta di .wm-tipo, magenta #B7127F con il testo bianco (.tipo.pt della
+   Tavola 7), come il tipo di sentieri, itinerari e cammini: nessuna regola propria (Rubens, 19/11) */
 
 /* Sotto 768px i pulsanti delle pagine vanno a tutta larghezza: anche «Condividi», che sta dentro un contenitore in linea */
 @media (max-width: 767px) {

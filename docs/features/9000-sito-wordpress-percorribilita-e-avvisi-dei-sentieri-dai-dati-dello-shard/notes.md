@@ -104,6 +104,59 @@
   (`forestas_sezione_pagina()`): si cambia dal pannello della pagina, senza codice.
 - Niente «Condividi», come le pagine d'elenco: l'indirizzo della ricerca si condivide dal browser.
 
+### Task 19 file v1 della traccia (aggiunto il 19/11)
+
+- Il plugin ha il filtro `wmwp_track_json_version` (con ripiego sul file senza versione), il child sceglie `v1`.
+- Verificato sul locale (dev): 15 tracce, in italiano e in inglese, danno lo stesso `main` dal file v1 e da quello
+  senza versione; la copia in cache viene da `tracks/v1/<id>.json`, con solo `taxonomies`. Nessun cambiamento visibile,
+  quindi nessun controllo di accessibilità nuovo.
+
+### Task 21 breadcrumb del dettaglio (aggiunto il 19/11)
+
+- La pagina di mezzo è quella del menu principale per il tipo (`_wpf_pagina`: `sentieri`, `itinerari`, `cammini`,
+  `da-vedere`). Il primo giro usava il titolo della pagina, e per i POI usciva «Da vedere»: Rubens ha segnalato che il
+  nome ora è «Punti di interesse». Il nome viene dalla voce del menu principale che porta a quella pagina
+  (`forestas_voce_menu_principale()`, menu `main-menu*` di ogni lingua, voci scritte in maiuscolo e riportate con la
+  sola iniziale maiuscola): Sentieri/Trails, Itinerari/Itineraries, Cammini/Walks, Punti di interesse/Points of
+  interest. Il titolo della pagina resta il ripiego.
+- Stesso markup e stesso stile di `forestas_percorso()`, senza «Condividi» dopo: la riga dei pulsanti del dettaglio
+  ce l'ha già.
+
+### Task 22 etichetta del tipo del POI (aggiunto il 19/11)
+
+- La regola bianca (`.wm-tipo--poi`, oc:8969) veniva da una frase ambigua: «tipologia in etichetta bianca su
+  #B7127F (6,16:1)» (`docs/features/8783-…/implementazione-wordpress.md:519`) vuol dire testo bianco su fondo magenta,
+  come conferma il contrasto 6,16:1, ma è stata resa come etichetta bianca con il testo magenta. Nel CSS della tavola
+  l'etichetta del POI è `.tipo.pt`, magenta con il testo bianco come le altre, e nessuna regola della testata la
+  cambia: verificato dal markup e dal CSS di `index.html`, non dalla descrizione.
+
+### Task 23 quota e area sosta del POI (aggiunto il 19/11)
+
+- Dati verificati prima di cambiare il riquadro: la quota non c'è (976 POI del dev con la Z a 0 e senza `ele`),
+  l'area sosta è un tipo del POI (`equipped-rest-area`; 191 POI hanno più di un tipo), l'area geografica c'era già, i
+  percorsi vicini hanno il numero ma il raggio dello shard è 1 km (non i 5 km del wireframe) e l'API non lo dice.
+  Rubens ha scelto di tenere lo stile e le righe attuali e aggiungere quota e area sosta.
+- La quota la scrive `UpdateEcPoiDemJob` di wm-package in `properties.ele`, che l'API del POI di Forestas passa
+  così com'è: appena lo shard la calcola, la riga compare senza altri lavori. Sul dev la catena del POI ha scritto
+  `taxonomy_where` (974 POI) ma non `ele`: suppongo che il passo del DEM fallisca, non verificato.
+- Da girare ad Alessandro: `ele` dei POI non calcolato sul dev; e i «POI correlati» del dettaglio del POI (`ForestasPoiDetail::relatedPois()`)
+  prendono la quota da `ST_Z` della geometria (`App\Support\ForestasPoiDetail`), non da `properties.ele`, quindi
+  resteranno senza quota anche dopo il DEM.
+- L'etichetta sulla foto di Perda Liana diceva «Area sosta attrezzata» (primo tipo): ora la tipologia salta l'area
+  sosta, che ha la sua riga; il nome inglese del termine manca, per questo la riga ha un'etichetta nostra.
+
+### Task 24 percorsi vicini del POI (aggiunto il 19/11)
+
+- Rubens ha scelto di spostare solo i percorsi vicini, senza rifare il resto del POI come la traccia.
+- POI correlati (`properties.forestas.related_pois`, POI correlati di Drupal): sul dev li hanno 404 POI su 976 (fino a
+  12; 15 POI senza risposta dall'API durante il conteggio). La Tavola 7 non li prevede: Rubens li ha voluti come nella
+  traccia (task 25).
+- Percorsi vicini (POI) e percorsi correlati (traccia) si calcolano tutti e due per vicinanza (knowledge di forestas
+  sul dettaglio del POI e della traccia: «correlati e vicini sono la stessa cosa», oc:8959); i POI correlati di un POI
+  invece vengono ancora da Drupal («per ora», nessun raggio deciso). Lo shard non manda il tipo dei POI correlati del
+  POI, quindi la card non lo mostra: da girare ad Alessandro. Visto che sono lo stesso dato, Rubens ha deciso
+  un'etichetta sola: «Percorsi correlati» anche nel POI (il testo del totale e quello senza percorsi seguono).
+
 ### Commit
 
 - Un commit per repo invece di uno per task, come chiedeva il piano: molti file sono stati toccati da più task e dalle
@@ -284,6 +337,16 @@ Dialogo del 18/11 (Rubens):
 - Stima: 2,3 ore misurate più 8,3 stimate da `wm-estimate`; sul ticket Rubens ha messo 11 ore.
 
 ## Follow-up
+
+- **oc:8982 (stampa):** il pulsante «Stampa» è stato tolto dai dettagli di traccia e POI il 19/11; va rimesso in
+  `wp-package/track.php` e `wp-package/poi.php` (dove c'è il commento) quando la stampa funziona, insieme al controllo
+  di `tests/dettaglio.php` da invertire.
+
+- **oc:8997 (versioni del JSON della traccia, in develop di forestas dal 19/11).** Su richiesta di Giuseppe allo scrum
+  del 19/11 il dettaglio della traccia legge `tracks/v1/<id>.json` (task 19). `taxonomy_where` lo legge solo il
+  dettaglio del POI (`forestas_dettaglio_poi()`), che viene dall'API e non ha versioni. Su UAT il file v1 esiste solo
+  dopo il deploy di oc:8997 con `WMFE_TRACK_VERSIONS` nel `.env` e la rigenerazione delle tracce: fino ad allora il
+  plugin legge il file senza versione.
 
 - **Condizione di merge:** la PR di `wp-forestas` non va in merge prima del commit con il nuovo `WP_PACKAGE_REF` in
   `docker/scripts/init-wordpress.sh` (hash di `git rev-parse` dopo il merge del plugin, commit a sé nella stessa PR).

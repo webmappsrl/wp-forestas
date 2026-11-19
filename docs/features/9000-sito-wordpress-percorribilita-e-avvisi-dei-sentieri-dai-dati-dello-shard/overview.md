@@ -150,6 +150,30 @@ Allo scrum del 18/11 il lavoro è stato definito come allineare il WordPress all
       a filtro chiuso, in giù ad aperto; all'apertura della pagina aperto solo il filtro con una voce scelta), e
       «Mostra di più» / «Mostra meno» è il pulsante largo quanto la colonna con il filo sopra e la freccia; le
       dimensioni del testo restano quelle della ricerca (Rubens, 19/11).
+- [x] Breadcrumb nel dettaglio di traccia e POI (Rubens, 19/11), sotto la testata e prima dei pulsanti, con il markup
+      delle altre pagine: «Home › Sentieri | Itinerari | Cammini | Punti di interesse › nome». La voce di mezzo porta
+      alla pagina d'elenco del tipo e ha il nome della sua voce nel menu principale, nella lingua della pagina: la
+      pagina dei POI si intitola ancora «Da vedere», il menu dice «Punti di interesse» (Rubens, 19/11).
+- [x] Nella testata del POI la tipologia ha l'etichetta del wireframe (`.tipo.pt` della Tavola 7): fondo magenta
+      #B7127F, testo bianco (6,16:1), come il tipo di sentieri, itinerari e cammini; prima era bianca con il testo
+      magenta (Rubens, 19/11).
+- [x] Nel riquadro «Il punto in breve» del POI, con lo stile attuale, due righe della Tavola 7 (Rubens, 19/11):
+      «Quota» dal DEM dello shard (`properties.ele`), solo quando c'è (oggi su nessun POI del dev), e «Area sosta
+      attrezzata: Sì» per i POI con il tipo `equipped-rest-area`. La tipologia (riquadro ed etichetta sulla foto) è il
+      primo degli altri tipi, come nella tavola: per Perda Liana «Meraviglie della Geologia e del Paesaggio».
+- [x] Nel dettaglio del POI i «Percorsi vicini» vanno sotto la galleria, come i contenuti collegati della traccia
+      (Rubens, 19/11): in breve → il punto di interesse → galleria → percorsi correlati → punti di interesse correlati →
+      allegati. La sezione si chiama «Percorsi correlati» («Related routes») come nella traccia: un'etichetta sola per
+      tutti (Rubens, 19/11).
+- [x] Il dettaglio del POI mostra i «Punti di interesse correlati» (Rubens, 19/11), con le card e il «Mostra tutti» dei
+      POI correlati della traccia, da `forestas.related_pois` dello shard (POI correlati di Drupal; sul dev 404 POI su
+      976 ne hanno, fino a 12). Lo shard non manda il tipo dei correlati: la card dice «Punto di interesse».
+- [x] Il pulsante «Stampa» del dettaglio di traccia e POI non c'è più finché la stampa non è pronta (Rubens, 19/11):
+      torna con oc:8982. Tolto dal template, non nascosto con il CSS, come segnalazioni e recensioni: lo screen reader
+      non trova un pulsante che non fa niente.
+- [x] Il dettaglio della traccia legge il file v1 dello shard (`tracks/v1/<id>.json`, oc:8997; Giuseppe, scrum del
+      19/11), con ripiego sul file senza versione dove la v1 non c'è ancora. Solo le tracce: POI, ricerca e indice
+      non hanno versioni.
 - [x] Titolo della pagina della ricerca come nelle altre pagine del sito (Rubens, 19/11): intestazione
       `.forestas-intestazione` (titolo centrato con il filo sopra nel colore della sezione) e breadcrumb «Home › Cerca
       nel sito» (`forestas_percorso()`), senza «Condividi», come le pagine d'elenco.

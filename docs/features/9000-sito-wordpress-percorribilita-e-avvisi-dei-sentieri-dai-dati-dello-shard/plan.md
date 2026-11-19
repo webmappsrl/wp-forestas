@@ -433,6 +433,78 @@ stato `absent` della famiglia.
 - [x] **Passo 3:** nel browser IT a 1280px e EN a 375px: stessa intestazione della pagina Enti, un solo `h1`,
       `navigation` «Briciole di pane» / «Breadcrumb» con `aria-current`, nessuno scorrimento orizzontale.
 
+### Task 19: dettaglio della traccia dal file v1 (aggiunto il 19/11)
+
+**Repo:** `wp-package`, poi `wp-forestas` (child).
+
+- [x] **Passo 1 (plugin):** casi in `tests/php/detail-aws.php` (file della versione, 304 sullo stesso file, ripiego sul
+      file senza versione, niente ETag fra file diversi, versione non valida): FAIL. `wmwp_track_json_version()` e
+      lettura in `wmwp_detail_fetch()` (`includes/detail-render.php`); README e CHANGELOG. PASS, tutti i test.
+- [x] **Passo 2 (child):** controllo in `tests/dettaglio.php` (FAIL), filtro a `v1` in `inc/dettaglio.php` (PASS);
+      stesso HTML del dettaglio dal file v1 e da quello senza versione su 15 tracce IT/EN.
+
+### Task 20: via il pulsante «Stampa» (aggiunto il 19/11)
+
+**Repo:** `wp-forestas` (child).
+
+- [x] **Passo 1:** controllo in `tests/dettaglio.php` (traccia generata e template del POI senza «Stampa»): FAIL.
+- [x] **Passo 2:** tolto il pulsante da `wp-package/track.php` e `wp-package/poi.php` (un commento dice che torna con
+      oc:8982), commento di `assets/js/dettaglio.js` allineato; Version 1.17.11. PASS.
+- [x] **Passo 3:** nel browser sentiero e POI, IT ed EN, desktop e 375px: nella riga restano «Scarica GPX» (solo
+      tracce) e «Condividi», nessun errore, niente scorrimento orizzontale.
+
+### Task 21: breadcrumb nel dettaglio di traccia e POI (aggiunto il 19/11)
+
+**Repo:** `wp-forestas` (child).
+
+- [x] **Passo 1:** controlli in `tests/dettaglio.php` (breadcrumb di sentiero e itinerario nel dettaglio generato, fra
+      testata e pulsanti; POI e cammino dalla funzione; il template del POI la stampa): FAIL.
+- [x] **Passo 2:** `forestas_dettaglio_percorso()` e `forestas_voce_menu_principale()` (nome dal menu principale, non
+      dal titolo della pagina) in `inc/dettaglio.php`, stampata dopo la testata in
+      `wp-package/track.php` e `wp-package/poi.php`. PASS, tutti i test del child.
+- [x] **Passo 3:** nel browser sentiero, itinerario, cammino (EN, 375px) e POI (IT 375px, EN): `navigation`
+      «Briciole di pane» / «Breadcrumb» con i link e la pagina corrente, nomi lunghi a capo, niente scorrimento
+      orizzontale.
+
+### Task 22: etichetta del tipo del POI come nel wireframe (aggiunto il 19/11)
+
+**Repo:** `wp-forestas` (child).
+
+- [x] **Passo 1:** dalla tavola (markup e CSS di `index.html` dell'artifact, sezione `s2p`): `.tipo.pt`, fondo
+      #B7127F, testo bianco, 11px, 600, 3px 8px, angoli di 2px, la stessa `.tipo` delle tracce.
+- [x] **Passo 2:** tolta `.wm-tipo--poi` da `assets/css/dettaglio.css` (il POI usa `.wm-tipo` con `--wm-c`);
+      Version 1.17.12. Nel browser, desktop e 375px: fondo rgb(183, 18, 127), testo bianco, 11px, 600, 3px 8px, 2px.
+
+### Task 23: quota e area sosta nel riquadro del POI (aggiunto il 19/11)
+
+**Repo:** `wp-forestas` (child).
+
+- [x] **Passo 1:** controlli in `tests/dettaglio.php` (quota da `ele` arrotondata, 0 valido, non numerica assente;
+      area sosta dal tipo; tipologia senza l'area sosta, o l'area sosta se è l'unico tipo; «1.293 m»): FAIL.
+- [x] **Passo 2:** `quota`, `area_sosta` e tipologia in `forestas_dettaglio_poi()`, `forestas_dettaglio_quota()` in
+      `inc/dettaglio.php`; due righe in `wp-package/poi.php`, solo quando c'è il dato. PASS, tutti i test del child.
+- [x] **Passo 3:** nel browser Perda Liana (POI 278, quota scritta per la prova nella cache locale e poi tolta) IT a
+      1280px ed EN a 375px, e Sos Nibberos senza le due righe: righe con `rowheader`, nomi in inglese nostri.
+
+### Task 24: percorsi vicini del POI sotto la galleria (aggiunto il 19/11)
+
+**Repo:** `wp-forestas` (child).
+
+- [x] Spostata la sezione in `wp-package/poi.php`; nel browser l'ordine è `wm-breve`, `wm-punto`, `wm-galleria`,
+      `wm-vicini` (Perda Liana IT ed EN, Sos Nibberos). `tests/dettaglio.php`: PASS.
+
+### Task 25: POI correlati nel dettaglio del POI (aggiunto il 19/11)
+
+**Repo:** `wp-forestas` (child).
+
+- [x] **Passo 1:** controlli in `tests/dettaglio.php` (card dai `related_pois`, senza id fuori, vuoto senza dati,
+      il template li mostra): FAIL.
+- [x] **Passo 2:** `forestas_dettaglio_poi_correlati()` e `poi_correlati` in `forestas_dettaglio_poi()`; sezione
+      «Punti di interesse correlati» in `wp-package/poi.php` dopo i percorsi vicini, con `forestas_dettaglio_griglia()`.
+      PASS, tutti i test del child.
+- [x] **Passo 3:** nel browser S'Arcu 'e Laconitha (12 correlati) IT a 1280px ed EN a 375px: tre card, «Mostra tutti»
+      le apre tutte, link al dettaglio nella lingua, `region` con il titolo e card con `heading` di livello 3.
+
 ### Task 12: rilascio e controlli finali
 
 **Repo:** `wp-package`, poi `wp-forestas`.

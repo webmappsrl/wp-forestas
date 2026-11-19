@@ -172,7 +172,7 @@
 		});
 	});
 
-	// Su mobile la mappa (con legenda e «Vedi sulla mappa interattiva») viene subito dopo i pulsanti Scarica, Stampa e
+	// Su mobile la mappa (con legenda e «Vedi sulla mappa interattiva») viene subito dopo i pulsanti Scarica e
 	// Condividi, non in fondo alla colonna (oc:8969). Si sposta nel DOM, non solo a vista, così l'ordine del
 	// Tab e dello screen reader resta quello che si vede. Senza JavaScript resta in fondo, dove la mette il template.
 	var aside = root.querySelector('.wm-aside');

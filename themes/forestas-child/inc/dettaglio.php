@@ -199,6 +199,60 @@ function forestas_dettaglio_tipo( array $detail ): string {
 }
 
 /**
+ * Nome della voce del menu principale (i menu `main-menu*`, uno per lingua) che porta alla pagina, con la maiuscola
+ * solo all'inizio: nel menu le voci sono scritte in maiuscolo («PUNTI DI INTERESSE»). '' se la pagina non è nel menu.
+ */
+function forestas_voce_menu_principale( int $pagina ): string {
+	if ( $pagina <= 0 ) {
+		return '';
+	}
+	$voci = get_posts(
+		[
+			'post_type'        => 'nav_menu_item',
+			'numberposts'      => -1,
+			'suppress_filters' => true,
+			'meta_key'         => '_menu_item_object_id', // phpcs:ignore WordPress.DB.SlowDBQuery
+			'meta_value'       => (string) $pagina, // phpcs:ignore WordPress.DB.SlowDBQuery
+		]
+	);
+	foreach ( $voci as $voce ) {
+		$menu = wp_get_object_terms( $voce->ID, 'nav_menu', [ 'fields' => 'slugs' ] );
+		if ( is_wp_error( $menu ) || ! array_filter( $menu, fn( $slug ) => 0 === strpos( (string) $slug, 'main-menu' ) ) ) {
+			continue;
+		}
+		$nome = mb_strtolower( trim( wp_strip_all_tags( (string) wp_setup_nav_menu_item( $voce )->title ) ), 'UTF-8' );
+		if ( '' !== $nome ) {
+			return mb_strtoupper( mb_substr( $nome, 0, 1, 'UTF-8' ), 'UTF-8' ) . mb_substr( $nome, 1, null, 'UTF-8' );
+		}
+	}
+	return '';
+}
+
+/**
+ * Breadcrumb del dettaglio (Rubens, 19/11): «Home › <pagina d'elenco del tipo> › <nome>», con lo stesso markup di
+ * forestas_percorso() delle altre pagine. La pagina d'elenco è quella del menu principale per il tipo (`_wpf_pagina`:
+ * sentieri, itinerari, cammini, da-vedere), nella lingua corrente, con il nome della sua voce nel menu principale
+ * (forestas_voce_menu_principale(): «Punti di interesse», mentre la pagina si intitola ancora «Da vedere»); senza la
+ * voce il titolo della pagina, senza la pagina «Home › nome».
+ */
+function forestas_dettaglio_percorso( string $tipo, string $nome ): string {
+	$chiavi = [
+		'sentiero'   => 'sentieri',
+		'itinerario' => 'itinerari',
+		'cammino'    => 'cammini',
+		'poi'        => 'da-vedere',
+	];
+	$pagina = isset( $chiavi[ $tipo ] ) ? forestas_pagina_per_chiave( $chiavi[ $tipo ] ) : 0;
+	return sprintf(
+		'<nav class="forestas-percorso" aria-label="%1$s"><a href="%2$s">Home</a><span aria-hidden="true">›</span>%3$s<span aria-current="page">%4$s</span></nav>',
+		esc_attr( forestas_testo( 'Briciole di pane', 'Breadcrumb' ) ),
+		esc_url( apply_filters( 'wpml_home_url', home_url( '/' ) ) ),
+		$pagina ? sprintf( '<a href="%s">%s</a><span aria-hidden="true">›</span>', esc_url( get_permalink( $pagina ) ), esc_html( forestas_voce_menu_principale( $pagina ) ?: get_the_title( $pagina ) ) ) : '',
+		esc_html( $nome )
+	);
+}
+
+/**
  * Nome del cammino per la riga sopra il titolo (Tavola 5: «Cammino · Cammino Minerario di Santa Barbara»): il layer di
  * tipologia della traccia, `properties.layer_name` (oc:8959). Oggi i cammini stanno tutti in «Cammini di Sardegna»;
  * quando ognuno avrà il suo layer arriverà il nome del cammino senza cambiare niente qui. Vuoto per sentieri e
@@ -234,6 +288,14 @@ function forestas_dettaglio_nid( string $fonte, string $tipo, array $properties 
 	return is_scalar( $nid ) && '' !== trim( (string) $nid ) ? trim( (string) $nid ) : $fonte;
 }
 add_filter( 'wmwp_detail_source', 'forestas_dettaglio_nid', 10, 3 );
+
+/*
+ * Il dettaglio della traccia dal file v1 dello shard (`tracks/v1/<id>.json`, oc:8997; Giuseppe allo scrum del 19/11):
+ * le tassonomie solo in `taxonomies`, che il plugin e il child già usano per le tracce. Senza il file v1 il plugin
+ * legge quello senza versione. Riguarda solo le tracce: il dettaglio del POI viene dall'API e legge ancora
+ * `taxonomy_where` (forestas_dettaglio_poi()).
+ */
+add_filter( 'wmwp_track_json_version', fn() => 'v1' );
 
 /**
  * Colore del tipo e della fascia dei titoli di sezione (implementazione-wordpress.md di oc:8783).
@@ -994,16 +1056,23 @@ function forestas_dettaglio_nome( string $nome, string $codice ): string {
  * prime. I luoghi vengono da `taxonomy_where` (oggetto id → nomi, con `_admin_level`).
  *
  * @param array<string, mixed> $properties properties del JSON del POI.
- * @return array{tipologia: ?string, come_arrivare: string, allegati: list<array{url: string, title: string}>, video: list<array{url: string, title: ?string}>, luoghi: array{aree: list<string>, comuni: list<string>, provincia: ?string}}
+ * @return array{quota: ?int, area_sosta: bool, poi_correlati: list<array<string, mixed>>, tipologia: ?string, come_arrivare: string, allegati: list<array{url: string, title: string}>, video: list<array{url: string, title: ?string}>, luoghi: array{aree: list<string>, comuni: list<string>, provincia: ?string}}
  */
 function forestas_dettaglio_poi( array $properties ): array {
 	$forestas  = (array) ( $properties['forestas'] ?? [] );
-	$types     = wmwp_detail_poi_types( $properties, forestas_dettaglio_lingua() );
+	$types = wmwp_detail_poi_types( $properties, forestas_dettaglio_lingua() );
+	// Area sosta attrezzata: uno dei tipi del POI (`equipped-rest-area`), mostrato a sé nel riquadro «in breve»; la
+	// tipologia (etichetta sulla foto e riquadro) è il primo degli altri tipi, come nella Tavola 7 (Perda Liana:
+	// «Meraviglie della Geologia e del Paesaggio», non «Area sosta attrezzata»), e l'area sosta solo se è l'unico
+	$sosta     = in_array( 'equipped-rest-area', array_column( $types, 'identifier' ), true );
+	$altri     = array_values( array_filter( $types, fn( $type ) => 'equipped-rest-area' !== $type['identifier'] ) );
+	$primo     = $altri[0] ?? $types[0] ?? [];
 	$tipologia = [
-		'testo'  => $types[0]['name'] ?? '',
-		'lingua' => $types[0]['lang'] ?? null,
+		'testo'  => $primo['name'] ?? '',
+		'lingua' => $primo['lang'] ?? null,
 	];
 	$percorsi = array_values( array_filter( array_map( fn( $t ) => forestas_dettaglio_card_percorso( (array) $t ), (array) ( $forestas['nearby_tracks'] ?? [] ) ) ) );
+	$ele = $properties['ele'] ?? null;
 	return [
 		'tipologia'     => '' !== $tipologia['testo'] ? $tipologia['testo'] : null,
 		'tipologia_lang' => $tipologia['lingua'],
@@ -1014,7 +1083,45 @@ function forestas_dettaglio_poi( array $properties ): array {
 		// Percorsi vicini (raggio deciso dallo shard, i più vicini per primi; al massimo 10 e il totale)
 		'percorsi'        => $percorsi,
 		'percorsi_totale' => max( count( $percorsi ), (int) ( $forestas['nearby_tracks_count'] ?? 0 ) ),
+		// Quota in metri dal DEM dello shard (`properties.ele`, UpdateEcPoiDemJob di wm-package); null finché non c'è
+		'quota'           => is_numeric( $ele ) ? (int) round( (float) $ele ) : null,
+		'area_sosta'      => $sosta,
+		'poi_correlati'   => forestas_dettaglio_poi_correlati( $forestas ),
 	];
+}
+
+/**
+ * POI correlati di un POI (Rubens, 19/11): `forestas.related_pois` dello shard (`ForestasPoiDetail::relatedPois()`,
+ * POI correlati di Drupal), nella forma delle card dei POI correlati della traccia (forestas_dettaglio_correlati()).
+ * Lo shard non dà il tipo: la card mostra «Punto di interesse». L'indirizzo dal plugin, nella lingua della pagina.
+ *
+ * @param array<string, mixed> $forestas `properties.forestas` del POI.
+ * @return list<array{id: int, nome: string, tipo: null, immagine: ?string, url: ?string}>
+ */
+function forestas_dettaglio_poi_correlati( array $forestas ): array {
+	$codice = (string) apply_filters( 'wpml_current_language', 'it' );
+	$card   = [];
+	foreach ( (array) ( $forestas['related_pois'] ?? [] ) as $poi ) {
+		$id = is_array( $poi ) ? (int) ( $poi['id'] ?? 0 ) : 0;
+		if ( $id <= 0 ) {
+			continue;
+		}
+		$immagine = $poi['feature_image']['thumbnail'] ?? null;
+		$link     = function_exists( 'wmwp_detail_url' ) ? wmwp_detail_url( 'poi', $id, $codice ) : '';
+		$card[]   = [
+			'id'       => $id,
+			'nome'     => wmwp_text( $poi['name'] ?? null, forestas_dettaglio_lingua() )['text'],
+			'tipo'     => null,
+			'immagine' => is_string( $immagine ) && '' !== $immagine ? $immagine : null,
+			'url'      => '' !== $link ? $link : null,
+		];
+	}
+	return $card;
+}
+
+/** Quota in metri per la pagina, con il separatore delle migliaia della lingua: «1.293 m». */
+function forestas_dettaglio_quota( int $metri ): string {
+	return number_format_i18n( $metri ) . ' m';
 }
 
 /** Titolo della prima sezione, con l'articolo giusto: «Il sentiero in breve», «L'itinerario in breve». */

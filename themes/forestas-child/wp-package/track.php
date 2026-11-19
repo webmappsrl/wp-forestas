@@ -111,6 +111,8 @@ wmwp_template_header();
 		</div>
 	</header>
 
+	<?php echo forestas_dettaglio_percorso( $tipo, $nome ); // phpcs:ignore WordPress.Security.EscapeOutput -- markup già escapato ?>
+
 	<?php // Testata compatta che resta in alto scorrendo: la mostra assets/js/dettaglio.js dopo la testata grande ?>
 	<div class="wm-stick" data-wm-stick aria-hidden="true">
 		<span class="wm-tipo"><?php echo esc_html( $tipo_nome ); ?></span>
@@ -127,7 +129,7 @@ wmwp_template_header();
 		<?php if ( '' !== $gpx ) : ?>
 			<a class="forestas-pulsante" href="<?php echo esc_url( $gpx ); ?>" download><?php echo esc_html( forestas_testo( 'Scarica GPX', 'Download GPX' ) ); ?></a>
 		<?php endif; ?>
-		<button type="button" class="forestas-pulsante" aria-disabled="true"><?php echo esc_html( forestas_testo( 'Stampa', 'Print' ) ); ?></button>
+		<?php // «Stampa» tolto finché la stampa non c'è: torna con oc:8982 (Rubens, 19/11) ?>
 		<?php echo forestas_condividi( [ 'url' => (string) $detail['url'], 'titolo' => $nome ] ); // phpcs:ignore WordPress.Security.EscapeOutput -- markup già escapato ?>
 	</div>
 
