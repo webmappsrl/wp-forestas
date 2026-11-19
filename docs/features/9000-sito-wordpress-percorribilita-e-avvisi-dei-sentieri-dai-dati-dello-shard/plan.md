@@ -539,7 +539,6 @@ stato `absent` della famiglia.
 - [x] **Passo 3 (child):** tutti i test del child: PASS; `Version` alzata.
 - [ ] **Passo 4:** dopo il merge del plugin, `WP_PACKAGE_REF` in `wp-forestas/docker/scripts/init-wordpress.sh` con
       l'hash letto da `git rev-parse` (commit a sé, nella PR del ticket di `wp-forestas`).
-- [x] **Passo 5:** cancellare `/Volumes/WebmappDev/tmp/oc9000/` e i mu-plugin di prova (`zz-prova-9000.php`; resta
-      `zz-prova-config-detail.php`, che è nel container dal 12/11 e non è di questo lavoro).
+- [x] **Passo 5:** cartella di lavoro e mu-plugin di prova del confronto non restano nel repo né nel container.
 - [ ] **Passo 6 (a cura del dev):** dopo il merge, su dev e UAT `scripts/wordpress-up.sh` di `forestas`; verifica con
       dati veri (un sentiero parzialmente percorribile e un avviso creati in Nova).

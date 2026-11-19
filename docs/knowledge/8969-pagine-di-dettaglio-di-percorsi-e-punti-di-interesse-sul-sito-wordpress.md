@@ -1,6 +1,8 @@
 # Pagine di dettaglio di percorsi e punti di interesse
 
 > Lavoro d'origine: oc:8969. Artefatti in `docs/features/8969-pagine-di-dettaglio-di-percorsi-e-punti-di-interesse-sul-sito-wordpress/`.
+> Percorribilità, avviso, breadcrumb e POI come la Tavola 7: oc:9000, artefatti in
+> `docs/features/9000-sito-wordpress-percorribilita-e-avvisi-dei-sentieri-dai-dati-dello-shard/`.
 > La parte generica (indirizzi, indice, lettura del JSON, SEO, mappa) è del plugin `wp-package`: il suo `README.md` e la
 > sua pagina `docs/knowledge/8969-pagine-di-dettaglio-di-percorsi-e-punti-di-interesse-sul-sito-wordpress.md`.
 
@@ -21,6 +23,19 @@ e 7 del wireframe di oc:8783.
   con cui decide fra gli omonimi chi tiene l'indirizzo senza suffisso, è il nid di Drupal; i contenuti creati in Nova,
   senza nid, li riconosce dall'id dello shard. Come funzionano doppioni, storico dei percorsi e 301: README e pagina di
   conoscenza 8969 del plugin. Le correzioni a mano si fanno con `wp wmwp detail-paths`.
+- **Dati letti dal plugin** (oc:9000, plugin 0.5.0): Blocchi Dettaglio, galleria, POI correlati, dati tecnici,
+  luoghi, tipo del POI, percorribilità (`wmwp_walkability()`) e avviso (`wmwp_track_notice()`); il child li disegna e
+  con un plugin più vecchio degrada (`forestas_plugin_ready()`). Fascia della percorribilità e indicatori a tacche
+  seguono il registro degli stati del plugin: pagina di conoscenza di oc:9000.
+- **File v1 della traccia** (oc:9000, scrum del 19/11): il child sceglie `v1` con `wmwp_track_json_version`, e il
+  plugin legge `tracks/v1/<id>.json`, con ripiego sul file senza versione dove lo shard non la scrive.
+- **Breadcrumb** «Home › <elenco del tipo> › nome» sotto la testata (`forestas_dettaglio_percorso()`): la voce di mezzo
+  ha il nome della voce del menu principale che porta all'elenco (`forestas_voce_menu_principale()`).
+- **POI** (Tavola 7): etichetta del tipo magenta con il testo bianco come le altre; la tipologia è il primo tipo che
+  non sia l'area sosta; «Il punto in breve» con Quota (`properties.ele` del DEM, solo quando c'è) e «Area sosta
+  attrezzata» (tipo `equipped-rest-area`); poi descrizione, galleria, «Percorsi correlati» (i percorsi entro 1 km
+  dallo shard) e «Punti di interesse correlati» (`forestas.related_pois`, i correlati di Drupal, senza tipo).
+- **Niente «Stampa», segnalazioni né recensioni** nel primo rilascio: tolti dal template, tornano con oc:8982 e oc:8980.
 - **Pagina «Mappa interattiva»** (`inc/pagine-statiche.php`, `forestas_mappa_url()`): iframe della webapp dello shard
   dell'ambiente (`wmwp_webapp_url()` del plugin), con il focus sull'elemento da «Vedi sulla mappa interattiva».
 - **Icone delle tipologie di disabilità** dal set IcoMoon dello shard (`wmwp_icon_svg()`), che le prende dai termini
@@ -46,6 +61,15 @@ e 7 del wireframe di oc:8783.
   con il nome dal titolo, tutto aperto senza JavaScript; gli Enti aperti se ce n'è uno solo.
 - **Su mobile la mappa sale dopo i pulsanti, spostata nel DOM** e non solo a vista: Tab e screen reader seguono
   l'ordine che si vede.
+- **Pulsanti senza funzione tolti dal markup, non nascosti con il CSS** (oc:9000): lo screen reader non trova un
+  pulsante che non fa niente; un commento nel template dice dove rimetterli.
+- **Tacche nascoste allo screen reader** (oc:9000): il testo sotto dice già livello e stato («3 su 4, Parzialmente
+  percorribile»), e l'immagine con la stessa frase lo faceva leggere due volte; il «·» visibile si legge come virgola.
+- **Nome della voce del menu nella breadcrumb, non il titolo della pagina** (oc:9000): la pagina dei POI si intitola
+  ancora «Da vedere» perché il titolo arriva dalla sincronizzazione con Drupal, mentre il menu dice «Punti di
+  interesse».
+- **«Percorsi correlati» anche nel POI** (oc:9000): percorsi vicini al POI e percorsi correlati della traccia si
+  calcolano tutti e due per vicinanza, quindi un'etichetta sola.
 - **Pagina «Mappa interattiva» più alta di Drupal**: «Espandi la mappa» sta nella riga del percorso invece che in una
   barra di 88px; differenza voluta (Rubens).
 - **Icone dal set dello shard, non dal package**: il set si carica da `/icons-upload` dello shard e i termini lo usano
@@ -72,6 +96,13 @@ nel Passo 5 del Task 6 del piano. Tre cose da sapere:
   possono scambiarsi l'indirizzo (oc:8983). Controllo e comando nella howto, «Prima di cominciare».
 
 ## Come ci siamo arrivati
+
+- **Etichetta del tipo del POI bianca con il testo magenta** (oc:8969, superata da oc:9000): la guida del wireframe
+  diceva «tipologia in etichetta bianca su #B7127F (6,16:1)», cioè testo bianco su magenta; il CSS della Tavola 7
+  (`.tipo.pt`) lo conferma.
+- **Tipologia del POI = primo tipo** (oc:8969, superata da oc:9000): su Perda Liana il primo tipo è «Area sosta
+  attrezzata», che ora ha la sua riga nel riquadro.
+- **Breadcrumb con il titolo della pagina d'elenco** (oc:9000, superata lo stesso giorno): dava «Da vedere».
 
 - Le API del dettaglio sono cresciute insieme a queste pagine (oc:8959): enti per ruolo in `organizations`, percorsi
   vicini dei POI calcolati per vicinanza, `layer_name` per il nome del cammino, il nid di Drupal per la chiave stabile.

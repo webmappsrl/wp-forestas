@@ -78,9 +78,9 @@
 
 ### Controllo di accessibilità di avvisi e percorribilità (19/11)
 
-- Provato con dati finti scritti per un'ora nella cache locale dei dettagli (sentiero 99 parzialmente percorribile con
-  nota, data e avviso; itinerario 613 con avviso senza data; cammino 646 non percorribile) e degli avvisi
-  (`forestas_notices`), poi cancellati: sul dev non ci sono avvisi attivi né sentieri parzialmente percorribili.
+- Sul dev non ci sono avvisi attivi né sentieri parzialmente percorribili: le prove si fanno con dati scritti nella
+  cache locale del dettaglio (`wmwp_detail_json_track_<id>`, partendo da un dettaglio già in cache) e degli avvisi
+  (`forestas_notices`).
 - Contrasti: etichetta «Avviso» bianco su #B70827 6,82:1; testo dell'avviso 15,24:1, data 6,13:1; fascia
   «Parzialmente percorribile» 7,38:1, nota 11,56:1; «Non percorribile» 7,52:1; etichette della riga della ricerca:
   bianco su #0E7D2C 5,27:1, #333 su #F59B23 5,77:1, bianco su #B70827 6,82:1. Lo stato è sempre scritto, il colore non
@@ -300,10 +300,6 @@ Fatto da un agente, rivisto nella review finale. Scelte sue:
   avvisi solo per percorsi nell'indice. Scartati, con il motivo: la chiave `validazione_tacche` e le classi `av-*`
   restano in italiano come le chiavi e le classi vicine del child (`validazione`, `percorribilita`, `wm-tac`,
   `wm-segnaposto`): rinominarle solo qui farebbe convivere due lingue nello stesso array e nello stesso CSS.
-- **Pulizia (18/11).** Tolti il mu-plugin di simulazione `zz-prova-9000.php`, la cache dei dettagli 99 e 613 e la
-  copia degli avvisi che ne avevano i dati finti, la cartella `/Volumes/WebmappDev/tmp/oc9000/` e lo spazio di lavoro
-  del piano in `.superpowers/`. In locale la traccia 99 torna percorribile senza avviso e `/avvisi` non ha avvisi,
-  come il dev. `zz-prova-config-detail.php` resta: è nel container dal 12/11, non è di questo lavoro.
 - **Review interna, giro 2 (18/11).** Nessun bloccante in tutti e due i repo; applicati anche i cleanup facoltativi
   (copia dei POI nel formato di prima trattata come assente, liste saltate negli slug, parsing di `searchable`, un
   solo evento di ricostruzione durante l'attesa: note del plugin).
