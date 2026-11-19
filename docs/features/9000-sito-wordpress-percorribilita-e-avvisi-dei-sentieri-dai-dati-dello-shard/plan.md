@@ -505,6 +505,29 @@ stato `absent` della famiglia.
 - [x] **Passo 3:** nel browser S'Arcu 'e Laconitha (12 correlati) IT a 1280px ed EN a 375px: tre card, «Mostra tutti»
       le apre tutte, link al dettaglio nella lingua, `region` con il titolo e card con `heading` di livello 3.
 
+### Task 26: filtri dei post con lo stile della ricerca (aggiunto il 19/11)
+
+**Repo:** `wp-forestas` (child).
+
+- [x] **Passo 1:** riscritto lo stile di `.forestas-filtri*` in `style.css` con i valori di `.wmwp-facet*` (misure,
+      colori, casella, riquadro dei numeri, «Mostra di più»); commento di `forestas_filtri()` allineato; Version
+      1.17.13.
+- [x] **Passo 2:** nel browser Eventi (gruppo aperto), Enti con «Comune» scelto, la ricerca per confronto e Tutte le
+      news a 375px: stesse misure misurate (titolo 12,5px 500 #6B6B6B, voce 13px #4A4A4A, numero 11,5px 700, freccia
+      alta 24px), focus visibile su freccia e voci, niente scorrimento orizzontale. Tutti i test del child: PASS.
+
+### Task 27: «Filtri attivi» nelle liste dei post e degli enti (aggiunto il 19/11)
+
+**Repo:** `wp-forestas` (child).
+
+- [x] **Passo 1:** `tests/filtri-attivi.php` nuovo (markup, una voce per filtro, «Togli tutti i filtri», lista degli
+      eventi con e senza filtro, template degli enti): FAIL.
+- [x] **Passo 2:** `forestas_filtri_togli_url()`, `forestas_filtri_attivi_html()` e `forestas_filtri_attivi_griglia()`
+      in `inc/griglie.php`, in cima alla lista di `forestas_griglia()` e in `templates/entes-list.php`; stile come
+      `.wmwp-search__active` (Version 1.17.14). PASS, tutti i test del child.
+- [x] **Passo 3:** nel browser Eventi con due filtri (il clic su una voce toglie solo quella), Enti a 375px ed Enti in
+      inglese: link con il nome del gruppo, focus visibile, contrasti 8,82:1 e 9,24:1, niente scorrimento orizzontale.
+
 ### Task 12: rilascio e controlli finali
 
 **Repo:** `wp-package`, poi `wp-forestas`.

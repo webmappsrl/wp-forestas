@@ -174,6 +174,14 @@ Allo scrum del 18/11 il lavoro è stato definito come allineare il WordPress all
 - [x] Il dettaglio della traccia legge il file v1 dello shard (`tracks/v1/<id>.json`, oc:8997; Giuseppe, scrum del
       19/11), con ripiego sul file senza versione dove la v1 non c'è ancora. Solo le tracce: POI, ricerca e indice
       non hanno versioni.
+- [x] La colonna dei filtri dei post (News, Eventi, Da sapere, Enti: `forestas_filtri_colonna()`) ha lo stile dei
+      filtri della ricerca unica, che è il riferimento (Rubens, 19/11): titolo a 12,5px grigio con la freccia a
+      destra, voci a 13px con la casella disegnata (piena per la voce scelta), numero nel riquadro arancione a 11,5px,
+      niente grassetto nel gruppo attivo, «Mostra di più» a 12,5px, filo a destra della colonna su desktop. Le voci
+      restano link.
+- [x] «Filtri attivi» sopra le liste filtrabili dei post e degli enti, come nella ricerca (Rubens, 19/11): una voce
+      per filtro scelto con la ✕, che porta all'indirizzo senza quel filtro (e alla prima pagina), e «Togli tutti i
+      filtri»; lo screen reader legge «Togli il filtro Tipologia: eventi».
 - [x] Titolo della pagina della ricerca come nelle altre pagine del sito (Rubens, 19/11): intestazione
       `.forestas-intestazione` (titolo centrato con il filo sopra nel colore della sezione) e breadcrumb «Home › Cerca
       nel sito» (`forestas_percorso()`), senza «Condividi», come le pagine d'elenco.

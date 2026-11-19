@@ -157,6 +157,24 @@
   POI, quindi la card non lo mostra: da girare ad Alessandro. Visto che sono lo stesso dato, Rubens ha deciso
   un'etichetta sola: «Percorsi correlati» anche nel POI (il testo del totale e quello senza percorsi seguono).
 
+### Task 26 filtri dei post (aggiunto il 19/11)
+
+- Un solo componente da cambiare: `forestas_filtri_colonna()` (News, Eventi, Da sapere ed Enti). Solo CSS: il markup
+  e il comportamento restano quelli di Drupal (voci link, una voce scelta per gruppo, in fondo al gruppo), perché
+  ogni voce cambia l'indirizzo e la pagina.
+- La casella davanti alla voce è disegnata con `::before`: lo screen reader legge il link, e per la voce scelta
+  «Togli il filtro: …» con `aria-current`, come prima. Bordo #6B6B6B a 5,33:1.
+- Tolto il grassetto delle voci nel gruppo attivo: nella ricerca non c'è, e il segnale resta nei numeri pieni e nella
+  casella spuntata.
+
+### Task 27 filtri attivi (aggiunto il 19/11)
+
+- Le voci sono link e non pulsanti come nella ricerca: togliere un filtro cambia l'indirizzo e ricarica la pagina, come
+  le voci della colonna. Il link porta anche alla prima pagina (`/page/<n>/` e `paged` tolti), come le voci della
+  colonna, perché la pagina corrente potrebbe non esserci nella lista con meno filtri.
+- Negli enti c'è un solo filtro («Argomento»): voce e «Togli tutti i filtri» portano allo stesso indirizzo, come nella
+  ricerca con un filtro solo.
+
 ### Commit
 
 - Un commit per repo invece di uno per task, come chiedeva il piano: molti file sono stati toccati da più task e dalle
