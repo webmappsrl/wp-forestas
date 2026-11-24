@@ -20,15 +20,16 @@ $p          = (array) ( $detail['feature']['properties'] ?? [] );
 $forestas   = (array) ( $p['forestas'] ?? [] );
 $tipo       = forestas_dettaglio_tipo( $detail );
 $colori     = forestas_dettaglio_colori( $tipo );
-$tipi       = forestas_search_route_type_labels();
-$tipo_nome  = $tipi[ $p['taxonomies']['route-type'][0]['identifier'] ?? 'route-type-trail' ] ?? $tipi['route-type-trail'];
+// Nome del tipo dallo shard (oc:9018), con il ripiego del child se manca
+$tipo_nome  = forestas_dettaglio_nome_tipo( $p, $tipo );
 $codice     = forestas_dettaglio_testo( $p['ref'] ?? null );
 $nome       = forestas_dettaglio_nome( (string) $detail['name'], $codice );
 $luoghi     = forestas_dettaglio_luoghi( $p );
 $indicatori = forestas_dettaglio_indicatori( $p );
 $main_photo = wmwp_detail_feature_image( $p, forestas_dettaglio_lingua() );
 $foto       = $main_photo['large'] ?? '';
-$gpx        = (string) ( $forestas['downloads']['gpx'] ?? '' );
+// Tutti i formati che lo shard dà (oc:9018): GPX, KML, GeoJSON
+$scarica    = array_filter( [ 'GPX' => (string) ( $forestas['downloads']['gpx'] ?? '' ), 'KML' => (string) ( $forestas['downloads']['kml'] ?? '' ), 'GeoJSON' => (string) ( $forestas['downloads']['geojson'] ?? '' ) ], 'strlen' );
 $non_disp   = forestas_testo( 'Dato non ancora disponibile', 'Not yet available' );
 $correlati  = forestas_dettaglio_correlati( $p );
 $galleria   = forestas_dettaglio_galleria( $p );
@@ -121,15 +122,15 @@ wmwp_template_header();
 			<span class="wm-flag"><?php echo esc_html( $codice ); ?></span>
 		<?php endif; ?>
 		<?php if ( $indicatori['validazione'] && 'itinerario' !== $tipo ) : ?>
-			<span class="wm-stick__st"><?php echo esc_html( $indicatori['validazione']['etichetta'] ); ?></span>
+			<span class="wm-stick__st"<?php echo forestas_dettaglio_lang( $indicatori['validazione']['lingua'] ); // phpcs:ignore WordPress.Security.EscapeOutput -- attributo già escapato ?>><?php echo esc_html( $indicatori['validazione']['etichetta'] ); ?></span>
 		<?php endif; ?>
 	</div>
 
 	<div class="forestas-azioni wm-actions">
-		<?php if ( '' !== $gpx ) : ?>
-			<a class="forestas-pulsante" href="<?php echo esc_url( $gpx ); ?>" download><?php echo esc_html( forestas_testo( 'Scarica GPX', 'Download GPX' ) ); ?></a>
-		<?php endif; ?>
-		<?php // «Stampa» tolto finché la stampa non c'è: torna con oc:8982 (Rubens, 19/11) ?>
+		<?php foreach ( $scarica as $formato => $indirizzo ) : ?>
+			<a class="forestas-pulsante" href="<?php echo esc_url( $indirizzo ); ?>" download><?php echo esc_html( sprintf( forestas_testo( 'Scarica %s', 'Download %s' ), $formato ) ); ?></a>
+		<?php endforeach; ?>
+		<?php echo forestas_dettaglio_stampa( $detail ); // phpcs:ignore WordPress.Security.EscapeOutput -- markup già escapato ?>
 		<?php echo forestas_condividi( [ 'url' => (string) $detail['url'], 'titolo' => $nome ] ); // phpcs:ignore WordPress.Security.EscapeOutput -- markup già escapato ?>
 	</div>
 
@@ -165,7 +166,7 @@ wmwp_template_header();
 			<div class="wm-ind__i wm-ind__i--val">
 				<div class="wm-ind__k"><?php echo esc_html( forestas_testo( 'Validazione catastale', 'Trail register validation' ) ); ?> <?php echo $pulsante( 'wm-leg-val', forestas_testo( 'Legenda: livelli di validazione catastale', 'Legend: validation levels' ) ); // phpcs:ignore ?></div>
 				<span class="wm-tac" aria-hidden="true"><?php echo $tacche( $val['livello'], $val['totale'] ); // phpcs:ignore ?></span>
-				<div class="wm-ind__v"><?php echo esc_html( $val['livello'] . ' ' . $su . ' ' . $val['totale'] ) . forestas_separatore_html() . esc_html( $val['etichetta'] ); // phpcs:ignore WordPress.Security.EscapeOutput -- testo già escapato ?></div>
+				<div class="wm-ind__v"><?php echo esc_html( $val['livello'] . ' ' . $su . ' ' . $val['totale'] ) . forestas_separatore_html() . forestas_detail_lang_text( (string) $val['etichetta'], $val['lingua'] ); // phpcs:ignore WordPress.Security.EscapeOutput -- testo già escapato ?></div>
 				<?php echo $legenda( 'wm-leg-val', sprintf( forestas_testo( 'Validazione catastale, da 0 a %d', 'Trail register validation, from 0 to %d' ), $val['totale'] ), forestas_status_legend( 'validation-status' ) ); // phpcs:ignore ?>
 			</div>
 			<div class="wm-ind__i wm-ind__i--per">
@@ -337,10 +338,10 @@ wmwp_template_header();
 					<?php echo $titolo( forestas_testo( 'Attività e avvertenze', 'Activities and warnings' ), 'wm-attivita' ); // phpcs:ignore ?>
 					<?php if ( $difficolta ) : ?>
 						<table class="wm-diff">
-							<thead><tr><th scope="col"><?php echo esc_html( forestas_testo( 'Attività', 'Activity' ) ); ?></th><th scope="col"><?php echo esc_html( forestas_testo( 'Difficoltà', 'Difficulty' ) ); ?></th></tr></thead>
+							<thead><tr><th scope="col"><?php echo esc_html( forestas_testo( 'Scala', 'Scale' ) ); ?></th><th scope="col"><?php echo esc_html( forestas_testo( 'Difficoltà', 'Difficulty' ) ); ?></th></tr></thead>
 							<tbody>
-								<?php foreach ( $difficolta as [ $attivita, $grado, $lingua_grado ] ) : ?>
-									<tr><td><?php echo esc_html( $attivita ); ?></td><td><span class="wm-pill"<?php echo forestas_dettaglio_lang( $lingua_grado ); // phpcs:ignore ?>><?php echo esc_html( $grado ); ?></span></td></tr>
+								<?php foreach ( $difficolta as $d ) : ?>
+									<tr><td<?php echo forestas_dettaglio_lang( $d['scala_lingua'] ); // phpcs:ignore ?>><?php echo esc_html( $d['scala'] ); ?></td><td><span class="wm-pill"<?php echo forestas_dettaglio_lang( $d['grado_lingua'] ); // phpcs:ignore ?>><?php echo esc_html( $d['grado'] ); ?></span></td></tr>
 								<?php endforeach; ?>
 							</tbody>
 						</table>

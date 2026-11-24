@@ -5,7 +5,7 @@ Template: Impreza
 Author: Webmapp
 Author URI: https://webmapp.it/
 Description: Child theme di Impreza per Sardegna Sentieri (Forestas). Versionato nel repo wp-forestas e montato dal compose: si modifica nel repo, non dal pannello.
-Version: 1.17.14
+Version: 1.18.2
 */
 
 
@@ -2512,9 +2512,11 @@ Version: 1.17.14
 .wmwp-card--type-route-type-walk { --c: var(--sase-sezione-cammini); }
 .forestas-card--poi,
 .wmwp-card--type-poi { --c: var(--sase-sezione-punti-di-interesse); }
-.wmwp-card--type-da-sapere { --c: var(--sase-sezione-da-sapere); }
+/* Tipo di percorso che il child non conosce (oc:9018): il colore del testo del sito, neutro */
+.forestas-card--altro { --c: var(--sase-inchiostro); }
+.wmwp-card--type-good-to-know { --c: var(--sase-sezione-da-sapere); }
 .wmwp-card--type-news { --c: var(--sase-sezione-news); }
-.wmwp-card--type-evento { --c: var(--sase-blu-pulsante); }
+.wmwp-card--type-event { --c: var(--sase-blu-pulsante); }
 /* Card senza foto: il segnaposto di Drupal (images/thumb-placeholder.png del tema sardegnasentieri, grigio con il logo),
    come in node--sentiero--teaser, node--search-result e gli altri teaser (oc:8969). Nella ricerca il JS toglie solo
    l'immagine, e il riquadro resta */

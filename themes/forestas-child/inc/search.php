@@ -12,27 +12,42 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-// Tipi cercati: valore nell'indirizzo (parametro «contenuto») => post type
+// Tipi cercati: valore nell'indirizzo (parametro `content`, in inglese in tutte le lingue, oc:9018) => post type
 const FORESTAS_SEARCH_TYPES = [
-	'news'      => 'post',
-	'evento'    => 'evento',
-	'da-sapere' => 'da_sapere',
-	'pagina'    => 'page',
+	'news'         => 'post',
+	'event'        => 'evento',
+	'good-to-know' => 'da_sapere',
+	'page'         => 'page',
 ];
 const FORESTAS_SEARCH_PER_PAGE = 12;
 // Pagina di ricerca in config/pagine.json (meta _wpf_pagina): la trovano i redirect da `?s=` e dai link di Drupal e
 // lo shortcode; fuori dai risultati la tiene la regola delle pagine di struttura in forestas_search_rest()
 const FORESTAS_SEARCH_PAGE_KEY = 'cerca-nel-sito';
-// Province fra i luoghi dell'API (taxonomyWheres), comprese quelle storiche: sul dev il 09/11
-const FORESTAS_SEARCH_PROVINCES = [ 'Cagliari', 'Gallura Nord-Est Sardegna', 'Medio Campidano', 'Nuoro', 'Ogliastra', 'Oristano', 'Sassari', 'Sulcis Iglesiente' ];
+// Slug della ricerca inglese prima di oc:9018: uguale all'italiano, come la view di Drupal (`/en/cerca-nel-sito`). Lo slug
+// nuovo sta in config/pagine.json (`search-in-our-website`); il vecchio porta lì con un 301 (forestas_search_old_slug_target())
+const FORESTAS_SEARCH_OLD_SLUGS = [ 'cerca-nel-sito' ];
+// Ordine di ripiego dei valori di una scala di difficoltà, finché lo shard non pubblica il suo (`sort_order`, ticket
+// sullo shard, oc:9018): un punto solo; un valore che non vi compare si mostra lo stesso, in fondo
+const FORESTAS_DIFFICULTY_ORDER = [
+	'hiking-difficulty' => [ 'hiking-difficulty-T', 'hiking-difficulty-E', 'hiking-difficulty-EE', 'hiking-difficulty-EEA' ],
+];
+// Scale di difficoltà: le famiglie dello shard con questo suffisso, tranne l'accessibilità, che ha il suo indicatore
+// (regola unica per i filtri della ricerca e per il dettaglio, forestas_famiglia_difficolta())
+const FORESTAS_DIFFICULTY_SUFFIX  = '-difficulty';
+const FORESTAS_DIFFICULTY_EXCLUDE = [ 'inclusivity-difficulty' ];
+
+/** Vero se la famiglia dello shard è una scala di difficoltà (FORESTAS_DIFFICULTY_SUFFIX, FORESTAS_DIFFICULTY_EXCLUDE). */
+function forestas_famiglia_difficolta( string $famiglia ): bool {
+	return str_ends_with( $famiglia, FORESTAS_DIFFICULTY_SUFFIX ) && ! in_array( $famiglia, FORESTAS_DIFFICULTY_EXCLUDE, true );
+}
 
 /** Nome di ogni tipo nella lingua corrente. */
 function forestas_search_type_labels(): array {
 	return [
-		'news'      => forestas_testo( 'News', 'News' ),
-		'evento'    => forestas_testo( 'Evento', 'Event' ),
-		'da-sapere' => forestas_testo( 'Da sapere', 'Good to know' ),
-		'pagina'    => forestas_testo( 'Pagina', 'Page' ),
+		'news'         => forestas_testo( 'News', 'News' ),
+		'event'        => forestas_testo( 'Evento', 'Event' ),
+		'good-to-know' => forestas_testo( 'Da sapere', 'Good to know' ),
+		'page'         => forestas_testo( 'Pagina', 'Page' ),
 	];
 }
 
@@ -91,7 +106,7 @@ add_action(
 				'permission_callback' => '__return_true',
 				// Filtri «Tipo di ente» e «Ruolo sui sentieri» (oc:9000): valori separati da virgole
 				'args'                => forestas_search_rest_args() + array_fill_keys(
-					[ 'tipo-ente', 'ruolo' ],
+					[ 'entity-type', 'role' ],
 					[
 						'type'              => 'string',
 						'default'           => '',
@@ -396,7 +411,7 @@ function forestas_entes_search_rest( WP_REST_Request $request ): WP_REST_Respons
 		// Senza slug un ente non ha una pagina
 		$entes = array_values( array_filter( $found, fn( $ente ) => is_array( $ente ) && '' !== forestas_entes_slug( $ente ) ) );
 	}
-	$filtered = forestas_entes_search_filter( $entes, forestas_entes_roles_by_slug(), (string) $request['tipo-ente'], (string) $request['ruolo'] );
+	$filtered = forestas_entes_search_filter( $entes, forestas_entes_roles_by_slug(), (string) $request['entity-type'], (string) $request['role'] );
 	$entes    = array_map( fn( array $ente ): array => forestas_entes_list_item( $ente, $lang, $known ), $filtered['entes'] );
 
 	$per_page = (int) $request['per_page'];
@@ -468,166 +483,90 @@ function forestas_entes_search_card( array $ente ): array {
 	];
 }
 
-/*
- * Parametri dell'indirizzo come su Drupal: il testo in search_api_fulltext, così i link alla ricerca di oggi
- * continuano a funzionare; tab, pagina e vista con nomi italiani (oc:8952): «?tipo=percorsi&vista=mappa».
- */
-add_filter(
-	'wp_package_search_params',
-	function () {
-		return [
-			'q'    => 'search_api_fulltext',
-			'tab'  => 'tipo',
-			'page' => 'pagina',
-			'view' => 'vista',
-			'map'  => 'mappa',
-		];
-	}
-);
+// Parametri dell'indirizzo: quelli del plugin, in inglese e uguali in tutte le lingue, come la webapp (oc:9018): `q`,
+// `tab`, `pg`, `view`, `map`. I vecchi link di Drupal (search_api_fulltext, f[N]) li porta qui il redirect più sotto
 
-/** Nomi dei tipi di percorso (terms.route-type), per il filtro e per l'etichetta del tipo nelle righe e nelle card. */
-function forestas_search_route_type_labels(): array {
-	return [
-		'route-type-trail'     => forestas_testo( 'Sentiero', 'Trail' ),
-		'route-type-itinerary' => forestas_testo( 'Itinerario', 'Itinerary' ),
-		'route-type-walk'      => forestas_testo( 'Cammino', 'Walk' ),
+/**
+ * Nome di una famiglia di termini dal config.json dell'app (`LABELS.taxonomies`, oc:9018), con la lingua se è un'altra;
+ * il nome del child solo senza config.json (sito appena installato, prima del giro del cron).
+ *
+ * @return array{text: string, lang: ?string}
+ */
+function forestas_search_family_label( string $family, string $fallback ): array {
+	$config = forestas_plugin_ready() ? wmwp_app_config() : null;
+	$label  = null !== $config ? wmwp_app_label( $config['LABELS']['taxonomies'][ $family ]['labels'] ?? [], forestas_dettaglio_lingua() ) : [
+		'text' => '',
+		'lang' => null,
+	];
+	return '' !== $label['text'] ? $label : [
+		'text' => $fallback,
+		'lang' => null,
 	];
 }
 
 /**
- * Nomi dei termini dello shard mostrati nelle righe e nelle card (`term_labels` della source del plugin): tipo di
- * percorso e stato di validazione. L'API li dà solo in italiano (10/11), quindi sulla pagina inglese senza questi
- * nomi tipo e stato restavano in italiano. In italiano sono i nomi dell'API; in inglese provvisori, scritti da noi.
- */
-function forestas_search_term_labels(): array {
-	// Stati della percorribilità dal registro del plugin, nella lingua della pagina (oc:9000)
-	$walkability = array_map( fn( $name ) => $name['text'], forestas_status_names( forestas_walkability_family() ) );
-	return forestas_search_route_type_labels() + $walkability + [
-		'validation-status-validated'        => forestas_testo( 'Validato', 'Validated' ),
-		'validation-status-certified'        => forestas_testo( 'Certificato', 'Certified' ),
-		'validation-status-under-review'     => forestas_testo( 'In revisione-validazione', 'Under review' ),
-		'validation-status-pre-registration' => forestas_testo( 'In pre-accatastamento o manutenzione', 'Pre-registration or maintenance' ),
-		'validation-status-unverified'       => forestas_testo( 'Non verificato', 'Not verified' ),
-	];
-}
-
-/**
- * Faccetta di una famiglia del registro degli stati del plugin (oc:9000): un gruppo per stato, nell'ordine dello shard,
- * con il nome nella lingua della pagina; `missing` è lo stato di assenza, che vale anche per i percorsi senza termine
- * (search-logic.js). Null se il registro non conosce la famiglia o il plugin è più vecchio della 0.5.0.
+ * Faccetta di una famiglia del registro degli stati del plugin (oc:9000): ordine del registro, nomi dei termini dello
+ * shard (oc:9018); `missing` è lo stato di assenza, che vale anche per i percorsi senza termine (search-logic.js), con il
+ * suo nome dal registro, perché nessun dato lo porta. Null se il registro non conosce la famiglia o il plugin è vecchio.
  *
  * @return array<string, mixed>|null
  */
-function forestas_search_status_facet( string $family, string $key, string $label ): ?array {
-	$names = forestas_status_names( $family );
-	if ( ! $names ) {
+function forestas_search_status_facet( string $family, string $key, string $fallback ): ?array {
+	$registry = forestas_plugin_ready() ? ( wmwp_status_families()[ $family ] ?? null ) : null;
+	if ( ! is_array( $registry ) ) {
 		return null;
 	}
-	$groups = [];
-	foreach ( $names as $id => $name ) {
-		$groups[] = [
-			'id'     => (string) $id,
-			'label'  => $name['text'],
-			'values' => [ (string) $id ],
-		];
-	}
-	$registry = wmwp_status_families()[ $family ];
+	$label = forestas_search_family_label( $family, $fallback );
 	$facet = [
-		'key'    => $key,
-		'label'  => $label,
-		'type'   => 'terms',
-		'field'  => 'terms.' . $family,
-		'groups' => $groups,
-		'order'  => array_column( $groups, 'id' ),
+		'key'        => $key,
+		'label'      => $label['text'],
+		'label_lang' => $label['lang'],
+		'type'       => 'terms',
+		'field'      => 'terms.' . $family,
+		'order'      => array_values( array_filter( array_map( fn( $state ) => (string) ( $state['identifier'] ?? '' ), (array) ( $registry['states'] ?? [] ) ) ) ),
 	];
-	if ( null !== ( $registry['absent'] ?? null ) ) {
-		$facet['missing'] = (string) $registry['absent'];
+	$absent = $registry['absent'] ?? null;
+	if ( null !== $absent ) {
+		$facet['missing'] = (string) $absent;
+		$name             = wmwp_app_label( array_values( array_filter( (array) ( $registry['states'] ?? [] ), fn( $state ) => ( $state['identifier'] ?? '' ) === $absent ) )[0]['name'] ?? [], forestas_dettaglio_lingua() );
+		if ( '' !== $name['text'] ) {
+			$facet['labels'] = [ (string) $absent => $name['text'] ];
+			if ( null !== $name['lang'] ) {
+				$facet['lang_labels'] = [ (string) $absent => $name['lang'] ];
+			}
+		}
 	}
 	return $facet;
 }
 
 /**
- * Filtri dei percorsi di Forestas, nell'ordine della tavola 2 del wireframe di oc:8952.
+ * Filtri dei percorsi di Forestas, nell'ordine della tavola 2 del wireframe di oc:8952. Valori, nomi e ordine li dà lo
+ * shard (oc:9018): stati dal registro, tipo, attività, scale di difficoltà e aree dal config.json dell'app, come le app.
+ * Il child sceglie solo quali filtri e in che ordine.
  */
 function forestas_search_track_facets(): array {
-	return array_values( array_filter( [
-		// Un'opzione per stato, dal registro degli stati del plugin (oc:9000): percorribilità di wm-package e
-		// validazione di forestas; i percorsi senza termine valgono lo stato di assenza
-		forestas_search_status_facet( forestas_walkability_family(), 'percorribilita', forestas_testo( 'Percorribilità', 'Walkability' ) ),
-		forestas_search_status_facet( 'validation-status', 'validazione', forestas_testo( 'Validazione catastale', 'Trail registry validation' ) ),
-		[
-			'key'    => 'percorso',
-			'label'  => forestas_testo( 'Tipo di percorso', 'Route type' ),
-			'type'   => 'terms',
-			'field'  => 'terms.route-type',
-			'labels' => forestas_search_route_type_labels(),
-			'order'  => [ 'route-type-trail', 'route-type-itinerary', 'route-type-walk' ],
-		],
-		[
-			'key'            => 'attivita',
-			'label'          => forestas_testo( 'Attività', 'Activity' ),
-			'type'           => 'list',
-			'field'          => 'taxonomyActivities',
-			// Tipi di percorso e cammini stanno nello stesso campo delle attività, ma attività non sono:
-			// sono le tre righe storiche con cui i layer «Sentieri», «Itinerari» e «Cammini di Sardegna»
-			// raccolgono le tracce. Si escludono per nome da quando non portano più il prefisso della
-			// sorgente Drupal; spariranno quando quei layer passeranno al termine «Tipo percorso»
-			'exclude'        => [ 'trail', 'itinerary', 'walk' ],
-			// Nomi del sito per gli identifier di Geohub (wireframe, tav. 2): provvisori finché non arrivano
-			// con oc:8932
-			'labels'         => [
-				'hiking'         => forestas_testo( 'Camminate giornaliere', 'Day hikes' ),
-				'trekking'       => forestas_testo( 'Sentieri lunghi', 'Long-distance trails' ),
-				'mtb'            => forestas_testo( 'Mountain Bike', 'Mountain biking' ),
-				'horse'          => forestas_testo( 'Turismo equestre', 'Horse riding' ),
-				'nordic-walking' => forestas_testo( 'Passeggiate e Nordic Walk', 'Walks and Nordic walking' ),
-			],
-			'order'          => [ 'hiking', 'trekking', 'mtb', 'horse', 'nordic-walking' ],
-		],
-		// Le chiavi sono gli identifier dei termini sullo shard, che l'indice riporta così come sono:
-		// `<famiglia>-<sigla>`, con la sigla della scala CAI maiuscola. Prima erano i term id di
-		// Drupal (`sardegnasentieri:tid:4066`), cambiati quando gli identifier si sono staccati da
-		// Drupal: una chiave che non combacia lascia la voce senza etichetta e fuori ordine
-		[
-			'key'    => 'difficolta',
-			'label'  => forestas_testo( 'Difficoltà', 'Difficulty' ),
-			'type'   => 'terms',
-			'field'  => 'terms.hiking-difficulty',
-			'labels' => [
-				'hiking-difficulty-T'   => forestas_testo( 'T — turistico', 'T — tourist' ),
-				'hiking-difficulty-E'   => forestas_testo( 'E — escursionistico', 'E — hiking' ),
-				'hiking-difficulty-EE'  => forestas_testo( 'EE — per esperti', 'EE — for experts' ),
-				'hiking-difficulty-EEA' => forestas_testo( 'EEA — attrezzato', 'EEA — equipped' ),
-			],
-			'order'  => [ 'hiking-difficulty-T', 'hiking-difficulty-E', 'hiking-difficulty-EE', 'hiking-difficulty-EEA' ],
-		],
-		// «Dove» dell'API (taxonomyWheres) mescola regione, macro aree, settori CAI, province e comuni: si divide
-		// riconoscendoli dal nome, ripiego finché l'API non dà i luoghi per tipo (Rubens, 09/11). Le province hanno
-		// lo stesso nome del capoluogo: Cagliari, Nuoro, Oristano e Sassari stanno solo fra le province
-		[
-			'key'             => 'area',
-			'label'           => forestas_testo( 'Area', 'Area' ),
-			'type'            => 'list',
-			'field'           => 'taxonomyWheres',
-			'include_pattern' => '^Area ',
-		],
-		[
-			'key'     => 'provincia',
-			'label'   => forestas_testo( 'Provincia', 'Province' ),
-			'type'    => 'list',
-			'field'   => 'taxonomyWheres',
-			'include' => FORESTAS_SEARCH_PROVINCES,
-		],
-		[
-			'key'             => 'comune',
-			'label'           => forestas_testo( 'Comune', 'Municipality' ),
-			'type'            => 'list',
-			'field'           => 'taxonomyWheres',
-			// La regione vale per tutti i percorsi; «Z» + tre lettere + numero sono i settori CAI (es. ZNUB4)
-			'exclude'         => array_merge( [ 'Sardegna' ], FORESTAS_SEARCH_PROVINCES ),
-			'exclude_pattern' => '^(Area |Z[A-Z]{3}[0-9]+$)',
-		],
-	] ) );
+	return array_values(
+		array_filter(
+			[
+				forestas_search_status_facet( forestas_walkability_family(), 'walkability', forestas_testo( 'Percorribilità', 'Walkability' ) ),
+				forestas_search_status_facet( 'validation-status', 'validation', forestas_testo( 'Validazione catastale', 'Trail registry validation' ) ),
+				[
+					'key'         => 'type',
+					'from_config' => 'layers',
+				],
+				[
+					'key'         => 'activity',
+					'from_config' => 'activities',
+				],
+				[
+					'from_families' => FORESTAS_DIFFICULTY_SUFFIX,
+					'exclude'       => FORESTAS_DIFFICULTY_EXCLUDE,
+					'order'         => FORESTAS_DIFFICULTY_ORDER,
+				],
+				[ 'from_overlays' => true ],
+			]
+		)
+	);
 }
 
 // Filtri della ricerca che si aprono e chiudono dal titolo, come i gruppi dei filtri dei post (oc:9000)
@@ -641,7 +580,7 @@ add_filter(
 			$sources['tracks'] = array_merge(
 				$sources['tracks'],
 				[
-					'slug'            => 'percorsi',
+					'slug'            => 'trails',
 					'label'           => forestas_testo( 'Percorsi', 'Trails' ),
 					'nouns'           => [
 						// «percorsi» come il tab e il filtro «Tipo di percorso»: i risultati sono anche itinerari e cammini
@@ -655,10 +594,8 @@ add_filter(
 					// di oc:8783); niente etichetta per lo stato «non lo sappiamo» (Rubens, 18/11, oc:9000)
 					'badge_field'     => forestas_plugin_ready() ? 'terms.' . forestas_walkability_family() : '',
 					'badge_exclude'   => forestas_plugin_ready() ? array_values( array_filter( [ wmwp_status_families()[ forestas_walkability_family() ]['absent'] ?? null ] ) ) : [],
-					// Nomi di tipo e stato nella lingua della pagina (l'API li dà solo in italiano)
-					'term_labels'     => forestas_search_term_labels(),
-					// I comuni all'inizio della riga, come nella tavola 2 («Desulo, Villagrande Strisaili · 5,3 km …»)
-					'meta_facet'      => 'comune',
+					// All'inizio della riga l'ultimo luogo dell'API, il comune, come la card delle app (oc:9018)
+					'meta_last_field' => 'taxonomyWheres',
 					// Selezione e scarico di più percorsi (tavola 2, nota 7): nome del file e riepilogo della barra
 					'download_name'   => 'sardegna-sentieri-percorsi',
 					'selected'        => [
@@ -674,7 +611,7 @@ add_filter(
 			$sources['pois'] = array_merge(
 				$sources['pois'],
 				[
-					'slug'         => 'punti-di-interesse',
+					'slug'         => 'points-of-interest',
 					'label'        => forestas_testo( 'Punti di interesse', 'Points of interest' ),
 					'nouns'        => [
 						'one'   => forestas_testo( '%s punto di interesse', '%s point of interest' ),
@@ -683,23 +620,21 @@ add_filter(
 					'search_label' => forestas_testo( 'Cerca un punto di interesse', 'Search for a point of interest' ),
 					// Tipo sulla card, nella lingua della pagina
 					'type_label'   => forestas_testo( 'Punto di interesse', 'Point of interest' ),
-					// Dopo il tipo, area, provincia e comune come per i percorsi (oc:9000): stesse chiavi nell'indirizzo e stesse
-					// regole per dividere taxonomyWheres, che il plugin applica sul server
-					'facets'       => array_merge(
+					// Tipi dal config.json, poi le aree degli overlay come per i percorsi (oc:9018): il plugin calcola sul server
+					// in quali aree cade ogni POI
+					'facets'       => [
 						[
-							[
-								'key'   => 'tipo-poi',
-								'label' => forestas_testo( 'Tipo di punto di interesse', 'Type of point of interest' ),
-								'type'  => 'terms',
-							],
+							'key'         => 'poi-type',
+							'from_config' => 'poi_types',
+							'type'        => 'terms',
 						],
-						array_values( array_filter( forestas_search_track_facets(), fn( array $facet ): bool => in_array( $facet['key'], [ 'area', 'provincia', 'comune' ], true ) ) )
-					),
+						[ 'from_overlays' => true ],
+					],
 				]
 			);
 		}
 		$sources['content'] = [
-			'slug'         => 'contenuti',
+			'slug'         => 'content',
 			'label'        => forestas_testo( 'Contenuti del sito', 'Site content' ),
 			'nouns'        => [
 				'one'   => forestas_testo( '%s contenuto', '%s item' ),
@@ -711,7 +646,7 @@ add_filter(
 			// I valori del filtro li dà la rotta REST (by_type): qui solo la chiave nell'indirizzo e il nome
 			'facets'       => [
 				[
-					'key'   => 'contenuto',
+					'key'   => 'content',
 					'label' => forestas_testo( 'Tipo di contenuto', 'Content type' ),
 				],
 			],
@@ -719,7 +654,7 @@ add_filter(
 		// Enti dello shard (oc:8990): card con immagine, nome e tipo, dalla rotta forestas/v1/entes-search. Filtri del tipo
 		// e del ruolo sui sentieri (oc:9000): i valori li dà la rotta, qui solo la chiave nell'indirizzo e il nome
 		$sources['entes'] = [
-			'slug'         => 'enti',
+			'slug'         => 'organisations',
 			'label'        => forestas_testo( 'Enti', 'Organisations' ),
 			'nouns'        => [
 				'one'   => forestas_testo( '%s ente', '%s organisation' ),
@@ -730,11 +665,11 @@ add_filter(
 			'search_label' => forestas_testo( 'Cerca un ente', 'Search for an organisation' ),
 			'facets'       => [
 				[
-					'key'   => 'tipo-ente',
+					'key'   => 'entity-type',
 					'label' => forestas_testo( 'Tipo di ente', 'Type of organisation' ),
 				],
 				[
-					'key'   => 'ruolo',
+					'key'   => 'role',
 					'label' => forestas_testo( 'Ruolo sui sentieri', 'Role on trails' ),
 				],
 			],
@@ -807,48 +742,154 @@ function forestas_search_url(): string {
 }
 
 /**
- * Parametri nuovi per un vecchio link di Drupal alla ricerca filtrata per tipo
- * (`f[N]=cerca_contenuto_nel_sito:<tipo>`, link `rel="nofollow"` dei filtri di /cerca-nel-sito). null senza `f`.
- * `sentiero` e `itinerario` portano al tab «Percorsi» con il filtro «Tipo di percorso», `news`, `evento` e `page` al
- * tab «Contenuti del sito» con il tipo; più tipi dello stesso tab vanno nello stesso filtro (OR), separati da virgole.
- * `poi` porta al tab «Punti di interesse» (oc:9000), i tipi sconosciuti al tab «Tutti».
+ * Indirizzo nuovo della ricerca per un suo vecchio indirizzo (`cerca-nel-sito` nella pagina inglese), con la query così
+ * com'è: poi il redirect dei vecchi link della ricerca di Drupal ne traduce i parametri. Null per ogni altro indirizzo o
+ * se l'indirizzo nuovo è lo stesso (la pagina italiana).
+ *
+ * @param string $path  Percorso della richiesta, senza prefisso della lingua (`$wp->request`).
+ * @param string $query Query della richiesta, già codificata.
+ * @param string $url   Indirizzo della ricerca nella lingua della richiesta (forestas_search_url()).
  */
-function forestas_search_from_drupal( array $query ): ?array {
-	if ( empty( $query['f'] ) || ! is_array( $query['f'] ) ) {
+function forestas_search_old_slug_target( string $path, string $query, string $url ): ?string {
+	$path = trim( strtolower( $path ), '/' );
+	if ( '' === $url || ! in_array( $path, FORESTAS_SEARCH_OLD_SLUGS, true ) ) {
 		return null;
 	}
+	// La ricerca di questa lingua ha ancora lo slug vecchio (la pagina italiana): niente redirect
+	$current = trim( (string) wp_parse_url( $url, PHP_URL_PATH ), '/' );
+	if ( $current === $path || str_ends_with( $current, '/' . $path ) ) {
+		return null;
+	}
+	return '' !== $query ? $url . ( false === strpos( $url, '?' ) ? '?' : '&' ) . $query : $url;
+}
+
+// Vecchio indirizzo inglese della ricerca → indirizzo nuovo, con i parametri (301). Prima del redirect delle pagine
+// (inc/pagine-statiche.php, priorità 9), che perderebbe la query
+add_action(
+	'template_redirect',
+	function () {
+		global $wp;
+		if ( ! is_404() ) {
+			return;
+		}
+		$target = forestas_search_old_slug_target( (string) $wp->request, (string) ( $_SERVER['QUERY_STRING'] ?? '' ), forestas_search_url() ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+		if ( null !== $target ) {
+			wp_safe_redirect( $target, 301 );
+			exit;
+		}
+	},
+	8
+);
+
+// Cache della corrispondenza route-type → layer per i vecchi link di Drupal (forestas_search_layer_for_route_type())
+const FORESTAS_SEARCH_LAYERS_TRANSIENT = 'forestas_search_route_type_layers';
+// Shard che non ha risposto: per 10 minuti un vecchio link non lo richiama, così con lo shard giù il visitatore non
+// aspetta il timeout a ogni visita (review interna di oc:9018)
+const FORESTAS_SEARCH_LAYERS_FAILED = 'forestas_search_route_type_layers_failed';
+
+/**
+ * Layer di `MAP.filters.layers` (il filtro «Tipo di percorso», oc:9018) che ha più percorsi di un route-type nei
+ * risultati di Elastic: traduce il filtro per tipo dei vecchi link di Drupal e dà il colore delle linee dei percorsi
+ * vicini sulla mappa del POI. La corrispondenza resta in cache due ore e la rinnova il cron del config.json; con
+ * `$fetch` falso (in una pagina) si legge solo la cache; con `$refresh` (il cron) si riscarica anche se la cache c'è, e
+ * la si sostituisce solo se lo shard risponde. Null se nessun percorso di quel tipo sta in un layer del filtro, se lo
+ * shard non risponde o se la cache manca e `$fetch` è falso.
+ */
+function forestas_search_layer_for_route_type( string $route_type, bool $fetch = true, bool $refresh = false ): ?int {
+	$map = $refresh ? null : get_transient( FORESTAS_SEARCH_LAYERS_TRANSIENT );
+	if ( ! is_array( $map ) ) {
+		if ( ! $fetch || ! forestas_plugin_ready() || '' === wmwp_elastic_url() || ( ! $refresh && get_transient( FORESTAS_SEARCH_LAYERS_FAILED ) ) ) {
+			return null;
+		}
+		$config  = wmwp_app_config();
+		$allowed = array_map( 'intval', array_column( (array) ( $config['MAP']['filters']['layers']['options'] ?? [] ), 'id' ) );
+		$data    = wmwp_detail_get_json( add_query_arg( 'app', wmwp_app_param(), wmwp_elastic_url() ), WMWP_DETAIL_LIST_TIMEOUT );
+		if ( null === $data ) {
+			set_transient( FORESTAS_SEARCH_LAYERS_FAILED, 1, 10 * MINUTE_IN_SECONDS );
+			// Il rinnovo fallito lascia la corrispondenza di prima, se c'è
+			$prima = get_transient( FORESTAS_SEARCH_LAYERS_TRANSIENT );
+			return is_array( $prima ) && isset( $prima[ $route_type ] ) ? (int) $prima[ $route_type ] : null;
+		}
+		$hits   = $data['hits'] ?? [];
+		$hits   = isset( $hits['hits'] ) && is_array( $hits['hits'] ) ? $hits['hits'] : $hits;
+		$family = wmwp_track_kind_taxonomy();
+		$counts = [];
+		foreach ( (array) $hits as $hit ) {
+			$hit  = isset( $hit['_source'] ) && is_array( $hit['_source'] ) ? $hit['_source'] : (array) $hit;
+			$type = (string) ( $hit['terms'][ $family ][0]['identifier'] ?? '' );
+			foreach ( (array) ( $hit['layers'] ?? [] ) as $layer ) {
+				if ( '' !== $type && in_array( (int) $layer, $allowed, true ) ) {
+					$counts[ $type ][ (int) $layer ] = ( $counts[ $type ][ (int) $layer ] ?? 0 ) + 1;
+				}
+			}
+		}
+		$map = [];
+		foreach ( $counts as $type => $layers ) {
+			arsort( $layers );
+			$map[ $type ] = (int) array_key_first( $layers );
+		}
+		set_transient( FORESTAS_SEARCH_LAYERS_TRANSIENT, $map, 2 * HOUR_IN_SECONDS );
+		delete_transient( FORESTAS_SEARCH_LAYERS_FAILED );
+	}
+	return isset( $map[ $route_type ] ) ? (int) $map[ $route_type ] : null;
+}
+
+/**
+ * Rinnovo della corrispondenza route-type → layer, con il giro orario del config.json, fuori dalle pagine (oc:9018): si
+ * riscarica e si sostituisce solo se lo shard risponde, altrimenti resta quella di prima.
+ */
+function forestas_search_layers_refresh(): void {
+	forestas_search_layer_for_route_type( '', true, true );
+}
+add_action( 'wmwp_app_config_refresh', 'forestas_search_layers_refresh', 30 );
+
+/**
+ * Parametri della ricerca nuova da un vecchio link della ricerca di Drupal: testo (`search_api_fulltext`, anche senza
+ * filtri) e tipi (`f[N]=cerca_contenuto_nel_sito:<tipo>`). La tabella «tipo di Drupal → tab, filtro, valore» resta nel
+ * codice: traduce indirizzi vecchi, che non cambiano più, non dati dello shard. Il tipo di percorso diventa il layer
+ * del filtro «Tipo di percorso» (oc:9018). Null se il link non ha né testo né tipi conosciuti.
+ *
+ * @param array<string, mixed> $query Parametri dell'indirizzo.
+ * @return array<string, string>|null
+ */
+function forestas_search_from_drupal( array $query ): ?array {
+	$text    = isset( $query['search_api_fulltext'] ) && is_scalar( $query['search_api_fulltext'] ) ? trim( (string) $query['search_api_fulltext'] ) : '';
+	$filters = ! empty( $query['f'] ) && is_array( $query['f'] ) ? $query['f'] : [];
 	// tipo di Drupal → [ tab, filtro, valore ]
 	$map    = [
-		'sentiero'   => [ 'percorsi', 'percorso', 'route-type-trail' ],
-		'itinerario' => [ 'percorsi', 'percorso', 'route-type-itinerary' ],
-		'news'       => [ 'contenuti', 'contenuto', 'news' ],
-		'evento'     => [ 'contenuti', 'contenuto', 'evento' ],
-		'page'       => [ 'contenuti', 'contenuto', 'pagina' ],
+		'sentiero'   => [ 'trails', 'type', 'route-type-trail' ],
+		'itinerario' => [ 'trails', 'type', 'route-type-itinerary' ],
+		'news'       => [ 'content', 'content', 'news' ],
+		'evento'     => [ 'content', 'content', 'event' ],
+		'page'       => [ 'content', 'content', 'page' ],
 		// I punti di interesse hanno il loro tab (oc:9000), senza filtro
-		'poi'        => [ 'punti-di-interesse', null, null ],
+		'poi'        => [ 'points-of-interest', null, null ],
 	];
 	$out    = [];
 	$values = [];
-	foreach ( $query['f'] as $filter ) {
-		if ( ! preg_match( '/^cerca_contenuto_nel_sito:(\w+)$/', (string) $filter, $m ) || ! isset( $map[ $m[1] ] ) ) {
+	foreach ( $filters as $filter ) {
+		if ( ! is_scalar( $filter ) || ! preg_match( '/^cerca_contenuto_nel_sito:(\w+)$/', (string) $filter, $m ) || ! isset( $map[ $m[1] ] ) ) {
 			continue;
 		}
 		[ $tab, $key, $value ] = $map[ $m[1] ];
-		if ( ! isset( $out['tipo'] ) ) {
-			$out['tipo'] = $tab;
+		if ( ! isset( $out['tab'] ) ) {
+			$out['tab'] = $tab;
 		}
 		// Il tab è quello del primo tipo: i tipi di un altro tab non hanno un filtro lì
-		if ( $tab === $out['tipo'] && null !== $key ) {
-			$values[ $key ][] = $value;
+		if ( $tab === $out['tab'] && null !== $key ) {
+			$values[ $key ][] = 'type' === $key ? (string) forestas_search_layer_for_route_type( $value ) : $value;
 		}
 	}
 	foreach ( $values as $key => $list ) {
-		$out[ $key ] = implode( ',', array_unique( $list ) );
+		$list = array_values( array_unique( array_filter( $list, 'strlen' ) ) );
+		if ( $list ) {
+			$out[ $key ] = implode( ',', $list );
+		}
 	}
-	if ( isset( $query['search_api_fulltext'] ) && '' !== trim( (string) $query['search_api_fulltext'] ) ) {
-		$out = [ 'search_api_fulltext' => trim( (string) $query['search_api_fulltext'] ) ] + $out;
+	if ( '' !== $text ) {
+		$out = [ 'q' => $text ] + $out;
 	}
-	return $out;
+	return $out ? $out : null;
 }
 
 /*
@@ -866,12 +907,13 @@ add_action(
 		if ( is_search() && empty( $_GET['nojs'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 			$url = forestas_search_url();
 			if ( '' !== $url ) {
-				wp_safe_redirect( add_query_arg( 'search_api_fulltext', rawurlencode( get_search_query( false ) ), $url ), 302 );
+				wp_safe_redirect( add_query_arg( 'q', rawurlencode( get_search_query( false ) ), $url ), 302 );
 				exit;
 			}
 			return;
 		}
-		if ( isset( $_GET['f'] ) && is_page() && FORESTAS_SEARCH_PAGE_KEY === get_post_meta( get_queried_object_id(), '_wpf_pagina', true ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		// Anche i link con il solo testo (`?search_api_fulltext=…`, senza `f`), oc:9018
+		if ( ( isset( $_GET['f'] ) || isset( $_GET['search_api_fulltext'] ) ) && is_page() && FORESTAS_SEARCH_PAGE_KEY === get_post_meta( get_queried_object_id(), '_wpf_pagina', true ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 			$target = forestas_search_from_drupal( wp_unslash( $_GET ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 			if ( null !== $target ) {
 				wp_safe_redirect( add_query_arg( array_map( 'rawurlencode', $target ), get_permalink( get_queried_object_id() ) ), 302 );
@@ -887,20 +929,32 @@ add_action(
  * non crea un indirizzo diverso. Valori già codificati per l'indirizzo.
  */
 function forestas_search_canonical_args( array $query ): array {
-	$single  = [ 'search_api_fulltext', 'tipo', 'pagina' ];
-	$keys    = array_merge( [ 'search_api_fulltext', 'tipo' ], array_column( forestas_search_track_facets(), 'key' ), [ 'tipo-poi', 'contenuto', 'tipo-ente', 'ruolo', 'pagina' ] );
-	$args    = [];
+	// Parametri del plugin (oc:9018: in inglese, uguali in tutte le lingue) e chiavi dei filtri di tutte le source; le
+	// aree degli overlay stanno nel loro parametro condiviso (`layer`)
+	$params = wmwp_search_params();
+	$single = [ $params['q'], $params['tab'], $params['page'] ];
+	$facets = [];
+	foreach ( wmwp_search_sources() as $source ) {
+		foreach ( (array) ( $source['facets'] ?? [] ) as $facet ) {
+			$key = is_array( $facet ) ? (string) ( $facet['param'] ?? $facet['key'] ?? '' ) : '';
+			if ( '' !== $key && ! in_array( $key, $facets, true ) ) {
+				$facets[] = $key;
+			}
+		}
+	}
+	$keys = array_merge( [ $params['q'], $params['tab'] ], $facets, [ $params['page'] ] );
+	$args = [];
 	foreach ( $keys as $key ) {
 		if ( ! isset( $query[ $key ] ) || ! is_string( $query[ $key ] ) || '' === trim( $query[ $key ] ) ) {
 			continue;
 		}
 		$value = trim( $query[ $key ] );
-		if ( 'pagina' === $key && (int) $value <= 1 ) {
+		if ( $params['page'] === $key && (int) $value <= 1 ) {
 			continue;
 		}
 		if ( ! in_array( $key, $single, true ) ) {
 			$values = array_values( array_unique( array_filter( array_map( 'trim', explode( ',', $value ) ) ) ) );
-			sort( $values, SORT_STRING );
+			sort( $values, SORT_NATURAL );
 			$value = implode( ',', $values );
 		}
 		$args[ $key ] = rawurlencode( $value );
