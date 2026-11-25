@@ -563,6 +563,10 @@ function forestas_search_track_facets(): array {
 					'exclude'       => FORESTAS_DIFFICULTY_EXCLUDE,
 					'order'         => FORESTAS_DIFFICULTY_ORDER,
 				],
+				// Slider di distanza e tempo di MAP.filters, come le app (oc:9003): limiti, passo e nomi dal config.json;
+				// senza dati non si mostrano
+				[ 'from_config' => 'track_distance' ],
+				[ 'from_config' => 'track_duration' ],
 				[ 'from_overlays' => true ],
 			]
 		)
@@ -787,6 +791,12 @@ const FORESTAS_SEARCH_LAYERS_TRANSIENT = 'forestas_search_route_type_layers';
 // aspetta il timeout a ogni visita (review interna di oc:9018)
 const FORESTAS_SEARCH_LAYERS_FAILED = 'forestas_search_route_type_layers_failed';
 
+/** Id dei layer di «Tipo percorso» nel config.json (`MAP.filters.layers`, oc:9018): fra questi si cerca il layer di un route-type. */
+function forestas_search_type_layers(): array {
+	$config = function_exists( 'wmwp_app_config' ) ? wmwp_app_config() : null;
+	return array_map( 'intval', array_column( (array) ( $config['MAP']['filters']['layers']['options'] ?? [] ), 'id' ) );
+}
+
 /**
  * Layer di `MAP.filters.layers` (il filtro «Tipo di percorso», oc:9018) che ha più percorsi di un route-type nei
  * risultati di Elastic: traduce il filtro per tipo dei vecchi link di Drupal e dà il colore delle linee dei percorsi
@@ -794,15 +804,22 @@ const FORESTAS_SEARCH_LAYERS_FAILED = 'forestas_search_route_type_layers_failed'
  * `$fetch` falso (in una pagina) si legge solo la cache; con `$refresh` (il cron) si riscarica anche se la cache c'è, e
  * la si sostituisce solo se lo shard risponde. Null se nessun percorso di quel tipo sta in un layer del filtro, se lo
  * shard non risponde o se la cache manca e `$fetch` è falso.
+ * Con il plugin 0.7.0 e la copia delle tracce la corrispondenza viene dalla copia (wmwp_tracks_layer_for_term(), oc:9003),
+ * che conta tutti i route-type di una traccia; il download di Elastic, senza copia, conta solo il primo. Oggi una traccia
+ * ha un route-type solo, quindi il risultato è lo stesso.
  */
 function forestas_search_layer_for_route_type( string $route_type, bool $fetch = true, bool $refresh = false ): ?int {
+	// Con il plugin 0.7.0 la corrispondenza viene dalla copia delle tracce (oc:9003): niente download a parte, e con lo
+	// shard giù o a metà di un import resta l'ultima copia buona
+	if ( function_exists( 'wmwp_tracks_layer_for_term' ) && null !== wmwp_tracks_copy() ) {
+		return wmwp_tracks_layer_for_term( wmwp_track_kind_taxonomy(), $route_type, forestas_search_type_layers() );
+	}
 	$map = $refresh ? null : get_transient( FORESTAS_SEARCH_LAYERS_TRANSIENT );
 	if ( ! is_array( $map ) ) {
 		if ( ! $fetch || ! forestas_plugin_ready() || '' === wmwp_elastic_url() || ( ! $refresh && get_transient( FORESTAS_SEARCH_LAYERS_FAILED ) ) ) {
 			return null;
 		}
-		$config  = wmwp_app_config();
-		$allowed = array_map( 'intval', array_column( (array) ( $config['MAP']['filters']['layers']['options'] ?? [] ), 'id' ) );
+		$allowed = forestas_search_type_layers();
 		$data    = wmwp_detail_get_json( add_query_arg( 'app', wmwp_app_param(), wmwp_elastic_url() ), WMWP_DETAIL_LIST_TIMEOUT );
 		if ( null === $data ) {
 			set_transient( FORESTAS_SEARCH_LAYERS_FAILED, 1, 10 * MINUTE_IN_SECONDS );

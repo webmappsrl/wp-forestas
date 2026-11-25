@@ -192,7 +192,15 @@ subagent.
 - Lo stile dei filtri sta in due posti di `themes/forestas-child/style.css`, `.wmwp-facet*` e `.forestas-filtri*`:
   cambiandone uno solo i filtri del sito tornano diversi (knowledge 9000, «Stile dei filtri») (oc:9000)
 - Rinominando lo slug del menu principale (`main-menu*`) la breadcrumb dei dettagli torna al titolo della pagina
-  d'elenco, «Da vedere» per i POI (knowledge 8969) (oc:9000)
+  d'elenco invece della voce del menu: oggi coincidono, ma un titolo diverso (da Drupal o da `config/pagine.json`)
+  comparirebbe nella breadcrumb (knowledge 8969) (oc:9000)
+- `forestas_search_layer_for_route_type()` (`inc/search.php`) usa la copia delle tracce del plugin quando c'è: un test che
+  vuole provare la corrispondenza scaricata cancella e ripristina `WMWP_TRACKS_COPY_OPTION`, come `tests/search-facets.php`
+  e `tests/dettaglio.php`, altrimenti prova la copia del sito (oc:9003)
+- Titolo e sottotitolo di una pagina con nid li riscrive `bin/wordpress-config.sh pagine` da Drupal a ogni giro: un testo
+  concordato diverso va in `titolo` o `sottotitolo` per lingua di `config/pagine.json` (es. `da-vedere` → «Punti di interesse», `itinerari` →
+  «Itinerari»), non nel pannello
+  (oc:9003)
 - Una faccetta del child con la chiave `layer` diventa `f_layer`: `layer` è il parametro fisso di tutte le aree degli
   overlay (`WMWP_APP_AREA_PARAM` del plugin), letto anche dalla rotta dei POI. Gli id delle aree sono quelli dei layer
   dello shard e cambiano fra ambienti («Area F» è il layer 7 sul dev e 12 su UAT): un link con `?layer=` vale solo dove
@@ -217,3 +225,4 @@ subagent.
 | Enti sul sito | copia del JSON degli enti con token e WP-Cron, ultima copia buona e plausibilità, elenco e dettaglio come Drupal, tab della ricerca, link da percorsi e POI; la messa in opera in [docs/howto/messa-in-opera-degli-enti.md](docs/howto/messa-in-opera-degli-enti.md) | [docs/knowledge/8990-enti-sul-sito-wordpress-elenco-enti-dettaglio-enti-slug-e-ricerca-dallapi-di-oc8965.md](docs/knowledge/8990-enti-sul-sito-wordpress-elenco-enti-dettaglio-enti-slug-e-ricerca-dallapi-di-oc8965.md) |
 | Percorribilità, avvisi e filtri | stati e tacche dal registro del plugin, fascia della percorribilità e avviso nel dettaglio, pagina `/avvisi`, filtri della ricerca e delle liste dei post con «Filtri attivi», icona del sito | [docs/knowledge/9000-sito-wordpress-percorribilita-e-avvisi-dei-sentieri-dai-dati-dello-shard.md](docs/knowledge/9000-sito-wordpress-percorribilita-e-avvisi-dei-sentieri-dai-dati-dello-shard.md) |
 | Filtri e dettagli dai dati dello shard | filtri dal `config.json` come le app, parametri in inglese e `layer` per le aree, vecchi link della ricerca di Drupal, tipo «altro», colori delle linee dal layer, indirizzi Drupal dei dettagli nello storico, pulsante «Stampa», ripieghi dichiarati | [docs/knowledge/9018-sito-wordpress-filtri-e-dettagli-dai-dati-dello-shard.md](docs/knowledge/9018-sito-wordpress-filtri-e-dettagli-dai-dati-dello-shard.md) |
+| Pagine d'elenco | griglie di Sentieri, Itinerari, Cammini e Punti di interesse dal plugin, layer dal route-type sulla copia delle tracce, faccette e slider, categorie di Drupal come faccette, titolo «Punti di interesse», prova in locale con i dati di UAT; la messa in opera in [docs/howto/messa-in-opera-delle-pagine-d-elenco.md](docs/howto/messa-in-opera-delle-pagine-d-elenco.md) | [docs/knowledge/9003-pagine-sentieri-itinerari-cammini-e-punti-di-interesse.md](docs/knowledge/9003-pagine-sentieri-itinerari-cammini-e-punti-di-interesse.md) |

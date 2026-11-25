@@ -169,6 +169,19 @@
         "post_type": "us_content_template"
     },
     {
+        "chiave": "template-pagina-griglia",
+        "lingua": "it",
+        "menu_order": 0,
+        "meta": [],
+        "originale": null,
+        "post_content": "[vc_row height=\"auto\" width=\"full\"][vc_column][vc_column_text][forestas_testata][/vc_column_text][/vc_column][/vc_row][vc_row height=\"auto\" width=\"full\"][vc_column][vc_column_text][forestas_listing][/vc_column_text][/vc_column][/vc_row]",
+        "post_excerpt": "",
+        "post_name": "pagina-griglia",
+        "post_status": "publish",
+        "post_title": "Pagina con testata e griglia",
+        "post_type": "us_content_template"
+    },
+    {
         "chiave": "page-home",
         "lingua": "it",
         "menu_order": 0,

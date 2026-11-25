@@ -22,7 +22,7 @@
 - **Vecchi link della ricerca di Drupal** (`forestas_search_from_drupal()`): `?search_api_fulltext=…` (anche senza
   `f`) e `f[N]=cerca_contenuto_nel_sito:<tipo>` vanno con un 302 ai parametri nuovi; il tipo di percorso diventa il
   layer del filtro «Tipo di percorso» con più percorsi di quel route-type (`forestas_search_layer_for_route_type()`,
-  in cache due ore, rinnovata dal cron del `config.json` con `forestas_search_layers_refresh()`: con lo shard giù resta
+  con il plugin 0.7.0 dalla copia delle tracce (knowledge 9003); senza copia in cache due ore, rinnovata dal cron del `config.json` con `forestas_search_layers_refresh()`: con lo shard giù resta
   la corrispondenza di prima, e senza cache un fallimento si ricorda 10 minuti, così il visitatore non aspetta il
   timeout a ogni vecchio link). `?s=` va alla ricerca con `q`.
 - **Pagina di ricerca in inglese** `/en/search-in-our-website/` (`config/pagine.json`; prima `/en/cerca-nel-sito`, come

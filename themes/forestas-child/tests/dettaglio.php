@@ -82,7 +82,7 @@ $poi      = [
 // oc:9018: un'interruzione lasciava la fixture di UAT al posto della copia del sito). Un errore fatale di WordPress
 // chiude il processo prima delle funzioni di shutdown: per questo il gestore delle eccezioni
 $salvati = [];
-foreach ( [ WMWP_APP_CONFIG_OPTION ] as $nome ) {
+foreach ( [ WMWP_APP_CONFIG_OPTION, WMWP_TRACKS_COPY_OPTION ] as $nome ) {
 	$salvati[ $nome ] = get_option( $nome, null );
 }
 $transient_salvati = [];
@@ -105,6 +105,8 @@ set_exception_handler(
 	}
 );
 update_option( WMWP_APP_CONFIG_OPTION, [ 'url' => wmwp_app_config_url(), 'config' => json_decode( (string) file_get_contents( WMWP_PATH . 'tests/fixtures/config-uat.json' ), true ) ], false );
+// Senza la copia delle tracce del plugin (oc:9003): qui si prova la corrispondenza route-type → layer scaricata
+delete_option( WMWP_TRACKS_COPY_OPTION );
 delete_transient( FORESTAS_SEARCH_LAYERS_TRANSIENT );
 
 // 1. Tipo e colori
