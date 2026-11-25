@@ -96,6 +96,12 @@ try {
 				if ( ! $d ) {
 					$ferma( "il nodo {$voce['nid']} ({$chiave}) non ha la lingua «{$lingua}» indicata in config/pagine.json: se la copia Drupal è in ricarica riprova più tardi; se su Drupal la traduzione è stata tolta, scrivi la nostra in config/traduzioni/{$lingua}/{$chiave}.json e .html, o togli slug.{$lingua} da config/pagine.json" );
 				}
+				// Titolo concordato col cliente diverso da quello di Drupal (wireframe di oc:8783: «Da vedere» si chiama
+				// «Punti di interesse» ovunque, oc:9003): con `titolo` nella lingua vince config/pagine.json, prima
+				// dell'impronta del testo, così la pagina non si riscrive a ogni giro
+				if ( isset( $voce['titolo'][ $lingua ] ) ) {
+					$d['titolo'] = (string) $voce['titolo'][ $lingua ];
+				}
 			} else {
 				// Pagina senza nodo (Cammini, schede ed elenchi delle news): titolo suo, testata della pagina
 				// indicata in testata_da. La testata (immagine, colore) non dipende dalla lingua: se Drupal non
@@ -111,6 +117,11 @@ try {
 				}
 				// Lo stato no: Cammini non esiste su Drupal e resta pubblicata anche se Itinerari va in bozza
 				$d = array_merge( $d, [ 'titolo' => $voce['titolo'][ $lingua ], 'body' => '', 'allegati' => [], 'galleria' => [], 'status' => true ] );
+			}
+			// Sottotitolo concordato diverso da quello di Drupal o della pagina da cui si prende la testata (Cammini, che
+			// prende la testata da Itinerari, oc:9003): con `sottotitolo` nella lingua vince config/pagine.json
+			if ( isset( $voce['sottotitolo'][ $lingua ] ) ) {
+				$d['sottotitolo'] = (string) $voce['sottotitolo'][ $lingua ];
 			}
 			$dati[ $chiave ][ $lingua ] = $d;
 		}

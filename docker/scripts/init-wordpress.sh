@@ -15,7 +15,7 @@ IMPREZA_ZIP=/opt/wp-forestas/themes/impreza.zip
 # codice di quello di partenza (vuoto: nessun download). Per aggiornarlo:
 # git ls-remote https://github.com/webmappsrl/wp-package refs/heads/main, poi l'hash qui e scripts/wordpress-up.sh
 # di forestas, che ricostruisce l'immagine
-WP_PACKAGE_REF=f189f11a176a698733070d7a1e1854a46986fbf8
+WP_PACKAGE_REF=9bb05526bc8883dd840b59d687c5c846a8750790
 WMWP_DIR="${WP_PATH}/wp-content/plugins/wp-package"
 WMWP_TARBALL="https://github.com/webmappsrl/wp-package/archive/${WP_PACKAGE_REF}.tar.gz"
 # Commit scaricato, scritto nella cartella del plugin: se è diverso da WP_PACKAGE_REF si riscarica, così un

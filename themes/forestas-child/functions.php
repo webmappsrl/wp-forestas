@@ -319,3 +319,4 @@ require_once __DIR__ . '/inc/redirect-drupal.php';
 require_once __DIR__ . '/inc/entes.php';
 require_once __DIR__ . '/inc/statuses.php';
 require_once __DIR__ . '/inc/notices.php';
+require_once __DIR__ . '/inc/listings.php';
