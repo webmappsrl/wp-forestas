@@ -557,6 +557,9 @@ add_action(
 		if ( ! is_404() && ! is_attachment() ) {
 			return;
 		}
+		// I parametri dell'indirizzo vecchio passano a quello nuovo (oc:9003: /da-vedere/?pg=2 e i filtri della griglia)
+		$parametri = (string) wp_unslash( $_SERVER['QUERY_STRING'] ?? '' ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- passa a wp_safe_redirect, che controlla l'host
+		$con       = fn( string $url ): string => '' === $parametri ? $url : $url . ( str_contains( $url, '?' ) ? '&' : '?' ) . $parametri;
 		$percorso = trim( strtolower( remove_accents( rawurldecode( (string) $wp->request ) ) ), '/' );
 		// Gli alias di Drupal non hanno estensione né il prefisso wp-: un file statico mancante (immagine,
 		// .xml, .php) o un indirizzo di WordPress non fa le tre ricerche sui meta
@@ -569,14 +572,15 @@ add_action(
 		if ( ! $pagine ) {
 			// Le tipologie dei «da sapere» hanno una pagina: /taxonomy/term/<tid> e l'alias di Drupal (oc:8760)
 			$termini = get_terms( [ 'taxonomy' => 'tipologia_da_sapere', 'hide_empty' => false, 'number' => 1, 'meta_query' => [ [ 'key' => FORESTAS_META_ALIAS_DRUPAL, 'value' => '"' . $percorso . '"', 'compare' => 'LIKE' ] ] ] );
-			if ( is_array( $termini ) && $termini ) {
-				wp_safe_redirect( get_term_link( $termini[0] ), 301 );
+			$link = is_array( $termini ) && $termini ? get_term_link( $termini[0] ) : null;
+			if ( is_string( $link ) ) {
+				wp_safe_redirect( $con( $link ), 301 );
 				exit;
 			}
 			return;
 		}
 		$id = (int) apply_filters( 'wpml_object_id', (int) $pagine[0], get_post_type( (int) $pagine[0] ), true );
-		wp_safe_redirect( get_permalink( $id ), 301 );
+		wp_safe_redirect( $con( (string) get_permalink( $id ) ), 301 );
 		exit;
 	},
 	9

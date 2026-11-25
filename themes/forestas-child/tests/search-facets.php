@@ -23,7 +23,7 @@ $check    = function ( bool $ok, string $what ) use ( &$failures ) {
 // oc:9018: un'interruzione lasciava la fixture di UAT al posto della copia del sito). Un errore fatale di WordPress
 // chiude il processo prima delle funzioni di shutdown: per questo il gestore delle eccezioni
 $salvati = [];
-foreach ( [ WMWP_APP_CONFIG_OPTION, WMWP_APP_OVERLAYS_OPTION, WMWP_APP_OVERLAY_LAYERS_OPTION ] as $nome ) {
+foreach ( [ WMWP_APP_CONFIG_OPTION, WMWP_APP_OVERLAYS_OPTION, WMWP_APP_OVERLAY_LAYERS_OPTION, WMWP_TRACKS_COPY_OPTION ] as $nome ) {
 	$salvati[ $nome ] = get_option( $nome, null );
 }
 $transient_salvati = [];
@@ -47,6 +47,8 @@ set_exception_handler(
 );
 $fixture        = json_decode( (string) file_get_contents( WMWP_PATH . 'tests/fixtures/config-uat.json' ), true );
 update_option( WMWP_APP_CONFIG_OPTION, [ 'url' => wmwp_app_config_url(), 'config' => $fixture ], false );
+// Senza la copia delle tracce del plugin (oc:9003): qui si prova la corrispondenza route-type → layer scaricata
+delete_option( WMWP_TRACKS_COPY_OPTION );
 $square = [ 'type' => 'Polygon', 'coordinates' => [ [ [ 0, 0 ], [ 1, 0 ], [ 1, 1 ], [ 0, 0 ] ] ] ];
 // I filtri leggono l'option piccola con gli id delle aree: senza, li ricavano dalla copia con le geometrie, quella del test
 delete_option( WMWP_APP_OVERLAY_LAYERS_OPTION );
@@ -73,7 +75,9 @@ $check( null === forestas_search_status_facet( 'nessuna-famiglia', 'x', 'X' ), '
 // 2. I filtri dei percorsi di Forestas: chiavi in inglese, valori dal config.json (oc:9018)
 $raw = forestas_search_track_facets();
 $check( 'walkability' === ( $raw[0]['key'] ?? '' ) && 'validation' === ( $raw[1]['key'] ?? '' ), 'Percorribilità e validazione restano i primi filtri' );
-$check( 'layers' === ( $raw[2]['from_config'] ?? '' ) && 'activities' === ( $raw[3]['from_config'] ?? '' ) && '-difficulty' === ( $raw[4]['from_families'] ?? '' ) && ! empty( $raw[5]['from_overlays'] ), 'tipo, attività, scale e aree dal config.json' );
+$check( 'layers' === ( $raw[2]['from_config'] ?? '' ) && 'activities' === ( $raw[3]['from_config'] ?? '' ) && '-difficulty' === ( $raw[4]['from_families'] ?? '' ) && ! empty( $raw[7]['from_overlays'] ), 'tipo, attività, scale e aree dal config.json' );
+// Slider di distanza e tempo di MAP.filters, dopo le scale e prima delle aree, come le app (oc:9003)
+$check( 'track_distance' === ( $raw[5]['from_config'] ?? '' ) && 'track_duration' === ( $raw[6]['from_config'] ?? '' ), 'slider di distanza e tempo dopo le scale' );
 $tracks = wmwp_search_sources()['tracks'] ?? [];
 $facets = array_column( (array) ( $tracks['facets'] ?? [] ), null, 'key' );
 foreach ( [ 'percorribilita', 'validazione', 'percorso', 'attivita', 'difficolta', 'area', 'provincia', 'comune' ] as $old ) {

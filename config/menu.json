@@ -298,7 +298,7 @@
                     "descrizione": "",
                     "destinazione": {
                         "tipo": "custom",
-                        "url": "#"
+                        "url": "/sentieri/?activity=accessible-trails"
                     },
                     "genitore": null,
                     "meta": [],
@@ -624,7 +624,7 @@
                     "descrizione": "",
                     "destinazione": {
                         "tipo": "custom",
-                        "url": "#"
+                        "url": "/en/sentieri/?activity=accessible-trails"
                     },
                     "genitore": null,
                     "meta": [],

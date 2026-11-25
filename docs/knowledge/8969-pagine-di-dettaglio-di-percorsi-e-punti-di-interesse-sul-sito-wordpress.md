@@ -66,9 +66,10 @@ e 7 del wireframe di oc:8783.
   pulsante che non fa niente; un commento nel template dice dove rimetterli.
 - **Tacche nascoste allo screen reader** (oc:9000): il testo sotto dice già livello e stato («3 su 4, Parzialmente
   percorribile»), e l'immagine con la stessa frase lo faceva leggere due volte; il «·» visibile si legge come virgola.
-- **Nome della voce del menu nella breadcrumb, non il titolo della pagina** (oc:9000): la pagina dei POI si intitola
-  ancora «Da vedere» perché il titolo arriva dalla sincronizzazione con Drupal, mentre il menu dice «Punti di
-  interesse».
+- **Nome della voce del menu nella breadcrumb, non il titolo della pagina** (oc:9000): allora la pagina dei POI si
+  intitolava «Da vedere», perché il titolo arrivava dalla sincronizzazione con Drupal, mentre il menu diceva «Punti di
+  interesse». Da oc:9003 le pagine si intitolano come le voci del menu («Punti di interesse», «Itinerari»: `titolo` in
+  `config/pagine.json`); la voce del menu resta la fonte della breadcrumb.
 - **«Percorsi correlati» anche nel POI** (oc:9000): percorsi vicini al POI e percorsi correlati della traccia si
   calcolano tutti e due per vicinanza, quindi un'etichetta sola.
 - **Pagina «Mappa interattiva» più alta di Drupal**: «Espandi la mappa» sta nella riga del percorso invece che in una

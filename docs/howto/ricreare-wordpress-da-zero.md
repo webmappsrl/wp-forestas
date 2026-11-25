@@ -118,6 +118,11 @@ bin/wordpress-config.sh pagine              # anteprima: 46 pagine, 99 news, 14 
 bin/wordpress-config.sh pagine --conferma   # crea pagine, news, eventi, «da sapere» e termini, scarica media, assegna i template
 ```
 
+Le pagine con il template `griglia` (Sentieri, Itinerari, Cammini, Punti di interesse, oc:9003) usano
+l'us_content_template `template-pagina-griglia`, che l'apply del passo 2 crea da `config/post.json`: la sequenza non
+cambia. Le griglie dei percorsi compaiono quando il plugin ha la copia delle tracce (rebuild orario dell'indice, o
+`wp wmwp tracks-copy refresh`); fino ad allora mostrano «I percorsi non sono disponibili in questo momento».
+
 Prima del primo giro i tipi `evento` e `da_sapere` devono essere traducibili in WPML (li rende tali
 l'apply del passo 2, `custom_posts_sync_option` in `config/wpml.json`): senza, le traduzioni inglesi
 nascerebbero scollegate dall'italiano. Si controlla in WPML → Impostazioni → «Traduzione dei tipi di
