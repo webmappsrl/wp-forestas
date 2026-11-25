@@ -207,12 +207,12 @@ try {
 	// 1. Source `entes` nel filtro del plugin, in italiano e in inglese
 	$sorgente = apply_filters( 'wp_package_search_sources', [] )['entes'] ?? null;
 	$check( is_array( $sorgente ), 'source entes nel filtro wp_package_search_sources' );
-	$check( 'enti' === $campo( $sorgente, 'slug' ), 'source entes: slug enti' );
+	$check( 'organisations' === $campo( $sorgente, 'slug' ), 'source entes: slug organisations (oc:9018)' );
 	$check( 'Enti' === $campo( $sorgente, 'label' ), 'source entes: label Enti' );
 	$check( [ 'one' => '%s ente', 'other' => '%s enti' ] === $campo( $sorgente, 'nouns' ), 'source entes: nouns in italiano' );
 	$check( 'forestas-search' === $campo( $sorgente, 'script' ), 'source entes: script forestas-search' );
 	$check( 'cards' === $campo( $sorgente, 'layout' ), 'source entes: layout cards' );
-	$check( [ [ 'key' => 'tipo-ente', 'label' => 'Tipo di ente' ], [ 'key' => 'ruolo', 'label' => 'Ruolo sui sentieri' ] ] === $campo( $sorgente, 'facets' ), 'source entes: filtri tipo di ente e ruolo sui sentieri (' . wp_json_encode( $campo( $sorgente, 'facets' ) ) . ')' );
+	$check( [ [ 'key' => 'entity-type', 'label' => 'Tipo di ente' ], [ 'key' => 'role', 'label' => 'Ruolo sui sentieri' ] ] === $campo( $sorgente, 'facets' ), 'source entes: filtri tipo di ente e ruolo sui sentieri (' . wp_json_encode( $campo( $sorgente, 'facets' ) ) . ')' );
 	$lingua( 'en-us' );
 	$sorgente = apply_filters( 'wp_package_search_sources', [] )['entes'] ?? null;
 	$check( 'Organisations' === $campo( $sorgente, 'label' ), 'source entes: label Organisations' );
@@ -512,7 +512,7 @@ try {
 		file_put_contents( $file_log, '' );
 		$risponde( $codice, $corpo );
 		$risposta = $cerca( [ 'lang' => 'it', 'q' => 'tepilora' ] );
-		$check( 200 === $risposta->get_status() && [ 'total' => 0, 'items' => [], 'facets' => [ 'tipo-ente' => [], 'ruolo' => [] ] ] === $risposta->get_data(), "shard {$codice}: nessun risultato (" . $risposta->get_status() . ' ' . wp_json_encode( $risposta->get_data() ) . ')' );
+		$check( 200 === $risposta->get_status() && [ 'total' => 0, 'items' => [], 'facets' => [ 'entity-type' => [], 'role' => [] ] ] === $risposta->get_data(), "shard {$codice}: nessun risultato (" . $risposta->get_status() . ' ' . wp_json_encode( $risposta->get_data() ) . ')' );
 		$check( false === get_transient( $pausa ) && 0 === forestas_entes_search_paused(), "shard {$codice}: nessuna pausa" );
 		$check( '' === $log(), "shard {$codice}: nessuna riga di log: " . $log() );
 		$cerca( [ 'lang' => 'it', 'q' => 'tepilor' ] );
@@ -559,40 +559,42 @@ try {
 	$risponde( 200, $trovati );
 	$risposta = $cerca( [ 'lang' => 'it' ] );
 	$check(
-		[ [ 'complesso-forestale', 'Complesso forestale', 1, false ], [ 'comune', 'Comune', 1, false ], [ 'ente-partner', 'Ente partner', 1, false ] ] === $voci( $risposta, 'tipo-ente' ),
-		'filtri, testo vuoto: voci del tipo di ente ' . wp_json_encode( $voci( $risposta, 'tipo-ente' ) )
+		// oc:9018: un tipo che il child non conosce compare con il valore grezzo, invece di sparire
+		[ [ 'boh', 'boh', 1, false ], [ 'complesso-forestale', 'Complesso forestale', 1, false ], [ 'comune', 'Comune', 1, false ], [ 'ente-partner', 'Ente partner', 1, false ] ] === $voci( $risposta, 'entity-type' ),
+		'filtri, testo vuoto: voci del tipo di ente ' . wp_json_encode( $voci( $risposta, 'entity-type' ) )
 	);
 	$check(
-		[ [ 'gestore', 'Soggetto gestore', 2, false ], [ 'manutentore', 'Soggetto manutentore', 1, false ], [ 'rilevatore', 'Soggetto rilevatore', 1, false ] ] === $voci( $risposta, 'ruolo' ),
-		'filtri, testo vuoto: voci del ruolo ' . wp_json_encode( $voci( $risposta, 'ruolo' ) )
+		// oc:9018: anche un ruolo che il child non conosce, con il valore grezzo
+		[ [ 'gestore', 'Soggetto gestore', 2, false ], [ 'ruolo-sconosciuto', 'ruolo-sconosciuto', 1, false ], [ 'manutentore', 'Soggetto manutentore', 1, false ], [ 'rilevatore', 'Soggetto rilevatore', 1, false ] ] === $voci( $risposta, 'role' ),
+		'filtri, testo vuoto: voci del ruolo ' . wp_json_encode( $voci( $risposta, 'role' ) )
 	);
-	$risposta = $cerca( [ 'lang' => 'it', 'ruolo' => 'gestore' ] );
+	$risposta = $cerca( [ 'lang' => 'it', 'role' => 'gestore' ] );
 	$check( 2 === $campo( $risposta->get_data(), 'total' ) && [ 11, 13 ] === $ids( $risposta ), 'ruolo gestore: Tepilora e Agenzia (' . implode( ', ', $ids( $risposta ) ) . ')' );
-	$check( [ [ 'complesso-forestale', 'Complesso forestale', 1, false ] ] === $voci( $risposta, 'tipo-ente' ), 'ruolo gestore: il tipo conta solo i gestori ' . wp_json_encode( $voci( $risposta, 'tipo-ente' ) ) );
+	$check( [ [ 'boh', 'boh', 1, false ], [ 'complesso-forestale', 'Complesso forestale', 1, false ] ] === $voci( $risposta, 'entity-type' ), 'ruolo gestore: il tipo conta solo i gestori ' . wp_json_encode( $voci( $risposta, 'entity-type' ) ) );
 	$check(
-		[ [ 'gestore', 'Soggetto gestore', 2, true ], [ 'manutentore', 'Soggetto manutentore', 1, false ], [ 'rilevatore', 'Soggetto rilevatore', 1, false ] ] === $voci( $risposta, 'ruolo' ),
-		'ruolo gestore: il ruolo conta senza il proprio filtro, gestore scelto ' . wp_json_encode( $voci( $risposta, 'ruolo' ) )
+		[ [ 'gestore', 'Soggetto gestore', 2, true ], [ 'ruolo-sconosciuto', 'ruolo-sconosciuto', 1, false ], [ 'manutentore', 'Soggetto manutentore', 1, false ], [ 'rilevatore', 'Soggetto rilevatore', 1, false ] ] === $voci( $risposta, 'role' ),
+		'ruolo gestore: il ruolo conta senza il proprio filtro, gestore scelto ' . wp_json_encode( $voci( $risposta, 'role' ) )
 	);
-	$risposta = $cerca( [ 'lang' => 'it', 'tipo-ente' => 'ente-partner,comune' ] );
+	$risposta = $cerca( [ 'lang' => 'it', 'entity-type' => 'ente-partner,comune' ] );
 	$check( [ 12, 15 ] === $ids( $risposta ), 'tipo comune o ente partner: Stintino e GAL (' . implode( ', ', $ids( $risposta ) ) . ')' );
-	$check( [ [ 'rilevatore', 'Soggetto rilevatore', 1, false ] ] === $voci( $risposta, 'ruolo' ), 'tipo comune o ente partner: il ruolo conta solo quelli ' . wp_json_encode( $voci( $risposta, 'ruolo' ) ) );
-	$risposta = $cerca( [ 'lang' => 'it', 'tipo-ente' => 'comune', 'ruolo' => 'gestore' ] );
+	$check( [ [ 'ruolo-sconosciuto', 'ruolo-sconosciuto', 1, false ], [ 'rilevatore', 'Soggetto rilevatore', 1, false ] ] === $voci( $risposta, 'role' ), 'tipo comune o ente partner: il ruolo conta solo quelli ' . wp_json_encode( $voci( $risposta, 'role' ) ) );
+	$risposta = $cerca( [ 'lang' => 'it', 'entity-type' => 'comune', 'role' => 'gestore' ] );
 	$check( 0 === $campo( $risposta->get_data(), 'total' ), 'comune e gestore: nessun ente' );
-	$check( [ [ 'complesso-forestale', 'Complesso forestale', 1, false ], [ 'comune', 'Comune', 0, true ] ] === $voci( $risposta, 'tipo-ente' ), 'comune e gestore: la voce scelta resta con 0 ' . wp_json_encode( $voci( $risposta, 'tipo-ente' ) ) );
-	$risposta = $cerca( [ 'lang' => 'it', 'ruolo' => 'inventato', 'tipo-ente' => 'boh' ] );
+	$check( [ [ 'boh', 'boh', 1, false ], [ 'complesso-forestale', 'Complesso forestale', 1, false ], [ 'comune', 'Comune', 0, true ] ] === $voci( $risposta, 'entity-type' ), 'comune e gestore: la voce scelta resta con 0 ' . wp_json_encode( $voci( $risposta, 'entity-type' ) ) );
+	$risposta = $cerca( [ 'lang' => 'it', 'role' => 'inventato', 'entity-type' => 'non-esiste' ] );
 	$check( 4 === $campo( $risposta->get_data(), 'total' ), 'valori sconosciuti nell\'indirizzo: ignorati' );
 	// Con un testo: il tipo dalla ricerca dello shard, i ruoli dalla copia (un ente non ancora nella copia non ne ha)
 	$risposta = $cerca( [ 'lang' => 'it', 'q' => 'tepilora' ] );
-	$check( [ [ 'complesso-forestale', 'Complesso forestale', 1, false ], [ 'comune', 'Comune', 1, false ] ] === $voci( $risposta, 'tipo-ente' ), 'tepilora: voci del tipo ' . wp_json_encode( $voci( $risposta, 'tipo-ente' ) ) );
-	$check( [ [ 'gestore', 'Soggetto gestore', 1, false ], [ 'manutentore', 'Soggetto manutentore', 1, false ] ] === $voci( $risposta, 'ruolo' ), 'tepilora: ruoli dalla copia ' . wp_json_encode( $voci( $risposta, 'ruolo' ) ) );
-	$risposta = $cerca( [ 'lang' => 'it', 'q' => 'tepilora', 'ruolo' => 'gestore' ] );
+	$check( [ [ 'complesso-forestale', 'Complesso forestale', 1, false ], [ 'comune', 'Comune', 1, false ] ] === $voci( $risposta, 'entity-type' ), 'tepilora: voci del tipo ' . wp_json_encode( $voci( $risposta, 'entity-type' ) ) );
+	$check( [ [ 'gestore', 'Soggetto gestore', 1, false ], [ 'manutentore', 'Soggetto manutentore', 1, false ] ] === $voci( $risposta, 'role' ), 'tepilora: ruoli dalla copia ' . wp_json_encode( $voci( $risposta, 'role' ) ) );
+	$risposta = $cerca( [ 'lang' => 'it', 'q' => 'tepilora', 'role' => 'gestore' ] );
 	$check( [ 11 ] === $ids( $risposta ), 'tepilora e gestore: solo Tepilora (' . implode( ', ', $ids( $risposta ) ) . ')' );
 	$risposta = $cerca( [ 'lang' => 'en' ] );
-	$check( 'Municipality' === ( $voci( $risposta, 'tipo-ente' )[1][1] ?? null ) && 'Managing authority' === ( $voci( $risposta, 'ruolo' )[0][1] ?? null ), 'filtri in inglese' );
+	$check( in_array( 'Municipality', array_column( $voci( $risposta, 'entity-type' ), 1 ), true ) && 'Managing authority' === ( $voci( $risposta, 'role' )[0][1] ?? null ), 'filtri in inglese' );
 	$lingua( 'it' );
 	// Parametri nell'indirizzo canonico, con i valori in ordine
-	$canonici = forestas_search_canonical_args( [ 'tipo' => 'enti', 'ruolo' => 'rilevatore,gestore', 'tipo-ente' => 'comune' ] );
-	$check( [ 'tipo' => 'enti', 'tipo-ente' => 'comune', 'ruolo' => rawurlencode( 'gestore,rilevatore' ) ] === $canonici, 'canonical con i filtri degli enti: ' . wp_json_encode( $canonici ) );
+	$canonici = forestas_search_canonical_args( [ 'tab' => 'organisations', 'role' => 'rilevatore,gestore', 'entity-type' => 'comune' ] );
+	$check( [ 'tab' => 'organisations', 'entity-type' => 'comune', 'role' => rawurlencode( 'gestore,rilevatore' ) ] === $canonici, 'canonical con i filtri degli enti: ' . wp_json_encode( $canonici ) );
 
 	// Il token non deve mai finire nell'output del test
 	$failures = array_map( fn( $f ) => str_replace( $token, '<token>', $f ), $failures );

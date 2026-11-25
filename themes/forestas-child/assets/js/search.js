@@ -19,7 +19,7 @@
   api.registerSource('content', {
     search: function (query, signal) {
       var url = new URL(config.endpoint, window.location.href);
-      var chosen = (query.filters && query.filters.contenuto) || [];
+      var chosen = (query.filters && query.filters.content) || [];
       if (query.rawText) {
         url.searchParams.set('q', query.rawText);
       }
@@ -48,14 +48,15 @@
           return {
             total: data.total || 0,
             items: data.items || [],
-            facets: [{ key: 'contenuto', label: '', disabled: false, values: values }]
+            facets: [{ key: 'content', label: '', disabled: false, values: values }]
           };
         });
     }
   });
 
   if (config.entesEndpoint) {
-    var ENTES_FACETS = ['tipo-ente', 'ruolo'];
+    // Chiavi in inglese, uguali in tutte le lingue (oc:9018)
+    var ENTES_FACETS = ['entity-type', 'role'];
     api.registerSource('entes', {
       search: function (query, signal) {
         var url = new URL(config.entesEndpoint, window.location.href);
