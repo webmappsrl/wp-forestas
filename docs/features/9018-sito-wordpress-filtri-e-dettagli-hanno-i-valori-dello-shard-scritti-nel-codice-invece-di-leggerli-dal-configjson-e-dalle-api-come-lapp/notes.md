@@ -457,6 +457,17 @@ aggiunge all'elenco «Nello shard (da chiedere tramite oc:8916)» della descript
 - **Nomi della difficoltà:** lo shard ha «T», «E», «EE», «EEA»; Drupal ha i nomi lunghi
   («Turistico», «Escursionistico», «Escursionista Esperto», «Escursionista Esperto Attrezzato»).
   Quale nome mostrare è contenuto da concordare con il cliente (scrum del 19/11).
+- **Filtro Provincia, se il dev riapre la decisione del 23/11** (verificato il 25/11, da decidere): in Elastic
+  `taxonomyWheres` ha solo i nomi (percorso 263 sul dev: `ZSUD1, ZSUD3, Area D (Sud-OVEST), Iglesiente e
+  Marganai, Sardegna, Sulcis Iglesiente, Buggerru, Fluminimaggiore`). Lo shard conosce `_admin_level` (4 regione,
+  6 provincia, 8 comune), ma lo usa solo per ordinare l'elenco e poi lo toglie
+  (`TaxonomyWhereDisplayService::orderedNames()`, `wm-package/src/Services/TaxonomyWhereDisplayService.php:140-160`;
+  `EcTrack.php:863`): dai nomi non si distinguono province e comuni. Su Geohub l'app 32 ha 5 layer di provincia
+  (186 Nuoro, 187 Cagliari, 188 Sassari, 189 Oristano, 190 Sud Sardegna), che però non stanno né nella home, né in un
+  overlay, né in `MAP.filters`. Layer dei comuni: nessuno. Sono le province vecchie: per Buggerru lo shard ha «Sulcis
+  Iglesiente», Geohub «Sud Sardegna». Proposta: layer di provincia creati dai luoghi dello shard con `admin_level` 6,
+  non da Geohub, in un overlay «Province»; il sito li mostra con il meccanismo delle aree senza modifiche. In
+  alternativa il livello in `taxonomyWheres` di Elastic, ma va contro «niente dati nuovi in Elastic» (Giuseppe, 24/11).
 
 ## Info per altri ticket
 

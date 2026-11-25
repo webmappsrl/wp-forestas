@@ -80,7 +80,7 @@ tipologie di disabilità, nome dello stato di assenza) stanno ciascuno in un sol
 - [x] **Step 4:** lanciare `tests/search-facets.php` e `tests/filtri-attivi.php`; atteso `PASS`.
 - [x] **Step 5:** test sui dati veri: sul dev e su UAT, per 3 opzioni di ogni filtro, i risultati scelti
   hanno davvero quel valore (conteggio rifatto nel DB dello shard, con l'ora).
-- [ ] **Step 6 (commit del dev):** `feat(oc:9018): filtri di percorsi e POI dal config.json dello shard`
+- [x] **Step 6 (commit del dev):** `feat(oc:9018): filtri di percorsi e POI dal config.json dello shard` — fatto nel commit unico `6c7183a` (24/11), su richiesta del dev
 
 ### Task 2: vecchi link della ricerca di Drupal
 
@@ -104,7 +104,7 @@ tipologie di disabilità, nome dello stato di assenza) stanno ciascuno in un sol
 - [x] **Step 2:** lanciare; atteso `FAIL`.
 - [x] **Step 3:** implementare.
 - [x] **Step 4:** lanciare `tests/search-facets.php`; atteso `PASS`.
-- [ ] **Step 5 (commit del dev):** `feat(oc:9018): redirect dei vecchi link di ricerca ai parametri nuovi`
+- [x] **Step 5 (commit del dev):** `feat(oc:9018): redirect dei vecchi link di ricerca ai parametri nuovi` — fatto nel commit unico `6c7183a` (24/11), su richiesta del dev
 
 ### Task 3: dettaglio con i dati dello shard
 
@@ -140,7 +140,7 @@ tipologie di disabilità, nome dello stato di assenza) stanno ciascuno in un sol
 - [x] **Step 2:** lanciare; atteso `FAIL`.
 - [x] **Step 3:** implementare; alzare `Version` di `style.css`.
 - [x] **Step 4:** lanciare `tests/dettaglio.php`, `tests/notices.php`, `tests/entes-view.php`; atteso `PASS`.
-- [ ] **Step 5 (commit del dev):** `feat(oc:9018): dettaglio con tipi, gradi, difficoltà e download dello shard`
+- [x] **Step 5 (commit del dev):** `feat(oc:9018): dettaglio con tipi, gradi, difficoltà e download dello shard` — fatto nel commit unico `6c7183a` (24/11), su richiesta del dev
 
 ### Task 4: indirizzi Drupal dei dettagli
 
@@ -166,7 +166,7 @@ tipologie di disabilità, nome dello stato di assenza) stanno ciascuno in un sol
   301 → pagina corrente dell'elemento con lo stesso nid; atteso 0 errori. Prove di `/sentiero/` e
   `/itinerario/` sul dev. *Fatto in locale sui dati del dev (3512 indirizzi su 3512, 24/11); sui server dev e UAT
   dopo il deploy.*
-- [ ] **Step 6 (commit del dev):** `feat(oc:9018): redirect 301 dei vecchi indirizzi Drupal di percorsi e POI`
+- [x] **Step 6 (commit del dev):** `feat(oc:9018): redirect 301 dei vecchi indirizzi Drupal di percorsi e POI` — fatto nel commit unico `6c7183a` (24/11), su richiesta del dev
 
 ### Task 5: messa in opera su dev e UAT
 
@@ -186,7 +186,7 @@ tipologie di disabilità, nome dello stato di assenza) stanno ciascuno in un sol
 - [ ] **Step 3:** controllo su dev e UAT: i filtri della ricerca hanno i nomi dello shard, le aree
   catastali (7) e, sul dev, le aree geografiche (39); su UAT le geografiche non compaiono finché non c'è
   oc:9001. *Dopo il deploy.*
-- [ ] **Step 4 (commit del dev):** `chore(oc:9018): plugin 0.6.0 e procedura di messa in opera`
+- [ ] **Step 4 (commit del dev):** `chore(oc:9018): plugin 0.6.0 e procedura di messa in opera` *La procedura è nel commit `47b45a7` di forestas (24/11); resta `WP_PACKAGE_REF`, dopo il merge del plugin.*
 
 ### Task 6: accessibilità e documentazione
 
@@ -199,7 +199,7 @@ tipologie di disabilità, nome dello stato di assenza) stanno ciascuno in un sol
   italiani della pagina inglese, opzione scelta a zero togliibile, linee della mappa con le tile bloccate.
 - [x] **Step 2:** scrivere la pagina di conoscenza (come funziona, perché così, ripieghi e quando si tolgono)
   e la riga in `CLAUDE.md`.
-- [ ] **Step 3 (commit del dev):** `docs(oc:9018): pagina di conoscenza dei filtri dallo shard`
+- [x] **Step 3 (commit del dev):** `docs(oc:9018): pagina di conoscenza dei filtri dallo shard` — fatto nel commit unico `6c7183a` (24/11), su richiesta del dev
 
 ### Task 7: pulsante «Stampa» (aggiunto il 24/11 sera, chiesto dal dev)
 
@@ -216,4 +216,4 @@ tipologie di disabilità, nome dello stato di assenza) stanno ciascuno in un sol
   screen reader con la stampa accesa; visto fallire.
 - [x] **Step 2:** pulsante nei due template, fra i download e «Condividi»; test PASS.
 - [x] **Step 3:** `Disallow: /print/` nel `robots.txt` dello shard.
-- [ ] **Step 4 (commit del dev):** `feat(oc:9018): pulsante «Stampa» dalla stampa dell'app`
+- [x] **Step 4 (commit del dev):** `feat(oc:9018): pulsante «Stampa» dalla stampa dell'app` — fatto nel commit unico `6c7183a` (24/11), su richiesta del dev
