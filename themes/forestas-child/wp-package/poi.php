@@ -70,7 +70,7 @@ wmwp_template_header();
 	</div>
 
 	<div class="forestas-azioni wm-actions">
-		<?php // «Stampa» tolto finché la stampa non c'è: torna con oc:8982 (Rubens, 19/11) ?>
+		<?php echo forestas_dettaglio_stampa( $detail ); // phpcs:ignore WordPress.Security.EscapeOutput -- markup già escapato ?>
 		<?php echo forestas_condividi( [ 'url' => (string) $detail['url'], 'titolo' => $nome ] ); // phpcs:ignore WordPress.Security.EscapeOutput -- markup già escapato ?>
 	</div>
 

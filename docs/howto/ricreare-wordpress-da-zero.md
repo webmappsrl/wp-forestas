@@ -207,17 +207,21 @@ Nel browser, in italiano e inglese:
 - `/attivita-e-comunicazioni/`, `/tutte-le-news/` ed `/eventi/` hanno a sinistra i filtri «Tipologia» e «Anno»
   (sotto 960px dietro il pulsante «Filtri»); `/attivita-e-comunicazioni/?anno=2022` lascia 3 news,
   `/eventi/?anno=2025` 4 eventi; la lista degli eventi è a una colonna di card orizzontali;
-- ricerca (oc:8952): `/cerca-nel-sito/?search_api_fulltext=perda+liana` ha i tab «Tutti», «Percorsi» e
-  «Contenuti del sito» con i numeri (il 09/11 e il 10/11 in locale 42 e 4; in inglese «All», «Trails», «Site
-  content») e i gruppi con le prime card; il tab
-  «Percorsi» ha i filtri a sinistra (Validazione catastale, Tipo di percorso, Attività, Difficoltà, Area,
-  Provincia, Comune) e una casella su ogni riga: scegliendo due percorsi compare in fondo la barra «2 percorsi
-  selezionati» e «Scarica 2 percorsi in GPX» scarica `sardegna-sentieri-percorsi-2.gpx`; «Mappa», accanto al
-  totale, mostra gli stessi percorsi su una mappa con «Inquadratura sul riquadro che contiene tutti i risultati» in
-  basso e l'indirizzo con `vista=mappa` (il 10/11 in locale, senza testo, 769 percorsi in circa 7 secondi); `/?s=oliena` porta
-  in 302 a `/cerca-nel-sito/?search_api_fulltext=oliena`, `/en/?s=trail` a `/en/cerca-nel-sito/`; un vecchio
-  link di Drupal `…?f%5B0%5D=cerca_contenuto_nel_sito%3Asentiero` porta in 302 al tab «Percorsi» con il filtro
-  del tipo (`?tipo=percorsi&percorso=route-type-trail`); fra i «Contenuti del sito» di tipo pagina ci sono le 13
+- ricerca (oc:8952; parametri, filtri e slug inglese cambiati da oc:9018, verificati il 24/11 in locale ma non ancora
+  con un reset completo): `/cerca-nel-sito/?q=perda+liana` ha i tab «Tutti», «Percorsi», «Punti di interesse»,
+  «Contenuti del sito» ed «Enti» con i numeri (il 24/11 in locale 42, 13, 4 e 2; in inglese «All», «Trails»…) e i
+  gruppi con le prime card; il tab «Percorsi» (`?tab=trails`) ha i filtri a sinistra, presi dal `config.json`
+  dell'app come le app (il 24/11, sul `config.json` del dev: Percorribilità, Stato validazione, Tipo percorso,
+  Attività, una «Difficoltà …» per scala, le aree degli overlay) e una casella su ogni riga: scegliendo due percorsi
+  compare in fondo la barra «2 percorsi selezionati» e «Scarica 2 percorsi in GPX» scarica
+  `sardegna-sentieri-percorsi-2.gpx`; «Mappa», accanto al totale, mostra gli stessi percorsi su una mappa con
+  «Inquadratura sul riquadro che contiene tutti i risultati» in basso (il 10/11 in locale, senza testo, 769
+  percorsi in circa 7 secondi). I filtri del `config.json` compaiono solo dopo il primo giro del cron che lo scarica:
+  in locale WP-Cron non parte, si lancia `docker exec wordpress-forestas wp cron event run wmwp_app_config_refresh
+  --allow-root`. `/?s=oliena` porta in 302 a `/cerca-nel-sito/?q=oliena`, `/en/?s=trail` a
+  `/en/search-in-our-website/?q=trail`, `/en/cerca-nel-sito/` in 301 a `/en/search-in-our-website/`; un vecchio link
+  di Drupal `…?f%5B0%5D=cerca_contenuto_nel_sito%3Asentiero` porta in 302 al tab «Percorsi» con il filtro del tipo
+  (`?tab=trails&type=<id del layer>`, `type=11` sul dev); fra i «Contenuti del sito» di tipo pagina ci sono le 13
   pagine venute da Drupal (la «Pagina di esempio» dell'installazione è nel cestino, oc:8990);
 - dettagli (oc:8969, aggiunti al ciclo il 13/11 ma non ancora verificati con un reset completo): `/da-vedere/` porta
   in 301 a `/punti-di-interesse/`; dalla ricerca una card porta al dettaglio (`/?wmwp_detail=track&wmwp_id=<id>` in

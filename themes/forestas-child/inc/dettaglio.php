@@ -180,8 +180,42 @@ function forestas_dettaglio_blocchi( array $p, ?string $lingua = null ): array {
 // plugin non la conosce e la riceve dal tema (oc:9000)
 add_filter( 'wmwp_track_kind_taxonomy', fn() => 'route-type' );
 
+// Tipo del dettaglio per route-type, in un punto solo (oc:9018): decide colore, pagina d'elenco della breadcrumb e
+// titoli. Un route-type che il child non conosce (o nessuno) vale `altro`: nome dello shard, colore neutro, breadcrumb
+// generica, mai «sentiero»
+const FORESTAS_ROUTE_TYPE_KINDS = [
+	'route-type-trail'     => 'sentiero',
+	'route-type-itinerary' => 'itinerario',
+	'route-type-walk'      => 'cammino',
+];
+
+/** Tipo del dettaglio di un route-type: `sentiero`, `itinerario`, `cammino` o `altro`. */
+function forestas_route_type_kind( string $identifier ): string {
+	return FORESTAS_ROUTE_TYPE_KINDS[ $identifier ] ?? 'altro';
+}
+
 /**
- * Tipo del dettaglio: `sentiero`, `itinerario`, `cammino` (dal `route-type`; senza, il sentiero) o `poi`.
+ * Nome del tipo del percorso: quello dello shard (`route-type`) nella lingua della pagina; senza nome, il nome del tipo
+ * del child («Percorso» per un tipo che non conosce), così la testata non resta vuota.
+ *
+ * @param array<string, mixed> $properties properties del JSON.
+ */
+function forestas_dettaglio_nome_tipo( array $properties, string $tipo ): string {
+	$nome = forestas_dettaglio_testo( $properties['taxonomies']['route-type'][0]['name'] ?? null );
+	if ( '' !== $nome ) {
+		return $nome;
+	}
+	$nomi = [
+		'sentiero'   => forestas_testo( 'Sentiero', 'Trail' ),
+		'itinerario' => forestas_testo( 'Itinerario', 'Itinerary' ),
+		'cammino'    => forestas_testo( 'Cammino', 'Walk' ),
+	];
+	return $nomi[ $tipo ] ?? forestas_testo( 'Percorso', 'Route' );
+}
+
+/**
+ * Tipo del dettaglio: `sentiero`, `itinerario`, `cammino`, `altro` (route-type che il child non conosce, o nessuno) o
+ * `poi`.
  *
  * @param array<string, mixed> $detail wmwp_detail_current().
  */
@@ -189,13 +223,7 @@ function forestas_dettaglio_tipo( array $detail ): string {
 	if ( 'poi' === ( $detail['type'] ?? '' ) ) {
 		return 'poi';
 	}
-	$tipi = [
-		'route-type-trail'     => 'sentiero',
-		'route-type-itinerary' => 'itinerario',
-		'route-type-walk'      => 'cammino',
-	];
-	$id   = $detail['feature']['properties']['taxonomies']['route-type'][0]['identifier'] ?? '';
-	return $tipi[ $id ] ?? 'sentiero';
+	return forestas_route_type_kind( (string) ( $detail['feature']['properties']['taxonomies']['route-type'][0]['identifier'] ?? '' ) );
 }
 
 /**
@@ -308,12 +336,30 @@ function forestas_dettaglio_colori( string $tipo ): array {
 		'itinerario' => [ '#58810B', '#EFF4E6' ],
 		'cammino'    => [ '#1A416F', '#E8ECF1' ],
 		'poi'        => [ '#B7127F', '#F8E9F3' ],
+		// Tipo che il child non conosce: il colore del testo del sito (--sase-inchiostro), che con il testo bianco passa AA
+		'altro'      => [ '#1A1A1A', '#F2F2F2' ],
 	];
-	[ $colore, $fascia ] = $colori[ $tipo ] ?? $colori['sentiero'];
+	[ $colore, $fascia ] = $colori[ $tipo ] ?? $colori['altro'];
 	return [
 		'colore' => $colore,
 		'fascia' => $fascia,
 	];
+}
+
+/**
+ * Colore della linea di un percorso sulla mappa del dettaglio (oc:9018): il primo layer colorato dell'app fra i suoi
+ * layer, nell'ordine dell'app, come le linee della ricerca (wp-package, track-map.js); senza, il colore del tipo.
+ *
+ * @param list<int|string> $layers Layer del percorso.
+ */
+function forestas_dettaglio_colore_linea( array $layers, string $tipo ): string {
+	$layers = array_map( 'intval', $layers );
+	foreach ( forestas_plugin_ready() ? wmwp_map_layer_colors() : [] as $item ) {
+		if ( in_array( (int) ( $item['id'] ?? 0 ), $layers, true ) && '' !== (string) ( $item['color'] ?? '' ) ) {
+			return (string) $item['color'];
+		}
+	}
+	return forestas_dettaglio_colori( $tipo )['colore'];
 }
 
 /**
@@ -361,7 +407,20 @@ function forestas_dettaglio_enti( array $properties ): array {
 	$enti     = [];
 	// Slug degli enti della copia, una volta sola, dall'opzione piccola degli slug (non si deserializza la copia)
 	$known = function_exists( 'forestas_entes_known_slugs' ) ? forestas_entes_known_slugs() : [];
-	$lang = (string) apply_filters( 'wpml_current_language', 'it' );
+	$lang  = (string) apply_filters( 'wpml_current_language', 'it' );
+	// Voce di un ente per un ruolo: nome, slug e indirizzo della pagina dell'ente se è nella copia
+	$voce = function ( array $ente, string $ruolo, string $etichetta ) use ( $known, $lang ): array {
+		$nome = forestas_dettaglio_testo( $ente['name'] ?? null );
+		$slug = function_exists( 'forestas_entes_slug' ) && '' !== forestas_entes_slug( $ente ) ? forestas_entes_slug( $ente ) : null;
+		return [
+			'ruolo'     => $ruolo,
+			'etichetta' => $etichetta,
+			'id'        => (int) ( $ente['id'] ?? 0 ),
+			'nome'      => '' !== $nome ? $nome : null,
+			'slug'      => $slug,
+			'url'       => null !== $slug && isset( $known[ $slug ] ) ? forestas_entes_url( $slug, $lang ) : null,
+		];
+	};
 	foreach ( forestas_dettaglio_ruoli() as $ruolo => $info ) {
 		$lista = [];
 		if ( isset( $forestas['organizations'] ) && is_array( $forestas['organizations'] ) ) {
@@ -376,19 +435,24 @@ function forestas_dettaglio_enti( array $properties ): array {
 			}
 		}
 		foreach ( $lista as $ente ) {
-			if ( ! is_array( $ente ) ) {
+			if ( is_array( $ente ) ) {
+				$enti[] = $voce( $ente, $ruolo, $info['etichetta'] );
+			}
+		}
+	}
+	// Un ruolo che il child non conosce compare con il valore grezzo, invece di sparire (oc:9018): i nomi dei ruoli sono
+	// un ripiego finché l'API degli enti non li dà
+	$noti = array_merge( ...array_values( array_column( forestas_dettaglio_ruoli(), 'chiavi' ) ) );
+	if ( isset( $forestas['organizations'] ) && is_array( $forestas['organizations'] ) ) {
+		foreach ( $forestas['organizations'] as $ruolo => $lista ) {
+			if ( in_array( (string) $ruolo, $noti, true ) ) {
 				continue;
 			}
-			$nome   = forestas_dettaglio_testo( $ente['name'] ?? null );
-			$slug   = function_exists( 'forestas_entes_slug' ) && '' !== forestas_entes_slug( $ente ) ? forestas_entes_slug( $ente ) : null;
-			$enti[] = [
-				'ruolo'     => $ruolo,
-				'etichetta' => $info['etichetta'],
-				'id'        => (int) ( $ente['id'] ?? 0 ),
-				'nome'      => '' !== $nome ? $nome : null,
-				'slug'      => $slug,
-				'url'       => null !== $slug && isset( $known[ $slug ] ) ? forestas_entes_url( $slug, $lang ) : null,
-			];
+			foreach ( (array) $lista as $ente ) {
+				if ( is_array( $ente ) ) {
+					$enti[] = $voce( $ente, (string) $ruolo, (string) $ruolo );
+				}
+			}
 		}
 	}
 	return $enti;
@@ -404,26 +468,31 @@ function forestas_dettaglio_enti( array $properties ): array {
  *   sempre, e senza termine vale «Non verificato», 0.
  *
  * @param array<string, mixed> $properties properties del JSON.
- * @return array{validazione: ?array{chiave: string, etichetta: string}, validazione_tacche: array{livello: int, totale: int, etichetta: string}, percorribilita: array<string, mixed>, accessibilita: array<string, mixed>}
+ * @return array{validazione: ?array{chiave: string, etichetta: string, lingua: ?string}, validazione_tacche: array{livello: int, totale: int, etichetta: string, lingua: ?string}, percorribilita: array<string, mixed>, accessibilita: array<string, mixed>}
  */
 function forestas_dettaglio_indicatori( array $properties ): array {
 	$termine     = $properties['taxonomies']['validation-status'][0] ?? null;
 	$validazione = null;
 	if ( is_array( $termine ) && ! empty( $termine['identifier'] ) ) {
-		$etichette   = forestas_search_term_labels();
+		// Nome dello shard (oc:9018) con la lingua da cui viene, per `lang` sulla pagina inglese; senza nome, l'identifier
+		$nome        = forestas_dettaglio_testo_lingua( $termine['name'] ?? null );
 		$validazione = [
 			'chiave'    => (string) $termine['identifier'],
-			'etichetta' => $etichette[ $termine['identifier'] ] ?? forestas_dettaglio_testo( $termine['name'] ?? null ),
+			'etichetta' => '' !== $nome['testo'] ? $nome['testo'] : (string) $termine['identifier'],
+			'lingua'    => '' !== $nome['testo'] ? $nome['lingua'] : null,
 		];
 	}
 	$level  = wmwp_status_level( 'validation-status', $validazione['chiave'] ?? null );
 	$absent = (string) ( wmwp_status_families()['validation-status']['absent'] ?? '' );
+	// Senza termine il nome dello stato di assenza, con la sua lingua: per `lang` sulla pagina inglese come la validazione
+	$assente = null === $validazione ? wmwp_status_name( 'validation-status', $absent, forestas_dettaglio_lingua() ) : null;
 	return [
 		'validazione'        => $validazione,
 		'validazione_tacche' => [
 			'livello'   => $level['level'],
 			'totale'    => $level['total'],
-			'etichetta' => $validazione['etichetta'] ?? wmwp_status_name( 'validation-status', $absent, forestas_dettaglio_lingua() )['text'],
+			'etichetta' => $validazione['etichetta'] ?? (string) $assente['text'],
+			'lingua'    => null !== $validazione ? $validazione['lingua'] : ( $assente['lang'] ?? null ),
 		],
 		'percorribilita'     => wmwp_walkability( $properties, forestas_dettaglio_lingua() ),
 		'accessibilita'      => forestas_dettaglio_accessibilita( $properties ),
@@ -618,7 +687,7 @@ function forestas_dettaglio_durata( $minuti ): ?string {
  * @param list<array{0: string, 1: string, 2?: bool, 3?: array{url: string, nascosto: string}|null, 4?: ?string, 5?: ?string}> $righe
  *        Etichetta, valore, se il valore è un segnaposto, il link «Maggiori info» (con il resto del nome, nascosto, per
  *        lo screen reader), la lingua del valore se ripiega su un'altra (`lang`) e l'indirizzo del valore, che
- *        se c'è lo rende un link.
+ *        se c'è lo rende un link. Con la chiave `html` il valore è quel markup, già escaped (parti in lingue diverse).
  */
 function forestas_dettaglio_gruppo( string $id, string $titolo, array $righe, bool $aperto ): string {
 	if ( ! $righe ) {
@@ -629,7 +698,7 @@ function forestas_dettaglio_gruppo( string $id, string $titolo, array $righe, bo
 		$link  = ! empty( $riga[3]['url'] )
 			? ' <a class="wm-dt__mi" href="' . esc_url( $riga[3]['url'] ) . '">' . esc_html( forestas_testo( 'Maggiori info', 'More info' ) ) . '<span class="screen-reader-text"> ' . esc_html( (string) ( $riga[3]['nascosto'] ?? '' ) ) . '</span></a>'
 			: '';
-		$valore = esc_html( (string) $riga[1] );
+		$valore = isset( $riga['html'] ) ? (string) $riga['html'] : esc_html( (string) $riga[1] );
 		if ( ! empty( $riga[5] ) ) {
 			$valore = '<a href="' . esc_url( (string) $riga[5] ) . '">' . $valore . '</a>';
 		}
@@ -663,7 +732,10 @@ function forestas_dettaglio_tabelle( array $properties, string $tipo ): array {
 		$url = forestas_dettaglio_pagina_drupal( $nid );
 		return '' !== $url ? [ 3 => [ 'url' => $url, 'nascosto' => $nascosto ] ] : [];
 	};
-	$difficolta = implode( '; ', array_map( fn( $d ) => $d[0] . ': ' . $d[1], forestas_dettaglio_difficolta( $properties ) ) );
+	// Grado di difficoltà su una riga: testo per i confronti, HTML con `lang` sulle parti in un'altra lingua (WCAG 3.1.2)
+	$scale      = forestas_dettaglio_difficolta( $properties );
+	$difficolta = implode( '; ', array_map( fn( $d ) => $d['scala'] . ': ' . $d['grado'], $scale ) );
+	$grado_html = implode( '; ', array_map( fn( $d ) => forestas_detail_lang_text( $d['scala'], $d['scala_lingua'] ) . ': ' . forestas_detail_lang_text( $d['grado'], $d['grado_lingua'] ), $scale ) );
 	$stats      = wmwp_detail_stats( $properties );
 	$percorso   = [
 		'titolo' => forestas_testo( 'Percorso', 'Route' ),
@@ -682,10 +754,14 @@ function forestas_dettaglio_tabelle( array $properties, string $tipo ): array {
 			[ forestas_testo( 'Quota minima', 'Minimum elevation' ), forestas_dettaglio_valore( forestas_dettaglio_misura( $stats['ele_min'], 'm' ) ) ],
 			[ forestas_testo( 'Quota massima', 'Maximum elevation' ), forestas_dettaglio_valore( forestas_dettaglio_misura( $stats['ele_max'], 'm' ) ) ],
 			[ forestas_testo( 'Tempo di percorrenza', 'Walking time' ), forestas_dettaglio_valore( forestas_dettaglio_durata( $stats['duration_forward'] ) ) ],
-			[ forestas_testo( 'Grado di difficoltà', 'Difficulty level' ), forestas_dettaglio_valore( $difficolta ) ] + $info( '1102', forestas_testo( 'sui gradi di difficoltà', 'about difficulty levels' ) ),
+			[ forestas_testo( 'Grado di difficoltà', 'Difficulty level' ), forestas_dettaglio_valore( $difficolta ) ] + ( $scale ? [ 'html' => $grado_html ] : [] ) + $info( '1102', forestas_testo( 'sui gradi di difficoltà', 'about difficulty levels' ) ),
 		],
 	];
-	$validazione = [ forestas_testo( 'Stato di validazione', 'Validation status' ), forestas_dettaglio_valore( $indicatori['validazione']['etichetta'] ?? null ) ] + $info( '87', forestas_testo( 'sui livelli di validazione', 'about validation levels' ) );
+	$validazione = [
+		0 => forestas_testo( 'Stato di validazione', 'Validation status' ),
+		1 => forestas_dettaglio_valore( $indicatori['validazione']['etichetta'] ?? null ),
+		4 => $indicatori['validazione']['lingua'] ?? null,
+	] + $info( '87', forestas_testo( 'sui livelli di validazione', 'about validation levels' ) );
 	if ( 'itinerario' === $tipo ) {
 		return [ $percorso, $misure ];
 	}
@@ -712,6 +788,23 @@ function forestas_dettaglio_tabelle( array $properties, string $tipo ): array {
 			],
 		],
 	];
+}
+
+/**
+ * Pulsante «Stampa» del dettaglio (oc:9018): link alla scheda PDF dello shard, solo con la stampa accesa nell'app
+ * (wmwp_detail_print_url() del plugin, che legge `OPTIONS.ec_pdf_enabled`), stringa vuota altrimenti o con un plugin
+ * che non ha la funzione. La rotta accoda la generazione del PDF, quindi `nofollow`; si apre in una nuova finestra,
+ * annunciata allo screen reader come i video.
+ *
+ * @param array<string, mixed> $detail Il dettaglio del plugin (`type`, `id`, `lang`).
+ */
+function forestas_dettaglio_stampa( array $detail ): string {
+	$url = function_exists( 'wmwp_detail_print_url' ) ? wmwp_detail_print_url( (string) ( $detail['type'] ?? '' ), (int) ( $detail['id'] ?? 0 ), (string) ( $detail['lang'] ?? '' ) ) : '';
+	if ( '' === $url ) {
+		return '';
+	}
+	return '<a class="forestas-pulsante" href="' . esc_url( $url ) . '" target="_blank" rel="nofollow noopener">' . esc_html( forestas_testo( 'Stampa', 'Print' ) )
+		. '<span class="screen-reader-text"> ' . esc_html( forestas_testo( '(si apre in una nuova finestra)', '(opens in a new window)' ) ) . '</span></a>';
 }
 
 /** La parte `AAAA-MM-GG` di una data dello shard (`AAAA-MM-GG`, ISO o `Y-m-d H:i:s`), o null: anche per `<time datetime>`. */
@@ -804,12 +897,7 @@ function forestas_dettaglio_card( array $item, string $classe ): string {
 	// Card unica del sito (forestas_card() di inc/contenuti.php, la .uc del wireframe), come i post e la ricerca: il
 	// filetto dell'etichetta ha il colore del menu del tipo (percorsi: sentiero, itinerario, cammino; POI: punti di
 	// interesse), e tutta la card si apre dal link del titolo
-	$tipi  = [
-		'route-type-trail'     => 'sentiero',
-		'route-type-itinerary' => 'itinerario',
-		'route-type-walk'      => 'cammino',
-	];
-	$tipo  = 'poi' === $classe ? 'poi' : ( $tipi[ $item['tipo_id'] ?? '' ] ?? 'sentiero' );
+	$tipo  = 'poi' === $classe ? 'poi' : forestas_route_type_kind( (string) ( $item['tipo_id'] ?? '' ) );
 	$meta  = array_filter( [ $item['lunghezza'] ?? null, $item['tempo'] ?? null, $item['distanza'] ?? null ] );
 	$media = ! empty( $item['immagine'] )
 		? '<div class="forestas-card__media"><img src="' . esc_url( $item['immagine'] ) . '" alt="" loading="lazy" decoding="async"></div>'
@@ -958,26 +1046,31 @@ function forestas_detail_visible_places( array $places ): array {
 
 /**
  * Difficoltà dichiarata per attività (una riga per famiglia `*-difficulty` che la traccia ha), come nella tabella della
- * Tavola 3: [ attività, valore ]. Il grado di accessibilità (`inclusivity-difficulty`) no: sta nell'indicatore
- * Accessibilità, e il link dei gradi di difficoltà non lo spiega (review 13/11).
+ * Tavola 3. Il grado di accessibilità (`inclusivity-difficulty`) no: sta nell'indicatore Accessibilità, e il link dei
+ * gradi di difficoltà non lo spiega (review 13/11). Le lingue sono quelle da cui vengono i testi, per `lang` quando non
+ * sono quella della pagina (`LABELS` ha spesso solo `it`).
  *
  * @param array<string, mixed> $properties properties del JSON.
- * @return list<array{0: string, 1: string, 2: ?string}> attività, valore e lingua del valore
+ * @return list<array{scala: string, scala_lingua: ?string, grado: string, grado_lingua: ?string}>
  */
 function forestas_dettaglio_difficolta( array $properties ): array {
-	$attivita = [
-		'hiking-difficulty'             => forestas_testo( 'Escursionismo', 'Hiking' ),
-		'mtb-difficulty'                => forestas_testo( 'Mountain bike', 'Mountain bike' ),
-		'horse-difficulty'              => forestas_testo( 'Ippovia', 'Horse riding' ),
-		'nordic-walking-difficulty'     => forestas_testo( 'Nordic walking', 'Nordic walking' ),
-		'soft-mobility-difficulty'      => forestas_testo( 'Mobilità dolce', 'Soft mobility' ),
-		'educational-trails-difficulty' => forestas_testo( 'Sentiero didattico', 'Educational trail' ),
-	];
-	$righe    = [];
-	foreach ( $attivita as $chiave => $nome ) {
-		$valore = forestas_dettaglio_testo_lingua( $properties['taxonomies'][ $chiave ][0]['name'] ?? null );
+	// Scale e nomi delle scale dal config.json dell'app (`LABELS.taxonomies`, oc:9018): una scala nuova compare da sola
+	$config = forestas_plugin_ready() ? wmwp_app_config() : null;
+	$righe  = [];
+	foreach ( (array) ( $config['LABELS']['taxonomies'] ?? [] ) as $famiglia => $info ) {
+		$famiglia = (string) $famiglia;
+		if ( ! forestas_famiglia_difficolta( $famiglia ) ) {
+			continue;
+		}
+		$valore = forestas_dettaglio_testo_lingua( $properties['taxonomies'][ $famiglia ][0]['name'] ?? null );
 		if ( '' !== $valore['testo'] ) {
-			$righe[] = [ $nome, $valore['testo'], $valore['lingua'] ];
+			$nome    = wmwp_app_label( is_array( $info ) ? ( $info['labels'] ?? [] ) : [], forestas_dettaglio_lingua() );
+			$righe[] = [
+				'scala'        => '' !== $nome['text'] ? $nome['text'] : $famiglia,
+				'scala_lingua' => '' !== $nome['text'] ? $nome['lang'] : null,
+				'grado'        => $valore['testo'],
+				'grado_lingua' => $valore['lingua'],
+			];
 		}
 	}
 	return $righe;
@@ -1064,8 +1157,10 @@ function forestas_dettaglio_poi( array $properties ): array {
 	// Area sosta attrezzata: uno dei tipi del POI (`equipped-rest-area`), mostrato a sé nel riquadro «in breve»; la
 	// tipologia (etichetta sulla foto e riquadro) è il primo degli altri tipi, come nella Tavola 7 (Perda Liana:
 	// «Meraviglie della Geologia e del Paesaggio», non «Area sosta attrezzata»), e l'area sosta solo se è l'unico
-	$sosta     = in_array( 'equipped-rest-area', array_column( $types, 'identifier' ), true );
-	$altri     = array_values( array_filter( $types, fn( $type ) => 'equipped-rest-area' !== $type['identifier'] ) );
+	// Con e senza il prefisso del config.json (`poi_type_equipped-rest-area`, oc:9018)
+	$is_sosta  = fn( $identifier ): bool => in_array( (string) $identifier, [ 'equipped-rest-area', 'poi_type_equipped-rest-area' ], true );
+	$sosta     = (bool) array_filter( array_column( $types, 'identifier' ), $is_sosta );
+	$altri     = array_values( array_filter( $types, fn( $type ) => ! $is_sosta( $type['identifier'] ) ) );
 	$primo     = $altri[0] ?? $types[0] ?? [];
 	$tipologia = [
 		'testo'  => $primo['name'] ?? '',
@@ -1130,8 +1225,9 @@ function forestas_dettaglio_titolo_breve( string $tipo ): string {
 		'sentiero'   => forestas_testo( 'Il sentiero in breve', 'The trail at a glance' ),
 		'itinerario' => forestas_testo( "L'itinerario in breve", 'The itinerary at a glance' ),
 		'cammino'    => forestas_testo( 'Il cammino in breve', 'The walk at a glance' ),
+		'altro'      => forestas_testo( 'Il percorso in breve', 'The route at a glance' ),
 	];
-	return $titoli[ $tipo ] ?? $titoli['sentiero'];
+	return $titoli[ $tipo ] ?? $titoli['altro'];
 }
 
 /**
@@ -1156,8 +1252,9 @@ function forestas_dettaglio_mostra_tutti( string $id, int $totale, int $limite =
  * - Percorso: i percorsi collegati (`forestas.nearby_tracks`) tratteggiati #5B7A99 e di sfondo, la traccia della scheda
  *   nel colore del suo tipo da 4 px, i primi tre punti di interesse correlati (`related_pois`, con la posizione)
  *   magenta e numerati come nella legenda; partenza (cerchio verde) e arrivo (bandiera a scacchi) della traccia della
- *   scheda, come la mappa di GeoHub del sito attuale; in un anello (fine entro 50 m dall'inizio, la stessa regola del
- *   plugin) la legenda ha solo la partenza. Senza la geometria la legenda le ha tutte e due.
+ *   scheda, come la mappa di GeoHub del sito attuale; in un anello (`roundtrip` dello shard; senza il campo, fine
+ *   entro 50 m dall'inizio, forestas_dettaglio_anello()) la legenda ha solo la partenza. Senza la geometria e senza
+ *   `roundtrip` la legenda le ha tutte e due.
  * - POI: il punto nero e i percorsi vicini (`forestas.nearby_tracks`) nel colore del loro tipo; la legenda nomina i
  *   tipi presenti.
  *
@@ -1171,11 +1268,6 @@ function forestas_dettaglio_mappa( array $properties, string $tipo, int $id, ?ar
 	$url      = function ( string $tipo_url, int $id_url ) use ( $lingua ): string {
 		return function_exists( 'wmwp_detail_url' ) ? wmwp_detail_url( $tipo_url, $id_url, $lingua ) : '';
 	};
-	$tipi     = [
-		'route-type-trail'     => 'sentiero',
-		'route-type-itinerary' => 'itinerario',
-		'route-type-walk'      => 'cammino',
-	];
 	$vicini   = [];
 	foreach ( (array) ( $properties['forestas']['nearby_tracks'] ?? [] ) as $traccia ) {
 		$traccia = (array) $traccia;
@@ -1189,7 +1281,12 @@ function forestas_dettaglio_mappa( array $properties, string $tipo, int $id, ?ar
 			'id'     => $vicino,
 			'codice' => $codice,
 			'nome'   => $nome,
-			'tipo'   => $tipi[ $traccia['route_type']['identifier'] ?? '' ] ?? 'sentiero',
+			'tipo'   => forestas_route_type_kind( (string) ( $traccia['route_type']['identifier'] ?? '' ) ),
+			// Nome del tipo dallo shard, per la legenda della mappa del POI (oc:9018)
+			'nome_tipo' => forestas_dettaglio_testo( $traccia['route_type']['name'] ?? null ),
+			// Colore della linea dal layer dell'app (oc:9018): i percorsi vicini non portano i loro layer, si usa il layer
+			// del filtro «Tipo di percorso» del loro route-type
+			'colore' => forestas_dettaglio_colore_linea( array_filter( [ forestas_search_layer_for_route_type( (string) ( $traccia['route_type']['identifier'] ?? '' ), false ) ] ), forestas_route_type_kind( (string) ( $traccia['route_type']['identifier'] ?? '' ) ) ),
 			'url'    => $url( 'track', $vicino ),
 		];
 	}
@@ -1213,26 +1310,22 @@ function forestas_dettaglio_mappa( array $properties, string $tipo, int $id, ?ar
 		foreach ( $vicini as $vicino ) {
 			$mappa['tracks'][]           = [
 				'id'      => $vicino['id'],
-				'color'   => forestas_dettaglio_colori( $vicino['tipo'] )['colore'],
+				'color'   => $vicino['colore'],
 				'width'   => 3,
 				'tooltip' => $tooltip( $vicino ),
 				'url'     => $vicino['url'],
 			];
-			$presenti[ $vicino['tipo'] ] = true;
+			// Una voce della legenda per colore con i nomi dei tipi dello shard (oc:9018): due tipi con lo stesso colore
+			// stanno nella stessa voce, nessuno si perde
+			$nome_tipo                                   = '' !== $vicino['nome_tipo'] ? $vicino['nome_tipo'] : forestas_testo( 'Percorsi', 'Routes' );
+			$presenti[ $vicino['colore'] ][ $nome_tipo ] = true;
 		}
-		$nomi = [
-			'sentiero'   => forestas_testo( 'Sentieri', 'Trails' ),
-			'itinerario' => forestas_testo( 'Itinerari', 'Itineraries' ),
-			'cammino'    => forestas_testo( 'Cammini', 'Walks' ),
-		];
-		foreach ( $nomi as $chiave => $nome ) {
-			if ( isset( $presenti[ $chiave ] ) ) {
-				$mappa['legenda'][] = [
-					'tipo'   => 'linea',
-					'colore' => forestas_dettaglio_colori( $chiave )['colore'],
-					'testo'  => $nome,
-				];
-			}
+		foreach ( $presenti as $colore_linea => $nomi ) {
+			$mappa['legenda'][] = [
+				'tipo'   => 'linea',
+				'colore' => (string) $colore_linea,
+				'testo'  => implode( ', ', array_keys( $nomi ) ),
+			];
 		}
 		return $mappa;
 	}
@@ -1248,7 +1341,8 @@ function forestas_dettaglio_mappa( array $properties, string $tipo, int $id, ?ar
 			'url'     => $vicino['url'],
 		];
 	}
-	$colore            = forestas_dettaglio_colori( $tipo )['colore'];
+	// Colore della linea dal primo layer colorato della traccia, come il plugin (oc:9018); senza, quello del tipo
+	$colore            = forestas_dettaglio_colore_linea( (array) ( $properties['layers'] ?? [] ), $tipo );
 	$codice            = trim( (string) ( $properties['ref'] ?? '' ) );
 	$partenza          = forestas_testo( 'Partenza', 'Start' );
 	$arrivo            = forestas_testo( 'Arrivo', 'Finish' );
@@ -1277,7 +1371,7 @@ function forestas_dettaglio_mappa( array $properties, string $tipo, int $id, ?ar
 		'colore' => '#1F8F35',
 		'testo'  => $partenza,
 	];
-	if ( ! forestas_dettaglio_anello( $geometria ) ) {
+	if ( ! forestas_dettaglio_anello( $geometria, $properties['roundtrip'] ?? null ) ) {
 		$mappa['legenda'][] = [
 			'tipo'   => 'arrivo',
 			'colore' => '#1A1A1A',
@@ -1320,12 +1414,16 @@ function forestas_dettaglio_mappa( array $properties, string $tipo, int $id, ?ar
 }
 
 /**
- * La traccia è un anello? Fine entro 50 m dall'inizio, come in assets/js/track-map.js del plugin, che allora non
- * disegna l'arrivo. Senza geometria (o non lineare) no.
+ * La traccia è un anello? Lo dice lo shard (`roundtrip`, oc:9018); senza quel campo, fine entro 50 m dall'inizio, come
+ * in assets/js/track-map.js del plugin, che allora non disegna l'arrivo. Senza geometria (o non lineare) no.
  *
  * @param array<string, mixed>|null $geometria LineString o MultiLineString.
+ * @param mixed                     $roundtrip `properties.roundtrip` della traccia.
  */
-function forestas_dettaglio_anello( ?array $geometria ): bool {
+function forestas_dettaglio_anello( ?array $geometria, $roundtrip = null ): bool {
+	if ( is_bool( $roundtrip ) ) {
+		return $roundtrip;
+	}
 	$linee = 'MultiLineString' === ( $geometria['type'] ?? '' ) ? (array) $geometria['coordinates'] : ( 'LineString' === ( $geometria['type'] ?? '' ) ? [ (array) $geometria['coordinates'] ] : [] );
 	$linee = array_values( array_filter( $linee, fn( $l ) => is_array( $l ) && $l ) );
 	if ( ! $linee ) {

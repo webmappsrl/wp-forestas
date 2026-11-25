@@ -77,9 +77,48 @@ $poi      = [
 	'feature' => [ 'properties' => [ 'id' => 9 ] ],
 ];
 
+// Config.json di UAT del 24/11 (fixture del plugin): nomi delle scale e layer non dipendono dalla copia del sito (oc:9018)
+// Option e transient veri rimessi com'erano alla fine, anche se il test si interrompe con un errore (review interna di
+// oc:9018: un'interruzione lasciava la fixture di UAT al posto della copia del sito). Un errore fatale di WordPress
+// chiude il processo prima delle funzioni di shutdown: per questo il gestore delle eccezioni
+$salvati = [];
+foreach ( [ WMWP_APP_CONFIG_OPTION ] as $nome ) {
+	$salvati[ $nome ] = get_option( $nome, null );
+}
+$transient_salvati = [];
+foreach ( [ FORESTAS_SEARCH_LAYERS_TRANSIENT, FORESTAS_SEARCH_LAYERS_FAILED ] as $nome ) {
+	$transient_salvati[ $nome ] = get_transient( $nome );
+}
+$ripristina_config = function () use ( $salvati, $transient_salvati ) {
+	foreach ( $salvati as $nome => $valore ) {
+		null === $valore ? delete_option( $nome ) : update_option( $nome, $valore, false );
+	}
+	foreach ( $transient_salvati as $nome => $valore ) {
+		false === $valore ? delete_transient( $nome ) : set_transient( $nome, $valore, HOUR_IN_SECONDS );
+	}
+};
+set_exception_handler(
+	function ( Throwable $e ) use ( $ripristina_config ) {
+		$ripristina_config();
+		echo 'FAIL: errore nel test: ' . $e->getMessage() . ' (' . basename( $e->getFile() ) . ':' . $e->getLine() . ")\n";
+		exit( 1 );
+	}
+);
+update_option( WMWP_APP_CONFIG_OPTION, [ 'url' => wmwp_app_config_url(), 'config' => json_decode( (string) file_get_contents( WMWP_PATH . 'tests/fixtures/config-uat.json' ), true ) ], false );
+delete_transient( FORESTAS_SEARCH_LAYERS_TRANSIENT );
+
 // 1. Tipo e colori
 $check( 'cammino' === forestas_dettaglio_tipo( $completa ), 'tipo dal route-type' );
-$check( 'sentiero' === forestas_dettaglio_tipo( $vuota ), 'senza route-type → sentiero' );
+// oc:9018: senza route-type, o con un route-type che il child non conosce, il tipo è «altro», mai «sentiero»
+$check( 'altro' === forestas_dettaglio_tipo( $vuota ), 'senza route-type → altro' );
+$check( 'altro' === forestas_route_type_kind( 'route-type-ippovia' ), 'route-type nuovo → altro' );
+// Nome del tipo: quello dello shard; senza nome, il nome del tipo del child, mai vuoto (review interna: lo screen reader
+// leggeva «, »)
+$check( 'Ippovia' === forestas_dettaglio_nome_tipo( [ 'taxonomies' => [ 'route-type' => [ [ 'identifier' => 'route-type-ippovia', 'name' => [ 'it' => 'Ippovia' ] ] ] ] ], 'altro' ), 'nome del tipo dallo shard' );
+$check( 'Percorso' === forestas_dettaglio_nome_tipo( [], 'altro' ) && 'Cammino' === forestas_dettaglio_nome_tipo( [ 'taxonomies' => [ 'route-type' => [ [ 'identifier' => 'route-type-walk' ] ] ] ], 'cammino' ), 'nome del tipo senza nome dello shard' );
+$check( [ 'colore' => '#1A1A1A', 'fascia' => '#F2F2F2' ] === forestas_dettaglio_colori( 'altro' ), 'tipo sconosciuto: colore neutro del testo' );
+$check( 'Il percorso in breve' === forestas_dettaglio_titolo_breve( 'altro' ), 'tipo sconosciuto: «Il percorso in breve»' );
+$check( false === strpos( forestas_dettaglio_percorso( 'altro', 'X' ), '›</span><a' ), 'tipo sconosciuto: breadcrumb senza pagina d\'elenco' );
 $check( 'poi' === forestas_dettaglio_tipo( $poi ), 'POI' );
 $check( [ 'colore' => '#1A416F', 'fascia' => '#E8ECF1' ] === forestas_dettaglio_colori( 'cammino' ), 'colori del cammino' );
 $check( '#B7127F' === forestas_dettaglio_colori( 'poi' )['colore'], 'colore del POI' );
@@ -243,15 +282,17 @@ $val = function ( string $suffix ): array {
 	return forestas_dettaglio_indicatori( [ 'taxonomies' => [ 'validation-status' => [ [ 'identifier' => 'validation-status-' . $suffix, 'name' => [ 'it' => 'x' ] ] ] ] ] )['validazione_tacche'];
 };
 $check( [ 5, 5 ] === [ $val( 'certified' )['livello'], $val( 'certified' )['totale'] ], 'certificato 5 su 5' );
-$check( 0 === $val( 'unverified' )['livello'] && 'Non verificato' === $val( 'unverified' )['etichetta'], 'non verificato 0' );
+// oc:9018: il nome dello stato è quello dello shard
+$check( 0 === $val( 'unverified' )['livello'] && 'x' === $val( 'unverified' )['etichetta'], 'non verificato 0, con il nome dello shard' );
 $senza_val = forestas_dettaglio_indicatori( [] )['validazione_tacche'];
 $check( 0 === $senza_val['livello'] && 5 === $senza_val['totale'] && 'Non verificato' === $senza_val['etichetta'], 'senza validazione: Non verificato 0 su 5' );
-$aee = forestas_dettaglio_indicatori( [ 'taxonomies' => [ 'inclusivity-difficulty' => [ [ 'identifier' => 'inclusivity-difficulty-aee', 'name' => [ 'it' => 'AEE' ] ] ] ] ] )['accessibilita'];
+$aee = forestas_dettaglio_indicatori( [ 'taxonomies' => [ 'inclusivity-difficulty' => [ [ 'identifier' => 'inclusivity-difficulty-AEE', 'name' => [ 'it' => 'AEE' ] ] ] ] ] )['accessibilita'];
 $check( 3 === $aee['livello'] && 3 === $aee['totale'], 'AEE 3 su 3' );
 // Accessibilità = grado AT · AE · AEE (inclusivity-difficulty) e tipologie di disabilità (wireframe Tavola 3, nota 10)
 $acc_p = [
 	'taxonomies' => [
-		'inclusivity-difficulty'   => [ [ 'identifier' => 'inclusivity-difficulty-ae', 'name' => [ 'it' => 'AE' ] ] ],
+		// Sigle maiuscole, come nello shard (oc:9018: scritte minuscole nel registro le tacche restavano spente)
+		'inclusivity-difficulty'   => [ [ 'identifier' => 'inclusivity-difficulty-AE', 'name' => [ 'it' => 'AE' ] ] ],
 		'inclusivity-disabilities' => [ [ 'identifier' => 'inclusivity-disabilities-sensory' ], [ 'identifier' => 'inclusivity-disabilities-physical' ] ],
 	],
 ];
@@ -308,9 +349,44 @@ $tabelle = forestas_dettaglio_tabelle( $completa['feature']['properties'], 'camm
 $check( [ 'Misure', 'Stato' ] === $titoli( $tabelle ), 'cammino: Misure e Stato' );
 $check( 'Validato' === ( $riga( $tabelle, 'Stato', 'Stato di validazione' )[1] ?? null ), 'cammino: stato di validazione in Stato' );
 $diff_p  = [ 'taxonomies' => [ 'hiking-difficulty' => [ [ 'name' => [ 'it' => 'E' ] ] ], 'inclusivity-difficulty' => [ [ 'name' => [ 'it' => 'AT' ] ] ] ] ];
-$check( 'Escursionismo: E' === ( $riga( forestas_dettaglio_tabelle( $diff_p, 'sentiero' ), 'Misure', 'Grado di difficoltà' )[1] ?? null ), 'grado di difficoltà in Misure, con l\'attività, senza il grado di accessibilità' );
+// oc:9018: il nome della scala da LABELS.taxonomies del config.json
+$check( 'Difficoltà escursionistica: E' === ( $riga( forestas_dettaglio_tabelle( $diff_p, 'sentiero' ), 'Misure', 'Grado di difficoltà' )[1] ?? null ), 'grado di difficoltà in Misure, con la scala, senza il grado di accessibilità' );
+$check( [ [ 'scala' => 'Difficoltà ippovia', 'scala_lingua' => null, 'grado' => 'Facile', 'grado_lingua' => 'it' ] ] === forestas_dettaglio_difficolta( [ 'taxonomies' => [ 'horse-difficulty' => [ [ 'name' => [ 'it' => 'Facile' ] ] ] ] ] ), 'scala del config.json con il suo nome' );
+// Sulla pagina inglese il nome della scala, solo italiano, porta la sua lingua (WCAG 3.1.2, review finale)
+$scala_en = ( function () { do_action( 'wpml_switch_language', 'en-us' ); $d = forestas_dettaglio_difficolta( [ 'taxonomies' => [ 'horse-difficulty' => [ [ 'name' => [ 'it' => 'Facile', 'en' => 'Easy' ] ] ] ] ] ); do_action( 'wpml_switch_language', 'it' ); return $d; } )();
+$check( 'Difficoltà ippovia' === ( $scala_en[0]['scala'] ?? '' ) && 'it' === ( $scala_en[0]['scala_lingua'] ?? null ), 'pagina inglese: nome della scala con lang it' );
+// Review interna (B3, B2): nella tabella Misure della pagina inglese la riga del grado marca con `lang` le parti italiane,
+// e la validazione con il solo italiano porta la sua lingua (WCAG 3.1.2)
+$tabelle_en = ( function () use ( $diff_p ) {
+	do_action( 'wpml_switch_language', 'en-us' );
+	$p                                    = $diff_p;
+	$p['taxonomies']['validation-status'] = [ [ 'identifier' => 'validation-status-validated', 'name' => [ 'it' => 'Validato' ] ] ];
+	$t                                    = forestas_dettaglio_tabelle( $p, 'sentiero' );
+	do_action( 'wpml_switch_language', 'it' );
+	return $t;
+} )();
+$grado_en = $riga( $tabelle_en, 'Measures', 'Difficulty level' );
+$check( '<span lang="it">Difficoltà escursionistica</span>: <span lang="it">E</span>' === ( $grado_en['html'] ?? null ), 'pagina inglese: grado di difficoltà con lang sulle parti italiane' );
+$check( 'Difficoltà escursionistica: E' === ( $riga( forestas_dettaglio_tabelle( $diff_p, 'sentiero' ), 'Misure', 'Grado di difficoltà' )['html'] ?? null ), 'pagina italiana: grado di difficoltà senza lang' );
+$validazione_en = $riga( $tabelle_en, 'Trail register', 'Validation status' );
+$check( 'Validato' === ( $validazione_en[1] ?? null ) && 'it' === ( $validazione_en[4] ?? null ), 'pagina inglese: validazione con lang it' );
+$check( false !== strpos( forestas_dettaglio_gruppo( 'g', 'Measures', [ $grado_en ], true ), '<td><span lang="it">Difficoltà escursionistica</span>: <span lang="it">E</span>' ), 'il gruppo stampa il valore HTML della riga' );
+$check( false !== strpos( (string) file_get_contents( get_stylesheet_directory() . '/wp-package/track.php' ), "forestas_dettaglio_lang( \$indicatori['validazione']['lingua']" ), 'riga compatta: validazione con la sua lingua' );
+// Anche il riquadro delle tacche della validazione (review interna, secondo giro): etichetta con la sua lingua, e il
+// template la stampa con forestas_detail_lang_text()
+$tacche_en = ( function () {
+	do_action( 'wpml_switch_language', 'en-us' );
+	$i = forestas_dettaglio_indicatori( [ 'taxonomies' => [ 'validation-status' => [ [ 'identifier' => 'validation-status-validated', 'name' => [ 'it' => 'Validato' ] ] ] ] ] );
+	do_action( 'wpml_switch_language', 'it' );
+	return $i['validazione_tacche'];
+} )();
+$check( 'Validato' === ( $tacche_en['etichetta'] ?? '' ) && 'it' === ( $tacche_en['lingua'] ?? null ), 'tacche della validazione: lingua del nome sulla pagina inglese' );
+$check( false !== strpos( (string) file_get_contents( get_stylesheet_directory() . '/wp-package/track.php' ), "forestas_detail_lang_text( (string) \$val['etichetta'], \$val['lingua'] )" ), 'tacche della validazione: stampate con la lingua' );
+$check( false !== strpos( (string) file_get_contents( get_stylesheet_directory() . '/wp-package/track.php' ), "forestas_testo( 'Scala', 'Scale' )" ), 'intestazione della colonna: la scala, non l\'attività' );
 // Il grado di accessibilità (AT · AE · AEE) sta nell'indicatore Accessibilità, non fra le difficoltà (review 13/11)
 $check( [] === forestas_dettaglio_difficolta( [ 'taxonomies' => [ 'inclusivity-difficulty' => [ [ 'name' => [ 'it' => 'AT' ] ] ] ] ] ), 'accessibilità non è una difficoltà' );
+// Regola unica delle scale di difficoltà, per la ricerca e per il dettaglio (review interna, cleanup)
+$check( forestas_famiglia_difficolta( 'hiking-difficulty' ) && ! forestas_famiglia_difficolta( 'inclusivity-difficulty' ) && ! forestas_famiglia_difficolta( 'difficulty-hiking' ), 'scale di difficoltà: suffisso, accessibilità esclusa' );
 // Il codice tra parentesi in coda al nome si toglie anche scritto in un altro modo (review 13/11: «(B 401)» e «B-401»)
 $check( 'Oliena - Monte Corrasi' === forestas_dettaglio_nome( 'Oliena - Monte Corrasi (B 401)', 'B-401' ), 'nome: codice tra parentesi tolto anche con un altro separatore' );
 $check( 'Anello (C 12)' === forestas_dettaglio_nome( 'Anello (C 12)', 'B 532A' ), 'nome: un altro codice tra parentesi resta' );
@@ -366,7 +442,7 @@ $p = [ 'taxonomies' => [
 	'warnings'          => [ [ 'identifier' => 'w', 'name' => [ 'it' => 'Cinghiali', 'en' => 'wild boars' ] ] ],
 ] ];
 $diff = forestas_dettaglio_difficolta( $p );
-$check( 2 === count( $diff ) && 'EE' === $diff[0][1], 'difficoltà per attività' );
+$check( 2 === count( $diff ) && 'EE' === $diff[0]['grado'], 'difficoltà per attività' );
 $check( [ 'Cinghiali' ] === forestas_dettaglio_avvertenze( $p ), 'avvertenze' );
 $check( [] === forestas_dettaglio_difficolta( [] ) && [] === forestas_dettaglio_avvertenze( [] ), 'niente difficoltà né avvertenze' );
 
@@ -450,7 +526,7 @@ $check( false !== strpos( $card, '<div class="forestas-card__media"><img src="ht
 $poi_card = forestas_dettaglio_card( [ 'id' => 2, 'nome' => 'Nuraghe', 'tipo' => 'Nuraghi', 'url' => null ], 'poi' );
 $check( false !== strpos( $poi_card, 'forestas-card--poi' ) && false !== strpos( $poi_card, 'forestas-card__media forestas-card__media--segnaposto' ) && false !== strpos( $poi_card, '<h3 class="forestas-card__titolo">Nuraghe</h3>' ), 'POI senza foto né link: segnaposto e titolo senza link' );
 $check( false !== strpos( forestas_dettaglio_card( [ 'id' => 4, 'nome' => 'Biancone' ], 'poi' ), '<span class="forestas-card__tag">Punto di interesse</span>' ), 'POI senza tipologia: etichetta «Punto di interesse»' );
-$check( false !== strpos( forestas_dettaglio_card( [ 'id' => 3, 'nome' => 'X', 'tipo_id' => null ], 'percorso' ), 'forestas-card--sentiero' ), 'percorso senza tipo: colore dei sentieri' );
+$check( false !== strpos( forestas_dettaglio_card( [ 'id' => 3, 'nome' => 'X', 'tipo_id' => null ], 'percorso' ), 'forestas-card--altro' ), 'percorso senza tipo: colore neutro (oc:9018)' );
 $check( [] === forestas_dettaglio_poi( [] )['percorsi'] && 0 === forestas_dettaglio_poi( [] )['percorsi_totale'], 'POI senza percorsi vicini' );
 // POI correlati del POI (Rubens, 19/11): `forestas.related_pois` dello shard (id, nome, foto), card come i POI
 // correlati della traccia, con l'indirizzo del dettaglio dal plugin; senza id fuori
@@ -515,8 +591,8 @@ $poi_mappa = forestas_dettaglio_mappa(
 		'name'     => [ 'it' => 'Perda Liana' ],
 		'forestas' => [
 			'nearby_tracks' => [
-				[ 'id' => 74, 'ref' => null, 'name' => [ 'it' => 'Itinerario' ], 'route_type' => [ 'identifier' => 'route-type-itinerary' ] ],
-				[ 'id' => 183, 'ref' => 'C 1', 'name' => [ 'it' => 'Sentiero' ], 'route_type' => [ 'identifier' => 'route-type-trail' ] ],
+				[ 'id' => 74, 'ref' => null, 'name' => [ 'it' => 'Itinerario' ], 'route_type' => [ 'identifier' => 'route-type-itinerary', 'name' => [ 'it' => 'Itinerario' ] ] ],
+				[ 'id' => 183, 'ref' => 'C 1', 'name' => [ 'it' => 'Sentiero' ], 'route_type' => [ 'identifier' => 'route-type-trail', 'name' => [ 'it' => 'Sentiero' ] ] ],
 			],
 		],
 	],
@@ -526,7 +602,41 @@ $poi_mappa = forestas_dettaglio_mappa(
 );
 $check( [ 74, 183 ] === array_column( $poi_mappa['tracks'], 'id' ) && '#58810B' === ( $poi_mappa['tracks'][0]['color'] ?? '' ) && '#DE1B0D' === ( $poi_mappa['tracks'][1]['color'] ?? '' ), 'POI: percorsi vicini nel colore del loro tipo' );
 $check( 1 === count( $poi_mappa['points'] ) && '#1A1A1A' === ( $poi_mappa['points'][0]['color'] ?? '' ) && ! isset( $poi_mappa['points'][0]['number'] ), 'POI: il punto nero, senza numero' );
-$check( [ [ 'tipo' => 'linea', 'colore' => '#DE1B0D', 'testo' => 'Sentieri' ], [ 'tipo' => 'linea', 'colore' => '#58810B', 'testo' => 'Itinerari' ] ] === $poi_mappa['legenda'], 'POI: legenda dei tipi presenti, nell\'ordine sentieri, itinerari, cammini' );
+// oc:9018: legenda con i nomi dei tipi dello shard, un colore per voce (senza la corrispondenza tipo → layer in cache,
+// il colore del tipo)
+$check( [ [ 'tipo' => 'linea', 'colore' => '#58810B', 'testo' => 'Itinerario' ], [ 'tipo' => 'linea', 'colore' => '#DE1B0D', 'testo' => 'Sentiero' ] ] === $poi_mappa['legenda'], 'POI: legenda dei tipi presenti con i nomi dello shard' );
+// Due tipi con lo stesso colore: una voce sola che li nomina tutti e due, invece di perderne uno (review interna)
+set_transient( FORESTAS_SEARCH_LAYERS_TRANSIENT, [ 'route-type-trail' => 11, 'route-type-ippovia' => 11 ], HOUR_IN_SECONDS );
+$stesso_colore = forestas_dettaglio_mappa(
+	[ 'forestas' => [ 'nearby_tracks' => [
+		[ 'id' => 1, 'route_type' => [ 'identifier' => 'route-type-trail', 'name' => [ 'it' => 'Sentiero' ] ] ],
+		[ 'id' => 2, 'route_type' => [ 'identifier' => 'route-type-ippovia', 'name' => [ 'it' => 'Ippovia' ] ] ],
+		[ 'id' => 3, 'route_type' => [ 'identifier' => 'route-type-trail', 'name' => [ 'it' => 'Sentiero' ] ] ],
+	] ] ],
+	'poi',
+	1,
+	null
+);
+delete_transient( FORESTAS_SEARCH_LAYERS_TRANSIENT );
+$check( 1 === count( $stesso_colore['legenda'] ) && 'Sentiero, Ippovia' === ( $stesso_colore['legenda'][0]['testo'] ?? '' ), 'POI: due tipi dello stesso colore in una voce sola' );
+// Con la corrispondenza tipo → layer in cache, il colore del layer dell'app (UAT: Itinerari #608d0d)
+set_transient( FORESTAS_SEARCH_LAYERS_TRANSIENT, [ 'route-type-itinerary' => 10, 'route-type-trail' => 11 ], HOUR_IN_SECONDS );
+$col_mappa = forestas_dettaglio_mappa( [ 'forestas' => [ 'nearby_tracks' => [ [ 'id' => 74, 'route_type' => [ 'identifier' => 'route-type-itinerary', 'name' => [ 'it' => 'Itinerario' ] ] ] ] ] ], 'poi', 1, null );
+$check( '#608d0d' === ( $col_mappa['tracks'][0]['color'] ?? '' ), 'POI: percorso vicino nel colore del layer dell\'app' );
+delete_transient( FORESTAS_SEARCH_LAYERS_TRANSIENT );
+// Traccia della scheda: colore dal suo primo layer colorato (oc:9018)
+$main = forestas_dettaglio_mappa( [ 'layers' => [ 3, 10 ] ], 'itinerario', 9, null );
+$check( '#608d0d' === ( end( $main['tracks'] )['color'] ?? '' ), 'traccia della scheda nel colore del suo layer' );
+// Anello dallo shard (oc:9018): roundtrip vince sulla distanza
+$lontani = [ 'type' => 'LineString', 'coordinates' => [ [ 9, 40 ], [ 9.01, 40.01 ], [ 9.003, 40 ] ] ];
+$check( true === forestas_dettaglio_anello( $lontani, true ) && false === forestas_dettaglio_anello( $lontani ), 'anello: roundtrip dello shard, senza la regola dei 50 m' );
+$vicini = [ 'type' => 'LineString', 'coordinates' => [ [ 9, 40 ], [ 9.01, 40.01 ], [ 9.0001, 40 ] ] ];
+$check( false === forestas_dettaglio_anello( $vicini, false ) && true === forestas_dettaglio_anello( $vicini ), 'non anello per lo shard anche se la fine è vicina' );
+// Area sosta attrezzata anche con il prefisso del config.json (oc:9018)
+$check( true === ( forestas_dettaglio_poi( [ 'taxonomies' => [ 'poi-type' => [ [ 'identifier' => 'poi_type_equipped-rest-area', 'name' => [ 'it' => 'Area sosta attrezzata' ] ] ] ] ] )['area_sosta'] ?? null ), 'area sosta con il prefisso poi_type_' );
+// Un ruolo nuovo compare con il valore grezzo (oc:9018)
+$nuovi = forestas_dettaglio_enti( [ 'forestas' => [ 'organizations' => [ 'nuovo-ruolo' => [ [ 'id' => 5, 'name' => [ 'it' => 'Ente X' ] ] ] ] ] ] );
+$check( 'nuovo-ruolo' === ( $nuovi[0]['etichetta'] ?? '' ) && 'Ente X' === ( $nuovi[0]['nome'] ?? '' ), 'ruolo nuovo con il valore grezzo' );
 
 // Mappa interattiva con il focus (oc:8969): il pulsante del dettaglio porta a /mappa-interattiva/?track=<id> o ?poi=<id>,
 // e la pagina mette nell'iframe la webapp dello shard con l'elemento a fuoco (wmwp_webapp_url() del plugin)
@@ -567,8 +677,8 @@ $check( '' === forestas_dettaglio_allegati_html( [ 'allegati' => [], 'video' => 
 $stato_per = function ( string $suffix, array $walkability = [] ): array {
 	return wmwp_walkability(
 		[
-			// Senza nome nel termine: il nome viene dal registro
-			'taxonomies'  => [ 'walkability-status' => [ [ 'identifier' => 'walkability-status-' . $suffix ] ] ],
+			// oc:9018: il nome viene dal termine dello shard (il registro non ha più i nomi)
+			'taxonomies'  => [ 'walkability-status' => [ [ 'identifier' => 'walkability-status-' . $suffix, 'name' => [ 'it' => 'Parzialmente percorribile' ] ] ] ],
 			'walkability' => $walkability,
 		],
 		'it'
@@ -648,13 +758,57 @@ $check( false !== strpos( forestas_dettaglio_percorso( 'poi', 'Sos Nibberos' ), 
 $check( false !== strpos( forestas_dettaglio_percorso( 'cammino', 'Tappa 1' ), $elenco( 'cammini', 'Cammini' ) ), 'cammino: breadcrumb con Cammini' );
 $check( false !== strpos( (string) file_get_contents( get_stylesheet_directory() . '/wp-package/poi.php' ), 'forestas_dettaglio_percorso(' ), 'POI: il template stampa la breadcrumb' );
 $check( 'Punti di interesse' === forestas_voce_menu_principale( forestas_pagina_per_chiave( 'da-vedere' ) ) && '' === forestas_voce_menu_principale( 0 ), 'nome della voce del menu principale, in maiuscolo solo la prima lettera' );
-// Niente «Stampa» finché la stampa non c'è (Rubens, 19/11: torna con oc:8982), né nella traccia né nel POI
-$check( false === strpos( $sentiero, '>Stampa<' ) && false === strpos( $itinerario, '>Stampa<' ), 'traccia: niente pulsante «Stampa»' );
-$check( false === strpos( (string) file_get_contents( get_stylesheet_directory() . '/wp-package/poi.php' ), "'Stampa'" ), 'POI: niente pulsante «Stampa»' );
+// «Stampa» (oc:9018, stampa di oc:8982): solo con `OPTIONS.ec_pdf_enabled` acceso nel config.json, link alla scheda
+// dello shard nella lingua della pagina, `rel="nofollow"` (la rotta accoda la generazione), nuova finestra annunciata
+$check( false === strpos( $sentiero, '>Stampa' ) && false === strpos( $itinerario, '>Stampa' ), 'traccia: niente «Stampa» con la stampa spenta (config.json di UAT)' );
+$genera_poi = function (): string {
+	$GLOBALS['wmwp_detail'] = [
+		'type'    => 'poi',
+		'id'      => 999999902,
+		'name'    => 'Punto',
+		'lang'    => 'it',
+		'url'     => '',
+		'feature' => [
+			'type'       => 'Feature',
+			'geometry'   => [ 'type' => 'Point', 'coordinates' => [ 9.1, 40.1 ] ],
+			'properties' => [ 'id' => 999999902, 'name' => [ 'it' => 'Punto' ] ],
+		],
+	];
+	$blocca = fn() => new WP_Error( 'test', 'shard bloccato nel test' );
+	add_filter( 'pre_http_request', $blocca, 1 );
+	ob_start();
+	try {
+		include get_stylesheet_directory() . '/wp-package/poi.php';
+	} finally {
+		$html = (string) ob_get_clean();
+		remove_filter( 'pre_http_request', $blocca, 1 );
+		unset( $GLOBALS['wmwp_detail'] );
+	}
+	return $html;
+};
+$check( false === strpos( $genera_poi(), '>Stampa' ), 'POI: niente «Stampa» con la stampa spenta' );
+$stampa_config                          = get_option( WMWP_APP_CONFIG_OPTION );
+$stampa_config['config']['OPTIONS']     = [ 'ec_pdf_enabled' => true ];
+$stampa_config['config']['LANGUAGES']   = [ 'default' => 'it', 'available' => [ 'en', 'it' ] ];
+update_option( WMWP_APP_CONFIG_OPTION, $stampa_config, false );
+$origine   = wmwp_configured_api_urls()['origin'];
+$pulsante  = function ( string $href ): string {
+	return '<a class="forestas-pulsante" href="' . esc_url( $href ) . '" target="_blank" rel="nofollow noopener">Stampa<span class="screen-reader-text"> (si apre in una nuova finestra)</span></a>';
+};
+$sentiero_stampa = $genera( 'route-type-trail' );
+$check( false !== strpos( $sentiero_stampa, $pulsante( $origine . '/print/ec-track/999999901?lang=it' ) ), 'traccia: «Stampa» verso la scheda dello shard' );
+$check( strpos( $sentiero_stampa, '>Stampa' ) < strpos( $sentiero_stampa, 'forestas-condividi' ), 'traccia: «Stampa» prima di «Condividi»' );
+$check( false !== strpos( $genera_poi(), $pulsante( $origine . '/print/ec-poi/999999902?lang=it' ) ), 'POI: «Stampa» verso la scheda dello shard' );
+// Un helper solo per i due template, che regge un plugin senza wmwp_detail_print_url() (review interna, B1)
+foreach ( [ 'track', 'poi' ] as $t ) {
+	$sorgente = (string) file_get_contents( get_stylesheet_directory() . "/wp-package/{$t}.php" );
+	$check( false !== strpos( $sorgente, 'forestas_dettaglio_stampa( $detail )' ) && false === strpos( $sorgente, 'wmwp_detail_print_url(' ), "{$t}: «Stampa» dall'helper del child" );
+}
+update_option( WMWP_APP_CONFIG_OPTION, [ 'url' => wmwp_app_config_url(), 'config' => json_decode( (string) file_get_contents( WMWP_PATH . 'tests/fixtures/config-uat.json' ), true ) ], false );
 
 // oc:9000: controllo unico della versione del plugin, e legenda delle tacche dal registro (assenza a 0)
-$check( forestas_plugin_ready() && forestas_plugin_ready( '0.5.0' ) && forestas_plugin_ready( '0.10.0' ), 'plugin dalla 0.5.0: pronto' );
-$check( ! forestas_plugin_ready( '0.4.0' ) && ! forestas_plugin_ready( '' ), 'plugin più vecchio: il child degrada' );
+$check( forestas_plugin_ready() && forestas_plugin_ready( '0.6.0' ) && forestas_plugin_ready( '0.10.0' ), 'plugin dalla 0.6.0: pronto (oc:9018)' );
+$check( ! forestas_plugin_ready( '0.5.0' ) && ! forestas_plugin_ready( '' ), 'plugin più vecchio: il child degrada' );
 $check( [ 0 => 'Sconosciuta', 2 => 'Non percorribile', 3 => 'Parzialmente percorribile', 4 => 'Percorribile' ] === forestas_status_legend( 'walkability-status' ), 'legenda della percorribilità' );
 $check( [ 1 => 'AT', 2 => 'AE', 3 => 'AEE' ] === forestas_status_legend( 'inclusivity-difficulty' ), 'legenda dell\'accessibilità' );
 $check( [] === forestas_status_legend( 'nessuna-famiglia' ), 'famiglia sconosciuta: legenda vuota' );
@@ -664,6 +818,8 @@ $check( 'route-type' === wmwp_track_kind_taxonomy(), 'famiglia del tipo indicata
 
 // Dettaglio della traccia dal file v1 (scrum del 19/11, oc:8997): il plugin legge tracks/v1/<id>.json
 $check( 'v1' === apply_filters( 'wmwp_track_json_version', '' ), 'versione del file della traccia: v1' );
+
+$ripristina_config();
 
 if ( $failures ) {
 	echo 'FAIL: ' . implode( '; ', $failures ) . "\n";

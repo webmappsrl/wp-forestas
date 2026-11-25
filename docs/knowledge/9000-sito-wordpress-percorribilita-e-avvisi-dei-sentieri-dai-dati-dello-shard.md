@@ -5,6 +5,9 @@
 > La parte generica (registro degli stati, letture del dettaglio, ricerca dei POI, filtri apribili) è del plugin
 > `wp-package`: il suo `README.md` e la sua pagina di conoscenza di oc:9000. I dati vengono dallo shard: percorribilità
 > oc:8989, avvisi oc:8981 (pagina di conoscenza `8981-avvisi-dei-sentieri.md` di forestas).
+> **Superato in parte da oc:9018** ([9018-sito-wordpress-filtri-e-dettagli-dai-dati-dello-shard.md](9018-sito-wordpress-filtri-e-dettagli-dai-dati-dello-shard.md)):
+> nomi degli stati dai termini dello shard (il registro tiene ordine e stato di assenza; `forestas_status_names()` non
+> c'è più), filtri dal `config.json`, niente area, provincia e comune per nome, chiavi in inglese.
 
 ## Come funziona oggi
 
@@ -18,7 +21,8 @@
   `/avvisi` (`inc/notices.php`, `templates/notices-list.php`) da `api/v1/avvisi` dello shard, con un transient di
   60 secondi e l'ultima risposta buona in un'opzione, ordinabile per data e a pagine.
 - **Ricerca unica** (`inc/search.php`, `assets/js/search.js`): tab «Punti di interesse» dalla sorgente del plugin, con i
-  filtri tipo, area, provincia e comune (gli stessi di `forestas_search_track_facets()`); tab «Enti» con «Tipo di ente»
+  filtri tipo, area, provincia e comune (gli stessi di `forestas_search_track_facets()`; superato da oc:9018: tipi e aree
+  degli overlay dal `config.json`, niente provincia e comune); tab «Enti» con «Tipo di ente»
   e «Ruolo sui sentieri», calcolati dalla rotta `forestas/v1/entes-search` (`forestas_entes_search_filter()`; i ruoli
   vengono sempre dalla copia degli enti). Intestazione e breadcrumb come le altre pagine.
 - **Stile dei filtri.** Quello della ricerca è il riferimento: numero nel riquadro arancione (pieno nel filtro con una

@@ -3,14 +3,16 @@
  * Stati delle famiglie di forestas nel registro degli stati del plugin (oc:9000): validazione catastale e
  * accessibilità. La percorribilità è di wm-package e il plugin ce l'ha già.
  *
- * Gli stati, il loro ordine e i nomi italiani sono quelli di `app/Console/Commands/ConfigureTaxonomyTermsCommand.php`
- * dello shard (dopo oc:8989, senza «Percorribile» e «Non percorribile», passati alla percorribilità); i nomi inglesi
- * sono nostri, come in forestas_search_term_labels(). Lo shard non espone ancora l'elenco degli stati di una famiglia:
- * quando lo farà, il registro del plugin lo leggerà da lì e questa lista si toglie.
+ * Dal registro restano solo ordine e stato di assenza (oc:9018): i nomi arrivano con i termini dello shard. Gli stati e
+ * il loro ordine sono quelli di `app/Console/Commands/ConfigureTaxonomyTermsCommand.php` dello shard (dopo oc:8989).
+ * Restano due ripieghi dichiarati, finché lo shard non pubblica l'elenco degli stati di una famiglia (ticket sullo
+ * shard): il nome dello stato di assenza della validazione, che non arriva con nessun dato, e i nomi delle legende delle
+ * tacche (FORESTAS_STATUS_LEGEND_NAMES), che elencano anche gli stati che il percorso non ha.
  *
  * Le tacche sono gli stati della famiglia e ogni stato accende fino alla sua posizione: validazione 5 tacche («Non
  * verificato» nessuna, «In revisione-validazione» 2 … «Certificato» 5), accessibilità 3 (la famiglia non ha uno stato
- * di assenza; senza grado nessuna tacca).
+ * di assenza; senza grado nessuna tacca). I gradi hanno le sigle maiuscole dello shard (`inclusivity-difficulty-AE`):
+ * scritte minuscole le tacche restavano spente.
  *
  * @package forestas-child
  */
@@ -20,13 +22,39 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Famiglie di forestas nel registro del plugin.
+ * Nomi delle legende delle tacche, per tutti gli stati di una famiglia (ripiego dichiarato, oc:9018): la legenda elenca
+ * anche gli stati che il percorso non ha, e i loro nomi non arrivano da nessuna API. Come le tre tipologie di
+ * disabilità, la legenda resta com'era (decisione del 24/11); lo shard deve avere gli stessi nomi.
+ */
+const FORESTAS_STATUS_LEGEND_NAMES = [
+	'validation-status'      => [
+		'validation-status-unverified'       => [ 'Non verificato', 'Not verified' ],
+		'validation-status-under-review'     => [ 'In revisione-validazione', 'Under review' ],
+		'validation-status-pre-registration' => [ 'In pre-accatastamento o manutenzione', 'Pre-registration or maintenance' ],
+		'validation-status-validated'        => [ 'Validato', 'Validated' ],
+		'validation-status-certified'        => [ 'Certificato', 'Certified' ],
+	],
+	'walkability-status'     => [
+		'walkability-status-unknown'            => [ 'Sconosciuta', 'Unknown' ],
+		'walkability-status-not-walkable'       => [ 'Non percorribile', 'Not walkable' ],
+		'walkability-status-partially-walkable' => [ 'Parzialmente percorribile', 'Partially walkable' ],
+		'walkability-status-walkable'           => [ 'Percorribile', 'Walkable' ],
+	],
+	'inclusivity-difficulty' => [
+		'inclusivity-difficulty-AT'  => [ 'AT', 'AT' ],
+		'inclusivity-difficulty-AE'  => [ 'AE', 'AE' ],
+		'inclusivity-difficulty-AEE' => [ 'AEE', 'AEE' ],
+	],
+];
+
+/**
+ * Famiglie di forestas nel registro del plugin: ordine, stato di assenza e il suo nome.
  *
  * @param array<string, array<string, mixed>> $families Famiglie già registrate.
  * @return array<string, array<string, mixed>>
  */
 function forestas_status_families( array $families ): array {
-	$families['validation-status'] = [
+	$families['validation-status']      = [
 		'absent' => 'validation-status-unverified',
 		'states' => [
 			[
@@ -36,60 +64,18 @@ function forestas_status_families( array $families ): array {
 					'en' => 'Not verified',
 				],
 			],
-			[
-				'identifier' => 'validation-status-under-review',
-				'name'       => [
-					'it' => 'In revisione-validazione',
-					'en' => 'Under review',
-				],
-			],
-			[
-				'identifier' => 'validation-status-pre-registration',
-				'name'       => [
-					'it' => 'In pre-accatastamento o manutenzione',
-					'en' => 'Pre-registration or maintenance',
-				],
-			],
-			[
-				'identifier' => 'validation-status-validated',
-				'name'       => [
-					'it' => 'Validato',
-					'en' => 'Validated',
-				],
-			],
-			[
-				'identifier' => 'validation-status-certified',
-				'name'       => [
-					'it' => 'Certificato',
-					'en' => 'Certified',
-				],
-			],
+			[ 'identifier' => 'validation-status-under-review' ],
+			[ 'identifier' => 'validation-status-pre-registration' ],
+			[ 'identifier' => 'validation-status-validated' ],
+			[ 'identifier' => 'validation-status-certified' ],
 		],
 	];
 	$families['inclusivity-difficulty'] = [
 		'absent' => null,
 		'states' => [
-			[
-				'identifier' => 'inclusivity-difficulty-at',
-				'name'       => [
-					'it' => 'AT',
-					'en' => 'AT',
-				],
-			],
-			[
-				'identifier' => 'inclusivity-difficulty-ae',
-				'name'       => [
-					'it' => 'AE',
-					'en' => 'AE',
-				],
-			],
-			[
-				'identifier' => 'inclusivity-difficulty-aee',
-				'name'       => [
-					'it' => 'AEE',
-					'en' => 'AEE',
-				],
-			],
+			[ 'identifier' => 'inclusivity-difficulty-AT' ],
+			[ 'identifier' => 'inclusivity-difficulty-AE' ],
+			[ 'identifier' => 'inclusivity-difficulty-AEE' ],
 		],
 	];
 	return $families;
@@ -97,7 +83,7 @@ function forestas_status_families( array $families ): array {
 add_filter( 'wmwp_status_families', 'forestas_status_families' );
 
 /** Versione di wp-package da cui il child legge dati del dettaglio, stati e percorribilità con le funzioni del plugin. */
-const FORESTAS_WMWP_MIN_VERSION = '0.5.0';
+const FORESTAS_WMWP_MIN_VERSION = '0.6.0';
 
 /**
  * Il plugin ha le funzioni che il child usa da oc:9000? Con un wp-package più vecchio (`WP_PACKAGE_REF` non aggiornato,
@@ -118,35 +104,23 @@ function forestas_walkability_family(): string {
 }
 
 /**
- * Stati di una famiglia del registro del plugin, nell'ordine dello shard, con il nome nella lingua della pagina:
- * identifier → { text, lang } (wmwp_text()). Vuoto se il registro non conosce la famiglia o il plugin è più vecchio.
- *
- * @return array<string, array{text: string, lang: ?string}>
- */
-function forestas_status_names( string $family ): array {
-	if ( ! forestas_plugin_ready() ) {
-		return [];
-	}
-	$names = [];
-	foreach ( (array) ( wmwp_status_families()[ $family ]['states'] ?? [] ) as $state ) {
-		$id = is_array( $state ) ? (string) ( $state['identifier'] ?? '' ) : '';
-		if ( '' !== $id ) {
-			$names[ $id ] = wmwp_text( $state['name'] ?? null, forestas_dettaglio_lingua() );
-		}
-	}
-	return $names;
-}
-
-/**
  * Legenda di una famiglia per gli indicatori a tacche: livello → nome dello stato, dal livello più basso (lo stato di
- * assenza vale 0, wmwp_status_level()).
+ * assenza vale 0, wmwp_status_level()), con i nomi di FORESTAS_STATUS_LEGEND_NAMES nella lingua della pagina. Vuota se
+ * il registro non conosce la famiglia o il plugin è più vecchio.
  *
  * @return array<int, string>
  */
 function forestas_status_legend( string $family ): array {
+	if ( ! forestas_plugin_ready() ) {
+		return [];
+	}
+	$names  = FORESTAS_STATUS_LEGEND_NAMES[ $family ] ?? [];
 	$legend = [];
-	foreach ( forestas_status_names( $family ) as $id => $name ) {
-		$legend[ wmwp_status_level( $family, $id )['level'] ] = $name['text'];
+	foreach ( (array) ( wmwp_status_families()[ $family ]['states'] ?? [] ) as $state ) {
+		$id = is_array( $state ) ? (string) ( $state['identifier'] ?? '' ) : '';
+		if ( '' !== $id ) {
+			$legend[ wmwp_status_level( $family, $id )['level'] ] = isset( $names[ $id ] ) ? forestas_testo( $names[ $id ][0], $names[ $id ][1] ) : $id;
+		}
 	}
 	ksort( $legend );
 	return $legend;

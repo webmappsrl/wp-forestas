@@ -35,7 +35,8 @@ e 7 del wireframe di oc:8783.
   non sia l'area sosta; «Il punto in breve» con Quota (`properties.ele` del DEM, solo quando c'è) e «Area sosta
   attrezzata» (tipo `equipped-rest-area`); poi descrizione, galleria, «Percorsi correlati» (i percorsi entro 1 km
   dallo shard) e «Punti di interesse correlati» (`forestas.related_pois`, i correlati di Drupal, senza tipo).
-- **Niente «Stampa», segnalazioni né recensioni** nel primo rilascio: tolti dal template, tornano con oc:8982 e oc:8980.
+- **Niente segnalazioni né recensioni** nel primo rilascio: tolti dal template, tornano con oc:8980. «Stampa» è
+  tornato con oc:9018, quando la stampa dell'app è accesa (knowledge 9018).
 - **Pagina «Mappa interattiva»** (`inc/pagine-statiche.php`, `forestas_mappa_url()`): iframe della webapp dello shard
   dell'ambiente (`wmwp_webapp_url()` del plugin), con il focus sull'elemento da «Vedi sulla mappa interattiva».
 - **Icone delle tipologie di disabilità** dal set IcoMoon dello shard (`wmwp_icon_svg()`), che le prende dai termini

@@ -702,7 +702,7 @@ function forestas_entes_type_labels(): array {
 
 /**
  * Nome del tipo di ente nella lingua corrente di WPML (forestas_entes_type_labels()). Un valore sconosciuto o assente
- * ('') non si mostra (null). Non scrive nel log, perché si chiama a ogni visita: i tipi sconosciuti li segnala il
+ * ('') non si mostra (null): la card dice «Ente»; nei filtri della ricerca invece compare grezzo (oc:9018). Non scrive nel log, perché si chiama a ogni visita: i tipi sconosciuti li segnala il
  * rinnovo della copia, una volta per rinnovo (forestas_entes_refresh()).
  */
 function forestas_entes_type_label( string $type ): ?string {
@@ -981,17 +981,18 @@ function forestas_entes_role_labels(): array {
 }
 
 /**
- * Ruoli conosciuti (forestas_entes_role_labels()) che un ente ha su almeno un sentiero, ciascuno una volta.
+ * Ruoli che un ente ha su almeno un sentiero, ciascuno una volta, anche quelli che forestas_entes_role_labels() non
+ * conosce (oc:9018).
  *
  * @param array<string, mixed> $ente Ente nella forma di `api/v1/entes` (con `tracks`).
  * @return list<string>
  */
 function forestas_entes_roles( array $ente ): array {
-	$known = forestas_entes_role_labels();
 	$roles = [];
 	foreach ( (array) ( $ente['tracks'] ?? [] ) as $track ) {
 		foreach ( is_array( $track ) ? (array) ( $track['roles'] ?? [] ) : [] as $role ) {
-			if ( is_string( $role ) && isset( $known[ $role ] ) ) {
+			// Anche un ruolo che il child non conosce (oc:9018): nel filtro compare con il valore grezzo
+			if ( is_string( $role ) && '' !== trim( $role ) ) {
 				$roles[ $role ] = true;
 			}
 		}
@@ -1001,8 +1002,9 @@ function forestas_entes_roles( array $ente ): array {
 
 /**
  * Filtri «Tipo di ente» e «Ruolo sui sentieri» del tab «Enti» della ricerca (oc:9000), sugli enti trovati.
- * - Più valori dello stesso filtro: basta uno (OR); i due filtri insieme: tutti e due (AND). Valori senza nome (tipi e
- *   ruoli sconosciuti, scritti a mano nell'indirizzo) ignorati.
+ * - Più valori dello stesso filtro: basta uno (OR); i due filtri insieme: tutti e due (AND). Un tipo o un ruolo che
+ *   il child non conosce compare con il valore grezzo (oc:9018); un valore scelto che nessun ente trovato ha (scritto a
+ *   mano nell'indirizzo) si ignora.
  * - I ruoli di un ente vengono dalla copia (`$roles`, per slug): la ricerca dello shard non dà i sentieri. Un ente non
  *   ancora nella copia non ha ruoli.
  * - Voci di ogni filtro: contate sugli enti filtrati con l'altro filtro e senza il proprio (come la rotta dei contenuti),
@@ -1016,17 +1018,30 @@ function forestas_entes_roles( array $ente ): array {
  * @return array{entes: list<array<string, mixed>>, facets: array<string, list<array{id: string, label: string, count: int, selected: bool}>>}
  */
 function forestas_entes_search_filter( array $entes, array $roles, string $types_raw, string $roles_raw ): array {
+	// Chiavi in inglese, uguali in tutte le lingue (oc:9018). Un tipo o un ruolo che il child non conosce compare con il
+	// valore grezzo
 	$labels = [
-		'tipo-ente' => forestas_entes_type_labels(),
-		'ruolo'     => forestas_entes_role_labels(),
+		'entity-type' => forestas_entes_type_labels(),
+		'role'        => forestas_entes_role_labels(),
 	];
+	foreach ( $entes as $ente ) {
+		$type = forestas_entes_type( $ente );
+		if ( '' !== $type && ! isset( $labels['entity-type'][ $type ] ) ) {
+			$labels['entity-type'][ $type ] = $type;
+		}
+		foreach ( $roles[ forestas_entes_slug( $ente ) ] ?? [] as $role ) {
+			if ( ! isset( $labels['role'][ $role ] ) ) {
+				$labels['role'][ $role ] = $role;
+			}
+		}
+	}
 	$chosen = [];
-	foreach ( [ 'tipo-ente' => $types_raw, 'ruolo' => $roles_raw ] as $key => $raw ) {
+	foreach ( [ 'entity-type' => $types_raw, 'role' => $roles_raw ] as $key => $raw ) {
 		$chosen[ $key ] = array_values( array_intersect( array_unique( array_map( 'trim', explode( ',', $raw ) ) ), array_keys( $labels[ $key ] ) ) );
 	}
 	$values_of = fn( array $ente ): array => [
-		'tipo-ente' => [ forestas_entes_type( $ente ) ],
-		'ruolo'     => $roles[ forestas_entes_slug( $ente ) ] ?? [],
+		'entity-type' => [ forestas_entes_type( $ente ) ],
+		'role'        => $roles[ forestas_entes_slug( $ente ) ] ?? [],
 	];
 	$passes    = fn( array $values, string $key ): bool => ! $chosen[ $key ] || array_intersect( $values[ $key ], $chosen[ $key ] );
 
@@ -1034,11 +1049,11 @@ function forestas_entes_search_filter( array $entes, array $roles, string $types
 	$counts = array_fill_keys( array_keys( $labels ), [] );
 	foreach ( $entes as $ente ) {
 		$values = $values_of( $ente );
-		if ( $passes( $values, 'tipo-ente' ) && $passes( $values, 'ruolo' ) ) {
+		if ( $passes( $values, 'entity-type' ) && $passes( $values, 'role' ) ) {
 			$found[] = $ente;
 		}
 		foreach ( array_keys( $labels ) as $key ) {
-			$other = 'tipo-ente' === $key ? 'ruolo' : 'tipo-ente';
+			$other = 'entity-type' === $key ? 'role' : 'entity-type';
 			if ( $passes( $values, $other ) ) {
 				foreach ( array_intersect( $values[ $key ], array_keys( $labels[ $key ] ) ) as $value ) {
 					$counts[ $key ][ $value ] = ( $counts[ $key ][ $value ] ?? 0 ) + 1;

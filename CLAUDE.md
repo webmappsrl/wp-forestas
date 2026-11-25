@@ -193,6 +193,16 @@ subagent.
   cambiandone uno solo i filtri del sito tornano diversi (knowledge 9000, «Stile dei filtri») (oc:9000)
 - Rinominando lo slug del menu principale (`main-menu*`) la breadcrumb dei dettagli torna al titolo della pagina
   d'elenco, «Da vedere» per i POI (knowledge 8969) (oc:9000)
+- Una faccetta del child con la chiave `layer` diventa `f_layer`: `layer` è il parametro fisso di tutte le aree degli
+  overlay (`WMWP_APP_AREA_PARAM` del plugin), letto anche dalla rotta dei POI. Gli id delle aree sono quelli dei layer
+  dello shard e cambiano fra ambienti («Area F» è il layer 7 sul dev e 12 su UAT): un link con `?layer=` vale solo dove
+  nasce (knowledge 9018) (oc:9018)
+- Un nome, un'opzione o un ordine sbagliato nei filtri o nei dettagli si corregge nello shard, non nel child: i valori
+  ancora scritti nel child sono i ripieghi dichiarati della knowledge 9018 (oc:9018)
+- Un test del child che tocca option o transient veri (copia del `config.json`, overlay, cache route-type → layer) li
+  ripristina anche se si interrompe con un errore, con `set_exception_handler`: con un errore fatale WordPress chiude il
+  processo prima delle funzioni di shutdown, e il sito locale resta sui dati di prova. Esempio nel blocco iniziale di
+  `themes/forestas-child/tests/search-facets.php` (oc:9018)
 
 ## Conoscenza
 
@@ -206,3 +216,4 @@ subagent.
 | Pagine di dettaglio di percorsi e POI | template del child sopra il plugin, tavole e Drupal come riferimento, chiave stabile (nid di Drupal, anche a Drupal spento), indirizzi stabili e storico dei percorsi del plugin, mappa interattiva per ambiente, icone dal set dello shard, messa in opera | [docs/knowledge/8969-pagine-di-dettaglio-di-percorsi-e-punti-di-interesse-sul-sito-wordpress.md](docs/knowledge/8969-pagine-di-dettaglio-di-percorsi-e-punti-di-interesse-sul-sito-wordpress.md) |
 | Enti sul sito | copia del JSON degli enti con token e WP-Cron, ultima copia buona e plausibilità, elenco e dettaglio come Drupal, tab della ricerca, link da percorsi e POI; la messa in opera in [docs/howto/messa-in-opera-degli-enti.md](docs/howto/messa-in-opera-degli-enti.md) | [docs/knowledge/8990-enti-sul-sito-wordpress-elenco-enti-dettaglio-enti-slug-e-ricerca-dallapi-di-oc8965.md](docs/knowledge/8990-enti-sul-sito-wordpress-elenco-enti-dettaglio-enti-slug-e-ricerca-dallapi-di-oc8965.md) |
 | Percorribilità, avvisi e filtri | stati e tacche dal registro del plugin, fascia della percorribilità e avviso nel dettaglio, pagina `/avvisi`, filtri della ricerca e delle liste dei post con «Filtri attivi», icona del sito | [docs/knowledge/9000-sito-wordpress-percorribilita-e-avvisi-dei-sentieri-dai-dati-dello-shard.md](docs/knowledge/9000-sito-wordpress-percorribilita-e-avvisi-dei-sentieri-dai-dati-dello-shard.md) |
+| Filtri e dettagli dai dati dello shard | filtri dal `config.json` come le app, parametri in inglese e `layer` per le aree, vecchi link della ricerca di Drupal, tipo «altro», colori delle linee dal layer, indirizzi Drupal dei dettagli nello storico, pulsante «Stampa», ripieghi dichiarati | [docs/knowledge/9018-sito-wordpress-filtri-e-dettagli-dai-dati-dello-shard.md](docs/knowledge/9018-sito-wordpress-filtri-e-dettagli-dai-dati-dello-shard.md) |
