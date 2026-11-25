@@ -346,9 +346,8 @@ collegato (barra di amministrazione presente):
 
 ### Task 5: messa in opera
 
-Fatte solo le procedure (`forestas/docs/howto/messa-in-opera-wordpress-uat.md` e `-dev.md`). Restano al dev: commit e
-merge dei due repo, `WP_PACKAGE_REF` con l'hash del plugin, `scripts/wordpress-up.sh` su dev e UAT, pulizia delle 170
-righe `i:` dello storico del dev.
+Fatte solo le procedure (`forestas/docs/howto/messa-in-opera-wordpress-uat.md` e `-dev.md`). Il 25/11: plugin su develop (#8, `416957e`) e su main (`f189f11`), `WP_PACKAGE_REF` a `f189f11`. Restano dopo il
+deploy: `scripts/wordpress-up.sh` su dev e UAT, pulizia delle 170 righe `i:` dello storico del dev.
 
 ### Pulsante «Stampa» (24/11 sera)
 

@@ -181,12 +181,11 @@ tipologie di disabilità, nome dello stato di assenza) stanno ciascuno in un sol
   UAT il 23/11); conteggio prima e dopo. *Procedura scritta in `forestas/docs/howto/messa-in-opera-wordpress-dev.md`;
   si fa dopo il deploy sul dev.*
 - [ ] **Step 2:** aggiornare `WP_PACKAGE_REF`; dopo il merge, `scripts/wordpress-up.sh` di forestas su dev
-  e UAT; `wp cron event run` del giro del `config.json` e dell'indice. *`WP_PACKAGE_REF` si aggiorna con l'hash del
-  plugin dopo il suo merge; il resto dopo il deploy.*
+  e UAT; `wp cron event run` del giro del `config.json` e dell'indice. *`WP_PACKAGE_REF` a `f189f11` (main del plugin con la 0.6.0, 25/11); il resto dopo il deploy.*
 - [ ] **Step 3:** controllo su dev e UAT: i filtri della ricerca hanno i nomi dello shard, le aree
   catastali (7) e, sul dev, le aree geografiche (39); su UAT le geografiche non compaiono finché non c'è
   oc:9001. *Dopo il deploy.*
-- [ ] **Step 4 (commit del dev):** `chore(oc:9018): plugin 0.6.0 e procedura di messa in opera` *La procedura è nel commit `47b45a7` di forestas (24/11); resta `WP_PACKAGE_REF`, dopo il merge del plugin.*
+- [x] **Step 4 (commit del dev):** `chore(oc:9018): plugin 0.6.0 e procedura di messa in opera` — procedura nel commit `47b45a7` di forestas (24/11), `WP_PACKAGE_REF` a `f189f11` nel commit del 25/11
 
 ### Task 6: accessibilità e documentazione
 
